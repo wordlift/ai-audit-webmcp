@@ -1,6 +1,7 @@
 import { Link, Route, Routes } from "react-router-dom";
 import { HomeRoute } from "./routes/HomeRoute";
 import { ReportRoute } from "./routes/ReportRoute";
+import { AuditWebsiteTool } from "./webmcp/AuditWebsiteTool";
 
 export function App() {
   return (
@@ -11,7 +12,10 @@ export function App() {
           <span>WordLift</span>
           <span className="product-name">AI Audit</span>
         </Link>
-        <span className="open-source-label">Open source · WebMCP</span>
+        <div className="header-status">
+          <AuditWebsiteTool />
+          <span className="open-source-label">Open source · WebMCP</span>
+        </div>
       </header>
       <main>
         <Routes>
