@@ -15,10 +15,15 @@ announced.
 | 5 | Paste the submission | https://webmcp.devpost.com | Your account |
 
 The deployed service is live in WordLift mode: real audit, Google V2 categories, Firestore reports,
-and the real Alpina endpoint. Verified in production on 2026-08-27: a live `alpina.travel` audit
-completed in 60s (foundation 94, readiness 0, archetype travel-hospitality high), and the sidecar
-turned `availability.check` from `human-only` into `sidecar-enabled` (readiness 13) in a child
-report naming its immutable parent.
+and the real Alpina endpoint. Verified in production on 2026-08-27, after the detection and
+invocation work landed: a live `alpina.travel` audit completed in ~45s (foundation 90, verified
+readiness 22, archetype travel-hospitality high) with six WebMCP tools found in the page, two MCP
+handshakes completed and `search_products` called for real. The sidecar then turned
+`availability.check` from `unverified` into `sidecar-enabled` (readiness 22 → 35) in a child report
+naming its immutable parent.
+
+Live numbers move as alpina.travel does. Re-run the audit before recording the video and use what
+it returns; the story does not depend on a specific figure.
 
 Google Cloud is already prepared: Natural Language enabled, Firestore TTL active on
 `reports.expiresAt`, `AI_AUDIT_WEBMCP_WORDLIFT_KEY` in Secret Manager, and the runtime service
@@ -40,10 +45,10 @@ curl -s -X POST "$URL/api/reports" -H 'content-type: application/json' \
 | Live foundation audit works | `npm run smoke:live -- https://alpina.travel` → completed in ~46s, foundation 92/100 |
 | Google V2 classification works | Same run: Mountain & Ski Resorts 0.86, Vacation Rentals 0.73 |
 | Firestore persistence works | Verified live: create, finalize, read back, immutable child revision, TTL ACTIVE |
-| Real Alpina API call works | In production: `human-only` → `sidecar-enabled`, readiness 0 → 13, child report names its parent |
+| Real Alpina API call works | In production: `unverified` → `sidecar-enabled`, readiness 22 → 35, child report names its parent |
 | WebMCP registration works | 11 component tests against a stubbed `document.modelContext` |
 | Nothing gets booked | Sidecar issues a GET with no body; asserted in tests |
-| The suite is green | 163 Vitest tests, 5 Playwright tests |
+| The suite is green | 198 Vitest tests, 5 Playwright tests |
 
 Not yet proven, and stated as such everywhere: an end-to-end invocation from ChatGPT's built-in
 browser has not been recorded. Do that during the video if the setup cooperates; if it does not, the
@@ -58,40 +63,50 @@ In `docs/submission/screenshots/`, regenerate with
 |---|---|
 | `travel-report-desktop.png` | Archetype, both scores, top three gaps, four-stage capability map |
 | `availability-contract-desktop.png` | Human vs agent evidence, recommendation, JSON-LD contract |
-| `sidecar-before.png` | `availability.check` before the call (`unverified` in the demo fixture, `human-only` on the live site) |
+| `sidecar-before.png` | `availability.check` before the call (`unverified` in both the demo fixture and on the live site) |
 | `sidecar-result.png` | Live availability with the read-only guarantee |
 | `sidecar-after.png` | Same action as `sidecar-enabled`, readiness raised |
 | `travel-report-mobile.png` | Responsive layout |
 
 Worth adding by hand: the ChatGPT or Chrome inspector view showing the three registered tools.
 
-## Demo video script (2:45)
+## Demo video script (2:50)
 
 **0:00 — the thesis.** "Every AI-readiness tool asks whether an agent can *read* your site. That is
 the wrong question. An agent that can read a hotel page still can't tell you if the room is free."
 
 **0:15 — one URL.** Enter `alpina.travel`. Show the three phases. Land on the report.
 
-**0:35 — the two scores.** "Foundation score 94. Verified agent readiness 0. Alpina publishes
-llms.txt, an agent-skills index, a booking API — and not one of those has been proven callable by an
-agent. We refuse to average those into one comfortable number."
+**0:35 — the two scores.** "Foundation score in the nineties. Verified agent readiness: 22. Alpina
+is one of the best-equipped sites on the agentic web — and those are still two different questions.
+We refuse to average them into one comfortable number."
 
 **0:55 — the map.** Walk Discover → Understand/Decide → Act → Manage. "This is what a travel site
 should let an agent do. Colour and label show what it actually can."
 
-**1:15 — the honest finding.** Open the capability detail. "Human evidence and agent evidence, side
-by side. And here's what we found live: three well-known agent files returned 200 — and returned the
-homepage. Soft 404s. A checklist scores those as present. We score them as broken."
+**1:10 — what a checklist cannot see.** "WebMCP has no discovery file. The tools are registered in
+the page. So we read the page — the annotations on the booking form, and the site's own scripts. Six
+tools. Every checklist auditor on the market reports zero, because it's looking in `.well-known` for
+something that was never there."
 
-**1:40 — the contract.** "Every gap ships with a JSON-LD contract: inputs, outputs, governance,
+**1:30 — the call.** "Then we stop reading and start calling. We opened a session on Alpina's MCP
+server, completed the handshake, and called `search_products` for real. That's why this action says
+agent-ready. Not because a file exists — because the call came back."
+
+**1:45 — the two defects.** "And calling finds things reading cannot. The MCP endpoint linked from
+Alpina's own homepage hands out a session and then rejects every request with a 405. And its search
+returns products with empty IDs, so an agent can't get from search to availability. Both in the
+server's own words."
+
+**2:00 — the contract.** "Every gap ships with a JSON-LD contract: inputs, outputs, governance,
 whether confirmation is required, what side effects it has."
 
-**1:55 — the wow.** Run the sidecar. Real availability, real price, real cancellation policy.
-"Read-only. No booking, no hold, no payment." Show the report becoming `sidecar-enabled`, readiness
-moving, and the child revision link. "The report I already shared with you didn't change. This is a
-new revision."
+**2:10 — closing the last gap.** Run the sidecar. Real availability, real price, real cancellation
+policy. "Read-only. No booking, no hold, no payment." Show the action becoming `sidecar-enabled`,
+readiness moving 22 to 35, and the child revision link. "The report I already shared with you didn't
+change. This is a new revision."
 
-**2:25 — WebMCP.** Show the tools registered in ChatGPT's built-in browser or the Chrome inspector.
+**2:30 — WebMCP.** Show the tools registered in ChatGPT's built-in browser or the Chrome inspector.
 "Same three functions an agent can call: audit a site, explain a capability, check availability."
 
 **2:40 — close.** "Pages give agents knowledge. Functions let them act. Open source, Apache-2.0."

@@ -21,11 +21,16 @@ Every "is my site AI-ready?" tool answers the wrong question. They check whether
 your pages. But an agent that can read your hotel page still cannot check whether the room is free
 on the twelfth. Knowledge is not capability.
 
-Worse, the signals everyone checks are trivially faked. During this build we pointed the audit at a
-site that publishes `/.well-known/mcp.json`, `/.well-known/webmcp/tools.json`, and `/openapi.json`.
-All three returned HTTP 200. All three returned the site's HTML homepage. A checklist audit — the
-foundation audit we ourselves call — scored them as present. They were soft 404s. If the industry
-grades agent-readiness on whether a URL returns 200, everyone passes and no agent can do anything.
+Worse, the signals everyone checks are trivially faked. Point an audit at a site whose catch-all
+answers every unknown path with its homepage and every `.well-known` probe returns HTTP 200. A
+checklist audit — the foundation audit we ourselves call — scores them as present. They are soft
+404s. If the industry grades agent-readiness on whether a URL returns 200, everyone passes and no
+agent can do anything.
+
+And the checks are aimed at the wrong place to begin with. WebMCP has no discovery document: tools
+are registered in the page through `navigator.modelContext`, or annotated on the form they operate.
+Any audit that probes `/.well-known/` for WebMCP will report a site that implemented it correctly as
+having none.
 
 ## What it does
 
@@ -37,12 +42,15 @@ Enter a public URL and the application:
 2. **Maps what an agent should be able to do** — infers one of six operating archetypes
    deterministically and compiles an ordered capability journey: Discover → Understand/Decide → Act
    → Manage, drawn from a versioned model of 24 governed actions.
-3. **Checks what an agent actually can do** — derives one of six states per action from typed
+3. **Checks what an agent actually can do** — reads the WebMCP tools registered in the page,
+   completes a handshake with any MCP server the site advertises, and calls the tools that server
+   annotates read-only and non-destructive. One of six states per action is derived from typed
    evidence, keeping human support and agent support strictly separate.
 4. **Hands you the fix** — every incomplete action gets a plain-language recommendation and a
    JSON-LD capability contract with inputs, outputs, governance, and provenance.
-5. **Closes one gap for real** — an approved read-only WebMCP sidecar makes a human-only capability
-   agent-callable, and the successful call is written back as evidence.
+5. **Closes a gap for real** — where a site has a usable endpoint and no agent interface, an
+   approved read-only WebMCP sidecar makes it agent-callable, and the successful call is written
+   back as evidence into a new immutable revision.
 
 The whole thing is itself a WebMCP surface: `audit-website`, `explain-capability`, and
 `check-alpina-availability` register on `document.modelContext`, so an agent in ChatGPT's built-in
@@ -50,24 +58,40 @@ browser can run the audit and read the findings without touching the UI.
 
 ## The rule that makes it honest
 
-**Declaration earns zero points.** A `.well-known/mcp.json` that exists is `unverified`, not ready.
-An action only counts as agent-ready when a call actually succeeded. This is why alpina.travel —
-which publishes llms.txt, skill.md, an agent-skills index, and a working booking API — still scores
-**0/100 on verified agent readiness** against a **94/100 foundation score**. Those are two different
-questions and we refuse to average them into one comfortable number.
+**Declaration earns zero points, and we actually go and check.** A `.well-known/mcp.json` that
+exists is `unverified`, not ready. An action counts as agent-ready only when a call succeeded — so
+the audit opens the session, completes the handshake, and makes the call. A standard you never apply
+is a slogan.
 
-## The demo: human-only → sidecar-enabled
+This is why alpina.travel — one of the best-equipped sites on the agentic web, with WebMCP tools in
+the page, a live MCP server, UCP, an agent card and an API catalogue — scores **22/100 on verified
+agent readiness** against a foundation score in the low nineties. Those are two different questions
+and we refuse to average them into one comfortable number.
 
-alpina.travel has a public availability API and a booking form. A person can check dates. But no
-agent call has ever been proven, so the capability map reads `human-only` — and the three
-`.well-known` agent files that answer with the homepage are recorded as broken declarations, not
-features.
+## The demo: what a checklist cannot see
 
-Run the approved sidecar — from the page, or by asking an agent in ChatGPT — and it calls the real
-public read-only endpoint. Availability comes back with a real quote (€644.80 for 12–15 September,
-2 guests, with the cancellation policy and tourist tax). That successful invocation is written as
-`invoked` evidence into a **new immutable revision** of the report, where the same action now reads
-`sidecar-enabled` and verified readiness moves 0 → 13.
+alpina.travel is the rare site that did the work, which makes it the hardest possible subject and
+the only honest one. The audit finds three things no checklist can produce.
+
+**Six WebMCP tools no crawler can find.** One annotated on the availability form, five registered
+through `navigator.modelContext`. They exist only in the page, so they are invisible to any audit
+that probes for a manifest.
+
+**A call, not a declaration.** The audit opens an MCP session on the server the site advertises,
+completes the handshake, and calls `search_products` for real. `site.search` reads `agent-ready`
+because the call returned, not because a file exists.
+
+**Two defects the site did not know it had.** `/mcp/sse` — the endpoint linked from its own homepage
+navigation — issues a session endpoint and then rejects every request to it with a `405`. And
+`search_products` returns products with an empty `id` and `sku`, so an agent cannot chain search to
+detail or availability. Both are reported in the server's own words.
+
+Then the gap that remains gets closed. Run the approved read-only sidecar — from the page, or by
+asking an agent in ChatGPT — and it calls the real public endpoint. Availability comes back with a
+live quote (€644.80 for 12–15 September, 2 guests, with the cancellation policy and tourist tax).
+That successful invocation is written as `invoked` evidence into a **new immutable revision** of the
+report, where `availability.check` moves from `unverified` to `sidecar-enabled` and verified
+readiness goes **22 → 35**.
 
 Nothing is booked, held, or paid. The tool says so in its description and in every response.
 
@@ -83,8 +107,11 @@ immutable anonymous report revisions.
 - **Deterministic compilation.** Same inputs and model version, same action IDs, order, scores, and
   contracts. Golden snapshots for all six archetypes enforce it.
 - **Evidence has a verification level** — `observed`, `declared`, `invoked`, `failed` — and only
-  `invoked` raises the score. A discovery document that answers with HTML is recorded as `failed`,
-  and the collector's own reading overrides the foundation audit's claim that the file exists.
+  `invoked` raises the score. The collector's own reading overrides the foundation audit's claim
+  that a file exists.
+- **Calling a stranger's tools, carefully.** Only what the server annotates read-only and
+  non-destructive, only when the name carries no transactional verb, only when every required
+  argument can be filled without inventing an identifier, and never more than five per endpoint.
 - **WebMCP through the Chrome-maintained `use-webmcp-tool` hook**, on the current
   `document.modelContext` API. Tools follow page context: the report-scoped tool unregisters on
   unmount, and the sidecar registers only on the report it applies to. Tool names, descriptions, and
@@ -95,25 +122,38 @@ immutable anonymous report revisions.
 
 ## Challenges
 
-**Proving a tool call, not just finding one.** A crawler can see a declaration; it cannot prove
-another origin's `document.modelContext` call succeeds. We scoped this honestly: runtime
-verification happens in a page we control, and everything else stays `unverified`. Refusing to claim
-verification we cannot perform shaped the entire scoring model.
+**Looking for WebMCP in the wrong place.** Our own first detector probed
+`/.well-known/webmcp/tools.json`, which is not part of the spec. Because alpina answers unknown
+paths with its homepage, the miss was recorded as a *broken declaration* — so the site with six
+working WebMCP tools was reported as having a broken one. Fixing it meant reading the tools out of
+the page: the declarative attributes in the HTML we already parsed, and a static scan of the site's
+own scripts for `navigator.modelContext.registerTool`.
 
-**The soft-404 problem.** Discovering that three "present" agent-discovery files were actually the
-homepage forced a real design change: parse every discovery document, record a broken declaration as
-failed evidence, and let the collector's verified reading outrank the upstream audit's boolean.
+**A call that only looked successful.** When we started calling tools for real, alpina's server
+answered an unknown product with `isError: false` and an error object inside the payload. Our probe
+recorded two verified invocations that had not happened — the exact false positive this product
+exists to prevent. Three guards came out of that: read the payload and not just the flag, split tool
+names into words before applying the block list (`_` is a word character, so `\bcheckout\b` never
+matched `create_checkout_session`), and chain identifiers only out of listing results so a session id
+is never passed to a lookup and the site blamed for the failure.
 
-**Telling the truth about a site that already tried.** Alpina is not a strawman with nothing — it
-scores 94/100 on foundations. The easy demo, "look, no API!", would have been a lie. The honest
-before-state is a capability people can use and no agent has been proven able to call, which makes a
-subtler but more valuable point: publishing a manifest is not the same as being callable.
+**The soft-404 problem.** A site whose catch-all returns its homepage makes every probe look
+present. The collector now asks for a path that cannot exist; if that answers `200` it stops
+trusting `200` on that host, and reports the soft 404 once as an observation rather than accusing
+each probed path of being broken.
+
+**Telling the truth about a site that already tried.** Alpina is not a strawman — it is better
+equipped than almost anything on the web. The easy demo, "look, no API!", would have been a lie. The
+honest finding is subtler and far more useful: six tools an agent can see, one call it can complete,
+one advertised endpoint that does not work, and a catalogue an agent cannot navigate.
 
 ## What we learned
 
 The gap between "AI-readable" and "AI-actionable" is much wider than the industry's checklists
-suggest, and it is invisible unless you insist on invocation. Once you separate the two questions,
-the roadmap for a site owner becomes obvious — which is exactly what the contracts are for.
+suggest, and it is invisible unless you insist on invocation. But insisting is not enough: an audit
+that demands proof and never attempts a call measures nothing. The moment we started calling, the
+findings got specific — a broken endpoint, an uncrawlable catalogue — and the roadmap for a site
+owner became obvious, which is exactly what the contracts are for.
 
 ## What's next
 
@@ -152,11 +192,17 @@ credentials at all.
 
 ## Testing and verification
 
-163 unit, integration, and component tests plus 5 Playwright browser tests, all green. Coverage
+198 unit, integration, and component tests plus 5 Playwright browser tests, all green. Coverage
 includes the compiled journeys for all six archetypes, the evidence state truth table, the
 verification-only scoring rule, JSON-LD contract expansion, adversarial URL cases, rate limits,
 WebMCP tool lifecycle against a stubbed `document.modelContext`, the live provider mappings, and the
 full sidecar transformation.
+
+The detection and invocation work carries its own suite: declarative and imperative WebMCP
+extraction, the MCP handshake over both transports including CRLF framing, and every guard on
+calling a stranger's tools — the block list read as words, an error payload behind
+`isError: false`, an identifier that must not be invented, and an empty one that is not an
+identifier.
 
 Live verification against real services: WordLift AI Audit (`api.wordlift.io`), Google Natural
 Language V2, Firestore with an active TTL policy, and the real Alpina availability endpoint.
