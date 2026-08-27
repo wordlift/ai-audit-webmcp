@@ -131,12 +131,13 @@ describe("safeFetch", () => {
   });
 
   it("never forwards cookies or authorization to the target", async () => {
-    const fetchMock = vi.fn(async () => response("<html></html>", { status: 200, headers: { "content-type": "text/html" } }));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      response("<html></html>", { status: 200, headers: { "content-type": "text/html" } }));
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await safeFetch("https://example.com", { resolve });
 
-    const headers = (fetchMock.mock.calls[0]?.[1] as RequestInit).headers as Record<string, string>;
+    const headers = (fetchMock.mock.calls[0]?.[1] ?? {}).headers as Record<string, string>;
     expect(Object.keys(headers).map((key) => key.toLowerCase())).not.toContain("cookie");
     expect(Object.keys(headers).map((key) => key.toLowerCase())).not.toContain("authorization");
     expect(result.status).toBe(200);

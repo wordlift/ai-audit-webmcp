@@ -225,26 +225,7 @@ export async function safeFetch(target: string | URL, options: UrlPolicyOptions 
     const remaining = timeoutMs - (Date.now() - started);
     if (remaining <= 0) throw new UrlPolicyError("collection_timeout", "Collecting this page took too long.", 504);
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), remaining);
-    let response: Response;
-    try {
-      response = await fetch(current, {
-        redirect: "manual",
-        signal: controller.signal,
-        headers: {
-          accept: "text/html,application/xhtml+xml,application/json;q=0.9,text/plain;q=0.8,*/*;q=0.5",
-          "user-agent": options.userAgent ?? DEFAULTS.userAgent,
-        },
-      });
-    } catch (error) {
-      if (controller.signal.aborted) {
-        throw new UrlPolicyError("collection_timeout", "Collecting this page took too long.", 504);
-      }
-      throw new UrlPolicyError("dns_failure", `That site could not be reached: ${describe(error)}`, 502);
-    } finally {
-      clearTimeout(timer);
-    }
+    const response = await request(current, remaining, options);
 
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");
@@ -267,6 +248,38 @@ export async function safeFetch(target: string | URL, options: UrlPolicyOptions 
   }
 
   throw new UrlPolicyError("too_many_redirects", "That site redirected too many times.", 400);
+}
+
+/**
+ * One retry covers the transient connect failure a first request to a dual-stack host can hit
+ * before the resolver settles; a second failure is reported as unreachable.
+ */
+async function request(target: URL, timeoutMs: number, options: UrlPolicyOptions): Promise<Response> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(target, {
+        redirect: "manual",
+        signal: controller.signal,
+        headers: {
+          accept: "text/html,application/xhtml+xml,application/json;q=0.9,text/plain;q=0.8,*/*;q=0.5",
+          "user-agent": options.userAgent ?? DEFAULTS.userAgent,
+        },
+      });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new UrlPolicyError("collection_timeout", "Collecting this page took too long.", 504);
+      }
+      lastError = error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  throw new UrlPolicyError("dns_failure", `That site could not be reached: ${describe(lastError)}`, 502);
 }
 
 async function readBounded(response: Response, maxBytes: number): Promise<{ body: string; truncated: boolean }> {
