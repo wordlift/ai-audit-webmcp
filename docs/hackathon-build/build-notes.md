@@ -242,3 +242,11 @@ The private Agentic Commerce reference classifies these informational patterns: 
 - Verification passed on pull request #1, workflow run 33043941631: typecheck, 50 tests, production build, real Chromium interaction tests, and desktop, capability-dialog, and mobile screenshot capture.
 - Andrea approved the functional and visual baseline: “It does.” He will provide the WordLift style guide and logo for a later visual-polish pass; this does not reopen the capability-map architecture or block WebMCP implementation.
 - Next checklist item: register and prove the current WebMCP audit tools.
+
+### Item 7 — Current WebMCP audit tools (review candidate)
+- Added the Chrome-maintained `use-webmcp-tool` lifecycle integration on `document.modelContext`.
+- `audit-website` is registered globally with a static read-only schema and returns terminal completed or partial findings, a public report URL, four-stage counts, capability-state counts, separate scores, and prioritized gaps.
+- `explain-capability` is registered only while a completed or partial report is visible and returns the selected action's evidence, recommendation, and machine-readable contract; unmount aborts its registration.
+- Unsupported browsers keep the normal URL-to-report experience unchanged. Registration and execution failures are normalized into explicit WebMCP error results.
+- Local verification passed: typecheck, 54 tests including four WebMCP lifecycle/invocation tests, production build, and whitespace check.
+- GitHub Actions Chromium proof and Andrea's review of the first agent-driven result are pending; item 7 remains unchecked until both pass.

@@ -7,6 +7,7 @@ import { ActionJourney } from "../components/ActionJourney";
 import { ClassificationCard } from "../components/ClassificationCard";
 import { ExecutiveSummary } from "../components/ExecutiveSummary";
 import { ReportErrorState } from "../components/ReportErrorState";
+import { ExplainCapabilityTool } from "../webmcp/WebMCPTools";
 
 export function ReportRoute() {
   const { reportId = "" } = useParams();
@@ -37,6 +38,7 @@ export function ReportRoute() {
 
   return (
     <div className="report-page">
+      <ExplainCapabilityTool report={report} />
       <nav className="report-toolbar" aria-label="Report actions">
         <Link to="/"><ArrowLeft size={17} /> New audit</Link>
         <button type="button" onClick={share}><Share2 size={17} /> {copied ? "Copied" : "Share report"}</button>

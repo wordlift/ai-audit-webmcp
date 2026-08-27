@@ -16,6 +16,7 @@
     "start": "node dist-server/server/index.js",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
     "test": "vitest",
+    "test:webmcp": "vitest --run tests/component/webmcp-tools.test.tsx",
     "test:e2e": "playwright test",
     "verify": "npm run typecheck && npm test -- --run && npm run build"
   },

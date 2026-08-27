@@ -1,10 +1,12 @@
 import { Link, Route, Routes } from "react-router-dom";
 import { HomeRoute } from "./routes/HomeRoute";
 import { ReportRoute } from "./routes/ReportRoute";
+import { AuditWebsiteTool } from "./webmcp/WebMCPTools";
 
 export function App() {
   return (
     <div className="app-shell">
+      <AuditWebsiteTool />
       <header className="site-header">
         <Link className="wordlift-brand" to="/" aria-label="WordLift AI Audit home">
           <span className="wordlift-mark" aria-hidden="true">W</span>
