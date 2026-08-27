@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "concurrently -k -n web,api -c cyan,magenta \"npm:dev:web\" \"npm:dev:api\"",
     "dev:web": "vite",
-    "dev:api": "tsx watch src/server/index.ts",
+    "dev:api": "tsc -p tsconfig.server.json && node --enable-source-maps dist-server/server/index.js",
     "dev:demo": "AUDIT_PROVIDER=fixtures REPORT_STORE=memory CLASSIFIER_PROVIDER=fixtures npm run dev",
     "build": "vite build && tsc -p tsconfig.server.json",
     "start": "node dist-server/server/index.js",

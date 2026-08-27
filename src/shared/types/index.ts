@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import type {
   actionContractSchema,
+  archetypeSchema,
   capabilityEvidenceSchema,
   capabilityResultSchema,
   classificationResultSchema,
@@ -12,6 +13,7 @@ import type {
 } from "../schemas/report.js";
 
 export type ActionContract = z.infer<typeof actionContractSchema>;
+export type Archetype = z.infer<typeof archetypeSchema>;
 export type CapabilityEvidence = z.infer<typeof capabilityEvidenceSchema>;
 export type CapabilityResult = z.infer<typeof capabilityResultSchema>;
 export type ClassificationResult = z.infer<typeof classificationResultSchema>;

@@ -1,0 +1,1 @@
+{"id":"failed","url":"https://failed.example/","archetype":"other","status":"failed","categories":[],"signals":[],"errors":[{"code":"site_unreachable","phase":"understanding","provider":"fixture-scrape","message":"The public site could not be reached and no usable evidence was collected.","retryable":true}],"evidence":[]}

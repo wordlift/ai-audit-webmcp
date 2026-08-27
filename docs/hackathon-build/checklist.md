@@ -63,7 +63,7 @@ These are not required for items 1–8 or for the open demo mode:
   Acceptance: Declarations without successful invocation remain unverified and add zero readiness points; sidecar-enabled requires successful controlled invocation; ties resolve deterministically; incomplete expected actions receive readable recommendations and valid contracts; transactional contracts always declare authorization, confirmation, and side effects.
   Verify: Run `npm test -- --run tests/unit/derive-state.test.ts tests/unit/score-readiness.test.ts tests/unit/rank-priorities.test.ts tests/unit/compile-contract.test.ts`; parse every generated contract as JSON-LD and snapshot the state truth table. Commit as `feat: score and contract agent capabilities`.
 
-- [ ] **5. Deliver the fixture-backed report API**
+- [x] **5. Deliver the fixture-backed report API**
   Spec ref: `spec.md > Report API and orchestrator`, `spec.md > HTTP API Contracts`, `spec.md > Primary lifecycle: URL to report`
   What to build: Add fixture audit, scrape, and classifier providers; create representative sanitized evidence fixtures for all six archetypes; implement the three-phase orchestrator and report routes for create, get, recompile, reverify, and contract download. Support client UUID idempotency, running/completed/partial/failed phases, and public immutable report URLs in memory mode.
   Acceptance: Demo mode needs no external credentials; every fixture URL returns a completed deterministic report; a repeated request UUID does not duplicate work; partial and failed fixtures remain honest; archetype override produces a child report; contracts download as `application/ld+json`.
