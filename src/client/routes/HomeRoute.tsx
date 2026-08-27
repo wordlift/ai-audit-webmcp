@@ -1,5 +1,5 @@
 import { ArrowRight, Bot, Network, ScanSearch, Sparkles } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createReport } from "../api/client";
 
@@ -9,26 +9,45 @@ const journey = [
   { label: "Check agent readiness", icon: Bot },
 ];
 
+/** Real phase durations for a live audit, which takes about a minute end to end. */
+const PHASES = [
+  { label: "Understanding the site", holdMs: 30_000 },
+  { label: "Mapping expected actions", holdMs: 12_000 },
+  { label: "Checking agent readiness", holdMs: Number.POSITIVE_INFINITY },
+];
+
 export function HomeRoute() {
   const navigate = useNavigate();
   const [url, setUrl] = useState("https://alpina.travel");
-  const [phase, setPhase] = useState<string | null>(null);
+  const [phaseIndex, setPhaseIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const timers = useRef<number[]>([]);
+  const phase = phaseIndex === null ? null : PHASES[phaseIndex].label;
+
+  useEffect(() => () => timers.current.forEach((timer) => window.clearTimeout(timer)), []);
+
+  function advanceThroughPhases() {
+    let elapsed = 0;
+    timers.current = PHASES.slice(0, -1).map((entry, index) => {
+      elapsed += entry.holdMs;
+      return window.setTimeout(() => setPhaseIndex(index + 1), elapsed);
+    });
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    setPhase("Understanding the site");
+    setPhaseIndex(0);
+    advanceThroughPhases();
     try {
       const report = await createReport(url);
-      setPhase("Mapping expected actions");
-      await new Promise((resolve) => window.setTimeout(resolve, 180));
-      setPhase("Checking agent readiness");
-      await new Promise((resolve) => window.setTimeout(resolve, 180));
       navigate(`/reports/${report.id}`);
     } catch (caught) {
-      setPhase(null);
+      setPhaseIndex(null);
       setError(caught instanceof Error ? caught.message : "The audit could not be completed");
+    } finally {
+      timers.current.forEach((timer) => window.clearTimeout(timer));
+      timers.current = [];
     }
   }
 

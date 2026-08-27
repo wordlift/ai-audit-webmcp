@@ -134,7 +134,9 @@ URL ──▶ understanding ──▶ mapping ──▶ checking ──▶ immut
 | Shared | [`src/shared/`](src/shared/) | Zod schemas, inferred types, agent-facing formatters. |
 
 Design decisions, the PRD, and the technical specification live in
-[`docs/hackathon-build/`](docs/hackathon-build/).
+[`docs/hackathon-build/`](docs/hackathon-build/). The interface follows the WordLift Core Brand
+design system — palette, type roles, and the accessible colour pairings are documented in
+[`docs/BRAND.md`](docs/BRAND.md).
 
 ## Open source boundary
 
