@@ -302,22 +302,48 @@ button:disabled { opacity: 0.6; cursor: wait; }
 
 .audit-form > p { margin: 10px 0 0; color: var(--muted); font-size: 0.82rem; }
 
+/* Two rows, so a longer word never shifts the phase line sideways as it rotates. */
 .progress-message {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 8px;
+  gap: 2px 9px;
   margin-top: 14px;
   color: var(--brand);
   font-weight: 600;
 }
 
-.progress-message span {
+.progress-detail { grid-column: 2; }
+
+.progress-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--brand);
   box-shadow: 0 0 0 6px rgba(52, 82, 219, 0.12);
   animation: pulse 1s infinite;
+}
+
+.progress-word {
+  animation: breathe 2.2s ease-in-out infinite;
+}
+
+.progress-detail {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .form-error { color: var(--wl-danger) !important; }
@@ -422,42 +448,86 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-self: start; }
 
 .score-card {
+  --score-ink: var(--ink);
+  --score-soft: var(--muted);
+  --score-track: rgba(25, 25, 25, 0.1);
+  --score-fill: var(--brand);
+  display: grid;
+  gap: 10px;
+  align-content: start;
   padding: 18px;
   border: 1px solid var(--line-subtle);
   border-radius: 18px;
   background: var(--surface);
+  color: var(--score-ink);
 }
 
+/* White at 82% clears AA on the brand blue; the old muted grey sat at 1.4:1. */
 .score-card-accent {
-  color: var(--wl-neutral-0);
+  --score-ink: var(--wl-neutral-0);
+  --score-soft: rgba(255, 255, 255, 0.82);
+  --score-track: rgba(255, 255, 255, 0.24);
+  --score-fill: var(--wl-neutral-0);
   background: var(--brand);
   border-color: transparent;
 }
 
-.score-card > div {
+.score-card-head {
   display: flex;
   gap: 7px;
   align-items: center;
-  color: var(--muted);
+  color: var(--score-soft);
   font-family: var(--font-mono);
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
 
-.score-card-accent > div, .score-card-accent small { color: rgba(255, 255, 255, 0.92); }
 .score-card svg { width: 17px; }
 
-.score-card strong {
-  display: inline-block;
-  margin-top: 18px;
+.score-card-value {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin: 6px 0 0;
+}
+
+.score-card-value strong {
+  color: var(--score-ink);
   font-family: var(--font-display);
   font-size: 2.6rem;
   font-weight: 600;
+  line-height: 1;
   letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
 }
 
-.score-card small { color: var(--muted); }
+.score-card-value small {
+  color: var(--score-soft);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.score-meter {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--score-track);
+  overflow: hidden;
+}
+
+.score-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--score-fill);
+}
+
+.score-card-caption {
+  margin: 0;
+  color: var(--score-soft);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
 
 .priority-panel { grid-column: 1 / -1; }
 .priority-panel ol { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0 0; padding: 0; list-style: none; counter-reset: gap; }
@@ -740,6 +810,11 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .webmcp-badge-error { border-color: color-mix(in srgb, var(--wl-danger) 35%, white); background: color-mix(in srgb, var(--wl-danger) 10%, white); color: #8e2323; }
 
 @keyframes pulse { 50% { opacity: 0.45; transform: scale(0.8); } }
+@keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-dot, .progress-word { animation: none; }
+}
 
 @media (max-width: 1000px) {
   .executive-summary { grid-template-columns: 1fr; }
