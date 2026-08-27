@@ -8,8 +8,7 @@ export function App() {
     <div className="app-shell">
       <header className="site-header">
         <Link className="wordlift-brand" to="/" aria-label="WordLift AI Audit home">
-          <span className="wordlift-mark" aria-hidden="true">W</span>
-          <span>WordLift</span>
+          <img className="wordlift-mark" src="/brand/wordmark-sky.svg" alt="WordLift" width={116} height={24} />
           <span className="product-name">AI Audit</span>
         </Link>
         <div className="header-status">
