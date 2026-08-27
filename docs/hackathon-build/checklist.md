@@ -57,7 +57,7 @@ These are not required for items 1–8 or for the open demo mode:
   Acceptance: Every archetype compiles into a readable Discover -> Understand/Decide -> Act -> Manage journey; identical inputs and model version produce identical action IDs/order; low-score or low-margin classification is provisional; overrides change expectations without changing observed evidence.
   Verify: Run `npm test -- --run tests/unit/action-model.test.ts tests/unit/archetype-inference.test.ts tests/golden/archetypes.test.ts`; inspect golden outputs for all six archetypes and confirm no template exceeds the agreed first-view density. Commit as `feat: add deterministic action model`.
 
-- [ ] **4. Implement evidence states, verified scoring, priorities, and JSON-LD contracts**
+- [x] **4. Implement evidence states, verified scoring, priorities, and JSON-LD contracts**
   Spec ref: `spec.md > Evidence engine and state derivation`, `spec.md > Scoring and prioritization`, `spec.md > Action contract compiler`
   What to build: Implement typed evidence mapping, human/agent separation, the six aggregate states, conflict handling, verification-only readiness scoring, deterministic top-three ranking, plain-language recommendations, and versioned JSON-LD contract generation with governance and provenance.
   Acceptance: Declarations without successful invocation remain unverified and add zero readiness points; sidecar-enabled requires successful controlled invocation; ties resolve deterministically; incomplete expected actions receive readable recommendations and valid contracts; transactional contracts always declare authorization, confirmation, and side effects.
