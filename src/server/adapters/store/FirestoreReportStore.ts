@@ -11,7 +11,11 @@ export class FirestoreReportStore implements ReportStore {
   ) {}
 
   static fromProject(projectId?: string, maximumBytes?: number) {
-    return new FirestoreReportStore(new Firestore(projectId ? { projectId } : undefined), maximumBytes);
+    // Optional report fields are absent rather than null, so undefined must not be a write error.
+    return new FirestoreReportStore(
+      new Firestore({ ignoreUndefinedProperties: true, ...(projectId ? { projectId } : {}) }),
+      maximumBytes,
+    );
   }
 
   async put(input: ReportRecord): Promise<ReportRecord> {
