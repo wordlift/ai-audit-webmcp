@@ -16,6 +16,6 @@ test("fixture report presents the action graph and expandable evidence", async (
   await expect(page.getByRole("heading", { name: "What an agent should be able to do" })).toBeVisible();
   await expect(page.getByText("Highest-impact gaps")).toBeVisible();
   await page.getByRole("button", { name: /check availability/i }).click();
-  await expect(page.getByRole("dialog")).toContainText("People can check dates through the booking interface");
+  await expect(page.getByRole("dialog")).toContainText("People can check dates through a booking form");
   await expect(page.getByRole("dialog")).toContainText("Machine-readable capability contract");
 });

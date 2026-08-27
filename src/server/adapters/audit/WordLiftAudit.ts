@@ -218,7 +218,7 @@ export function signalsFrom(data: NonNullable<WordLiftAuditResponse["data"]>): s
   if (data.siteFiles?.hasSkillMd) signals.add("agent:skill-md");
   if (wellKnown?.mcpJson) signals.add("agent:mcp-json");
   if (wellKnown?.mcpServerCard) signals.add("agent:mcp-server-card");
-  if (wellKnown?.webmcpToolsJson) signals.add("agent:webmcp-tools");
+  if (wellKnown?.webmcpToolsJson) signals.add("agent:well-known-tools-json");
   if (wellKnown?.agentSkillsIndex) signals.add("agent:agent-skills");
   if (data.jsRendering?.frameworkDetected) signals.add(`framework:${data.jsRendering.frameworkDetected}`);
 
@@ -285,17 +285,6 @@ export function evidenceFrom(
       confidence: 0.75,
     });
   }
-  if (wellKnown?.webmcpToolsJson) {
-    push({
-      id: "discovery-webmcp-tools",
-      actionId: "site.search",
-      kind: "webmcp",
-      sourceUrl: `${origin}/.well-known/webmcp/tools.json`,
-      claim: "A WebMCP tools manifest is declared, but no tool call has been verified",
-      confidence: 0.7,
-    });
-  }
-
   return evidence;
 }
 

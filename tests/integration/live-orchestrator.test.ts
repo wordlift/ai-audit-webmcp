@@ -32,15 +32,19 @@ const snapshot: SiteSnapshot = {
   jsonLdTypes: ["LodgingBusiness", "Offer", "Organization"],
   discovery: [
     { kind: "llms", url: "https://alpina.travel/llms.txt", status: "valid", found: true, declaredNames: [] },
-    {
-      kind: "webmcp-tools",
-      url: "https://alpina.travel/.well-known/webmcp/tools.json",
-      status: "valid",
-      found: true,
-      declaredNames: ["check_availability"],
-    },
     { kind: "openapi", url: "https://alpina.travel/openapi.json", status: "invalid", found: false, declaredNames: [] },
   ],
+  pageTools: [
+    {
+      name: "check_availability",
+      description: "Check live availability for a stay.",
+      origin: "declarative",
+      sourceUrl: "https://alpina.travel/",
+      parameters: [{ name: "checkIn", description: "Arrival date." }],
+    },
+  ],
+  mcpEndpoints: [],
+  softNotFound: false,
   truncated: false,
 };
 
