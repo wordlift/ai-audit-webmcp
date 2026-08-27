@@ -77,7 +77,9 @@ export class NativeFetchCollector implements ScrapeProvider {
       this.collectPageTools(document, finalUrl),
     ]);
     // The server card names its own transports, so it has to be read before anything is probed.
-    const mcpEndpoints = await this.probeMcpEndpoints(document, finalUrl, discovery);
+    // A search term taken from the page, so a tool call never needs invented vocabulary.
+    const seedQuery = text(document.querySelector("h1")) || text(document.querySelector("title")) || finalUrl.hostname;
+    const mcpEndpoints = await this.probeMcpEndpoints(document, finalUrl, discovery, seedQuery.slice(0, 60));
 
     return {
       requestedUrl: url.toString(),
@@ -188,6 +190,7 @@ export class NativeFetchCollector implements ScrapeProvider {
     document: Document,
     base: URL,
     discovery: DiscoveryDocument[],
+    seedQuery: string,
   ): Promise<McpEndpointProbe[]> {
     const linked = [...document.querySelectorAll("a[href], link[href]")]
       .map((node) => resolve(node.getAttribute("href"), base))
@@ -200,7 +203,9 @@ export class NativeFetchCollector implements ScrapeProvider {
     // A declared transport outranks a linked path: it is what the site says an agent should use.
     const candidates = unique([...declared, ...linked]).slice(0, MAX_MCP_ENDPOINTS);
     const results = await Promise.allSettled(
-      candidates.map((candidate) => probeMcpEndpoint(new URL(candidate), { ...this.options, timeoutMs: 8_000 })),
+      candidates.map((candidate) =>
+        probeMcpEndpoint(new URL(candidate), { ...this.options, timeoutMs: 12_000, seedQuery }),
+      ),
     );
 
     return results

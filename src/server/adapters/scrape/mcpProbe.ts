@@ -1,5 +1,17 @@
 import { assertPublicDestination, type UrlPolicyOptions } from "../../security/urlPolicy.js";
-import type { McpEndpointProbe } from "./ScrapeProvider.js";
+import {
+  buildArguments,
+  harvestIdentifier,
+  isSafeToCall,
+  LISTING_TOOL,
+  MAX_TOOL_CALLS,
+  nameWords,
+  resultError,
+  skipped,
+  type McpToolDescriptor,
+  type ProbeSeed,
+} from "./mcpToolCalls.js";
+import type { McpEndpointProbe, McpToolProbe } from "./ScrapeProvider.js";
 
 const MAX_STREAM_BYTES = 128_000;
 const MAX_TOOLS = 40;
@@ -36,7 +48,7 @@ function empty(url: string, transport: McpEndpointProbe["transport"], error?: st
  */
 export async function probeMcpEndpoint(
   target: URL,
-  options: UrlPolicyOptions & { timeoutMs?: number } = {},
+  options: UrlPolicyOptions & { timeoutMs?: number; seedQuery?: string } = {},
 ): Promise<McpEndpointProbe> {
   const url = target.toString();
   try {
@@ -99,9 +111,94 @@ async function probeStreamableHttp(
   const session = opened.sessionId;
   await postRpc(target, controller, options, session, { method: "notifications/initialized", params: {} });
   const listed = await postRpc(target, controller, options, session, { id: TOOLS_LIST_ID, method: "tools/list", params: {} });
-  probe.tools = toolNames(firstJsonRpc(listed.body)?.result?.tools);
+  const declared = toolDescriptors(firstJsonRpc(listed.body)?.result?.tools);
+  probe.tools = await callSafeTools(target, controller, options, session, declared);
 
   return probe;
+}
+
+/**
+ * Attempts the tools a server says are safe. This is what turns "an interface is declared" into
+ * "an agent completed this call", which is the only thing the readiness score counts.
+ */
+async function callSafeTools(
+  target: URL,
+  controller: AbortController,
+  options: UrlPolicyOptions & { seedQuery?: string },
+  session: string | null,
+  declared: McpToolDescriptor[],
+): Promise<McpToolProbe[]> {
+  const seed: ProbeSeed = { query: options.seedQuery?.trim() || "information" };
+  const results = new Map<string, McpToolProbe>();
+  const deferred: McpToolDescriptor[] = [];
+  let budget = MAX_TOOL_CALLS;
+  let nextId = TOOLS_LIST_ID + 1;
+  let listingRan = false;
+
+  const attempt = async (tool: McpToolDescriptor): Promise<void> => {
+    const args = buildArguments(tool.inputSchema, seed);
+    if (args === null) {
+      // Every unfilled argument is an identifier; it may exist after an earlier call returns one.
+      deferred.push(tool);
+      return;
+    }
+    if (budget <= 0) {
+      results.set(tool.name, skipped(tool.name, "the per-endpoint call budget was already spent"));
+      return;
+    }
+
+    budget -= 1;
+    nextId += 1;
+    const reply = await postRpc(target, controller, options, session, {
+      id: nextId,
+      method: "tools/call",
+      params: { name: tool.name, arguments: args },
+    });
+    const message = firstJsonRpc(reply.body);
+    const outcome = message?.result as { isError?: unknown } | undefined;
+    const reported = outcome ? resultError(outcome) : undefined;
+    const failure = !outcome || outcome.isError === true || Boolean(message?.error) || Boolean(reported);
+    const note = text(message?.error?.message, 160) || reported || "the call returned an error";
+
+    results.set(tool.name, {
+      name: tool.name,
+      called: true,
+      ok: !failure,
+      arguments: JSON.stringify(args).slice(0, 200),
+      ...(failure ? { note } : {}),
+    });
+
+    // Only a listing yields identifiers worth chaining; anything else names the server, not a thing.
+    if (!failure && LISTING_TOOL.test(nameWords(tool.name))) {
+      listingRan = true;
+      seed.id ??= harvestIdentifier(outcome);
+    }
+  };
+
+  for (const tool of declared) {
+    const { safe, note } = isSafeToCall(tool);
+    if (!safe) {
+      results.set(tool.name, skipped(tool.name, note ?? "not safe to call"));
+      continue;
+    }
+    await attempt(tool);
+  }
+
+  // Second pass: a tool that needed an identifier can now be tried with one this server returned.
+  const shortfall = listingRan
+    ? "this server's own search results carry no usable identifier"
+    : "it needs an identifier the audit will not invent";
+
+  for (const tool of deferred) {
+    if (seed.id === undefined) {
+      results.set(tool.name, skipped(tool.name, shortfall));
+      continue;
+    }
+    await attempt(tool);
+    if (!results.has(tool.name)) results.set(tool.name, skipped(tool.name, shortfall));
+  }
+
+  return declared.map((tool) => results.get(tool.name) ?? skipped(tool.name, "not attempted"));
 }
 
 interface RpcReply {
@@ -288,7 +385,11 @@ async function readSseSession(
         }
 
         if (message.id === TOOLS_LIST_ID) {
-          probe.tools = toolNames(message.result?.tools);
+          // Calls are only driven over streamable HTTP; on the deprecated transport a listed tool
+          // stays a declaration rather than being reported as something an agent completed.
+          probe.tools = toolDescriptors(message.result?.tools).map((tool) =>
+            skipped(tool.name, "listed over the deprecated SSE transport, which the audit does not call"),
+          );
           return probe;
         }
 
@@ -336,11 +437,16 @@ function resolveSession(data: string, base: URL): URL | null {
   }
 }
 
-function toolNames(tools: unknown): string[] {
+function toolDescriptors(tools: unknown): McpToolDescriptor[] {
   if (!Array.isArray(tools)) return [];
   return tools
-    .map((tool) => (tool && typeof tool === "object" ? text((tool as { name?: unknown }).name, 64) : ""))
-    .filter(Boolean)
+    .filter((tool): tool is Record<string, unknown> => Boolean(tool) && typeof tool === "object")
+    .map((tool) => ({
+      name: text(tool.name, 64),
+      inputSchema: tool.inputSchema as McpToolDescriptor["inputSchema"],
+      annotations: tool.annotations as McpToolDescriptor["annotations"],
+    }))
+    .filter((tool) => tool.name.length > 0)
     .slice(0, MAX_TOOLS);
 }
 

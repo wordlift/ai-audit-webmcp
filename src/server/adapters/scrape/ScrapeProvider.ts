@@ -52,9 +52,25 @@ export interface PageAgentTool {
 }
 
 /**
+ * One tool a live MCP server listed, and what happened when the audit tried it. A tool is only
+ * called when the server annotates it read-only and non-destructive, its name carries no
+ * transactional verb, and every required argument could be filled without inventing an identifier.
+ */
+export interface McpToolProbe {
+  name: string;
+  /** False when the tool was listed but deliberately not called. */
+  called: boolean;
+  /** True only when a call returned a non-error result. */
+  ok: boolean;
+  /** The arguments actually sent, kept so a reader can judge the invocation. */
+  arguments?: string;
+  /** Why the tool was skipped, or how the call failed. */
+  note?: string;
+}
+
+/**
  * The result of talking to an MCP endpoint the page links to. `initialized` means the handshake
- * completed, which is a real round trip; `tools` are the names the server listed, which is a
- * declaration — listing a tool is not the same as calling it.
+ * completed, which is a real round trip; a listed tool is a declaration until it is called.
  */
 export interface McpEndpointProbe {
   url: string;
@@ -63,7 +79,7 @@ export interface McpEndpointProbe {
   initialized: boolean;
   serverName: string;
   protocolVersion: string;
-  tools: string[];
+  tools: McpToolProbe[];
   error?: string;
 }
 

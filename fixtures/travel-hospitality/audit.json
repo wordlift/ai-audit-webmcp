@@ -30,11 +30,11 @@
   ],
   "foundation": {
     "score": 94,
-    "summary": "An unusually complete agent surface: WebMCP tools in the page, a live MCP server, and published UCP, agent-card, and catalogue documents.",
+    "summary": "An unusually complete agent surface: WebMCP tools in the page, a live MCP server the audit called, and published UCP, agent-card, and catalogue documents.",
     "findings": [
       "WebMCP tools registered in the page, declaratively and through navigator.modelContext",
       "MCP server reachable over streamable HTTP; the SSE endpoint linked from the homepage refuses requests",
-      "Unknown paths answer with the site's HTML page and a 200"
+      "Search results carry no product identifier, so an agent cannot chain search to detail or availability"
     ],
     "provider": "fixture"
   },
@@ -57,7 +57,7 @@
       "audience": "agent",
       "kind": "discovery",
       "sourceUrl": "https://alpina.travel/mcp/alpina/http/mcp",
-      "claim": "\"check_booking_availability\" is listed by the site's live MCP server, but this tool has not been called",
+      "claim": "\"check_booking_availability\" is listed by the site's live MCP server, but it was not called: this server's own search results carry no usable identifier",
       "confidence": 0.9,
       "verification": "declared",
       "collectedAt": "2026-08-27T05:00:00.000Z"
@@ -145,7 +145,7 @@
       "audience": "agent",
       "kind": "discovery",
       "sourceUrl": "https://alpina.travel/mcp/alpina/http/mcp",
-      "claim": "\"get_product\" is listed by the site's live MCP server, but this tool has not been called",
+      "claim": "\"get_product\" is listed by the site's live MCP server, but it was not called: this server's own search results carry no usable identifier",
       "confidence": 0.9,
       "verification": "declared",
       "collectedAt": "2026-08-27T05:00:00.000Z"
@@ -294,6 +294,17 @@
       "collectedAt": "2026-08-27T05:00:00.000Z"
     },
     {
+      "id": "mcp-call-search_products",
+      "actionId": "site.search",
+      "audience": "agent",
+      "kind": "tool-result",
+      "sourceUrl": "https://alpina.travel/mcp/alpina/http/mcp",
+      "claim": "An agent called \"search_products\" on the site's live MCP server with {\"query\":\"Mountain days. One easy apartment base.\"} and it returned a result",
+      "confidence": 1,
+      "verification": "invoked",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
       "id": "mcp-endpoint-failed-https://alpina.travel/mcp/sse",
       "actionId": "site.search",
       "audience": "agent",
@@ -309,8 +320,8 @@
       "actionId": "site.search",
       "audience": "agent",
       "kind": "discovery",
-      "sourceUrl": "https://alpina.travel/mcp/alpina/http/mcp",
-      "claim": "\"search_products\" is listed by the site's live MCP server, but this tool has not been called",
+      "sourceUrl": "https://alpina.travel/mcp/alpina/sse",
+      "claim": "\"search_products\" is listed by the site's live MCP server, but it was not called: listed over the deprecated SSE transport, which the audit does not call",
       "confidence": 0.9,
       "verification": "declared",
       "collectedAt": "2026-08-27T05:00:00.000Z"
