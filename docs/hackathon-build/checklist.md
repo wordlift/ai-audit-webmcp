@@ -45,7 +45,7 @@ These are not required for items 1–8 or for the open demo mode:
   Acceptance: A fresh checkout installs reproducibly, serves a branded landing shell and `/api/health`, builds browser and server artifacts, and contains no secrets. The README states that this repository is new hackathon work and identifies the private service as an optional provider.
   Verify: Run `npm ci && npm run typecheck && npm test -- --run && npm run build`; start the production server and check `GET /api/health`; inspect `git diff --check`. Commit as `chore: bootstrap AI Audit WebMCP app`.
 
-- [ ] **2. Define shared contracts, configuration, and report stores**
+- [x] **2. Define shared contracts, configuration, and report stores**
   Spec ref: `spec.md > Report store`, `spec.md > HTTP API Contracts`, `spec.md > Configuration And Modes`
   What to build: Create Zod schemas and inferred TypeScript types for reports, classification, evidence, capability results, scores, priorities, errors, action contracts, and API requests/responses. Add validated environment configuration, `ReportStore` interface, in-memory implementation, Firestore implementation, immutable child-report revisions, expiration fields, and serialized-size/evidence caps.
   Acceptance: Invalid stored/API shapes fail closed; memory mode works without cloud credentials; Firestore is server-only; recompile/reverify can create child records without modifying the parent; raw HTML, headers, credentials, and private account identifiers are excluded by schema.
