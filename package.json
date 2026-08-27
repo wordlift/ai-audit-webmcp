@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
     "test": "vitest",
     "test:e2e": "playwright test",
+    "test:webmcp": "vitest run tests/component/webmcp-tools.test.tsx",
     "verify": "npm run typecheck && npm test -- --run && npm run build"
   },
   "dependencies": {
