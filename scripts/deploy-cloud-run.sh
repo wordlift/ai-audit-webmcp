@@ -17,7 +17,8 @@ REGION="${2:-us-west1}"
 SERVICE="ai-audit-webmcp"
 
 PROJECT_NUMBER="$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')"
-PUBLIC_URL="https://${SERVICE}-${PROJECT_NUMBER}.${REGION}.run.app"
+# Share links are baked into stored reports, so a custom domain must survive a redeploy.
+PUBLIC_URL="${PUBLIC_APP_URL:-https://${SERVICE}-${PROJECT_NUMBER}.${REGION}.run.app}"
 
 echo "Deploying ${SERVICE} to ${PROJECT} (${REGION})"
 echo "Public URL will be ${PUBLIC_URL}"
