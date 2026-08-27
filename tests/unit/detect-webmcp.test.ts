@@ -1,7 +1,12 @@
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
 import { detectSiteEvidence } from "../../src/domain/evidence/detectSiteEvidence.js";
-import type { McpEndpointProbe, PageAgentTool, SiteSnapshot } from "../../src/server/adapters/scrape/ScrapeProvider.js";
+import type {
+  McpEndpointProbe,
+  McpToolProbe,
+  PageAgentTool,
+  SiteSnapshot,
+} from "../../src/server/adapters/scrape/ScrapeProvider.js";
 import { collectDeclarativeTools, extractImperativeTools } from "../../src/server/adapters/scrape/webmcpTools.js";
 
 const COLLECTED_AT = "2026-08-27T05:00:00.000Z";
@@ -46,6 +51,14 @@ function snapshotWith(overrides: Partial<SiteSnapshot>): SiteSnapshot {
     truncated: false,
     ...overrides,
   };
+}
+
+function called(name: string): McpToolProbe {
+  return { name, called: true, ok: true, arguments: '{"query":"Lungau"}' };
+}
+
+function listed(name: string): McpToolProbe {
+  return { name, called: false, ok: false, note: "not annotated read-only" };
 }
 
 function probeWith(overrides: Partial<McpEndpointProbe>): McpEndpointProbe {
@@ -155,7 +168,7 @@ describe("site evidence from page tools", () => {
 describe("site evidence from a linked MCP endpoint", () => {
   it("records a completed handshake as invoked and its tool list as declared", () => {
     const snapshot = snapshotWith({
-      mcpEndpoints: [probeWith({ tools: ["check_samspitze_availability", "search_lungau"] })],
+      mcpEndpoints: [probeWith({ tools: [called("check_samspitze_availability"), listed("search_lungau")] })],
     });
     const { evidence, signals } = detectSiteEvidence(snapshot, COLLECTED_AT);
 
@@ -163,10 +176,14 @@ describe("site evidence from a linked MCP endpoint", () => {
     expect(handshake?.verification).toBe("invoked");
     expect(handshake?.claim).toMatch(/completed the initialize handshake with "alpina-travel"/);
 
-    const listed = evidence.find((item) => item.id === "mcp-tool-check_samspitze_availability");
-    expect(listed?.actionId).toBe("availability.check");
-    expect(listed?.verification).toBe("declared");
-    expect(listed?.claim).toMatch(/has not been called/);
+    const invoked = evidence.find((item) => item.id === "mcp-call-check_samspitze_availability");
+    expect(invoked?.actionId).toBe("availability.check");
+    expect(invoked?.verification).toBe("invoked");
+    expect(invoked?.claim).toMatch(/called "check_samspitze_availability".*returned a result/);
+
+    const notCalled = evidence.find((item) => item.id === "mcp-tool-search_lungau");
+    expect(notCalled?.verification).toBe("declared");
+    expect(notCalled?.claim).toMatch(/not called: not annotated read-only/);
     expect(signals).toContain("agent:mcp-endpoint");
   });
 
@@ -231,7 +248,7 @@ describe("a site that answers unknown paths with its own page", () => {
   it("does not let the soft 404 cancel an MCP handshake that actually worked", () => {
     const snapshot = snapshotWith({
       softNotFound: true,
-      mcpEndpoints: [probeWith({ transport: "streamable-http", tools: ["check_booking_availability"] })],
+      mcpEndpoints: [probeWith({ transport: "streamable-http", tools: [called("check_booking_availability")] })],
     });
     const browse = detectSiteEvidence(snapshot, COLLECTED_AT).evidence.filter(
       (item) => item.actionId === "site.browse" && item.audience === "agent",

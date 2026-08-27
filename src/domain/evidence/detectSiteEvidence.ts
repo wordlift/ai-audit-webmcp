@@ -221,17 +221,52 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
       verification: "invoked",
     });
 
-    // The server listing a tool is still a declaration. Only calling the tool would verify it.
-    for (const name of probe.tools.slice(0, 20)) {
-      const actionId = actionForDeclaredName(name);
+    for (const tool of probe.tools.slice(0, 20)) {
+      const actionId = actionForDeclaredName(tool.name);
       if (!actionId) continue;
+
+      // A tool that was called and answered is the only thing that earns verified readiness.
+      if (tool.called && tool.ok) {
+        add({
+          id: `mcp-call-${tool.name}`.slice(0, 160),
+          actionId,
+          audience: "agent",
+          kind: "tool-result",
+          sourceUrl: probe.url,
+          claim: `An agent called "${tool.name}" on the site's live MCP server with ${
+            tool.arguments ?? "{}"
+          } and it returned a result`,
+          confidence: 1,
+          verification: "invoked",
+        });
+        continue;
+      }
+
+      if (tool.called) {
+        add({
+          id: `mcp-call-failed-${tool.name}`.slice(0, 160),
+          actionId,
+          audience: "agent",
+          kind: "tool-result",
+          sourceUrl: probe.url,
+          claim: `"${tool.name}" is declared by the site's live MCP server but the call failed${
+            tool.note ? `: ${tool.note}` : ""
+          }`,
+          confidence: 0.9,
+          verification: "failed",
+        });
+        continue;
+      }
+
       add({
-        id: `mcp-tool-${name}`.slice(0, 160),
+        id: `mcp-tool-${tool.name}`.slice(0, 160),
         actionId,
         audience: "agent",
         kind: "discovery",
         sourceUrl: probe.url,
-        claim: `"${name}" is listed by the site's live MCP server, but this tool has not been called`,
+        claim: `"${tool.name}" is listed by the site's live MCP server, but it was not called${
+          tool.note ? `: ${tool.note}` : ""
+        }`,
         confidence: 0.9,
         verification: "declared",
       });
