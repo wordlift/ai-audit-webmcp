@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import { normalizeTargetUrl } from "../../security/urlPolicy.js";
 import {
   archetypeSchema,
   capabilityEvidenceSchema,
@@ -51,13 +52,18 @@ export class FixtureProvider {
 
   resolve(fixtureId: string | null | undefined, requestedUrl: string): FixtureAudit {
     if (fixtureId) return this.get(fixtureId);
-    const normalized = normalizePublicUrl(requestedUrl);
+    const normalized = normalizeTargetUrl(requestedUrl);
     const fixture = this.list().map((id) => this.get(id)).find((candidate) => new URL(candidate.url).host === normalized.host);
-    if (!fixture) throw new Error(`No deterministic fixture is registered for ${normalized.host}`);
+    if (!fixture) throw new UnknownFixtureError(normalized.host);
     return fixture;
   }
 }
 
-export function normalizePublicUrl(input: string): URL {
-  return new URL(input.includes("://") ? input : `https://${input}`);
+export class UnknownFixtureError extends Error {
+  constructor(readonly host: string) {
+    super(
+      `No deterministic fixture is registered for ${host}. Demo mode covers alpina.travel, shop.example, publisher.example, insurance.example, saas.example, and organization.example.`,
+    );
+    this.name = "UnknownFixtureError";
+  }
 }
