@@ -32,6 +32,20 @@ export class FirestoreReportStore implements ReportStore {
     return report;
   }
 
+  async finalize(input: ReportRecord): Promise<ReportRecord> {
+    const report = parseStoredReport(input, this.maximumBytes);
+    if (report.status === "running") throw new Error("Final report must have a terminal status");
+    const reference = this.firestore.collection("reports").doc(report.id);
+    await this.firestore.runTransaction(async (transaction: Transaction) => {
+      const snapshot = await transaction.get(reference);
+      if (!snapshot.exists || parseStoredReport(snapshot.data(), this.maximumBytes).status !== "running") {
+        throw new Error(`Report ${report.id} is not an active running report`);
+      }
+      transaction.set(reference, report);
+    });
+    return report;
+  }
+
   async createRevision(parentReportId: string, input: ReportRecord): Promise<ReportRecord> {
     const report = parseStoredReport(input, this.maximumBytes);
     if (report.parentReportId !== parentReportId) {

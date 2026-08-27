@@ -1,8 +1,11 @@
 import express, { type Express } from "express";
 import path from "node:path";
+import { createReportsRouter } from "./routes/reports.js";
+import type { AuditOrchestrator } from "./services/AuditOrchestrator.js";
 
 export interface AppOptions {
   staticDirectory?: string;
+  orchestrator?: AuditOrchestrator;
 }
 
 export function createApp(options: AppOptions = {}): Express {
@@ -14,6 +17,10 @@ export function createApp(options: AppOptions = {}): Express {
   app.get("/api/health", (_request, response) => {
     response.status(200).json({ status: "ok", service: "ai-audit-webmcp" });
   });
+
+  if (options.orchestrator) {
+    app.use("/api/reports", createReportsRouter(options.orchestrator));
+  }
 
   if (options.staticDirectory) {
     app.use(express.static(options.staticDirectory));

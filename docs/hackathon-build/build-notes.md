@@ -225,3 +225,12 @@ The private Agentic Commerce reference classifies these informational patterns: 
 - Added deterministic Schema.org/WordLift JSON-LD capability contracts with inputs, outputs, governance, provenance, and delivery guidance. Transactional actions require authorization, explicit confirmation, and declared side effects.
 - Verification passed: typecheck, 10 focused state/score/priority/contract tests, offline JSON-LD expansion for every generated contract, production build, and whitespace check.
 - Next checklist item: fixture providers, report orchestration, immutable report APIs, and contract downloads.
+
+### Item 5 — Fixture-backed report API
+- Completed: 2026-08-27
+- Added sanitized deterministic fixtures for all six archetypes plus explicit partial and failed recovery cases.
+- Added fixture resolution, URL normalization, idempotent UUID report creation, running-to-terminal lifecycle, immutable override/reverification child records, public report retrieval, and JSON-LD contract downloads.
+- Added the end-to-end deterministic compiler path from fixture categories/signals/evidence through classification, expected graph, evidence states, contracts, readiness, priorities, and stored report.
+- `npm run dev:demo` now starts without external credentials using a compiled API process that also works where `tsx` IPC is restricted.
+- Verification passed: 49 full-suite tests, production build, six fixture API reports, partial/failed truth tests, idempotency, child revisions, contract content type, whitespace check, and a live local Alpina fixture API smoke.
+- Next checklist item: the complete visual capability-map vertical slice and first participant review pause.

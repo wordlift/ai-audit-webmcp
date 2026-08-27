@@ -47,6 +47,15 @@ describe("MemoryReportStore", () => {
     expect((await store.get(child.id))?.parentReportId).toBe(parent.id);
   });
 
+  it("finalizes a running record exactly once", async () => {
+    const store = new MemoryReportStore(900_000, () => currentTime);
+    const running = report({ status: "running", phase: "understanding", completedAt: undefined });
+    const completed = { ...running, status: "completed" as const, phase: "complete" as const, completedAt: currentTime.toISOString() };
+    await store.put(running);
+    await expect(store.finalize(completed)).resolves.toEqual(completed);
+    await expect(store.finalize(completed)).rejects.toThrow(/not an active running report/);
+  });
+
   it("hides expired reports and rejects an orphan revision", async () => {
     const store = new MemoryReportStore(900_000, () => currentTime);
     const expired = report({ expiresAt: "2026-08-26T05:00:00.000Z" });
@@ -72,6 +81,10 @@ describe("FirestoreReportStore contract", () => {
     const transaction = {
       get: vi.fn(async (reference: ReturnType<typeof document>) => reference.get()),
       create: vi.fn((reference: ReturnType<typeof document>, value: ReportRecord) => reference.create(value)),
+      set: vi.fn((reference: ReturnType<typeof document>, value: ReportRecord) => {
+        records.set(value.id, structuredClone(value));
+        return reference;
+      }),
     };
     const firestore = {
       collection: vi.fn(() => collection),
