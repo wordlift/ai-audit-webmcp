@@ -216,3 +216,12 @@ The private Agentic Commerce reference classifies these informational patterns: 
 - Low-evidence and low-margin classification is provisional; an override changes expectations while preserving ranked observed evidence.
 - Verification passed: typecheck, 11 focused model/inference/golden tests, six stored golden snapshots, production build, and whitespace check.
 - Next checklist item: evidence state derivation, verification-only scoring, deterministic priorities, and JSON-LD contracts.
+
+### Item 4 — Evidence states, verified scoring, priorities, and contracts
+- Completed: 2026-08-27
+- Added the ordered six-state truth table, keeping human observation, agent declaration, successful invocation, failed invocation, and approved sidecar evidence distinct.
+- Readiness is strictly verification-only; declarations and detected interfaces remain unverified and add zero points.
+- Added deterministic gap ranking and plain-language recommendations, resolving ties with model display order and stable action IDs.
+- Added deterministic Schema.org/WordLift JSON-LD capability contracts with inputs, outputs, governance, provenance, and delivery guidance. Transactional actions require authorization, explicit confirmation, and declared side effects.
+- Verification passed: typecheck, 10 focused state/score/priority/contract tests, offline JSON-LD expansion for every generated contract, production build, and whitespace check.
+- Next checklist item: fixture providers, report orchestration, immutable report APIs, and contract downloads.
