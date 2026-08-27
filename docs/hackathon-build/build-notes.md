@@ -234,3 +234,10 @@ The private Agentic Commerce reference classifies these informational patterns: 
 - `npm run dev:demo` now starts without external credentials using a compiled API process that also works where `tsx` IPC is restricted.
 - Verification passed: 49 full-suite tests, production build, six fixture API reports, partial/failed truth tests, idempotency, child revisions, contract content type, whitespace check, and a live local Alpina fixture API smoke.
 - Next checklist item: the complete visual capability-map vertical slice and first participant review pause.
+
+### Item 6 — Visual capability map (verification blocked)
+- Work completed locally: URL-to-report navigation, executive summary, separate foundation/readiness scores, top-three gaps, expandable classification and archetype override, four-stage action journey, explicit human/agent support, evidence dialog, recommendation, JSON-LD contract copy/download, sharing, partial/failed states, responsive layout, and WordLift CTA.
+- Automated verification passed: full typecheck, production build, 50 unit/integration/component tests, keyboard dialog focus restoration, and whitespace check.
+- Browser verification is not complete. The workspace has no Chrome/Chromium binary; two bounded Playwright installation attempts returned truncated zero-byte archives from the CDN, even after increasing the connection timeout.
+- Proposed recovery: run the Playwright E2E and desktop/mobile screenshot capture in GitHub Actions, where Chromium can be installed by the runner, then use that result as review pause 1 evidence. Item 6 remains unchecked until this passes and Andrea reviews the slice.
+- Andrea approved the recovery with “Absolutely.” The checklist now treats the GitHub Actions browser job and its screenshot artifact as the item 6 browser gate when local Chromium installation is unavailable.
