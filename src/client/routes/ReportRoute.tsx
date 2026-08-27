@@ -4,10 +4,23 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Archetype, ReportRecord } from "../../shared/types/index.js";
 import { getReport, recompileReport } from "../api/client";
 import { ActionJourney } from "../components/ActionJourney";
+import { AlpinaSidecarPanel } from "../components/AlpinaSidecarPanel";
 import { ClassificationCard } from "../components/ClassificationCard";
 import { ExecutiveSummary } from "../components/ExecutiveSummary";
 import { ReportErrorState } from "../components/ReportErrorState";
+import { AlpinaAvailabilityTool } from "../webmcp/AlpinaAvailabilityTool";
 import { ExplainCapabilityTool } from "../webmcp/ExplainCapabilityTool";
+
+const SIDECAR_HOST = "alpina.travel";
+
+/** The approved sidecar is offered only where its allowlisted endpoint actually applies. */
+function sidecarApplies(report: ReportRecord): boolean {
+  try {
+    return new URL(report.canonicalUrl ?? report.requestedUrl).hostname.replace(/^www\./, "") === SIDECAR_HOST;
+  } catch {
+    return false;
+  }
+}
 
 export function ReportRoute() {
   const { reportId = "" } = useParams();
@@ -39,6 +52,7 @@ export function ReportRoute() {
   return (
     <div className="report-page">
       <ExplainCapabilityTool report={report} />
+      <AlpinaAvailabilityTool reportId={report.id} enabled={sidecarApplies(report)} />
       <nav className="report-toolbar" aria-label="Report actions">
         <Link to="/"><ArrowLeft size={17} /> New audit</Link>
         <button type="button" onClick={share}><Share2 size={17} /> {copied ? "Copied" : "Share report"}</button>
@@ -47,6 +61,7 @@ export function ReportRoute() {
       <ExecutiveSummary report={report} />
       {report.classification && <ClassificationCard classification={report.classification} onOverride={override} />}
       <ActionJourney reportId={report.id} capabilities={report.capabilities ?? []} />
+      {sidecarApplies(report) && <AlpinaSidecarPanel reportId={report.id} />}
     </div>
   );
 }
