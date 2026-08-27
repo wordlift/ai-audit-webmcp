@@ -1,0 +1,11 @@
+{
+  "@context": {
+    "schema": "https://schema.org/",
+    "wlcap": "https://wordlift.io/vocab/agent-capability/",
+    "stage": "wlcap:stage",
+    "intent": "wlcap:intent",
+    "governance": "wlcap:governance",
+    "recommendedDelivery": "wlcap:recommendedDelivery",
+    "modelVersion": "wlcap:modelVersion"
+  }
+}
