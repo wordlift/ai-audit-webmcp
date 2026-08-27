@@ -61,7 +61,16 @@ export function ReportRoute() {
       <ExecutiveSummary report={report} />
       {report.classification && <ClassificationCard classification={report.classification} onOverride={override} />}
       <ActionJourney reportId={report.id} capabilities={report.capabilities ?? []} />
-      {sidecarApplies(report) && <AlpinaSidecarPanel reportId={report.id} />}
+      {sidecarApplies(report) && (
+        <AlpinaSidecarPanel
+          reportId={report.id}
+          verified={
+            report.capabilities?.some(
+              (capability) => capability.actionId === "availability.check" && capability.state === "sidecar-enabled",
+            ) ?? false
+          }
+        />
+      )}
     </div>
   );
 }

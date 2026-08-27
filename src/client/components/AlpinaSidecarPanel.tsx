@@ -8,7 +8,7 @@ import { describeAvailability } from "../webmcp/AlpinaAvailabilityTool";
  * The human control for the same approved sidecar an agent calls. It exists so the before/after
  * transformation can be demonstrated in any browser, with or without WebMCP.
  */
-export function AlpinaSidecarPanel({ reportId }: { reportId: string }) {
+export function AlpinaSidecarPanel({ reportId, verified }: { reportId: string; verified: boolean }) {
   const navigate = useNavigate();
   const [checkIn, setCheckIn] = useState("2026-09-12");
   const [checkOut, setCheckOut] = useState("2026-09-15");
@@ -38,10 +38,13 @@ export function AlpinaSidecarPanel({ reportId }: { reportId: string }) {
     <section className="sidecar-panel" aria-labelledby="sidecar-title">
       <div className="sidecar-heading">
         <p className="section-kicker"><Plug size={16} /> Approved sidecar</p>
-        <h2 id="sidecar-title">Turn one human-only capability into an agent function</h2>
+        <h2 id="sidecar-title">
+          {verified ? "This capability is now a verified agent function" : "Turn one unverified capability into an agent function"}
+        </h2>
         <p>
-          This report's availability check exists for people only. Run the approved read-only sidecar to
-          verify it as an agent function; the result becomes a new immutable revision of this report.
+          {verified
+            ? "A successful agent call is recorded as evidence in this revision, so the availability check reads sidecar-enabled. Run it again for new dates; each verified call creates its own revision."
+            : "People can check dates here and an availability interface is declared, but no agent call has been verified. Run the approved read-only sidecar to prove it; the result becomes a new immutable revision of this report."}
         </p>
       </div>
       <form onSubmit={submit}>

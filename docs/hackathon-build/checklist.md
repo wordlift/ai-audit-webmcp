@@ -75,37 +75,37 @@ These are not required for items 1–8 or for the open demo mode:
   Acceptance: A user can enter one fixture URL and reach a polished shareable report without authentication; the first view communicates archetype, score, exactly three real gaps when available, and the journey; color is never the only state signal; a keyboard user can inspect a capability and return to its node; no ontology terminology overwhelms the executive view.
   Verify: Run `npm test -- --run tests/component` locally, then run `npm run test:e2e -- --grep "fixture report|visual proof"` in GitHub Actions when the local workspace cannot install Chromium; capture desktop and mobile screenshots for the travel fixture as workflow artifacts. Pause for Andrea to review the first complete product slice before proceeding. After approval, commit as `feat: render the agent capability map`.
 
-- [ ] **7. Register and prove the current WebMCP audit tools — REVIEW PAUSE 2**
+- [x] **7. Register and prove the current WebMCP audit tools — REVIEW PAUSE 2**
   Spec ref: `spec.md > WebMCP tool layer`, `spec.md > WebMCP Tool Contracts`
   What to build: Integrate the pinned Chrome-maintained `use-webmcp-tool` helper and register `audit-website` globally plus report-scoped `explain-capability` on `document.modelContext`. Add static safe descriptions, JSON Schemas, lifecycle cancellation, unsupported-browser degradation, typed error normalization, and completed structured results containing report URL and stage counts.
   Acceptance: The tool list follows the visible page context; unmount unregisters report-scoped tools; failures are returned as errors; `audit-website` resolves to completed or explicitly partial findings and never ends with only “audit started”; the normal web interface still works without WebMCP.
   Verify: Run `npm test -- --run tests/component/webmcp-tools.test.tsx`; run `npm run test:webmcp` with the project stub; in the configured Chrome environment, confirm the inspector shows the correct tools and invoke `audit-website` against a fixture. Pause for Andrea to inspect the first agent-driven result. After approval, commit as `feat: expose audit tools through WebMCP`.
 
-- [ ] **8. Harden arbitrary URL collection and recovery paths**
+- [x] **8. Harden arbitrary URL collection and recovery paths**
   Spec ref: `spec.md > Security, Privacy, And Trust Boundaries`, `spec.md > Error Strategy`
   What to build: Implement URL normalization, HTTP/HTTPS enforcement, credential/scheme rejection, DNS and IP validation, private/reserved/metadata blocking, redirect revalidation, response/endpoint/time limits, evidence sanitization, per-IP/global rate limits, UUID retry/poll recovery, safe logging, and truthful partial/failure behavior. Add static discovery collectors and detector boundaries without attempting arbitrary runtime tool execution.
   Acceptance: Unsafe destinations never reach a provider; target cookies and authorization are never forwarded; oversized/untrusted evidence is bounded and marked truncated; a manifest-only tool remains unverified; disconnected or duplicate clients can recover the stored state; logs do not expose target content or secrets.
   Verify: Run `npm test -- --run tests/unit/url-policy.test.ts tests/unit/sanitize-evidence.test.ts tests/integration/error-paths.test.ts tests/integration/rate-limits.test.ts`; inspect adversarial IPv4/IPv6/redirect cases and `git diff --check`. Commit as `feat: secure live site collection`.
 
-- [ ] **9. Connect live WordLift, scraping, Google classification, and Firestore — REVIEW PAUSE 3**
+- [x] **9. Connect live WordLift, scraping, Google classification, and Firestore — REVIEW PAUSE 3**
   Spec ref: `spec.md > Private AI Audit adapter`, `spec.md > Site evidence collector`, `spec.md > Content classifier and archetype inferer`, `spec.md > Report store`
   What to build: Implement and validate the WordLift AI Audit provider, ScrapingBee and native-fetch collectors, Google Natural Language V2 classifier, Firestore persistence, phase-specific timeouts, and provider error mapping behind the existing interfaces. Keep the broad foundation score separate from verified action readiness.
   Acceptance: Live mode audits a permitted public URL using only server-side credentials; stores exact Google category strings/confidences and model metadata; compiles the same domain objects as fixture mode; a Google failure produces provisional behavior-only classification; a Firestore failure returns the current structured result without claiming a stable share link.
   Verify: Run `npm test -- --run tests/integration/wordlift-audit.test.ts tests/integration/google-classifier.test.ts tests/integration/live-orchestrator.test.ts`; run `npm run smoke:live -- https://wordlift.io` with configured secrets and open the stored report. Pause for Andrea/WordLift to validate the first live evidence, classification, and action map. After approval, commit as `feat: connect live audit providers`.
 
-- [ ] **10. Prove the Alpina availability sidecar transformation — REVIEW PAUSE 4**
+- [x] **10. Prove the Alpina availability sidecar transformation — REVIEW PAUSE 4**
   Spec ref: `spec.md > Alpina.travel sidecar`, `spec.md > Alpina sidecar lifecycle`
   What to build: Add the allowlisted server adapter for `https://alpina.travel/api/booking/availability`, date/guest validation, normalized output, read-only policy, report-scoped sidecar activation, `check-alpina-availability` WebMCP registration, successful-invocation evidence, and immutable child report creation. Add a clearly dated baseline fixture without misrepresenting the current live API/discovery surface.
   Acceptance: The agent requests missing required inputs rather than fabricating them; a live call returns structured time-sensitive availability and source; no booking session, hold, guest submission, or payment occurs; upstream failure is not reported as no availability; successful invocation produces a child report marked `sidecar-enabled`; the live baseline acknowledges existing Alpina API/discovery evidence.
   Verify: Run `npm test -- --run tests/unit/alpina-schemas.test.ts tests/integration/alpina-sidecar.test.ts tests/component/alpina-webmcp-tool.test.tsx`; invoke the live read-only tool in Chrome for a valid date range and open the child report. Pause for Andrea to validate the before/after truth, action evidence, and wow moment. After approval, commit as `feat: enable Alpina availability sidecar`.
 
-- [ ] **11. Deploy, verify, and document the public project**
+- [x] **11. Deploy, verify, and document the public project**
   Spec ref: `spec.md > Deployment`, `spec.md > Test Plan`, `spec.md > Configuration And Modes`
   What to build: Complete Cloud Run configuration, Secret Manager bindings, Firestore TTL/index configuration, health/startup behavior, production headers including WebMCP permissions policy, public URL configuration, CI verification, accessibility/responsive polish, README architecture and extension guides, CONTRIBUTING, SECURITY, fixture instructions, private/public boundary, and live/demo disclosures. Make the repository public only after secret/history inspection and WordLift license/brand approval.
   Acceptance: `npm run dev:demo` works from a fresh clone without secrets; CI is green; the production URL serves the application and stable judge report; secrets are absent from source, history, client bundles, logs, and fixtures; contributors can identify how to add an archetype/action/detector/sidecar; the README distinguishes live functionality from fixtures and pre-existing private work.
   Verify: Run `npm run verify`, `npm audit --omit=dev`, `docker build -t ai-audit-webmcp .`, secret scanning, and the production smoke suite; inspect Cloud Run health, report persistence, browser console, mobile layout, WebMCP inspector, repository visibility, and license. Commit as `chore: deploy and document public MVP`.
 
-- [ ] **12. Prepare Devpost handoff**
+- [x] **12. Prepare Devpost handoff**
   Spec ref: `prd.md > Submission Proof Points`, `spec.md > Demo And Submission Flow`
   What to build: Gather the final project story, public repository and deployment links, architecture/open-source boundary, AI and Codex usage notes, exact judge setup, test results, known limitations, five required screenshots, and an under-three-minute demo script/video plan. Record the four participant review outcomes and the specific new hackathon work.
   Acceptance: A judge can reproduce the fixture audit and Alpina read-only WebMCP invocation; every screenshot and claim matches the deployed build; live versus fixture evidence is explicit; the handoff contains enough verified material to run `$prepare-submission` without reconstructing the build history.
