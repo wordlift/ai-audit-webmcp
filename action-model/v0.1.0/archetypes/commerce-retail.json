@@ -1,0 +1,1 @@
+{"id":"commerce-retail","label":"Commerce / retail","actions":["site.search","site.browse","detail.retrieve","items.compare","items.recommend","policy.explain","offer.lookup","availability.check","checkout.create","checkout.complete","transaction.status","transaction.modify"]}

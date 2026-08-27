@@ -1,0 +1,1 @@
+{"id":"travel-hospitality","label":"Travel / hospitality","actions":["site.search","site.browse","detail.retrieve","items.compare","items.recommend","policy.explain","availability.check","inquiry.submit","transaction.status","transaction.modify"]}

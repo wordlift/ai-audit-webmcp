@@ -1,0 +1,291 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`six archetype golden journeys > compiles commerce-retail into the agreed four-stage density 1`] = `
+[
+  {
+    "id": "site.search",
+    "order": 0,
+    "stage": "discover",
+  },
+  {
+    "id": "site.browse",
+    "order": 1,
+    "stage": "discover",
+  },
+  {
+    "id": "detail.retrieve",
+    "order": 2,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "items.compare",
+    "order": 3,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "items.recommend",
+    "order": 4,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "policy.explain",
+    "order": 5,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "offer.lookup",
+    "order": 6,
+    "stage": "act",
+  },
+  {
+    "id": "availability.check",
+    "order": 7,
+    "stage": "act",
+  },
+  {
+    "id": "checkout.create",
+    "order": 8,
+    "stage": "act",
+  },
+  {
+    "id": "checkout.complete",
+    "order": 9,
+    "stage": "act",
+  },
+  {
+    "id": "transaction.status",
+    "order": 10,
+    "stage": "manage",
+  },
+  {
+    "id": "transaction.modify",
+    "order": 11,
+    "stage": "manage",
+  },
+]
+`;
+
+exports[`six archetype golden journeys > compiles finance-insurance into the agreed four-stage density 1`] = `
+[
+  {
+    "id": "site.search",
+    "order": 0,
+    "stage": "discover",
+  },
+  {
+    "id": "site.browse",
+    "order": 1,
+    "stage": "discover",
+  },
+  {
+    "id": "detail.retrieve",
+    "order": 2,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "items.compare",
+    "order": 3,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "eligibility.explain",
+    "order": 4,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "policy.explain",
+    "order": 5,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "quote.request",
+    "order": 6,
+    "stage": "act",
+  },
+  {
+    "id": "application.start",
+    "order": 7,
+    "stage": "act",
+  },
+  {
+    "id": "transaction.status",
+    "order": 8,
+    "stage": "manage",
+  },
+]
+`;
+
+exports[`six archetype golden journeys > compiles other into the agreed four-stage density 1`] = `
+[
+  {
+    "id": "site.search",
+    "order": 0,
+    "stage": "discover",
+  },
+  {
+    "id": "detail.retrieve",
+    "order": 1,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "policy.explain",
+    "order": 2,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "inquiry.submit",
+    "order": 3,
+    "stage": "act",
+  },
+  {
+    "id": "transaction.status",
+    "order": 4,
+    "stage": "manage",
+  },
+]
+`;
+
+exports[`six archetype golden journeys > compiles publisher-content into the agreed four-stage density 1`] = `
+[
+  {
+    "id": "site.search",
+    "order": 0,
+    "stage": "discover",
+  },
+  {
+    "id": "site.browse",
+    "order": 1,
+    "stage": "discover",
+  },
+  {
+    "id": "detail.retrieve",
+    "order": 2,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "content.related",
+    "order": 3,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "source.verify",
+    "order": 4,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "subscription.start",
+    "order": 5,
+    "stage": "act",
+  },
+  {
+    "id": "inquiry.submit",
+    "order": 6,
+    "stage": "act",
+  },
+  {
+    "id": "subscription.manage",
+    "order": 7,
+    "stage": "manage",
+  },
+]
+`;
+
+exports[`six archetype golden journeys > compiles saas into the agreed four-stage density 1`] = `
+[
+  {
+    "id": "features.search",
+    "order": 0,
+    "stage": "discover",
+  },
+  {
+    "id": "detail.retrieve",
+    "order": 1,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "plans.compare",
+    "order": 2,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "policy.explain",
+    "order": 3,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "trial.start",
+    "order": 4,
+    "stage": "act",
+  },
+  {
+    "id": "inquiry.submit",
+    "order": 5,
+    "stage": "act",
+  },
+  {
+    "id": "subscription.manage",
+    "order": 6,
+    "stage": "manage",
+  },
+  {
+    "id": "support.request",
+    "order": 7,
+    "stage": "manage",
+  },
+]
+`;
+
+exports[`six archetype golden journeys > compiles travel-hospitality into the agreed four-stage density 1`] = `
+[
+  {
+    "id": "site.search",
+    "order": 0,
+    "stage": "discover",
+  },
+  {
+    "id": "site.browse",
+    "order": 1,
+    "stage": "discover",
+  },
+  {
+    "id": "detail.retrieve",
+    "order": 2,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "items.compare",
+    "order": 3,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "items.recommend",
+    "order": 4,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "policy.explain",
+    "order": 5,
+    "stage": "understand-decide",
+  },
+  {
+    "id": "availability.check",
+    "order": 6,
+    "stage": "act",
+  },
+  {
+    "id": "inquiry.submit",
+    "order": 7,
+    "stage": "act",
+  },
+  {
+    "id": "transaction.status",
+    "order": 8,
+    "stage": "manage",
+  },
+  {
+    "id": "transaction.modify",
+    "order": 9,
+    "stage": "manage",
+  },
+]
+`;

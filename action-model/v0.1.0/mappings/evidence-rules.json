@@ -1,0 +1,8 @@
+[
+  {"rule":"search-form","audience":"human","kind":"form"},
+  {"rule":"structured-data","audience":"agent","kind":"structured-data"},
+  {"rule":"webmcp-search","audience":"agent","kind":"webmcp"},
+  {"rule":"availability-tool","audience":"agent","kind":"tool-result"},
+  {"rule":"availability-ui","audience":"human","kind":"form"},
+  {"rule":"availability-api","audience":"agent","kind":"openapi"}
+]

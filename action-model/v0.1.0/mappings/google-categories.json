@@ -1,0 +1,12 @@
+[
+  {"prefix":"/Shopping","archetype":"commerce-retail","weight":3},
+  {"prefix":"/Business & Industrial/Retail","archetype":"commerce-retail","weight":3},
+  {"prefix":"/Books & Literature","archetype":"publisher-content","weight":2},
+  {"prefix":"/News","archetype":"publisher-content","weight":3},
+  {"prefix":"/Arts & Entertainment","archetype":"publisher-content","weight":1.5},
+  {"prefix":"/Travel","archetype":"travel-hospitality","weight":3},
+  {"prefix":"/Finance","archetype":"finance-insurance","weight":3},
+  {"prefix":"/Business & Industrial/Insurance","archetype":"finance-insurance","weight":3},
+  {"prefix":"/Computers & Electronics/Software","archetype":"saas","weight":3},
+  {"prefix":"/Internet & Telecom/Web Services","archetype":"saas","weight":2.5}
+]

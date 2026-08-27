@@ -51,7 +51,7 @@ These are not required for items 1–8 or for the open demo mode:
   Acceptance: Invalid stored/API shapes fail closed; memory mode works without cloud credentials; Firestore is server-only; recompile/reverify can create child records without modifying the parent; raw HTML, headers, credentials, and private account identifiers are excluded by schema.
   Verify: Run `npm test -- --run tests/unit/schemas.test.ts tests/integration/report-store.test.ts`; validate the Firestore adapter against the emulator or mocked contract; assert the maximum fixture stays below the configured size ceiling. Commit as `feat: define report contracts and stores`.
 
-- [ ] **3. Compile action-model 0.1.0 for all six archetypes**
+- [x] **3. Compile action-model 0.1.0 for all six archetypes**
   Spec ref: `spec.md > Versioned action model`, `spec.md > Content classifier and archetype inferer`
   What to build: Add the versioned action definitions, JSON-LD context, archetype templates for commerce/retail, publisher/content, travel/hospitality, finance/insurance, SaaS, and other, Google V2 category weights, behavioral rules, and deterministic compiler. Produce stable stage/order, expectation provenance, ranked archetypes, provisional reasons, and explicit user overrides from stored evidence.
   Acceptance: Every archetype compiles into a readable Discover -> Understand/Decide -> Act -> Manage journey; identical inputs and model version produce identical action IDs/order; low-score or low-margin classification is provisional; overrides change expectations without changing observed evidence.

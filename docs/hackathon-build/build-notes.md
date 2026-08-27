@@ -208,3 +208,11 @@ The private Agentic Commerce reference classifies these informational patterns: 
 - Enforced report expiry, UUID identity, a 100-item evidence ceiling, 500-character evidence snippets, strict unknown-field rejection, and a configurable serialized-size ceiling below Firestore's document limit.
 - Verification passed: typecheck, 8 focused schema/store tests including a mocked Firestore contract, production build, and whitespace check.
 - Next checklist item: compile action-model `0.1.0` for all six site archetypes.
+
+### Item 3 — Deterministic action model 0.1.0
+- Completed: 2026-08-27
+- Added versioned model data: manifest, provisional JSON-LD context, 24 reusable governed actions, six compact archetype journeys, Google V2 category weights, behavior rules, and evidence mappings.
+- Added strict startup validation, deterministic four-stage graph compilation, stable action order/IDs, expectation provenance, and category-plus-behavior archetype inference with explicit overrides.
+- Low-evidence and low-margin classification is provisional; an override changes expectations while preserving ranked observed evidence.
+- Verification passed: typecheck, 11 focused model/inference/golden tests, six stored golden snapshots, production build, and whitespace check.
+- Next checklist item: evidence state derivation, verification-only scoring, deterministic priorities, and JSON-LD contracts.
