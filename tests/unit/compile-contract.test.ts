@@ -16,7 +16,7 @@ describe("action contract compiler", () => {
           documentLoader: async (url) => {
             if (url !== "https://schema.org") throw new Error(`Unexpected remote context: ${url}`);
             return {
-              contextUrl: null,
+              contextUrl: undefined,
               documentUrl: url,
               document: { "@context": { "@vocab": "https://schema.org/" } },
             };

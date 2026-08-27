@@ -12,14 +12,14 @@ export interface AppOptions {
 }
 
 /**
- * `tools=*` keeps the WebMCP tool surface available to the agent embedding this page; everything
- * else is locked down. The CSP allows only same-origin code, so an audited site's content can
- * never execute here.
+ * The WebMCP `tools` policy-controlled feature already defaults to `'self'`; stating it keeps the
+ * grant explicit without widening it to embedded third-party frames. The CSP allows only
+ * same-origin code, so an audited site's content can never execute here.
  */
 const SECURITY_HEADERS: Record<string, string> = {
   "content-security-policy":
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
-  "permissions-policy": "tools=*, camera=(), microphone=(), geolocation=(), payment=()",
+  "permissions-policy": "tools=(self), camera=(), microphone=(), geolocation=(), payment=()",
   "referrer-policy": "strict-origin-when-cross-origin",
   "x-content-type-options": "nosniff",
   "x-frame-options": "DENY",

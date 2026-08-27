@@ -5,7 +5,9 @@ import type {
   capabilityEvidenceSchema,
   capabilityResultSchema,
   classificationResultSchema,
+  contentCategorySchema,
   createReportRequestSchema,
+  foundationAuditSummarySchema,
   priorityGapSchema,
   readinessScoreSchema,
   reportErrorSchema,
@@ -13,6 +15,8 @@ import type {
 } from "../schemas/report.js";
 
 export type ActionContract = z.infer<typeof actionContractSchema>;
+export type ContentCategory = z.infer<typeof contentCategorySchema>;
+export type FoundationAuditSummary = z.infer<typeof foundationAuditSummarySchema>;
 export type Archetype = z.infer<typeof archetypeSchema>;
 export type CapabilityEvidence = z.infer<typeof capabilityEvidenceSchema>;
 export type CapabilityResult = z.infer<typeof capabilityResultSchema>;

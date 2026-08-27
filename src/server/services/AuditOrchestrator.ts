@@ -5,33 +5,74 @@ import { deriveCapability } from "../../domain/action-model/deriveState.js";
 import type { ActionModel } from "../../domain/action-model/loadModel.js";
 import { recommendationFor, rankPriorities } from "../../domain/action-model/rankPriorities.js";
 import { scoreReadiness } from "../../domain/action-model/scoreReadiness.js";
+import { detectSiteEvidence } from "../../domain/evidence/detectSiteEvidence.js";
 import { inferArchetype } from "../../domain/classification/inferArchetype.js";
 import { createReportRequestSchema, recompileReportRequestSchema } from "../../shared/schemas/report.js";
-import type { Archetype, CapabilityEvidence, ReportRecord } from "../../shared/types/index.js";
+import type {
+  Archetype,
+  CapabilityEvidence,
+  ContentCategory,
+  ReportError,
+  ReportRecord,
+} from "../../shared/types/index.js";
+import type { AuditEvidenceBundle, AuditProvider } from "../adapters/audit/AuditProvider.js";
+import { auditErrorToReportError } from "../adapters/audit/WordLiftAudit.js";
+import type { ClassifierProvider } from "../adapters/classify/ClassifierProvider.js";
 import { FixtureProvider, type FixtureAudit } from "../adapters/fixtures/FixtureProvider.js";
+import type { ScrapeProvider, SiteSnapshot } from "../adapters/scrape/ScrapeProvider.js";
 import type { ReportStore } from "../adapters/store/ReportStore.js";
 import { ReportRequestError } from "../errors.js";
 import { sanitizeEvidence } from "../security/sanitizeEvidence.js";
-import { normalizeTargetUrl } from "../security/urlPolicy.js";
+import { normalizeTargetUrl, UrlPolicyError } from "../security/urlPolicy.js";
+
+export interface OrchestratorOptions {
+  publicAppUrl: string;
+  ttlDays: number;
+  now?: () => Date;
+  mode?: "demo" | "live";
+  providers?: {
+    audit?: AuditProvider;
+    scrape?: ScrapeProvider;
+    classify?: ClassifierProvider;
+  };
+}
+
+interface CompiledInputs {
+  canonicalUrl: string;
+  categories: ContentCategory[];
+  signals: string[];
+  evidence: CapabilityEvidence[];
+  foundation?: ReportRecord["foundationAudit"];
+  classifierModel: string;
+  errors: ReportError[];
+  evidenceTruncated: boolean;
+}
 
 export class AuditOrchestrator {
   constructor(
     private readonly store: ReportStore,
     private readonly model: ActionModel,
     private readonly fixtures: FixtureProvider,
-    private readonly options: { publicAppUrl: string; ttlDays: number; now?: () => Date },
+    private readonly options: OrchestratorOptions,
   ) {}
+
+  get mode(): "demo" | "live" {
+    return this.options.mode ?? "demo";
+  }
 
   async create(input: unknown): Promise<ReportRecord> {
     const request = createReportRequestSchema.parse(input);
     const existing = await this.store.get(request.requestId);
     if (existing) return existing;
-    const now = this.now();
-    const requestedUrl = normalizeTargetUrl(request.url).toString();
-    const fixture = this.fixtures.resolve(request.fixtureId, requestedUrl);
-    const running = this.baseRecord(request.requestId, requestedUrl, now);
+
+    const target = normalizeTargetUrl(request.url);
+    if (request.fixtureId && this.mode === "live") {
+      throw new ReportRequestError("Fixture selection is only available in demo mode.", 400);
+    }
+
+    const running = this.baseRecord(request.requestId, target.toString(), this.now());
     await this.store.put(running);
-    const finalReport = this.compileFixture(running, fixture, request.archetypeOverride ?? undefined);
+    const finalReport = await this.run(running, target, request.fixtureId ?? null, request.archetypeOverride ?? undefined);
     return this.store.finalize(finalReport);
   }
 
@@ -55,21 +96,32 @@ export class AuditOrchestrator {
       phase: "complete",
       canonicalUrl: parent.canonicalUrl,
       completedAt: this.now().toISOString(),
-      classification: { ...parent.classification, primaryArchetype: archetype, override: archetype, provisional: false, provisionalReason: undefined },
+      classification: {
+        ...parent.classification,
+        primaryArchetype: archetype,
+        override: archetype,
+        provisional: false,
+        provisionalReason: undefined,
+      },
       foundationAudit: parent.foundationAudit,
       capabilities,
       score: scoreReadiness(capabilities),
       priorities: rankPriorities(capabilities),
       errors: parent.errors,
+      evidenceTruncated: parent.evidenceTruncated,
     };
     return this.store.createRevision(parent.id, child);
   }
 
   async reverify(parentId: string): Promise<ReportRecord> {
     const parent = await this.required(parentId);
-    const fixture = this.fixtures.resolve(null, parent.requestedUrl);
     const childBase = this.baseRecord(randomUUID(), parent.requestedUrl, this.now(), parent.id);
-    const child = this.compileFixture(childBase, fixture, parent.classification?.override);
+    const child = await this.run(
+      childBase,
+      normalizeTargetUrl(parent.requestedUrl),
+      null,
+      parent.classification?.override,
+    );
     return this.store.createRevision(parent.id, child);
   }
 
@@ -82,44 +134,196 @@ export class AuditOrchestrator {
     return new URL(`/reports/${id}`, this.options.publicAppUrl).toString();
   }
 
+  /** Adds evidence from a verified sidecar invocation as an immutable child revision. */
+  async attachInvocationEvidence(parentId: string, evidence: CapabilityEvidence[]): Promise<ReportRecord> {
+    const parent = await this.required(parentId);
+    if (!parent.capabilities || !parent.classification) {
+      throw new ReportRequestError("That report has no capability map to update.", 409);
+    }
+    const merged = sanitizeEvidence([
+      ...parent.capabilities.flatMap((capability) => capability.evidence),
+      ...evidence,
+    ]);
+    const archetype = parent.classification.primaryArchetype;
+    const graph = compileActionGraph(this.model, archetype, [`archetype:${archetype}`]);
+    const capabilities = this.capabilities(
+      graph.actions,
+      merged.evidence,
+      parent.canonicalUrl ?? parent.requestedUrl,
+    );
+    const child: ReportRecord = {
+      ...this.baseRecord(randomUUID(), parent.requestedUrl, this.now(), parent.id),
+      status: parent.status === "partial" ? "partial" : "completed",
+      phase: "complete",
+      canonicalUrl: parent.canonicalUrl,
+      completedAt: this.now().toISOString(),
+      classification: parent.classification,
+      foundationAudit: parent.foundationAudit,
+      capabilities,
+      score: scoreReadiness(capabilities),
+      priorities: rankPriorities(capabilities),
+      errors: parent.errors,
+      evidenceTruncated: parent.evidenceTruncated || merged.truncated,
+    };
+    return this.store.createRevision(parent.id, child);
+  }
+
+  private async run(
+    base: ReportRecord,
+    target: URL,
+    fixtureId: string | null,
+    override?: Archetype,
+  ): Promise<ReportRecord> {
+    if (this.mode === "demo") {
+      return this.compileFixture(base, this.fixtures.resolve(fixtureId, target.toString()), override);
+    }
+    return this.compileLive(base, target, override);
+  }
+
+  /** Three phases: understand the site, map its expected actions, check what an agent can do. */
+  private async compileLive(base: ReportRecord, target: URL, override?: Archetype): Promise<ReportRecord> {
+    const inputs = await this.collectLiveInputs(target);
+
+    if (inputs.evidence.length === 0 && !inputs.foundation) {
+      return {
+        ...base,
+        status: "failed",
+        phase: "complete",
+        canonicalUrl: inputs.canonicalUrl,
+        completedAt: this.now().toISOString(),
+        errors: inputs.errors.length > 0 ? inputs.errors : [failure("no_evidence", "understanding", "No usable evidence could be collected from this site.")],
+      };
+    }
+
+    return this.compile(base, inputs, override);
+  }
+
+  private async collectLiveInputs(target: URL): Promise<CompiledInputs> {
+    const providers = this.options.providers ?? {};
+    const collectedAt = this.now().toISOString();
+    const errors: ReportError[] = [];
+
+    const [snapshotResult, auditResult] = await Promise.allSettled([
+      providers.scrape ? providers.scrape.collect(target) : Promise.resolve(null),
+      providers.audit ? providers.audit.audit(target) : Promise.resolve(null),
+    ]);
+
+    let snapshot: SiteSnapshot | null = null;
+    if (snapshotResult.status === "fulfilled") {
+      snapshot = snapshotResult.value;
+    } else {
+      const reason = snapshotResult.reason;
+      errors.push(
+        reason instanceof UrlPolicyError
+          ? failure(reason.code, "understanding", reason.message)
+          : failure("collector_failed", "understanding", "The page could not be collected."),
+      );
+    }
+
+    let audit: AuditEvidenceBundle | null = null;
+    if (auditResult.status === "fulfilled") {
+      audit = auditResult.value;
+    } else {
+      errors.push(auditErrorToReportError(auditResult.reason));
+    }
+
+    const detection = snapshot ? detectSiteEvidence(snapshot, collectedAt) : { evidence: [], signals: [] };
+    const classification = snapshot && providers.classify
+      ? await providers.classify.classify({ text: snapshot.text, url: snapshot.canonicalUrl })
+      : { categories: [], model: "behavior-only", failureReason: snapshot ? undefined : "No page text was collected." };
+
+    if (classification.failureReason) {
+      errors.push(failure("classifier_unavailable", "understanding", classification.failureReason, false));
+    }
+
+    // What the collector actually read outranks what the foundation audit reported as present.
+    const disproved = disprovedDiscovery(snapshot);
+    const auditEvidence = (audit?.evidence ?? []).filter((item) => !disproved.evidenceIds.has(item.id));
+    const auditSignals = (audit?.signals ?? []).filter((signal) => !disproved.signals.has(signal));
+    const sanitized = sanitizeEvidence([...detection.evidence, ...auditEvidence]);
+
+    return {
+      canonicalUrl: snapshot?.canonicalUrl ?? audit?.url ?? target.toString(),
+      categories: classification.categories,
+      signals: [...new Set([...detection.signals, ...auditSignals])].sort(),
+      evidence: sanitized.evidence,
+      foundation: audit?.foundation,
+      classifierModel: classification.model,
+      errors,
+      evidenceTruncated: sanitized.truncated || Boolean(snapshot?.truncated),
+    };
+  }
+
   private compileFixture(base: ReportRecord, fixture: FixtureAudit, override?: Archetype): ReportRecord {
     if (fixture.status === "failed") {
-      return { ...base, status: "failed", phase: "complete", canonicalUrl: fixture.url, completedAt: this.now().toISOString(), errors: fixture.errors };
+      return {
+        ...base,
+        status: "failed",
+        phase: "complete",
+        canonicalUrl: fixture.url,
+        completedAt: this.now().toISOString(),
+        errors: fixture.errors,
+      };
     }
-    const inference = inferArchetype(this.model, fixture.categories, fixture.signals, override);
-    const categoryProvenance = fixture.categories.map((category) => `category:${category.name}`);
-    const graph = compileActionGraph(this.model, inference.primaryArchetype, categoryProvenance);
+
     const sanitized = sanitizeEvidence(fixture.evidence);
-    const capabilities = this.capabilities(graph.actions, sanitized.evidence, fixture.url);
+    const report = this.compile(
+      base,
+      {
+        canonicalUrl: fixture.url,
+        categories: fixture.categories,
+        signals: fixture.signals,
+        evidence: sanitized.evidence,
+        foundation: fixture.foundation,
+        classifierModel: "google-v2-fixture",
+        errors: fixture.errors,
+        evidenceTruncated: sanitized.truncated,
+      },
+      override,
+    );
+    return { ...report, status: fixture.status };
+  }
+
+  private compile(base: ReportRecord, inputs: CompiledInputs, override?: Archetype): ReportRecord {
+    const inference = inferArchetype(this.model, inputs.categories, inputs.signals, override);
+    const provenance = inputs.categories.map((category) => `category:${category.name}`);
+    const graph = compileActionGraph(this.model, inference.primaryArchetype, provenance);
+    const capabilities = this.capabilities(graph.actions, inputs.evidence, inputs.canonicalUrl);
     const topScore = inference.rankedArchetypes[0]?.score ?? 0;
+    const retryable = inputs.errors.some((error) => error.retryable);
+
     return {
       ...base,
-      evidenceTruncated: sanitized.truncated,
-      status: fixture.status,
+      status: inputs.errors.length > 0 && retryable ? "partial" : "completed",
       phase: "complete",
-      canonicalUrl: fixture.url,
+      canonicalUrl: inputs.canonicalUrl,
       completedAt: this.now().toISOString(),
       classification: {
         primaryArchetype: inference.primaryArchetype,
-        categories: fixture.categories,
+        categories: inputs.categories,
         rankedArchetypes: inference.rankedArchetypes,
         confidence: inference.provisional ? "low" : topScore >= 4 ? "high" : "medium",
         margin: inference.margin,
         provisional: inference.provisional,
         provisionalReason: inference.provisionalReason,
         override: inference.override,
-        model: "google-v2-fixture",
+        model: inputs.classifierModel,
         collectedAt: this.now().toISOString(),
       },
-      foundationAudit: fixture.foundation,
+      foundationAudit: inputs.foundation,
       capabilities,
       score: scoreReadiness(capabilities),
       priorities: rankPriorities(capabilities),
-      errors: fixture.errors,
+      errors: inputs.errors,
+      evidenceTruncated: inputs.evidenceTruncated,
     };
   }
 
-  private capabilities(actions: ReturnType<typeof compileActionGraph>["actions"], evidence: CapabilityEvidence[], siteUrl: string) {
+  private capabilities(
+    actions: ReturnType<typeof compileActionGraph>["actions"],
+    evidence: CapabilityEvidence[],
+    siteUrl: string,
+  ) {
     return actions.map((action) => {
       const capability = deriveCapability(action, evidence.filter((item) => item.actionId === action.id));
       if (["missing", "human-only", "unverified"].includes(capability.state)) {
@@ -138,7 +342,7 @@ export class AuditOrchestrator {
       parentReportId,
       status: "running",
       phase: "understanding",
-      mode: "demo",
+      mode: this.mode,
       requestedUrl,
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
@@ -157,4 +361,31 @@ export class AuditOrchestrator {
   private now(): Date {
     return this.options.now?.() ?? new Date();
   }
+}
+
+function failure(code: string, phase: ReportError["phase"], message: string, retryable = true): ReportError {
+  return { code, phase, message, retryable };
+}
+
+const DISPROVABLE_DISCOVERY: Record<string, { evidenceId: string; signals: string[] }> = {
+  llms: { evidenceId: "discovery-llms-txt", signals: ["agent:llms-txt"] },
+  skill: { evidenceId: "discovery-skill-md", signals: ["agent:skill-md"] },
+  mcp: { evidenceId: "discovery-mcp", signals: ["agent:mcp-json", "agent:mcp-server-card"] },
+  "webmcp-tools": { evidenceId: "discovery-webmcp-tools", signals: ["agent:webmcp-tools"] },
+};
+
+/** Claims the collector proved false by reading the document itself. */
+function disprovedDiscovery(snapshot: SiteSnapshot | null): { evidenceIds: Set<string>; signals: Set<string> } {
+  const evidenceIds = new Set<string>();
+  const signals = new Set<string>();
+
+  for (const document of snapshot?.discovery ?? []) {
+    if (document.status === "valid") continue;
+    const entry = DISPROVABLE_DISCOVERY[document.kind];
+    if (!entry) continue;
+    evidenceIds.add(entry.evidenceId);
+    for (const signal of entry.signals) signals.add(signal);
+  }
+
+  return { evidenceIds, signals };
 }

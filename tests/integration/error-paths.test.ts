@@ -97,7 +97,7 @@ describe("error and recovery paths", () => {
 
   it("sets the WebMCP permissions policy and blocks framing", async () => {
     const response = await request(testApp()).get("/api/health").expect(200);
-    expect(response.headers["permissions-policy"]).toMatch(/tools=\*/);
+    expect(response.headers["permissions-policy"]).toMatch(/tools=\(self\)/);
     expect(response.headers["x-frame-options"]).toBe("DENY");
     expect(response.headers["content-security-policy"]).toMatch(/frame-ancestors 'none'/);
     expect(response.headers["x-powered-by"]).toBeUndefined();
