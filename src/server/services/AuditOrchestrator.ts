@@ -8,8 +8,11 @@ import { scoreReadiness } from "../../domain/action-model/scoreReadiness.js";
 import { inferArchetype } from "../../domain/classification/inferArchetype.js";
 import { createReportRequestSchema, recompileReportRequestSchema } from "../../shared/schemas/report.js";
 import type { Archetype, CapabilityEvidence, ReportRecord } from "../../shared/types/index.js";
-import { FixtureProvider, normalizePublicUrl, type FixtureAudit } from "../adapters/fixtures/FixtureProvider.js";
+import { FixtureProvider, type FixtureAudit } from "../adapters/fixtures/FixtureProvider.js";
 import type { ReportStore } from "../adapters/store/ReportStore.js";
+import { ReportRequestError } from "../errors.js";
+import { sanitizeEvidence } from "../security/sanitizeEvidence.js";
+import { normalizeTargetUrl } from "../security/urlPolicy.js";
 
 export class AuditOrchestrator {
   constructor(
@@ -24,7 +27,7 @@ export class AuditOrchestrator {
     const existing = await this.store.get(request.requestId);
     if (existing) return existing;
     const now = this.now();
-    const requestedUrl = normalizePublicUrl(request.url).toString();
+    const requestedUrl = normalizeTargetUrl(request.url).toString();
     const fixture = this.fixtures.resolve(request.fixtureId, requestedUrl);
     const running = this.baseRecord(request.requestId, requestedUrl, now);
     await this.store.put(running);
@@ -39,7 +42,9 @@ export class AuditOrchestrator {
   async recompile(parentId: string, input: unknown): Promise<ReportRecord> {
     const { archetype } = recompileReportRequestSchema.parse(input);
     const parent = await this.required(parentId);
-    if (!parent.capabilities || !parent.classification) throw new Error("The parent has no evidence to recompile");
+    if (!parent.capabilities || !parent.classification) {
+      throw new ReportRequestError("That report has no observed evidence, so it cannot be recompiled.", 409);
+    }
     const evidence = parent.capabilities.flatMap((capability) => capability.evidence);
     const childBase = this.baseRecord(randomUUID(), parent.requestedUrl, this.now(), parent.id);
     const graph = compileActionGraph(this.model, archetype, [`override:${archetype}`]);
@@ -84,10 +89,12 @@ export class AuditOrchestrator {
     const inference = inferArchetype(this.model, fixture.categories, fixture.signals, override);
     const categoryProvenance = fixture.categories.map((category) => `category:${category.name}`);
     const graph = compileActionGraph(this.model, inference.primaryArchetype, categoryProvenance);
-    const capabilities = this.capabilities(graph.actions, fixture.evidence, fixture.url);
+    const sanitized = sanitizeEvidence(fixture.evidence);
+    const capabilities = this.capabilities(graph.actions, sanitized.evidence, fixture.url);
     const topScore = inference.rankedArchetypes[0]?.score ?? 0;
     return {
       ...base,
+      evidenceTruncated: sanitized.truncated,
       status: fixture.status,
       phase: "complete",
       canonicalUrl: fixture.url,
@@ -143,7 +150,7 @@ export class AuditOrchestrator {
 
   private async required(id: string): Promise<ReportRecord> {
     const report = await this.store.get(id);
-    if (!report) throw new Error(`Report ${id} was not found or has expired`);
+    if (!report) throw new ReportRequestError(`Report ${id} was not found or has expired.`, 404, "report_not_found");
     return report;
   }
 
