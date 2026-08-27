@@ -199,3 +199,12 @@ The private Agentic Commerce reference classifies these informational patterns: 
 - The health contract passed through Supertest and confirms the framework header is suppressed.
 - Remote repository inspection before publication reported an empty Git repository, confirming that no earlier implementation commit existed.
 - Next checklist item: shared schemas, validated configuration, and memory/Firestore report stores.
+
+### Item 2 — Shared contracts, configuration, and report stores
+- Completed: 2026-08-27
+- Added strict Zod schemas and inferred TypeScript types for classification, evidence, capabilities, readiness scores, priorities, errors, reports, action contracts, and report API inputs.
+- Added validated live/demo environment configuration with conditional secret requirements.
+- Added an immutable `ReportStore` boundary with defensive in-memory storage and a server-only Firestore adapter using create-only writes and transactions for child revisions.
+- Enforced report expiry, UUID identity, a 100-item evidence ceiling, 500-character evidence snippets, strict unknown-field rejection, and a configurable serialized-size ceiling below Firestore's document limit.
+- Verification passed: typecheck, 8 focused schema/store tests including a mocked Firestore contract, production build, and whitespace check.
+- Next checklist item: compile action-model `0.1.0` for all six site archetypes.
