@@ -1,14 +1,17 @@
 import express, { type Express, type RequestHandler } from "express";
 import path from "node:path";
+import { createAlpinaRouter } from "./routes/alpina.js";
 import { createReportsRouter } from "./routes/reports.js";
 import { createAuditRateLimiters, type RateLimitOptions } from "./security/rateLimits.js";
 import type { AuditOrchestrator } from "./services/AuditOrchestrator.js";
+import { AlpinaAvailabilitySidecar } from "./sidecars/alpina/adapter.js";
 
 export interface AppOptions {
   staticDirectory?: string;
   orchestrator?: AuditOrchestrator;
   rateLimits?: RateLimitOptions;
   trustProxy?: boolean;
+  alpinaSidecar?: AlpinaAvailabilitySidecar;
 }
 
 /**
@@ -45,6 +48,10 @@ export function createApp(options: AppOptions = {}): Express {
   if (options.orchestrator) {
     const limiters: RequestHandler[] = createAuditRateLimiters(options.rateLimits);
     app.use("/api/reports", createReportsRouter(options.orchestrator, limiters));
+    app.use(
+      "/api/sidecars/alpina",
+      createAlpinaRouter(options.alpinaSidecar ?? new AlpinaAvailabilitySidecar(), options.orchestrator, limiters),
+    );
   }
 
   app.use("/api", (_request, response) => {

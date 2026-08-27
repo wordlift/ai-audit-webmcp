@@ -325,7 +325,12 @@ export class AuditOrchestrator {
     siteUrl: string,
   ) {
     return actions.map((action) => {
-      const capability = deriveCapability(action, evidence.filter((item) => item.actionId === action.id));
+      const actionEvidence = evidence.filter((item) => item.actionId === action.id);
+      // Only an approved sidecar's own verified invocation may claim `sidecar-enabled`.
+      const approvedSidecar = actionEvidence.some(
+        (item) => item.verification === "invoked" && item.kind === "tool-result" && item.id.startsWith("sidecar:"),
+      );
+      const capability = deriveCapability(action, actionEvidence, { approvedSidecar });
       if (["missing", "human-only", "unverified"].includes(capability.state)) {
         capability.recommendation = recommendationFor(capability);
         capability.contract = compileActionContract(action, siteUrl, capability.evidence);

@@ -95,6 +95,49 @@ export async function recompileReport(reportId: string, archetype: Archetype): P
   return reportRecordSchema.parse(body);
 }
 
+export interface AlpinaAvailabilityInput {
+  reportId?: string;
+  propertyId?: string;
+  checkIn: string;
+  checkOut: string;
+  adults: number;
+  childrenAges?: number[];
+  locale?: "en" | "de" | "it";
+}
+
+export interface AlpinaAvailabilityResponse {
+  source: string;
+  propertyId: string;
+  available: boolean;
+  status: "available" | "unavailable" | "unknown";
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  adults: number;
+  childrenAges: number[];
+  totalGuests: number;
+  quote?: { total: number; currency: string; instantConfirmation?: boolean; cancellationSummary?: string; taxes?: string[] };
+  checkoutUrl?: string;
+  checkedAt: string;
+  expiresAt?: string;
+  requiresRevalidation: boolean;
+  readOnly: true;
+  notice: string;
+  updatedReportId?: string;
+  updatedReportUrl?: string;
+  reportUpdateError?: string;
+}
+
+/** Read-only availability lookup through the approved server-side sidecar. */
+export async function checkAlpinaAvailability(input: AlpinaAvailabilityInput): Promise<AlpinaAvailabilityResponse> {
+  const { body } = await requestJson("/api/sidecars/alpina/availability", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return body as AlpinaAvailabilityResponse;
+}
+
 export function contractPath(reportId: string, actionId: string): string {
   return `/api/reports/${reportId}/contracts/${encodeURIComponent(actionId)}`;
 }

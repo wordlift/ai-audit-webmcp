@@ -218,7 +218,10 @@ describe("WebMCP tool layer", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(modelContext.toolNames()).toEqual(["audit-website", "explain-capability"]));
+    // The Alpina report also enables the approved sidecar tool for its own host.
+    await waitFor(() =>
+      expect(modelContext.toolNames()).toEqual(["audit-website", "check-alpina-availability", "explain-capability"]),
+    );
 
     const result = await act(async () => modelContext.call("explain-capability", { actionId: "availability.check" }));
     const text = toolText(result);

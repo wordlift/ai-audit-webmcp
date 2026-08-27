@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "test:webmcp": "vitest run tests/component/webmcp-tools.test.tsx",
+    "test:webmcp": "vitest run tests/component/webmcp-tools.test.tsx tests/component/alpina-webmcp-tool.test.tsx",
     "smoke:live": "tsx scripts/smoke-live.ts",
     "verify": "npm run typecheck && npm test -- --run && npm run build"
   },
