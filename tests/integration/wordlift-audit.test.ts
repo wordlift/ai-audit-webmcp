@@ -99,13 +99,13 @@ describe("WordLift audit provider", () => {
         "agent:llms-txt",
         "agent:skill-md",
         "agent:mcp-json",
-        "agent:webmcp-tools",
+        "agent:well-known-tools-json",
         "framework:Astro",
       ]),
     );
 
-    const webmcp = bundle.evidence.find((item) => item.kind === "webmcp");
-    expect(webmcp?.claim).toMatch(/no tool call has been verified/);
+    // A `.well-known` tools file is not part of WebMCP, so it must never produce WebMCP evidence.
+    expect(bundle.evidence.some((item) => item.kind === "webmcp")).toBe(false);
     expect(bundle.evidence.some((item) => item.actionId === "offer.lookup")).toBe(true);
   });
 

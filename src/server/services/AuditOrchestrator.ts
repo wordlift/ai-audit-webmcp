@@ -376,7 +376,7 @@ const DISPROVABLE_DISCOVERY: Record<string, { evidenceId: string; signals: strin
   llms: { evidenceId: "discovery-llms-txt", signals: ["agent:llms-txt"] },
   skill: { evidenceId: "discovery-skill-md", signals: ["agent:skill-md"] },
   mcp: { evidenceId: "discovery-mcp", signals: ["agent:mcp-json", "agent:mcp-server-card"] },
-  "webmcp-tools": { evidenceId: "discovery-webmcp-tools", signals: ["agent:webmcp-tools"] },
+  ucp: { evidenceId: "discovery-ucp", signals: ["agent:ucp"] },
 };
 
 /** Claims the collector proved false by reading the document itself. */
