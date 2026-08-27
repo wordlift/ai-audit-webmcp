@@ -69,7 +69,7 @@ These are not required for items 1–8 or for the open demo mode:
   Acceptance: Demo mode needs no external credentials; every fixture URL returns a completed deterministic report; a repeated request UUID does not duplicate work; partial and failed fixtures remain honest; archetype override produces a child report; contracts download as `application/ld+json`.
   Verify: Run `npm test -- --run tests/integration/reports-api.test.ts tests/integration/fixture-providers.test.ts`; run `npm run dev:demo`, submit each archetype fixture, and compare action IDs/scores with golden results. Commit as `feat: add fixture report orchestration`.
 
-- [ ] **6. Build the complete visual capability-map vertical slice — REVIEW PAUSE 1**
+- [x] **6. Build the complete visual capability-map vertical slice — REVIEW PAUSE 1**
   Spec ref: `spec.md > React application shell`, `spec.md > ActionJourney`, `spec.md > Demo And Submission Flow`
   What to build: Implement the URL entry and phase UI, executive summary, separate foundation/readiness scores, classification card and override, deterministic four-stage action journey, accessible state legend, action detail dialog, human-versus-agent evidence, recommendations, contract viewer/copy/download, share control, expired/missing/partial states, WordLift branding, and restrained `wordlift.io` CTA.
   Acceptance: A user can enter one fixture URL and reach a polished shareable report without authentication; the first view communicates archetype, score, exactly three real gaps when available, and the journey; color is never the only state signal; a keyboard user can inspect a capability and return to its node; no ontology terminology overwhelms the executive view.

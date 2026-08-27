@@ -235,9 +235,10 @@ The private Agentic Commerce reference classifies these informational patterns: 
 - Verification passed: 49 full-suite tests, production build, six fixture API reports, partial/failed truth tests, idempotency, child revisions, contract content type, whitespace check, and a live local Alpina fixture API smoke.
 - Next checklist item: the complete visual capability-map vertical slice and first participant review pause.
 
-### Item 6 — Visual capability map (verification blocked)
+### Item 6 — Visual capability map
 - Work completed locally: URL-to-report navigation, executive summary, separate foundation/readiness scores, top-three gaps, expandable classification and archetype override, four-stage action journey, explicit human/agent support, evidence dialog, recommendation, JSON-LD contract copy/download, sharing, partial/failed states, responsive layout, and WordLift CTA.
 - Automated verification passed: full typecheck, production build, 50 unit/integration/component tests, keyboard dialog focus restoration, and whitespace check.
-- Browser verification is not complete. The workspace has no Chrome/Chromium binary; two bounded Playwright installation attempts returned truncated zero-byte archives from the CDN, even after increasing the connection timeout.
-- Proposed recovery: run the Playwright E2E and desktop/mobile screenshot capture in GitHub Actions, where Chromium can be installed by the runner, then use that result as review pause 1 evidence. Item 6 remains unchecked until this passes and Andrea reviews the slice.
-- Andrea approved the recovery with “Absolutely.” The checklist now treats the GitHub Actions browser job and its screenshot artifact as the item 6 browser gate when local Chromium installation is unavailable.
+- Local browser installation was unavailable: two bounded Playwright attempts returned truncated zero-byte Chromium archives from the CDN. Andrea approved moving this gate to GitHub Actions.
+- Verification passed on pull request #1, workflow run 33043941631: typecheck, 50 tests, production build, real Chromium interaction tests, and desktop, capability-dialog, and mobile screenshot capture.
+- Andrea approved the functional and visual baseline: “It does.” He will provide the WordLift style guide and logo for a later visual-polish pass; this does not reopen the capability-map architecture or block WebMCP implementation.
+- Next checklist item: register and prove the current WebMCP audit tools.
