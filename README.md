@@ -8,7 +8,7 @@ have, and turns every gap into an implementation-ready action contract. It expos
 of WebMCP tools, so an agent can run the whole audit from a chat — and it proves the thesis by
 turning one human-only capability into a working, verified agent function.
 
-Built for [The WebMCP Challenge](https://webmcp.devpost.com).
+**Live:** [beta.audit.wordlift.io](https://beta.audit.wordlift.io) · Built for [The WebMCP Challenge](https://webmcp.devpost.com).
 
 ## What makes this different from a checklist
 

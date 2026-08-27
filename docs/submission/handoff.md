@@ -8,7 +8,7 @@ announced.
 
 | # | Action | Command or place | Why it needs you |
 |---|---|---|---|
-| 1 | ~~Deploy to Cloud Run~~ | Done: https://ai-audit-webmcp-383880673216.us-west1.run.app | Live and verified on 2026-08-27 |
+| 1 | ~~Deploy and map the domain~~ | Done: https://beta.audit.wordlift.io | Live and verified on 2026-08-27 |
 | 2 | Make the repository public | GitHub settings, after WordLift brand/license approval | Outward-facing and hard to reverse |
 | 3 | Record the demo video | Script below, under 3 minutes | Needs a person and a voice |
 | 4 | Confirm the AI-usage wording | `devpost-submission.md` | Must match what actually happened |
@@ -24,10 +24,10 @@ Google Cloud is already prepared: Natural Language enabled, Firestore TTL active
 `reports.expiresAt`, `AI_AUDIT_WEBMCP_WORDLIFT_KEY` in Secret Manager, and the runtime service
 account granted `datastore.user` and `secretmanager.secretAccessor`.
 
-After deploying, smoke test and record the URL in `devpost-submission.md`:
+Smoke test the public URL (the Cloud Run URL keeps working as a fallback):
 
 ```bash
-URL=https://ai-audit-webmcp-383880673216.us-west1.run.app
+URL=https://beta.audit.wordlift.io
 curl -s "$URL/api/health"
 curl -s -X POST "$URL/api/reports" -H 'content-type: application/json' \
   -d "{\"requestId\":\"$(uuidgen)\",\"url\":\"alpina.travel\"}" | head -c 400
