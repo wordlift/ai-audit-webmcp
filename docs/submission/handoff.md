@@ -8,11 +8,17 @@ announced.
 
 | # | Action | Command or place | Why it needs you |
 |---|---|---|---|
-| 1 | Deploy to Cloud Run | `scripts/deploy-cloud-run.sh ai-audit-wordlift us-west1` | Creates a public, billed endpoint |
+| 1 | ~~Deploy to Cloud Run~~ | Done: https://ai-audit-webmcp-383880673216.us-west1.run.app | Live and verified on 2026-08-27 |
 | 2 | Make the repository public | GitHub settings, after WordLift brand/license approval | Outward-facing and hard to reverse |
 | 3 | Record the demo video | Script below, under 3 minutes | Needs a person and a voice |
 | 4 | Confirm the AI-usage wording | `devpost-submission.md` | Must match what actually happened |
 | 5 | Paste the submission | https://webmcp.devpost.com | Your account |
+
+The deployed service is live in WordLift mode: real audit, Google V2 categories, Firestore reports,
+and the real Alpina endpoint. Verified in production on 2026-08-27: a live `alpina.travel` audit
+completed in 60s (foundation 94, readiness 0, archetype travel-hospitality high), and the sidecar
+turned `availability.check` from `human-only` into `sidecar-enabled` (readiness 13) in a child
+report naming its immutable parent.
 
 Google Cloud is already prepared: Natural Language enabled, Firestore TTL active on
 `reports.expiresAt`, `AI_AUDIT_WEBMCP_WORDLIFT_KEY` in Secret Manager, and the runtime service
@@ -34,7 +40,7 @@ curl -s -X POST "$URL/api/reports" -H 'content-type: application/json' \
 | Live foundation audit works | `npm run smoke:live -- https://alpina.travel` → completed in ~46s, foundation 92/100 |
 | Google V2 classification works | Same run: Mountain & Ski Resorts 0.86, Vacation Rentals 0.73 |
 | Firestore persistence works | Verified live: create, finalize, read back, immutable child revision, TTL ACTIVE |
-| Real Alpina API call works | `unverified` → `sidecar-enabled`, readiness 0 → 13, child report names its parent |
+| Real Alpina API call works | In production: `human-only` → `sidecar-enabled`, readiness 0 → 13, child report names its parent |
 | WebMCP registration works | 11 component tests against a stubbed `document.modelContext` |
 | Nothing gets booked | Sidecar issues a GET with no body; asserted in tests |
 | The suite is green | 163 Vitest tests, 5 Playwright tests |
@@ -52,7 +58,7 @@ In `docs/submission/screenshots/`, regenerate with
 |---|---|
 | `travel-report-desktop.png` | Archetype, both scores, top three gaps, four-stage capability map |
 | `availability-contract-desktop.png` | Human vs agent evidence, recommendation, JSON-LD contract |
-| `sidecar-before.png` | `availability.check` as `unverified` |
+| `sidecar-before.png` | `availability.check` before the call (`unverified` in the demo fixture, `human-only` on the live site) |
 | `sidecar-result.png` | Live availability with the read-only guarantee |
 | `sidecar-after.png` | Same action as `sidecar-enabled`, readiness raised |
 | `travel-report-mobile.png` | Responsive layout |
@@ -66,7 +72,7 @@ the wrong question. An agent that can read a hotel page still can't tell you if 
 
 **0:15 — one URL.** Enter `alpina.travel`. Show the three phases. Land on the report.
 
-**0:35 — the two scores.** "Foundation score 92. Verified agent readiness 0. Alpina publishes
+**0:35 — the two scores.** "Foundation score 94. Verified agent readiness 0. Alpina publishes
 llms.txt, an agent-skills index, a booking API — and not one of those has been proven callable by an
 agent. We refuse to average those into one comfortable number."
 

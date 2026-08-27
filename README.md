@@ -29,11 +29,15 @@ be able to *do* here, and can it?**
 
 ## The wow moment
 
-`alpina.travel` publishes a booking API and agent-discovery files. Its availability check is still
-`unverified`: a person can pick dates, an interface is announced, but no agent call has ever been
-proven. The report registers an approved read-only WebMCP sidecar, an agent calls it, and the
-successful invocation is written as evidence into a new immutable revision of the report — where
-the same action now reads `sidecar-enabled`.
+`alpina.travel` publishes llms.txt, a skill description, an agent-skills index, and a real booking
+API. It scores **94/100** on the foundation audit and **0/100** on verified agent readiness. Its
+availability check is `human-only`: a person can pick dates, and no agent call has ever been proven.
+Three of its `.well-known` agent files answer with the site's HTML homepage, so the report records
+them as broken declarations rather than features.
+
+The report registers an approved read-only WebMCP sidecar, an agent calls it, and the successful
+invocation is written as evidence into a new immutable revision of the report — where the same
+action reads `sidecar-enabled` and verified readiness moves 0 → 13.
 
 Nothing is booked, held, or paid. The sidecar looks up availability and says so, every time.
 

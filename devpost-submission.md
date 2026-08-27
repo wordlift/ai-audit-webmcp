@@ -53,14 +53,15 @@ browser can run the audit and read the findings without touching the UI.
 **Declaration earns zero points.** A `.well-known/mcp.json` that exists is `unverified`, not ready.
 An action only counts as agent-ready when a call actually succeeded. This is why alpina.travel —
 which publishes llms.txt, skill.md, an agent-skills index, and a working booking API — still scores
-**0/100 on verified agent readiness** against a **92/100 foundation score**. Those are two different
+**0/100 on verified agent readiness** against a **94/100 foundation score**. Those are two different
 questions and we refuse to average them into one comfortable number.
 
-## The demo: unverified → sidecar-enabled
+## The demo: human-only → sidecar-enabled
 
-alpina.travel has a public availability API and a booking form. A person can check dates. An
-interface is announced. But no agent call has ever been proven, so the capability map reads
-`unverified`.
+alpina.travel has a public availability API and a booking form. A person can check dates. But no
+agent call has ever been proven, so the capability map reads `human-only` — and the three
+`.well-known` agent files that answer with the homepage are recorded as broken declarations, not
+features.
 
 Run the approved sidecar — from the page, or by asking an agent in ChatGPT — and it calls the real
 public read-only endpoint. Availability comes back with a real quote (€644.80 for 12–15 September,
@@ -103,9 +104,10 @@ verification we cannot perform shaped the entire scoring model.
 homepage forced a real design change: parse every discovery document, record a broken declaration as
 failed evidence, and let the collector's verified reading outrank the upstream audit's boolean.
 
-**Telling the truth about a site that already tried.** Alpina is not a strawman with nothing. The
-easy demo — "look, no API!" — would have been a lie. The honest before-state is `unverified`, which
-makes a subtler but more valuable point: publishing a manifest is not the same as being callable.
+**Telling the truth about a site that already tried.** Alpina is not a strawman with nothing — it
+scores 94/100 on foundations. The easy demo, "look, no API!", would have been a lie. The honest
+before-state is a capability people can use and no agent has been proven able to call, which makes a
+subtler but more valuable point: publishing a manifest is not the same as being callable.
 
 ## What we learned
 
@@ -126,7 +128,7 @@ Vitest, Testing Library, Supertest, Playwright, JSON-LD, Schema.org, Apache-2.0.
 
 ## Try it (judge path, three minutes)
 
-1. Open **[LIVE URL — CONFIRM after deploy]**.
+1. Open **https://ai-audit-webmcp-383880673216.us-west1.run.app**.
 2. Enter `alpina.travel` and press **Map capabilities**. You get the archetype, both scores, the top
    three gaps, and the four-stage capability map.
 3. Click **Check availability** to see human vs agent evidence, the recommendation, and the JSON-LD
@@ -144,7 +146,7 @@ credentials at all.
 
 ## Links
 
-- **Live app:** [CONFIRM after deploy — `https://ai-audit-webmcp-383880673216.us-west1.run.app`]
+- **Live app:** https://ai-audit-webmcp-383880673216.us-west1.run.app (deployed, live mode, verified 2026-08-27)
 - **Repository:** [CONFIRM — `https://github.com/wordlift/ai-audit-webmcp`, must be public]
 - **Demo video:** [CONFIRM — under 3 minutes, see `docs/submission/handoff.md` for the script]
 

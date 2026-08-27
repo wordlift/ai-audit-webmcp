@@ -12,6 +12,9 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/dist-server ./dist-server
+# The versioned action model and the demo fixtures are data the server reads at runtime.
+COPY --from=build /app/action-model ./action-model
+COPY --from=build /app/fixtures ./fixtures
 USER node
-EXPOSE 3000
+EXPOSE 8080
 CMD ["npm", "start"]
