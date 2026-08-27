@@ -128,7 +128,7 @@ Vitest, Testing Library, Supertest, Playwright, JSON-LD, Schema.org, Apache-2.0.
 
 ## Try it (judge path, three minutes)
 
-1. Open **https://ai-audit-webmcp-383880673216.us-west1.run.app**.
+1. Open **https://beta.audit.wordlift.io**.
 2. Enter `alpina.travel` and press **Map capabilities**. You get the archetype, both scores, the top
    three gaps, and the four-stage capability map.
 3. Click **Check availability** to see human vs agent evidence, the recommendation, and the JSON-LD
@@ -146,7 +146,7 @@ credentials at all.
 
 ## Links
 
-- **Live app:** https://ai-audit-webmcp-383880673216.us-west1.run.app (deployed, live mode, verified 2026-08-27)
+- **Live app:** https://beta.audit.wordlift.io (deployed in live mode, verified 2026-08-27)
 - **Repository:** [CONFIRM — `https://github.com/wordlift/ai-audit-webmcp`, must be public]
 - **Demo video:** [CONFIRM — under 3 minutes, see `docs/submission/handoff.md` for the script]
 
