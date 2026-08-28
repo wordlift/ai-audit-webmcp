@@ -1,6 +1,6 @@
 import { ChevronDown, ScanSearch } from "lucide-react";
 import { useState } from "react";
-import { describeSignal } from "../../shared/format/explainExpectation.js";
+import { describeSignal, presentableSignals } from "../../shared/format/explainExpectation.js";
 import type { Archetype, ClassificationResult } from "../../shared/types/index.js";
 
 const MAX_SIGNAL_CHIPS = 14;
@@ -20,7 +20,7 @@ export function ClassificationCard({ classification, onOverride }: { classificat
     <section className="classification-card">
       <button className="classification-toggle" type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
         <ScanSearch />
-        <span><strong>How we understood the site</strong><small>{classification.categories[0]?.name ?? "Behavior-only classification"} · {classification.confidence} confidence</small></span>
+        <span><strong>Meaning &amp; provenance</strong><small>{classification.categories[0]?.name ?? "Behavior-only classification"} · {classification.confidence} confidence</small></span>
         <ChevronDown className={expanded ? "rotated" : ""} />
       </button>
       {expanded && (
@@ -64,14 +64,15 @@ function RankedArchetypes({ classification }: { classification: ClassificationRe
 
 /** Observed behavior, in words: the second half of the classification's evidence. */
 function BehaviorSignals({ signals }: { signals: string[] }) {
-  if (signals.length === 0) return null;
+  const shown = presentableSignals(signals);
+  if (shown.length === 0) return null;
   return (
     <div>
       <p>Behavior signals</p>
-      {signals.slice(0, MAX_SIGNAL_CHIPS).map((signal) => (
+      {shown.slice(0, MAX_SIGNAL_CHIPS).map((signal) => (
         <span className="category-chip" key={signal} title={signal}>{describeSignal(signal)}</span>
       ))}
-      {signals.length > MAX_SIGNAL_CHIPS && <span className="category-chip">+{signals.length - MAX_SIGNAL_CHIPS} more</span>}
+      {shown.length > MAX_SIGNAL_CHIPS && <span className="category-chip">+{shown.length - MAX_SIGNAL_CHIPS} more</span>}
     </div>
   );
 }

@@ -10,7 +10,7 @@ test("landing page communicates the agent capability workflow", async ({ page })
 test("fixture report presents the action graph and expandable evidence", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Website URL").fill("https://alpina.travel");
-  await page.getByRole("button", { name: /map capabilities/i }).click();
+  await page.getByRole("button", { name: /build the service map/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
   await expect(page.getByRole("heading", { name: /travel \/ hospitality/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: "What an agent should be able to do" })).toBeVisible();

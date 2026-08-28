@@ -3,12 +3,10 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Archetype, ReportRecord } from "../../shared/types/index.js";
 import { getReport, recompileReport } from "../api/client";
-import { ActionJourney } from "../components/ActionJourney";
 import { AlpinaSidecarPanel } from "../components/AlpinaSidecarPanel";
-import { ClassificationCard } from "../components/ClassificationCard";
 import { ExecutiveSummary } from "../components/ExecutiveSummary";
-import { KeyEntities } from "../components/KeyEntities";
 import { ReportErrorState } from "../components/ReportErrorState";
+import { ServiceMap } from "../components/ServiceMap";
 import { AlpinaAvailabilityTool } from "../webmcp/AlpinaAvailabilityTool";
 import { ExplainCapabilityTool } from "../webmcp/ExplainCapabilityTool";
 
@@ -60,9 +58,7 @@ export function ReportRoute() {
       </nav>
       {report.status === "partial" && <div className="partial-banner" role="status">Partial report: {report.errors[0]?.message}</div>}
       <ExecutiveSummary report={report} />
-      {report.classification && <ClassificationCard classification={report.classification} onOverride={override} />}
-      <KeyEntities entities={report.entities ?? []} capabilities={report.capabilities ?? []} />
-      <ActionJourney reportId={report.id} capabilities={report.capabilities ?? []} classification={report.classification} entities={report.entities ?? []} />
+      <ServiceMap report={report} onOverride={override} />
       {sidecarApplies(report) && (
         <AlpinaSidecarPanel
           reportId={report.id}

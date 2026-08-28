@@ -14,7 +14,14 @@ const STAGE_LABELS: Record<CapabilityResult["stage"], string> = {
 };
 
 /** Structured-data types that say a website exists, not what it means. */
-const GENERIC_SCHEMA_SIGNALS = new Set(["ImageObject", "WebSite", "Organization", "BreadcrumbList", "DataCatalog"]);
+const GENERIC_SCHEMA_SIGNALS = new Set([
+  "ImageObject",
+  "WebSite",
+  "Organization",
+  "BreadcrumbList",
+  "DataCatalog",
+  "SearchAction",
+]);
 
 const SIGNAL_PHRASES: Array<{ pattern: RegExp; phrase: (value: string) => string }> = [
   { pattern: /^path:booking$/, phrase: () => "a booking flow" },
@@ -28,7 +35,19 @@ const SIGNAL_PHRASES: Array<{ pattern: RegExp; phrase: (value: string) => string
   { pattern: /^agent:llms-txt$/, phrase: () => "a published llms.txt" },
   { pattern: /^agent:ucp$/, phrase: () => "a UCP declaration" },
   { pattern: /^agent:openapi$/, phrase: () => "an OpenAPI document" },
+  { pattern: /^agent:agent-card$/, phrase: () => "an agent card" },
+  { pattern: /^agent:agent-skills$/, phrase: () => "an agent-skills index" },
+  { pattern: /^agent:mcp-server-card$/, phrase: () => "an MCP server card" },
+  { pattern: /^agent:mcp-json$/, phrase: () => "an MCP discovery document" },
+  { pattern: /^agent:api-catalog$/, phrase: () => "an API catalogue" },
+  { pattern: /^agent:skill-md$/, phrase: () => "a published skill.md" },
+  { pattern: /^agent:well-known-tools-json$/, phrase: () => "a well-known WebMCP tools document" },
 ];
+
+/** Signals worth showing a reader at all: variants and framework noise stay out of chip lists. */
+export function presentableSignals(signals: string[]): string[] {
+  return signals.filter((signal) => !/^agent:webmcp-|^framework:/.test(signal));
+}
 
 /** One behavior signal in words a non-technical reader can use. */
 export function describeSignal(signal: string): string {

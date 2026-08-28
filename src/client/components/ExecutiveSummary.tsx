@@ -1,13 +1,16 @@
 import { Bot, CheckCircle2, ShieldCheck } from "lucide-react";
+import { explainClassification } from "../../shared/format/explainExpectation.js";
 import type { ReportRecord } from "../../shared/types/index.js";
 
 export function ExecutiveSummary({ report }: { report: ReportRecord }) {
   const archetype = report.classification?.primaryArchetype.replaceAll("-", " / ") ?? "Unclassified";
+  const grounding = explainClassification(report.classification);
   return (
     <section className="executive-summary" aria-labelledby="summary-heading">
       <div className="summary-copy">
-        <p className="section-kicker"><Bot size={18} /> AI agent perspective</p>
+        <p className="section-kicker"><Bot size={18} /> Agent Service Map</p>
         <h1 id="summary-heading">We understand this as a <span>{archetype}</span> site.</h1>
+        {grounding && <p className="summary-grounding">{grounding}</p>}
         <p>{report.foundationAudit?.summary ?? "This report maps the functions an agent needs against the evidence available today."}</p>
       </div>
       <div className="score-grid" aria-label="Readiness scores">

@@ -7,7 +7,17 @@ import type { CapabilityResult, SiteEntity } from "../../shared/types/index.js";
  * structured data. Every card names its source, and the chips connect each entity to the actions
  * it justifies on the map below.
  */
-export function KeyEntities({ entities, capabilities }: { entities: SiteEntity[]; capabilities: CapabilityResult[] }) {
+export function KeyEntities({
+  entities,
+  capabilities,
+  selectedId = null,
+  onSelect,
+}: {
+  entities: SiteEntity[];
+  capabilities: CapabilityResult[];
+  selectedId?: string | null;
+  onSelect?: (entityId: string) => void;
+}) {
   if (entities.length === 0) return null;
   const labels = new Map(capabilities.map((capability) => [capability.actionId, capability.label]));
 
@@ -15,7 +25,7 @@ export function KeyEntities({ entities, capabilities }: { entities: SiteEntity[]
     <section className="key-entities" aria-labelledby="key-entities-title">
       <div className="key-entities-heading">
         <p className="section-kicker"><Boxes size={16} /> Key entities</p>
-        <h2 id="key-entities-title">What this business offers</h2>
+        <h3 id="key-entities-title">What this business offers</h3>
         <p>Read from the site's own structured data — extracted, not inferred. Every card links to its source.</p>
       </div>
       <div className="entity-grid">
@@ -23,12 +33,27 @@ export function KeyEntities({ entities, capabilities }: { entities: SiteEntity[]
           const actions = actionsForEntityType(entity.type)
             .map((actionId) => labels.get(actionId))
             .filter((label): label is string => Boolean(label));
-          return (
-            <article className="entity-card" key={entity.id}>
+          const isSelected = selectedId === entity.id;
+          const body = (
+            <>
               <span className="entity-type">{entity.type}</span>
               <strong>{entity.name}</strong>
               {entity.description && <p className="entity-description">{entity.description}</p>}
               {offerLine(entity) && <p className="entity-offer">{offerLine(entity)}</p>}
+            </>
+          );
+          return (
+            <article
+              className={`entity-card${isSelected ? " selected" : ""}${selectedId !== null && !isSelected ? " unselected" : ""}`}
+              key={entity.id}
+            >
+              {onSelect ? (
+                <button type="button" className="entity-trace" aria-pressed={isSelected} onClick={() => onSelect(entity.id)}>
+                  {body}
+                </button>
+              ) : (
+                <div className="entity-trace">{body}</div>
+              )}
               {actions.length > 0 && (
                 <p className="entity-actions" aria-label="Actions this entity justifies">
                   {actions.map((label) => <span className="category-chip" key={label}>{label}</span>)}

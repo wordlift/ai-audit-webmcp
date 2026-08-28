@@ -107,7 +107,7 @@ export function HomeRoute() {
           <div className="input-row">
             <input id="site-url" name="url" type="url" value={url} onChange={(event) => setUrl(event.target.value)} required />
             <button type="submit" disabled={Boolean(phase)}>
-              {phase ? "Scanning" : "Map capabilities"} <ArrowRight size={18} />
+              {phase ? "Scanning" : "Build the Service Map"} <ArrowRight size={18} />
             </button>
           </div>
           <p>No account required. Public websites only.</p>
