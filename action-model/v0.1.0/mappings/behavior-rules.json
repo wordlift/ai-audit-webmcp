@@ -1,11 +1,97 @@
 [
-  {"signal":"schema:Product","archetype":"commerce-retail","weight":2},
-  {"signal":"path:checkout","archetype":"commerce-retail","weight":2},
-  {"signal":"schema:Article","archetype":"publisher-content","weight":2},
-  {"signal":"schema:LodgingBusiness","archetype":"travel-hospitality","weight":3},
-  {"signal":"path:booking","archetype":"travel-hospitality","weight":2},
-  {"signal":"schema:FinancialService","archetype":"finance-insurance","weight":3},
-  {"signal":"path:quote","archetype":"finance-insurance","weight":2},
-  {"signal":"schema:SoftwareApplication","archetype":"saas","weight":3},
-  {"signal":"path:pricing","archetype":"saas","weight":2}
+  {
+    "signal": "schema:Product",
+    "archetype": "commerce-retail",
+    "weight": 2
+  },
+  {
+    "signal": "path:checkout",
+    "archetype": "commerce-retail",
+    "weight": 2
+  },
+  {
+    "signal": "schema:Article",
+    "archetype": "publisher-content",
+    "weight": 2
+  },
+  {
+    "signal": "schema:LodgingBusiness",
+    "archetype": "travel-hospitality",
+    "weight": 3
+  },
+  {
+    "signal": "path:booking",
+    "archetype": "travel-hospitality",
+    "weight": 2
+  },
+  {
+    "signal": "schema:FinancialService",
+    "archetype": "finance-insurance",
+    "weight": 3
+  },
+  {
+    "signal": "path:quote",
+    "archetype": "finance-insurance",
+    "weight": 2
+  },
+  {
+    "signal": "schema:SoftwareApplication",
+    "archetype": "saas",
+    "weight": 3
+  },
+  {
+    "signal": "path:pricing",
+    "archetype": "saas",
+    "weight": 2
+  },
+  {
+    "signal": "path:cart",
+    "archetype": "commerce-retail",
+    "weight": 2
+  },
+  {
+    "signal": "schema:Offer",
+    "archetype": "commerce-retail",
+    "weight": 1
+  },
+  {
+    "signal": "schema:NewsArticle",
+    "archetype": "publisher-content",
+    "weight": 2
+  },
+  {
+    "signal": "schema:BlogPosting",
+    "archetype": "publisher-content",
+    "weight": 2
+  },
+  {
+    "signal": "schema:Hotel",
+    "archetype": "travel-hospitality",
+    "weight": 3
+  },
+  {
+    "signal": "schema:Resort",
+    "archetype": "travel-hospitality",
+    "weight": 3
+  },
+  {
+    "signal": "schema:Apartment",
+    "archetype": "travel-hospitality",
+    "weight": 2
+  },
+  {
+    "signal": "schema:Accommodation",
+    "archetype": "travel-hospitality",
+    "weight": 2
+  },
+  {
+    "signal": "schema:InsuranceAgency",
+    "archetype": "finance-insurance",
+    "weight": 3
+  },
+  {
+    "signal": "schema:WebApplication",
+    "archetype": "saas",
+    "weight": 3
+  }
 ]
