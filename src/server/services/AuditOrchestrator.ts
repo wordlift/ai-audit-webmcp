@@ -76,8 +76,15 @@ export class AuditOrchestrator {
 
     const running = this.baseRecord(request.requestId, target.toString(), this.now());
     await this.store.put(running);
-    const finalReport = await this.run(running, target, request.fixtureId ?? null, request.archetypeOverride ?? undefined);
-    return this.store.finalize(finalReport);
+    try {
+      const finalReport = await this.run(running, target, request.fixtureId ?? null, request.archetypeOverride ?? undefined);
+      return await this.store.finalize(finalReport);
+    } catch (error) {
+      // A record left `running` traps every retry of this requestId in polling until it expires,
+      // so the failure itself becomes the terminal state before the error reaches the caller.
+      await this.finalizeFailed(running, error).catch(() => undefined);
+      throw error;
+    }
   }
 
   async get(id: string): Promise<ReportRecord | null> {
@@ -202,6 +209,20 @@ export class AuditOrchestrator {
       evidenceTruncated: parent.evidenceTruncated || merged.truncated,
     };
     return this.store.createRevision(parent.id, child);
+  }
+
+  /** Stores a terminal failed revision of a running report, with a caller-safe message. */
+  private async finalizeFailed(base: ReportRecord, cause: unknown): Promise<void> {
+    const message = cause instanceof ReportRequestError || cause instanceof UrlPolicyError
+      ? cause.message
+      : "The audit could not be completed.";
+    await this.store.finalize({
+      ...base,
+      status: "failed",
+      phase: "complete",
+      completedAt: this.now().toISOString(),
+      errors: [failure("report_failed", "understanding", message)],
+    });
   }
 
   private async run(

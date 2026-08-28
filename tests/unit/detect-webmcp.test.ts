@@ -188,16 +188,65 @@ describe("site evidence from a linked MCP endpoint", () => {
     expect(signals).toContain("agent:mcp-endpoint");
   });
 
-  it("records a linked endpoint that never handshakes as a broken declaration", () => {
+  it("records an endpoint that opened a session and then failed as a broken declaration", () => {
     const snapshot = snapshotWith({
-      mcpEndpoints: [probeWith({ initialized: false, sessionOpened: false, error: "endpoint answered 404" })],
+      mcpEndpoints: [probeWith({
+        initialized: false,
+        sessionOpened: true,
+        serverName: "",
+        protocolVersion: "",
+        error: "the session endpoint refused the initialize request with HTTP 405",
+      })],
     });
     const evidence = detectSiteEvidence(snapshot, COLLECTED_AT).evidence;
     const failure = evidence.find((item) => item.id.startsWith("mcp-endpoint-failed-"));
 
     expect(failure?.verification).toBe("failed");
-    expect(failure?.claim).toMatch(/did not complete a handshake: endpoint answered 404/);
+    expect(failure?.claim).toMatch(/did not complete a handshake: the session endpoint refused/);
     expect(evidence.some((item) => item.verification === "invoked")).toBe(false);
+  });
+
+  it("records a card-declared endpoint that never answered as a broken declaration", () => {
+    const snapshot = snapshotWith({
+      discovery: [{
+        kind: "mcp-server-card",
+        url: "https://alpina.travel/.well-known/mcp/server-card.json",
+        status: "valid",
+        found: true,
+        declaredNames: ["https://alpina.travel/mcp/sse"],
+      }],
+      mcpEndpoints: [probeWith({
+        initialized: false,
+        sessionOpened: false,
+        serverName: "",
+        protocolVersion: "",
+        error: "endpoint answered 404",
+      })],
+    });
+    const failure = detectSiteEvidence(snapshot, COLLECTED_AT).evidence.find((item) =>
+      item.id.startsWith("mcp-endpoint-failed-"),
+    );
+
+    expect(failure?.verification).toBe("failed");
+    expect(failure?.claim).toMatch(/endpoint answered 404/);
+  });
+
+  it("does not accuse a linked path that never spoke MCP of anything", () => {
+    // A blog post at /mcp-explained matches the endpoint pattern without declaring an interface.
+    const snapshot = snapshotWith({
+      mcpEndpoints: [probeWith({
+        url: "https://alpina.travel/mcp-explained",
+        initialized: false,
+        sessionOpened: false,
+        serverName: "",
+        protocolVersion: "",
+        error: "endpoint answered 200 text/html",
+      })],
+    });
+    const evidence = detectSiteEvidence(snapshot, COLLECTED_AT).evidence;
+
+    expect(evidence.filter((item) => item.verification === "failed")).toEqual([]);
+    expect(evidence.some((item) => item.id.startsWith("mcp-endpoint-"))).toBe(false);
   });
 });
 
