@@ -49,6 +49,8 @@ export const classificationResultSchema = z
     provisional: z.boolean(),
     provisionalReason: z.string().max(500).optional(),
     override: archetypeSchema.optional(),
+    /** Behavioral signals that grounded the archetype, e.g. `path:booking`, `schema:Hotel`. */
+    signals: z.array(z.string().min(1).max(80)).max(60).optional(),
     model: z.string().min(1).max(120),
     collectedAt: z.string().datetime(),
   })

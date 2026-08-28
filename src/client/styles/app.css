@@ -847,3 +847,23 @@ button:disabled { opacity: 0.6; cursor: wait; }
   .sidecar-panel button { width: 100%; }
   .wordlift-mark { width: 96px; }
 }
+
+/* Why an action is expected: the meaning layer, spelled out. */
+.why-expected {
+  margin: 14px 0 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-subtle);
+  border-left: 3px solid var(--brand);
+  border-radius: 8px;
+  background: var(--page);
+}
+.why-expected h3 {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.why-expected p { margin: 0; font-size: 0.95rem; color: var(--ink); }
+.why-expected .why-caveat { margin-top: 6px; font-size: 0.85rem; color: var(--muted); }
+.classification-detail .provisional-note { margin: 2px 0 0; font-size: 0.85rem; color: var(--muted); }

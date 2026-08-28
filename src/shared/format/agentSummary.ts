@@ -1,3 +1,4 @@
+import { explainClassification, explainExpectation } from "./explainExpectation.js";
 import type { CapabilityResult, ReportRecord } from "../types/index.js";
 
 export interface StageCount {
@@ -10,6 +11,8 @@ export interface AuditToolResult {
   canonicalUrl: string;
   archetype: string;
   classificationConfidence: string;
+  /** How the site was read: the content and behavior that grounded the archetype. */
+  classificationGrounding: string | null;
   agentReadinessScore: number;
   foundationAuditScore: number | null;
   priorityGaps: Array<{ actionId: string; label: string; state: string; reason: string }>;
@@ -33,6 +36,8 @@ export interface CapabilityToolResult {
   intent: string;
   expected: boolean;
   expectationSource: string[];
+  /** Plain-language reasoning: why this action belongs on this site's map. */
+  whyExpected: string;
   state: string;
   humanSupport: boolean;
   agentSupport: boolean;
@@ -78,6 +83,7 @@ export function summarizeReportForAgent(report: ReportRecord, reportUrl: string)
     canonicalUrl: report.canonicalUrl ?? report.requestedUrl,
     archetype: report.classification?.primaryArchetype ?? "other",
     classificationConfidence: report.classification?.confidence ?? "low",
+    classificationGrounding: explainClassification(report.classification),
     agentReadinessScore: report.score?.value ?? 0,
     foundationAuditScore: report.foundationAudit?.score ?? null,
     priorityGaps: (report.priorities ?? []).map((gap) => ({
@@ -101,6 +107,7 @@ export function summarizeReportForAgent(report: ReportRecord, reportUrl: string)
 export function auditSummaryText(result: AuditToolResult): string {
   const lines = [
     `${result.canonicalUrl} looks like a ${result.archetype.replace("-", "/")} site (${result.classificationConfidence} confidence).`,
+    ...(result.classificationGrounding ? [result.classificationGrounding] : []),
     `Verified agent readiness: ${result.agentReadinessScore}/100${
       result.foundationAuditScore === null ? "" : ` · AI Audit foundation score: ${result.foundationAuditScore}/100`
     }.`,
@@ -146,6 +153,7 @@ export function describeCapabilityForAgent(
     intent: capability.intent,
     expected: capability.expected,
     expectationSource: capability.expectationSource,
+    whyExpected: whyExpectedText(report, capability),
     state: capability.state,
     humanSupport: capability.humanSupport,
     agentSupport: capability.agentSupport,
@@ -167,6 +175,7 @@ export function describeCapabilityForAgent(
 export function capabilitySummaryText(result: CapabilityToolResult): string {
   const lines = [
     `${result.label} — ${result.state.replace("-", " ")} (${result.intent}, ${result.stage} stage).`,
+    `Why expected: ${result.whyExpected}`,
     `Human support: ${result.humanSupport ? "yes" : "no"}. Agent support: ${result.agentSupport ? "yes" : "no"}.`,
   ];
   if (result.evidence.length > 0) {
@@ -195,4 +204,9 @@ export function capabilitySummaryText(result: CapabilityToolResult): string {
 
 function yesNo(value: boolean): string {
   return value ? "required" : "not required";
+}
+
+function whyExpectedText(report: ReportRecord, capability: CapabilityResult): string {
+  const why = explainExpectation(report.classification, capability);
+  return [why.headline, why.grounding, why.caveat].filter(Boolean).join(" ");
 }

@@ -1,9 +1,10 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { Bot, ExternalLink, UserRound, X } from "lucide-react";
-import type { CapabilityResult } from "../../shared/types/index.js";
+import { explainExpectation } from "../../shared/format/explainExpectation.js";
+import type { CapabilityResult, ClassificationResult } from "../../shared/types/index.js";
 import { ContractViewer } from "./ContractViewer";
 
-export function ActionDetailDialog({ reportId, capability, onOpenChange }: { reportId: string; capability: CapabilityResult | null; onOpenChange: (open: boolean) => void }) {
+export function ActionDetailDialog({ reportId, capability, classification, onOpenChange }: { reportId: string; capability: CapabilityResult | null; classification?: ClassificationResult; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog.Root open={Boolean(capability)} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -14,6 +15,7 @@ export function ActionDetailDialog({ reportId, capability, onOpenChange }: { rep
             <Dialog.Close className="dialog-close" aria-label="Close capability details"><X /></Dialog.Close>
             <p className="dialog-description">{capability.description}</p>
             <div className="dialog-state"><span className={`state-badge state-${capability.state}`}>{capability.state.replace("-", " ")}</span><span>{capability.intent} · importance {capability.importance}/3</span></div>
+            <WhyExpected capability={capability} classification={classification} />
             <section className="evidence-columns">
               <EvidenceColumn title="For humans" icon={<UserRound />} available={capability.humanSupport} evidence={capability.evidence.filter((item) => item.audience === "human")} />
               <EvidenceColumn title="For agents" icon={<Bot />} available={capability.agentSupport} evidence={capability.evidence.filter((item) => item.audience === "agent")} />
@@ -24,6 +26,17 @@ export function ActionDetailDialog({ reportId, capability, onOpenChange }: { rep
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+function WhyExpected({ capability, classification }: { capability: CapabilityResult; classification?: ClassificationResult }) {
+  const why = explainExpectation(classification, capability);
+  return (
+    <section className="why-expected">
+      <h3>Why this action is expected here</h3>
+      <p>{why.headline}{why.grounding ? ` ${why.grounding}` : ""}</p>
+      {why.caveat && <p className="why-caveat">{why.caveat}</p>}
+    </section>
   );
 }
 

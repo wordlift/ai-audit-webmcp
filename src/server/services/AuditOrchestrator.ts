@@ -328,6 +328,8 @@ export class AuditOrchestrator {
         provisional: inference.provisional,
         provisionalReason: inference.provisionalReason,
         override: inference.override,
+        // Stored so "why is this action expected here?" stays answerable from the report alone.
+        signals: inputs.signals.slice(0, 60).map((signal) => signal.slice(0, 80)),
         model: inputs.classifierModel,
         collectedAt: this.now().toISOString(),
       },

@@ -39,6 +39,17 @@ describe("fixture report API", () => {
     expect(response.body.priorities.length).toBeLessThanOrEqual(3);
   });
 
+  it("persists the behavior signals that grounded the classification", async () => {
+    const { app } = testApp();
+    const response = await request(app)
+      .post("/api/reports")
+      .send({ requestId: randomUUID(), url: "alpina.travel", fixtureId: "travel-hospitality" })
+      .expect(200);
+
+    expect(response.body.classification.signals).toContain("path:booking");
+    expect(response.body.classification.signals).toContain("agent:webmcp");
+  });
+
   it("uses the request UUID idempotently", async () => {
     const { app } = testApp();
     const payload = { requestId: randomUUID(), url: "alpina.travel", fixtureId: "travel-hospitality" };
