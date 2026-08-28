@@ -1,3 +1,4 @@
+import { actionsForEntityType } from "../../domain/evidence/schemaActions.js";
 import { explainClassification, explainExpectation } from "./explainExpectation.js";
 import type { CapabilityResult, ReportRecord, SiteEntity } from "../types/index.js";
 
@@ -40,6 +41,8 @@ export interface CapabilityToolResult {
   expectationSource: string[];
   /** Plain-language reasoning: why this action belongs on this site's map. */
   whyExpected: string;
+  /** Source-backed entities this action applies to, so intent can resolve before invoking. */
+  appliesTo: Array<{ id: string; type: string; name: string; offer: string | null; sourceUrl: string }>;
   state: string;
   humanSupport: boolean;
   agentSupport: boolean;
@@ -170,6 +173,16 @@ export function describeCapabilityForAgent(
     expected: capability.expected,
     expectationSource: capability.expectationSource,
     whyExpected: whyExpectedText(report, capability),
+    appliesTo: (report.entities ?? [])
+      .filter((entity) => actionsForEntityType(entity.type).includes(capability.actionId))
+      .slice(0, 5)
+      .map((entity) => ({
+        id: entity.id,
+        type: entity.type,
+        name: entity.name,
+        offer: describeOffer(entity),
+        sourceUrl: entity.sourceUrl,
+      })),
     state: capability.state,
     humanSupport: capability.humanSupport,
     agentSupport: capability.agentSupport,
@@ -193,6 +206,13 @@ export function capabilitySummaryText(result: CapabilityToolResult): string {
   const lines = [
     `${result.label} — ${result.state.replace("-", " ")} (${result.intent}, ${result.stage} stage).`,
     `Why expected: ${result.whyExpected}`,
+    ...(result.appliesTo.length > 0
+      ? [
+          `Applies to: ${result.appliesTo
+            .map((entity) => `${entity.name} (${entity.type}${entity.offer ? `, ${entity.offer}` : ""})`)
+            .join("; ")}.`,
+        ]
+      : []),
     `Human support: ${result.humanSupport ? "yes" : "no"}. Agent support: ${result.agentSupport ? "yes" : "no"}.`,
   ];
   if (result.evidence.length > 0) {

@@ -1,12 +1,14 @@
 import { z } from "zod";
-import type { CapabilityEvidence } from "../../../shared/types/index.js";
+import type { CapabilityEvidence, SiteEntity } from "../../../shared/types/index.js";
 import {
   ALPINA_AVAILABILITY_ENDPOINT,
   READ_ONLY_NOTICE,
   alpinaAvailabilityInputSchema,
   alpinaAvailabilityResultSchema,
+  sidecarEntityContextSchema,
   type AlpinaAvailabilityRequest,
   type AlpinaAvailabilityResult,
+  type SidecarEntityContext,
 } from "./schemas.js";
 
 /** Upstream shape, read loosely: only allowlisted fields below are ever forwarded. */
@@ -160,6 +162,31 @@ export class AlpinaAvailabilitySidecar {
   private now(): Date {
     return this.options.now?.() ?? new Date();
   }
+}
+
+/**
+ * Finds the report entity this availability answer is about, so the tool result carries the
+ * source-backed context an agent grounded its intent in. Matching is by identity, not guesswork:
+ * the property identifier must appear in the entity's id or URL, or slug-match its name.
+ */
+export function resolveSidecarEntity(entities: SiteEntity[], propertyId: string): SidecarEntityContext | null {
+  const needle = propertyId.toLowerCase();
+  const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const match = entities.find(
+    (entity) =>
+      entity.id.toLowerCase().includes(needle) ||
+      (entity.url ?? "").toLowerCase().includes(needle) ||
+      slugify(entity.name) === needle,
+  );
+  if (!match) return null;
+  return sidecarEntityContextSchema.parse({
+    id: match.id,
+    type: match.type,
+    name: match.name,
+    sourceUrl: match.sourceUrl,
+    method: match.method,
+    collectedAt: match.collectedAt,
+  });
 }
 
 /**

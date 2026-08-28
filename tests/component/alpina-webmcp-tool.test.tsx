@@ -25,6 +25,14 @@ const availability = {
   requiresRevalidation: true,
   readOnly: true,
   notice: "Availability and pricing are time-sensitive and must be revalidated. This lookup created no booking, held no inventory, sent no guest details, and took no payment.",
+  entity: {
+    id: "https://alpina.travel/#samspitze-4",
+    type: "Apartment",
+    name: "Samspitze 4",
+    sourceUrl: "https://alpina.travel/",
+    method: "json-ld",
+    collectedAt: "2026-08-27T05:00:00.000Z",
+  },
   updatedReportId: CHILD_ID,
   updatedReportUrl: `/reports/${CHILD_ID}`,
 };
@@ -100,6 +108,7 @@ describe("check-alpina-availability tool", () => {
     const text = toolText(result);
     expect(result.isError).toBeFalsy();
     expect(text).toMatch(/is available for 2026-09-12 to 2026-09-15/);
+    expect(text).toMatch(/Grounded in Samspitze 4 \(Apartment\) — read as json-ld from https:\/\/alpina\.travel\//);
     expect(text).toMatch(/644\.80 EUR/);
     expect(text).toMatch(/created no booking/);
     expect(text).toMatch(new RegExp(`/reports/${CHILD_ID}`));

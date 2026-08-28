@@ -1,6 +1,11 @@
 import { Router, type RequestHandler } from "express";
 import type { AuditOrchestrator } from "../services/AuditOrchestrator.js";
-import { AlpinaSidecarError, sidecarInvocationEvidence, type AlpinaAvailabilitySidecar } from "../sidecars/alpina/adapter.js";
+import {
+  AlpinaSidecarError,
+  resolveSidecarEntity,
+  sidecarInvocationEvidence,
+  type AlpinaAvailabilitySidecar,
+} from "../sidecars/alpina/adapter.js";
 
 export function createAlpinaRouter(
   sidecar: AlpinaAvailabilitySidecar,
@@ -14,8 +19,14 @@ export function createAlpinaRouter(
       const result = await sidecar.check(request.body);
       const reportId = typeof request.body?.reportId === "string" ? request.body.reportId : null;
 
+      // The answer is grounded in the report's own Key Entities: the entity the agent's intent
+      // resolved to travels with the result, with its source and collection time.
+      const report = reportId ? await orchestrator.get(reportId).catch(() => null) : null;
+      const entity = report ? resolveSidecarEntity(report.entities ?? [], result.propertyId) : null;
+      const grounded = entity ? { ...result, entity } : result;
+
       if (!reportId) {
-        response.json(result);
+        response.json(grounded);
         return;
       }
 
@@ -23,10 +34,10 @@ export function createAlpinaRouter(
       // that cannot be updated must not hide the availability answer the agent already has.
       try {
         const child = await orchestrator.attachInvocationEvidence(reportId, [sidecarInvocationEvidence(result)]);
-        response.json({ ...result, updatedReportId: child.id, updatedReportUrl: `/reports/${child.id}` });
+        response.json({ ...grounded, updatedReportId: child.id, updatedReportUrl: `/reports/${child.id}` });
       } catch (error) {
         response.json({
-          ...result,
+          ...grounded,
           reportUpdateError: error instanceof Error ? error.message : "The report could not be updated.",
         });
       }

@@ -123,6 +123,7 @@ export interface AlpinaAvailabilityResponse {
   requiresRevalidation: boolean;
   readOnly: true;
   notice: string;
+  entity?: { id: string; type: string; name: string; sourceUrl: string; method: string; collectedAt: string };
   updatedReportId?: string;
   updatedReportUrl?: string;
   reportUpdateError?: string;

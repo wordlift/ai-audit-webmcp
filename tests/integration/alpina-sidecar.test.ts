@@ -83,6 +83,13 @@ describe("Alpina availability sidecar", () => {
       .expect(200);
 
     expect(response.body.updatedReportUrl).toMatch(/^\/reports\//);
+    // The answer is grounded in the report's own entity, with source and collection time.
+    expect(response.body.entity).toMatchObject({
+      type: "Apartment",
+      name: "Samspitze 4",
+      method: "json-ld",
+      sourceUrl: "https://alpina.travel/",
+    });
 
     const child = await request(app).get(`/api/reports/${response.body.updatedReportId}`).expect(200);
     const after = child.body.capabilities.find((item: { actionId: string }) => item.actionId === "availability.check");
@@ -98,6 +105,18 @@ describe("Alpina availability sidecar", () => {
     expect(
       unchanged.body.capabilities.find((item: { actionId: string }) => item.actionId === "availability.check").state,
     ).toBe("unverified");
+  });
+
+  it("carries no entity context without a report to ground it in", async () => {
+    const { app } = testApp(vi.fn(async () => jsonResponse(upstream)) as unknown as typeof fetch);
+
+    const response = await request(app)
+      .post("/api/sidecars/alpina/availability")
+      .send({ checkIn: "2026-09-12", checkOut: "2026-09-15", adults: 2 })
+      .expect(200);
+
+    expect(response.body.available).toBe(true);
+    expect(response.body.entity).toBeUndefined();
   });
 
   it("reports an upstream failure as a failure, never as no availability", async () => {

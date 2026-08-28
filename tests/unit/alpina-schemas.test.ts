@@ -1,4 +1,6 @@
 import { AlpinaAvailabilitySidecar, AlpinaSidecarError } from "../../src/server/sidecars/alpina/adapter.js";
+import { resolveSidecarEntity } from "../../src/server/sidecars/alpina/adapter.js";
+import type { SiteEntity } from "../../src/shared/types/index.js";
 import { alpinaAvailabilityInputSchema } from "../../src/server/sidecars/alpina/schemas.js";
 
 const sidecar = new AlpinaAvailabilitySidecar();
@@ -49,5 +51,39 @@ describe("Alpina sidecar input contract", () => {
         expect(requested[0]).toContain("checkIn=2026-09-12");
         expect(requested[0]).toContain("adults=2");
       });
+  });
+});
+
+describe("resolving the entity a sidecar answer is about", () => {
+  const entities: SiteEntity[] = [
+    {
+      id: "https://alpina.travel/#organization",
+      type: "LodgingBusiness",
+      name: "Alpina Travel",
+      sourceUrl: "https://alpina.travel/",
+      method: "json-ld",
+      collectedAt: "2026-08-27T05:00:00.000Z",
+    },
+    {
+      id: "https://alpina.travel/#samspitze-4",
+      type: "Apartment",
+      name: "Samspitze 4",
+      sourceUrl: "https://alpina.travel/",
+      method: "json-ld",
+      collectedAt: "2026-08-27T05:00:00.000Z",
+    },
+  ];
+
+  it("matches the property identifier against the entity's identity", () => {
+    expect(resolveSidecarEntity(entities, "samspitze-4")?.name).toBe("Samspitze 4");
+  });
+
+  it("slug-matches the entity name when the id carries no hint", () => {
+    const renamed = [{ ...entities[1], id: "urn:entity:2" }];
+    expect(resolveSidecarEntity(renamed, "samspitze-4")?.type).toBe("Apartment");
+  });
+
+  it("returns nothing rather than guessing", () => {
+    expect(resolveSidecarEntity(entities, "some-other-property")).toBeNull();
   });
 });

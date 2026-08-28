@@ -45,6 +45,23 @@ export const alpinaAvailabilityInputSchema = z
     }
   });
 
+/**
+ * The entity a sidecar answer is grounded in, copied verbatim from the report's Key Entities. It
+ * exists only when the audited site itself published the entity — never synthesized here.
+ */
+export const sidecarEntityContextSchema = z
+  .object({
+    id: z.string().min(1).max(160),
+    type: z.string().min(1).max(60),
+    name: z.string().min(1).max(200),
+    sourceUrl: z.string().min(1).max(600),
+    method: z.literal("json-ld"),
+    collectedAt: z.string(),
+  })
+  .strict();
+
+export type SidecarEntityContext = z.infer<typeof sidecarEntityContextSchema>;
+
 export type AlpinaAvailabilityInput = z.input<typeof alpinaAvailabilityInputSchema>;
 export type AlpinaAvailabilityRequest = z.output<typeof alpinaAvailabilityInputSchema>;
 
