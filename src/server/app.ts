@@ -20,14 +20,20 @@ export interface AppOptions {
  * The WebMCP `tools` policy-controlled feature already defaults to `'self'`; stating it keeps the
  * grant explicit without widening it to embedded third-party frames. The CSP allows only
  * same-origin code, so an audited site's content can never execute here.
+ *
+ * Framing is allowed for the agent surfaces that open this app embedded — ChatGPT renders web
+ * apps inside an iframe, and a blanket DENY silently removed that core path. Every other origin
+ * stays blocked. X-Frame-Options is gone on purpose: it cannot express an allowlist, and
+ * browsers that honor frame-ancestors ignore it anyway.
  */
+const FRAME_ANCESTORS = "'self' https://chatgpt.com https://chat.openai.com https://*.oaiusercontent.com";
+
 const SECURITY_HEADERS: Record<string, string> = {
   "content-security-policy":
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors ${FRAME_ANCESTORS}; base-uri 'self'; form-action 'self'`,
   "permissions-policy": "tools=(self), camera=(), microphone=(), geolocation=(), payment=()",
   "referrer-policy": "strict-origin-when-cross-origin",
   "x-content-type-options": "nosniff",
-  "x-frame-options": "DENY",
   "cross-origin-opener-policy": "same-origin",
 };
 

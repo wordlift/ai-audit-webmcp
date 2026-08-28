@@ -114,11 +114,15 @@ describe("error and recovery paths", () => {
     expect(stored.body.errors[0]).toMatchObject({ code: "report_failed", retryable: true });
   });
 
-  it("sets the WebMCP permissions policy and blocks framing", async () => {
+  it("sets the WebMCP permissions policy and frames only for agent surfaces", async () => {
     const response = await request(testApp()).get("/api/health").expect(200);
     expect(response.headers["permissions-policy"]).toMatch(/tools=\(self\)/);
-    expect(response.headers["x-frame-options"]).toBe("DENY");
-    expect(response.headers["content-security-policy"]).toMatch(/frame-ancestors 'none'/);
+    // ChatGPT opens the app embedded; those origins may frame it, nobody else can.
+    expect(response.headers["content-security-policy"]).toMatch(
+      /frame-ancestors 'self' https:\/\/chatgpt\.com https:\/\/chat\.openai\.com https:\/\/\*\.oaiusercontent\.com/,
+    );
+    // X-Frame-Options cannot express an allowlist, so it is deliberately absent.
+    expect(response.headers["x-frame-options"]).toBeUndefined();
     expect(response.headers["x-powered-by"]).toBeUndefined();
   });
 });
