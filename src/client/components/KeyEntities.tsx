@@ -1,4 +1,4 @@
-import { Boxes, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { actionsForEntityType } from "../../domain/evidence/schemaActions.js";
 import type { CapabilityResult, SiteEntity } from "../../shared/types/index.js";
 
@@ -22,12 +22,7 @@ export function KeyEntities({
   const labels = new Map(capabilities.map((capability) => [capability.actionId, capability.label]));
 
   return (
-    <section className="key-entities" aria-labelledby="key-entities-title">
-      <div className="key-entities-heading">
-        <p className="section-kicker"><Boxes size={16} /> Key entities</p>
-        <h3 id="key-entities-title">What this business offers</h3>
-        <p>Read from the site's own structured data — extracted, not inferred. Every card links to its source.</p>
-      </div>
+    <section className="key-entities" aria-label="Key entities">
       <div className="entity-grid">
         {entities.map((entity) => {
           const actions = actionsForEntityType(entity.type)

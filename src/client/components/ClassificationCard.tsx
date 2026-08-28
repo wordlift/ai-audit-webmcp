@@ -20,7 +20,7 @@ export function ClassificationCard({ classification, onOverride }: { classificat
     <section className="classification-card">
       <button className="classification-toggle" type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
         <ScanSearch />
-        <span><strong>Meaning &amp; provenance</strong><small>{classification.categories[0]?.name ?? "Behavior-only classification"} · {classification.confidence} confidence</small></span>
+        <span><strong>How we read this site</strong><small>{classification.categories[0]?.name ?? "Behavior-only classification"} · {classification.confidence} confidence</small></span>
         <ChevronDown className={expanded ? "rotated" : ""} />
       </button>
       {expanded && (

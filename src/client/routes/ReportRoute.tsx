@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Archetype, ReportRecord } from "../../shared/types/index.js";
 import { getReport, recompileReport } from "../api/client";
 import { AlpinaSidecarPanel } from "../components/AlpinaSidecarPanel";
+import { Chapter, JourneyRail, type ChapterSpec } from "../components/Chapter";
 import { ExecutiveSummary } from "../components/ExecutiveSummary";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { ServiceMap } from "../components/ServiceMap";
@@ -57,18 +58,57 @@ export function ReportRoute() {
         <button type="button" onClick={share}><Share2 size={17} /> {copied ? "Copied" : "Share report"}</button>
       </nav>
       {report.status === "partial" && <div className="partial-banner" role="status">Partial report: {report.errors[0]?.message}</div>}
-      <ExecutiveSummary report={report} />
+      <JourneyRail chapters={journeyChapters(report)} />
+      <div id="chapter-audit" className="chapter">
+        <ExecutiveSummary report={report} />
+      </div>
       <ServiceMap report={report} onOverride={override} />
-      {sidecarApplies(report) && (
-        <AlpinaSidecarPanel
-          reportId={report.id}
-          verified={
-            report.capabilities?.some(
-              (capability) => capability.actionId === "availability.check" && capability.state === "sidecar-enabled",
-            ) ?? false
-          }
-        />
-      )}
+      <Chapter
+        id="chapter-invocation"
+        step={5}
+        title="WebMCP invocation"
+        lede={
+          sidecarApplies(report)
+            ? "The map ends in a call: run the approved read-only sidecar and watch this report gain a verified revision."
+            : "The map ends in a call: this report's own tools are registered in the page through navigator.modelContext."
+        }
+      >
+        {sidecarApplies(report) ? (
+          <AlpinaSidecarPanel
+            reportId={report.id}
+            verified={
+              report.capabilities?.some(
+                (capability) => capability.actionId === "availability.check" && capability.state === "sidecar-enabled",
+              ) ?? false
+            }
+          />
+        ) : (
+          <div className="invocation-card">
+            <p>
+              <strong>audit-website</strong> — run this audit for any public site, from any
+              WebMCP-enabled agent.
+            </p>
+            <p>
+              <strong>explain-capability</strong> — ask about any action on this map: its state, the
+              entities it applies to, the evidence, the boundary, and the machine-readable contract.
+            </p>
+            <p className="invocation-note">
+              Open this page where WebMCP is available and the tools register automatically — the
+              badge in the header shows when they are live.
+            </p>
+          </div>
+        )}
+      </Chapter>
     </div>
   );
+}
+
+function journeyChapters(report: ReportRecord): ChapterSpec[] {
+  return [
+    { id: "chapter-audit", label: "Audit summary" },
+    { id: "chapter-entities", label: "Key entities" },
+    ...(report.classification ? [{ id: "chapter-meaning", label: "Meaning & provenance" }] : []),
+    { id: "chapter-actions", label: "Key actions" },
+    { id: "chapter-invocation", label: "WebMCP invocation" },
+  ];
 }

@@ -1008,3 +1008,84 @@ div.entity-trace { cursor: default; }
 }
 .entity-empty strong { display: block; margin-bottom: 4px; color: var(--ink); }
 .entity-empty p { margin: 0; }
+
+/* The journey in steps: chapters unfold in reading order. */
+.chapter {
+  margin-top: 34px;
+  animation: chapter-in 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  animation-delay: var(--chapter-delay, 0ms);
+}
+@keyframes chapter-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chapter { animation: none; }
+}
+.chapter-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.chapter-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: var(--wl-neutral-0);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.chapter-head h2 { margin: 2px 0 0; font-size: 1.3rem; }
+.chapter-head p { margin: 4px 0 0; color: var(--muted); font-size: 0.93rem; max-width: 72ch; }
+
+.journey-rail {
+  position: fixed;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 30;
+}
+@media (min-width: 1240px) { .journey-rail { display: flex; } }
+.journey-rail button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: none;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--faint);
+  cursor: pointer;
+  border-radius: 8px;
+}
+.journey-rail button i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  font-style: normal;
+  font-size: 0.7rem;
+  background: var(--surface);
+}
+.journey-rail button.active { color: var(--ink); font-weight: 600; }
+.journey-rail button.active i { border-color: var(--brand); background: var(--brand); color: var(--wl-neutral-0); }
+.journey-rail button:hover { color: var(--ink); }
+
+.invocation-card {
+  padding: 16px 18px;
+  border: 1px solid var(--line-subtle);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.invocation-card p { margin: 0 0 8px; font-size: 0.95rem; }
+.invocation-card p:last-child { margin-bottom: 0; }
+.invocation-note { color: var(--muted); font-size: 0.88rem; }

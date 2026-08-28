@@ -27,7 +27,7 @@ export function ActionJourney({ reportId, capabilities, classification, entities
   return (
     <section className="action-map" aria-labelledby="action-map-title">
       <div className="action-map-heading">
-        <div><p className="section-kicker">Key actions</p><h3 id="action-map-title">What an agent should be able to do</h3></div>
+        <div><h3 id="action-map-title">What an agent should be able to do</h3></div>
         <StateLegend />
       </div>
       <div className="action-journey">
