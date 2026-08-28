@@ -206,7 +206,8 @@ describe("WebMCP tool layer", () => {
 
     expect(result.isError).toBe(true);
     expect(toolText(result)).toMatch(/Unknown archetype/);
-    expect(fetchMock).not.toHaveBeenCalled();
+    // The home page pings /api/health for its copy; the audit API must stay untouched.
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/api/reports"))).toBe(false);
   });
 
   it("scopes explain-capability to the visible report and unregisters it on unmount", async () => {

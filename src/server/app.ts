@@ -44,7 +44,11 @@ export function createApp(options: AppOptions = {}): Express {
   app.use(express.json({ limit: "256kb" }));
 
   app.get("/api/health", (_request, response) => {
-    response.status(200).json({ status: "ok", service: "ai-audit-webmcp" });
+    response.status(200).json({
+      status: "ok",
+      service: "ai-audit-webmcp",
+      mode: options.orchestrator?.mode ?? "demo",
+    });
   });
 
   if (options.orchestrator) {

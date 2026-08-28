@@ -54,6 +54,13 @@ const snapshot: SiteSnapshot = {
     },
   ],
   mcpEndpoints: [],
+  searchAction: {
+    template: "https://alpina.travel/search?q={search_term_string}",
+    url: "https://alpina.travel/search?q=lungau",
+    query: "lungau",
+    status: 200,
+    confirmed: true,
+  },
   softNotFound: false,
   truncated: false,
 };
@@ -131,6 +138,10 @@ describe("live orchestrator", () => {
     expect(report.foundationAudit?.score).toBe(94);
     expect(report.capabilities?.length).toBeGreaterThan(0);
     expect(report.score?.value).toBeGreaterThanOrEqual(0);
+    // The executed SearchAction is a completed call, so site.search earns verified readiness.
+    const search = report.capabilities?.find((capability) => capability.actionId === "site.search");
+    expect(search?.state).toBe("agent-ready");
+    expect(search?.evidence.some((item) => item.id === "search-action-executed")).toBe(true);
   });
 
   it("keeps a declared WebMCP tool unverified so it adds no readiness points", async () => {
@@ -146,7 +157,11 @@ describe("live orchestrator", () => {
     expect(availability?.humanSupport).toBe(true);
     expect(availability?.evidence.some((item) => item.kind === "webmcp" && item.verification === "declared")).toBe(true);
     expect(availability?.state).toBe("unverified");
-    expect(report.score?.counts.ready).toBe(0);
+    // The one verified action is the executed SearchAction — never the declared WebMCP tool.
+    expect(report.score?.counts.ready).toBe(1);
+    expect(
+      report.capabilities?.filter((capability) => ["agent-ready", "sidecar-enabled"].includes(capability.state)).map((capability) => capability.actionId),
+    ).toEqual(["site.search"]);
   });
 
   it("returns a partial report when the foundation audit fails but the page was collected", async () => {

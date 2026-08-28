@@ -100,6 +100,15 @@ function offerFrom(offers: unknown): PageEntityOffer | undefined {
   return undefined;
 }
 
+/** Merges entity lists from several pages: first sighting wins, the budget still holds. */
+export function dedupeEntities(entities: PageEntity[]): PageEntity[] {
+  const byId = new Map<string, PageEntity>();
+  for (const entity of entities) {
+    if (!byId.has(entity.id)) byId.set(entity.id, entity);
+  }
+  return [...byId.values()].slice(0, MAX_ENTITIES);
+}
+
 /**
  * Reads source-backed entities out of the page's JSON-LD. Extraction only: a thing appears here
  * because the site published it with a type and a name, never because a model guessed it.

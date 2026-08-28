@@ -199,6 +199,47 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
       .filter((value) => value.length > 0),
   );
 
+  const search = snapshot.searchAction;
+  if (search) {
+    if (search.confirmed) {
+      signals.add("agent:search-action");
+      add({
+        id: "search-action-executed",
+        actionId: "site.search",
+        audience: "agent",
+        kind: "api-result",
+        sourceUrl: search.url,
+        claim: `An agent executed the site's declared SearchAction template with "${search.query}" and the site returned results for it`,
+        confidence: 1,
+        verification: "invoked",
+      });
+    } else if (search.status !== 200) {
+      add({
+        id: "search-action-failed",
+        actionId: "site.search",
+        audience: "agent",
+        kind: "api-result",
+        sourceUrl: search.url,
+        claim: `The site's declared SearchAction template did not answer when an agent executed it${search.note ? `: ${search.note}` : ""}`,
+        confidence: 0.9,
+        verification: "failed",
+      });
+    } else {
+      // A blind 200 proves nothing either way: results may render client-side, and the audit
+      // will not turn that blind spot into an award or an accusation.
+      add({
+        id: "search-action-unconfirmed",
+        actionId: "site.search",
+        audience: "agent",
+        kind: "api-result",
+        sourceUrl: search.url,
+        claim: "The declared SearchAction template answered, but results could not be confirmed without executing site scripts",
+        confidence: 0.7,
+        verification: "declared",
+      });
+    }
+  }
+
   for (const probe of snapshot.mcpEndpoints) {
     if (!probe.initialized) {
       // A broken declaration needs a declaration: the endpoint opened a session and then failed,

@@ -49,6 +49,7 @@ export function HomeRoute() {
   const [wordIndex, setWordIndex] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<"live" | "demo">("live");
   const timers = useRef<number[]>([]);
   const tickers = useRef<number[]>([]);
   const phase = phaseIndex === null ? null : PHASES[phaseIndex].label;
@@ -62,6 +63,18 @@ export function HomeRoute() {
   };
 
   useEffect(() => stopClocks, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const response = await fetch("/api/health");
+        const health = (await response.json()) as { mode?: string };
+        setMode(health.mode === "demo" ? "demo" : "live");
+      } catch {
+        // The live copy is the default; a failed probe changes nothing.
+      }
+    })();
+  }, []);
 
   function startClocks() {
     let elapsed = 0;
@@ -132,7 +145,11 @@ export function HomeRoute() {
           </article>
         ))}
       </section>
-      <p className="demo-note">Demo sites: alpina.travel · shop.example · publisher.example · insurance.example · saas.example</p>
+      <p className="demo-note">
+        {mode === "demo"
+          ? "Demo sites: alpina.travel · shop.example · publisher.example · insurance.example · saas.example"
+          : "Works on any public website. For the full WebMCP + live MCP + sidecar story, try alpina.travel."}
+      </p>
     </section>
   );
 }

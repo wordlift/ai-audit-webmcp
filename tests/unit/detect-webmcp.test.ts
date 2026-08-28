@@ -250,6 +250,46 @@ describe("site evidence from a linked MCP endpoint", () => {
   });
 });
 
+describe("an executed SearchAction", () => {
+  const probe = {
+    template: "https://alpina.travel/search?q={search_term_string}",
+    url: "https://alpina.travel/search?q=alpine%20apartments",
+    query: "alpine apartments",
+    status: 200,
+    confirmed: true,
+  };
+
+  it("counts as a completed call only when the results acknowledged the query", () => {
+    const { evidence, signals } = detectSiteEvidence(snapshotWith({ searchAction: probe }), COLLECTED_AT);
+    const executed = evidence.find((item) => item.id === "search-action-executed");
+
+    expect(executed?.actionId).toBe("site.search");
+    expect(executed?.verification).toBe("invoked");
+    expect(executed?.claim).toMatch(/executed the site's declared SearchAction template/);
+    expect(signals).toContain("agent:search-action");
+  });
+
+  it("stays a declaration on a blind 200 — no award, no accusation", () => {
+    const unconfirmed = { ...probe, confirmed: false, note: "the results page did not acknowledge the query" };
+    const evidence = detectSiteEvidence(snapshotWith({ searchAction: unconfirmed }), COLLECTED_AT).evidence;
+    const item = evidence.find((entry) => entry.id === "search-action-unconfirmed");
+
+    expect(item?.verification).toBe("declared");
+    expect(evidence.some((entry) => entry.verification === "invoked")).toBe(false);
+    expect(evidence.some((entry) => entry.verification === "failed")).toBe(false);
+  });
+
+  it("records a template that does not answer as a broken declaration", () => {
+    const failed = { ...probe, confirmed: false, status: 500, note: "the declared search template answered HTTP 500" };
+    const item = detectSiteEvidence(snapshotWith({ searchAction: failed }), COLLECTED_AT).evidence.find(
+      (entry) => entry.id === "search-action-failed",
+    );
+
+    expect(item?.verification).toBe("failed");
+    expect(item?.claim).toMatch(/HTTP 500/);
+  });
+});
+
 describe("UCP discovery", () => {
   it("maps published commerce capabilities to declared agent evidence", () => {
     const snapshot = snapshotWith({

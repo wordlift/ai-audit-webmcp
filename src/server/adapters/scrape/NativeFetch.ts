@@ -9,7 +9,8 @@ import type {
   SiteForm,
   SiteSnapshot,
 } from "./ScrapeProvider.js";
-import { collectJsonLdEntities } from "./jsonLdEntities.js";
+import { collectJsonLdEntities, dedupeEntities } from "./jsonLdEntities.js";
+import { executeSearchAction, findSearchActionTemplate } from "./searchAction.js";
 import { collectDeclarativeTools, dedupePageTools, extractImperativeTools } from "./webmcpTools.js";
 
 const MAX_LINKS = 150;
@@ -18,6 +19,15 @@ const MAX_TEXT = 20_000;
 const MAX_SCRIPTS = 6;
 const MAX_SCRIPT_BYTES = 400_000;
 const MAX_MCP_ENDPOINTS = 3;
+const MAX_ENTITY_PAGES = 3;
+
+/** Paths that usually carry the catalogue's JSON-LD: detail pages, not navigation. */
+const DETAIL_PATH =
+  /\/(products?|items?|p|rooms?|apartments?|accommodations?|stays?|tours?|courses?|articles?|features?|plans?|services?|angebote?|zimmer|ferienwohnung(en)?)(\/|-|$)/;
+
+/** Utility pages that never carry catalogue entities, whatever the menu calls them. */
+const UTILITY_PATH =
+  /(login|signin|sign-in|signup|sign-up|register|account|cart|basket|checkout|search|contact|privacy|terms|imprint|impressum|datenschutz|cookie|legal|faq|support|help|newsletter)/;
 
 /**
  * Paths worth asking for. A WebMCP manifest is not part of the WebMCP spec, so its absence is never
@@ -82,6 +92,19 @@ export class NativeFetchCollector implements ScrapeProvider {
     const seedQuery = text(document.querySelector("h1")) || text(document.querySelector("title")) || finalUrl.hostname;
     const mcpEndpoints = await this.probeMcpEndpoints(document, finalUrl, discovery, seedQuery.slice(0, 60));
 
+    // The most widespread declared interface on the web gets the same treatment as an MCP tool:
+    // it is executed, once and read-only, and only a page that acknowledges the query confirms it.
+    const searchTemplate = findSearchActionTemplate(document, finalUrl);
+    const searchAction = searchTemplate
+      ? await executeSearchAction(searchTemplate, seedQuery.slice(0, 60), this.options)
+      : undefined;
+
+    // Catalogue JSON-LD usually lives on detail pages, so a few of them are read too.
+    const entities = dedupeEntities([
+      ...collectJsonLdEntities(document, page.finalUrl),
+      ...(await this.collectDetailEntities(document, links, finalUrl)),
+    ]);
+
     return {
       requestedUrl: url.toString(),
       canonicalUrl,
@@ -93,10 +116,11 @@ export class NativeFetchCollector implements ScrapeProvider {
       linkLabels: unique(links.map((node) => text(node).toLowerCase()).filter(Boolean)).slice(0, 80),
       forms: collectForms(document, finalUrl),
       jsonLdTypes: collectJsonLdTypes(document),
-      entities: collectJsonLdEntities(document, page.finalUrl),
+      entities,
       discovery,
       pageTools,
       mcpEndpoints,
+      ...(searchAction ? { searchAction } : {}),
       softNotFound,
       truncated: page.truncated,
     };
@@ -185,6 +209,26 @@ export class NativeFetchCollector implements ScrapeProvider {
     }
 
     return dedupePageTools(tools);
+  }
+
+  /**
+   * Reads a few more same-origin pages for catalogue JSON-LD: detail-looking links first, then
+   * the top navigation, because that is where a site points at what it offers. Pages go through
+   * the collector's own fetcher, so a rendered provider (ScrapingBee) also renders these.
+   */
+  private async collectDetailEntities(document: Document, links: Element[], base: URL) {
+    const targets = pickEntityPages(document, links.map((node) => resolve(node.getAttribute("href"), base)), base);
+    const results = await Promise.allSettled(
+      targets.map(async (target) => {
+        const page = this.fetchPage
+          ? await this.fetchPage(new URL(target))
+          : await safeFetch(target, { ...this.options, timeoutMs: 8_000, maxBytes: 1_000_000 });
+        if ("status" in page && page.status !== 200) return [];
+        const parsed = parseHTML(page.body).document;
+        return collectJsonLdEntities(parsed, "finalUrl" in page ? page.finalUrl : target);
+      }),
+    );
+    return results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
   }
 
   /** Talks to MCP endpoints the page links to and the ones its server card declares. */
@@ -410,6 +454,31 @@ function path(href: string | null | undefined, base: URL): string {
 
 function unique(values: string[]): string[] {
   return [...new Set(values)];
+}
+
+/**
+ * The pages worth reading for entities: same-origin detail-looking links first, then the top
+ * navigation minus utility pages, deduplicated by path, budget applied. The menu is how a site
+ * says what it offers, so it is the fallback when no path looks like a detail page.
+ */
+export function pickEntityPages(document: Document, hrefs: Array<string | null>, base: URL): string[] {
+  const seen = new Set<string>([base.pathname.toLowerCase().replace(/\/$/, "") || "/"]);
+  const picked: string[] = [];
+
+  const consider = (href: string | null, requireDetail: boolean) => {
+    if (picked.length >= MAX_ENTITY_PAGES || !href || !sameOrigin(href, base)) return;
+    const pathname = new URL(href).pathname.toLowerCase().replace(/\/$/, "") || "/";
+    if (pathname === "/" || seen.has(pathname)) return;
+    if (requireDetail ? !DETAIL_PATH.test(pathname) : UTILITY_PATH.test(pathname)) return;
+    seen.add(pathname);
+    picked.push(href);
+  };
+
+  for (const href of hrefs) consider(href, true);
+  for (const node of document.querySelectorAll("header a[href], nav a[href]")) {
+    consider(resolve(node.getAttribute("href"), base), false);
+  }
+  return picked;
 }
 
 export function collectorErrorCode(error: unknown): string {
