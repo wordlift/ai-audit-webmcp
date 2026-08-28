@@ -10,6 +10,8 @@ export interface AppOptions {
   staticDirectory?: string;
   orchestrator?: AuditOrchestrator;
   rateLimits?: RateLimitOptions;
+  /** A separate, looser pool for the sidecar; inherits window and enablement from `rateLimits`. */
+  sidecarRateLimits?: RateLimitOptions;
   trustProxy?: boolean;
   alpinaSidecar?: AlpinaAvailabilitySidecar;
 }
@@ -48,9 +50,14 @@ export function createApp(options: AppOptions = {}): Express {
   if (options.orchestrator) {
     const limiters: RequestHandler[] = createAuditRateLimiters(options.rateLimits);
     app.use("/api/reports", createReportsRouter(options.orchestrator, limiters));
+    // The sidecar draws on its own pool: one agent conversation checks several date ranges, and
+    // none of those calls should spend the audit budget.
+    const sidecarLimiters: RequestHandler[] = createAuditRateLimiters(
+      options.sidecarRateLimits ?? { ...options.rateLimits, perIp: 30, global: 600 },
+    );
     app.use(
       "/api/sidecars/alpina",
-      createAlpinaRouter(options.alpinaSidecar ?? new AlpinaAvailabilitySidecar(), options.orchestrator, limiters),
+      createAlpinaRouter(options.alpinaSidecar ?? new AlpinaAvailabilitySidecar(), options.orchestrator, sidecarLimiters),
     );
   }
 

@@ -364,9 +364,14 @@ function collectTypes(node: unknown, types: Set<string>, depth: number): void {
   }
 }
 
-function readableText(document: Document): string {
+/** Classifier input: what a person reads on the page, never its script, style, or JSON-LD text. */
+export function readableText(document: Document): string {
   const main = document.querySelector("main") ?? document.querySelector("article") ?? document.body;
-  return (main?.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_TEXT);
+  if (!main) return "";
+  // Cloned so the removal never mutates the document the other extractors still read.
+  const clone = main.cloneNode(true) as Element;
+  for (const node of [...clone.querySelectorAll("script, style, noscript, template")]) node.remove();
+  return (clone.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_TEXT);
 }
 
 function text(node: Element | null): string {

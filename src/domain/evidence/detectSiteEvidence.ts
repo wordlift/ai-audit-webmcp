@@ -190,10 +190,21 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
     });
   }
 
+  // Endpoints the site's own server card names as transports. A failed handshake on one of these
+  // is a broken declaration even when the endpoint never spoke MCP at all.
+  const cardEndpoints = new Set(
+    snapshot.discovery
+      .filter((document) => document.kind === "mcp-server-card" && document.found)
+      .flatMap((document) => document.declaredNames.map(normalizeEndpoint))
+      .filter((value) => value.length > 0),
+  );
+
   for (const probe of snapshot.mcpEndpoints) {
     if (!probe.initialized) {
-      // The site links this endpoint as an agent interface, so a handshake that never lands is a
-      // broken declaration rather than a path that happens not to exist.
+      // A broken declaration needs a declaration: the endpoint opened a session and then failed,
+      // or the server card names it as a transport. A merely linked path that never spoke MCP —
+      // a blog post the endpoint pattern happened to match — made no claim, so nothing is said.
+      if (!probe.sessionOpened && !cardEndpoints.has(normalizeEndpoint(probe.url))) continue;
       add({
         id: `mcp-endpoint-failed-${probe.url}`.slice(0, 160),
         actionId: "site.search",
@@ -358,4 +369,13 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
   }
 
   return { evidence, signals: [...signals].sort() };
+}
+
+/** Parses an endpoint for comparison; an unparseable one can never match. */
+function normalizeEndpoint(value: string): string {
+  try {
+    return new URL(value).toString();
+  } catch {
+    return "";
+  }
 }
