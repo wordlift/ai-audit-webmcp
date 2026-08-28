@@ -11,7 +11,9 @@ export function ExecutiveSummary({ report }: { report: ReportRecord }) {
         <p className="section-kicker"><Bot size={18} /> Agent Service Map</p>
         <h1 id="summary-heading">We understand this as a <span>{archetype}</span> site.</h1>
         {grounding && <p className="summary-grounding">{grounding}</p>}
-        <p>{report.foundationAudit?.summary ?? "This report maps the functions an agent needs against the evidence available today."}</p>
+        <p className="summary-foundation">
+          {report.foundationAudit?.summary ?? "This report maps the functions an agent needs against the evidence available today."}
+        </p>
       </div>
       <div className="score-grid" aria-label="Readiness scores">
         <ScoreCard

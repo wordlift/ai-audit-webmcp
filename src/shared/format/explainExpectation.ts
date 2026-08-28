@@ -1,3 +1,4 @@
+import { SCHEMA_ACTION_MAP } from "../../domain/evidence/schemaActions.js";
 import type { CapabilityResult, ClassificationResult } from "../types/index.js";
 
 /**
@@ -58,13 +59,17 @@ export function describeSignal(signal: string): string {
   return signal;
 }
 
-/** The signals worth citing: concrete behavior first, boilerplate and duplicates dropped. */
+/**
+ * The signals worth citing in one sentence: observed paths, schema types the action model
+ * actually understands, and agent-facing declarations. A page can carry dozens of incidental
+ * types — ContactPoint, AggregateRating, Country — and citing those as "behavior" is noise.
+ */
 function groundingSignals(signals: string[]): string[] {
   const meaningful = signals.filter((signal) => {
-    if (signal.startsWith("framework:")) return false;
-    if (/^agent:webmcp-/.test(signal)) return false;
+    if (signal.startsWith("path:")) return true;
     const schema = /^schema:(.+)$/.exec(signal);
-    return !(schema && GENERIC_SCHEMA_SIGNALS.has(schema[1]));
+    if (schema) return schema[1] in SCHEMA_ACTION_MAP && !GENERIC_SCHEMA_SIGNALS.has(schema[1]);
+    return signal.startsWith("agent:") && !/^agent:webmcp-/.test(signal);
   });
   const rank = (signal: string) => (signal.startsWith("path:") ? 0 : signal.startsWith("schema:") ? 1 : 2);
   return [...meaningful].sort((left, right) => rank(left) - rank(right) || left.localeCompare(right)).slice(0, 3);

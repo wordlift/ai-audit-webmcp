@@ -1039,29 +1039,40 @@ div.entity-trace { cursor: default; }
 .chapter-head h2 { margin: 2px 0 0; font-size: 1.3rem; }
 .chapter-head p { margin: 4px 0 0; color: var(--muted); font-size: 0.93rem; max-width: 72ch; }
 
+/* The journey as a sticky stepper: always in flow, never over the content. */
 .journey-rail {
-  position: fixed;
-  right: 18px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: none;
-  flex-direction: column;
-  gap: 10px;
-  z-index: 30;
+  position: sticky;
+  top: 10px;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  margin: 14px 0 4px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  z-index: 40;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line-subtle);
+  border-radius: 999px;
+  box-shadow: 0 8px 26px rgba(25, 25, 25, 0.08);
+  scrollbar-width: none;
 }
-@media (min-width: 1240px) { .journey-rail { display: flex; } }
+.journey-rail::-webkit-scrollbar { display: none; }
 .journey-rail button {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   border: 0;
   background: none;
-  padding: 4px 6px;
+  padding: 5px 10px;
   font: inherit;
   font-size: 0.8rem;
   color: var(--faint);
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 .journey-rail button i {
   display: inline-flex;
@@ -1076,7 +1087,7 @@ div.entity-trace { cursor: default; }
   font-size: 0.7rem;
   background: var(--surface);
 }
-.journey-rail button.active { color: var(--ink); font-weight: 600; }
+.journey-rail button.active { color: var(--ink); font-weight: 600; background: var(--page); }
 .journey-rail button.active i { border-color: var(--brand); background: var(--brand); color: var(--wl-neutral-0); }
 .journey-rail button:hover { color: var(--ink); }
 
@@ -1089,3 +1100,14 @@ div.entity-trace { cursor: default; }
 .invocation-card p { margin: 0 0 8px; font-size: 0.95rem; }
 .invocation-card p:last-child { margin-bottom: 0; }
 .invocation-note { color: var(--muted); font-size: 0.88rem; }
+
+/* The foundation audit speaks in the hero, but briefly; the full text lives in the report data. */
+.summary-foundation {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.journey-rail button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+
+.chapter, #chapter-audit { scroll-margin-top: 72px; }
