@@ -1,1 +1,46 @@
-{"id":"other","url":"https://organization.example/","archetype":"other","categories":[{"name":"/People & Society","confidence":0.58}],"signals":[],"foundation":{"score":61,"summary":"The site provides useful pages but no clear vertical or agent action surface.","findings":["Basic crawl access detected","Contact form detected"],"provider":"fixture"},"evidence":[{"id":"contact-form","actionId":"inquiry.submit","audience":"human","kind":"form","sourceUrl":"https://organization.example/contact","claim":"People can submit a contact request","confidence":1,"verification":"observed","collectedAt":"2026-08-27T05:00:00.000Z"}]}
+{
+  "id": "other",
+  "url": "https://organization.example/",
+  "archetype": "other",
+  "categories": [
+    {
+      "name": "/People & Society",
+      "confidence": 0.58
+    }
+  ],
+  "signals": [],
+  "foundation": {
+    "score": 61,
+    "summary": "The site provides useful pages but no clear vertical or agent action surface.",
+    "findings": [
+      "Basic crawl access detected",
+      "Contact form detected"
+    ],
+    "provider": "fixture"
+  },
+  "evidence": [
+    {
+      "id": "contact-form",
+      "actionId": "inquiry.submit",
+      "audience": "human",
+      "kind": "form",
+      "sourceUrl": "https://organization.example/contact",
+      "claim": "People can submit a contact request",
+      "confidence": 1,
+      "verification": "observed",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    }
+  ],
+  "entities": [
+    {
+      "id": "https://organization.example/#foundation",
+      "type": "Organization",
+      "name": "Example Foundation",
+      "description": "Non-profit supporting mountain communities.",
+      "url": "https://organization.example/",
+      "sourceUrl": "https://organization.example/",
+      "method": "json-ld",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    }
+  ]
+}

@@ -59,7 +59,7 @@ export function AlpinaSidecarPanel({ reportId, verified }: { reportId: string; v
         </label>
         <button type="submit" disabled={busy}>{busy ? "Checking…" : "Run agent function"}</button>
       </form>
-      <p className="sidecar-guardrail"><ShieldCheck size={15} /> Read-only: no booking, no hold, no guest data, no payment.</p>
+      <p className="sidecar-guardrail"><ShieldCheck size={15} /> Read-only and source-backed. Answers are time-sensitive and expire. No booking, no hold, no guest data, no payment.</p>
       {error && <p className="form-error" role="alert">{error}</p>}
       {result && (
         <pre className="sidecar-result" role="status">{describeAvailability(result)}</pre>

@@ -43,7 +43,7 @@ export interface CapabilityToolResult {
   state: string;
   humanSupport: boolean;
   agentSupport: boolean;
-  evidence: Array<{ audience: string; kind: string; verification: string; claim: string; sourceUrl: string; confidence: number }>;
+  evidence: Array<{ audience: string; kind: string; verification: string; claim: string; sourceUrl: string; confidence: number; checkedAt: string }>;
   recommendation: string | null;
   governance: {
     requiresAuthentication: boolean;
@@ -180,6 +180,7 @@ export function describeCapabilityForAgent(
       claim: item.claim,
       sourceUrl: item.sourceUrl,
       confidence: item.confidence,
+      checkedAt: item.collectedAt,
     })),
     recommendation: capability.recommendation ?? null,
     governance: capability.contract?.governance ?? null,

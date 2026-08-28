@@ -1,5 +1,5 @@
 import { Boxes, ExternalLink } from "lucide-react";
-import { SCHEMA_ACTION_MAP } from "../../domain/evidence/schemaActions.js";
+import { actionsForEntityType } from "../../domain/evidence/schemaActions.js";
 import type { CapabilityResult, SiteEntity } from "../../shared/types/index.js";
 
 /**
@@ -20,7 +20,7 @@ export function KeyEntities({ entities, capabilities }: { entities: SiteEntity[]
       </div>
       <div className="entity-grid">
         {entities.map((entity) => {
-          const actions = (SCHEMA_ACTION_MAP[entity.type] ?? [])
+          const actions = actionsForEntityType(entity.type)
             .map((actionId) => labels.get(actionId))
             .filter((label): label is string => Boolean(label));
           return (

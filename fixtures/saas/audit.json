@@ -1,1 +1,64 @@
-{"id":"saas","url":"https://saas.example/","archetype":"saas","categories":[{"name":"/Computers & Electronics/Software/Business & Productivity Software","confidence":0.93}],"signals":["schema:SoftwareApplication","path:pricing"],"foundation":{"score":80,"summary":"Product documentation is strong, but evaluation and account actions are not agent-callable.","findings":["SoftwareApplication data detected","Pricing and trial interfaces detected"],"provider":"fixture"},"evidence":[{"id":"docs-search","actionId":"features.search","audience":"human","kind":"form","sourceUrl":"https://saas.example/docs","claim":"People can search the documentation","confidence":1,"verification":"observed","collectedAt":"2026-08-27T05:00:00.000Z"},{"id":"trial-form","actionId":"trial.start","audience":"human","kind":"form","sourceUrl":"https://saas.example/trial","claim":"People can start a trial","confidence":1,"verification":"observed","collectedAt":"2026-08-27T05:00:00.000Z"}]}
+{
+  "id": "saas",
+  "url": "https://saas.example/",
+  "archetype": "saas",
+  "categories": [
+    {
+      "name": "/Computers & Electronics/Software/Business & Productivity Software",
+      "confidence": 0.93
+    }
+  ],
+  "signals": [
+    "schema:SoftwareApplication",
+    "path:pricing"
+  ],
+  "foundation": {
+    "score": 80,
+    "summary": "Product documentation is strong, but evaluation and account actions are not agent-callable.",
+    "findings": [
+      "SoftwareApplication data detected",
+      "Pricing and trial interfaces detected"
+    ],
+    "provider": "fixture"
+  },
+  "evidence": [
+    {
+      "id": "docs-search",
+      "actionId": "features.search",
+      "audience": "human",
+      "kind": "form",
+      "sourceUrl": "https://saas.example/docs",
+      "claim": "People can search the documentation",
+      "confidence": 1,
+      "verification": "observed",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "trial-form",
+      "actionId": "trial.start",
+      "audience": "human",
+      "kind": "form",
+      "sourceUrl": "https://saas.example/trial",
+      "claim": "People can start a trial",
+      "confidence": 1,
+      "verification": "observed",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    }
+  ],
+  "entities": [
+    {
+      "id": "https://saas.example/#exampleflow",
+      "type": "SoftwareApplication",
+      "name": "ExampleFlow",
+      "description": "Workflow automation for small logistics teams.",
+      "url": "https://saas.example/",
+      "offer": {
+        "price": "29.00",
+        "priceCurrency": "EUR"
+      },
+      "sourceUrl": "https://saas.example/",
+      "method": "json-ld",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    }
+  ]
+}

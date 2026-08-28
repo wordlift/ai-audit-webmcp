@@ -30,6 +30,35 @@ export const SCHEMA_ACTION_MAP: Record<string, string[]> = {
   Order: ["transaction.status"],
 };
 
+/**
+ * Actions an entity of this type is *for*, beyond what publishing it proves. Publishing an
+ * Apartment is evidence for detail retrieval; an agent's intent about an apartment is to check
+ * dates and book. Display relevance only — evidence mapping stays in SCHEMA_ACTION_MAP.
+ */
+const ENTITY_ACTION_RELEVANCE: Record<string, string[]> = {
+  Apartment: ["availability.check", "checkout.create"],
+  Hotel: ["availability.check", "checkout.create"],
+  Resort: ["availability.check", "checkout.create"],
+  Accommodation: ["availability.check", "checkout.create"],
+  House: ["availability.check", "checkout.create"],
+  LodgingBusiness: ["availability.check"],
+  Product: ["checkout.create"],
+  ProductGroup: ["checkout.create"],
+  SoftwareApplication: ["trial.start"],
+  WebApplication: ["trial.start"],
+  FinancialService: ["quote.request", "application.start"],
+  InsuranceAgency: ["quote.request"],
+  Service: ["detail.retrieve", "quote.request"],
+  LocalBusiness: ["detail.retrieve", "inquiry.submit"],
+  Event: ["detail.retrieve", "availability.check"],
+  Course: ["detail.retrieve"],
+};
+
+/** Every action a named entity connects to: what publishing it proves plus what it is for. */
+export function actionsForEntityType(type: string): string[] {
+  return [...new Set([...(SCHEMA_ACTION_MAP[type] ?? []), ...(ENTITY_ACTION_RELEVANCE[type] ?? [])])];
+}
+
 /** Maps a declared tool or endpoint name to the action it most likely serves. */
 const NAME_ACTION_RULES: Array<{ pattern: RegExp; actionId: string }> = [
   { pattern: /avail|vacan|calendar/, actionId: "availability.check" },

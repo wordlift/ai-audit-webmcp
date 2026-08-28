@@ -35,6 +35,12 @@ describe("fixture report API", () => {
     expect(response.body.status).toBe("completed");
     expect(response.body.classification.primaryArchetype).toBe(fixtureId);
     expect(response.body.capabilities.length).toBeGreaterThan(0);
+    // Boundaries travel with every action, verified or not.
+    expect(
+      response.body.capabilities.every(
+        (capability: { contract?: { governance?: unknown } }) => capability.contract?.governance,
+      ),
+    ).toBe(true);
     expect(response.body.score.value).toBeGreaterThanOrEqual(0);
     expect(response.body.priorities.length).toBeLessThanOrEqual(3);
   });

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { CapabilityResult, ClassificationResult } from "../../shared/types/index.js";
+import type { CapabilityResult, ClassificationResult, SiteEntity } from "../../shared/types/index.js";
 import { ActionDetailDialog } from "./ActionDetailDialog";
 import { ActionNode } from "./ActionNode";
 
@@ -10,7 +10,7 @@ const stages = [
   { id: "manage", label: "Manage", description: "Track or change state" },
 ] as const;
 
-export function ActionJourney({ reportId, capabilities, classification }: { reportId: string; capabilities: CapabilityResult[]; classification?: ClassificationResult }) {
+export function ActionJourney({ reportId, capabilities, classification, entities = [] }: { reportId: string; capabilities: CapabilityResult[]; classification?: ClassificationResult; entities?: SiteEntity[] }) {
   const [selected, setSelected] = useState<CapabilityResult | null>(null);
   const [returnFocus, setReturnFocus] = useState<HTMLButtonElement | null>(null);
   function select(capability: CapabilityResult, trigger: HTMLButtonElement) {
@@ -40,7 +40,7 @@ export function ActionJourney({ reportId, capabilities, classification }: { repo
           </section>
         ))}
       </div>
-      <ActionDetailDialog reportId={reportId} capability={selected} classification={classification} onOpenChange={changeOpen} />
+      <ActionDetailDialog reportId={reportId} capability={selected} classification={classification} entities={entities} onOpenChange={changeOpen} />
     </section>
   );
 }

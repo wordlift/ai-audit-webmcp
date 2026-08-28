@@ -911,3 +911,30 @@ button:disabled { opacity: 0.6; cursor: wait; }
   text-decoration: none;
 }
 .entity-source:hover { color: var(--brand); }
+
+/* The action's boundary, before anything else. */
+.boundary-strip { margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 7px; }
+.boundary-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line-subtle);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.boundary-badge svg { width: 13px; height: 13px; }
+.boundary-safe { color: var(--wl-moss); background: rgba(34, 162, 134, 0.1); border-color: rgba(34, 162, 134, 0.3); }
+.boundary-caution { color: #7a6412; background: rgba(194, 164, 29, 0.12); border-color: rgba(194, 164, 29, 0.35); }
+.boundary-danger { color: var(--wl-danger); background: rgba(197, 48, 48, 0.08); border-color: rgba(197, 48, 48, 0.3); }
+.boundary-neutral { color: var(--muted); background: var(--page); }
+
+.applies-to { margin: 10px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.applies-to-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  font-weight: 600;
+}

@@ -62,7 +62,7 @@ export function ReportRoute() {
       <ExecutiveSummary report={report} />
       {report.classification && <ClassificationCard classification={report.classification} onOverride={override} />}
       <KeyEntities entities={report.entities ?? []} capabilities={report.capabilities ?? []} />
-      <ActionJourney reportId={report.id} capabilities={report.capabilities ?? []} classification={report.classification} />
+      <ActionJourney reportId={report.id} capabilities={report.capabilities ?? []} classification={report.classification} entities={report.entities ?? []} />
       {sidecarApplies(report) && (
         <AlpinaSidecarPanel
           reportId={report.id}

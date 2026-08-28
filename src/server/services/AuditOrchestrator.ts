@@ -361,9 +361,11 @@ export class AuditOrchestrator {
         (item) => item.verification === "invoked" && item.kind === "tool-result" && item.id.startsWith("sidecar:"),
       );
       const capability = deriveCapability(action, actionEvidence, { approvedSidecar });
+      // The contract travels with every action: a verified action still has boundaries, and the
+      // dialog reads governance and delivery from it. Only gaps get a recommendation.
+      capability.contract = compileActionContract(action, siteUrl, capability.evidence);
       if (["missing", "human-only", "unverified"].includes(capability.state)) {
         capability.recommendation = recommendationFor(capability);
-        capability.contract = compileActionContract(action, siteUrl, capability.evidence);
       }
       return capability;
     });
