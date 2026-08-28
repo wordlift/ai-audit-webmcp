@@ -95,6 +95,25 @@ describe("error and recovery paths", () => {
     expect(response.body.error).toBe("report_request_invalid");
   });
 
+  it("stores a terminal failed report when the audit result cannot be persisted", async () => {
+    // A ceiling far below any real report makes finalize throw after the audit itself ran.
+    const store = new MemoryReportStore(3_000, () => fixedNow);
+    const orchestrator = new AuditOrchestrator(store, loadActionModel(), new FixtureProvider(), {
+      publicAppUrl: "https://audit.example/",
+      ttlDays: 30,
+      now: () => fixedNow,
+    });
+    const app = createApp({ orchestrator, rateLimits: { enabled: false } });
+    const requestId = randomUUID();
+
+    await request(app).post("/api/reports").send({ requestId, url: "alpina.travel" }).expect(500);
+
+    // The record is not left `running`, so a retry reads a terminal failure instead of polling forever.
+    const stored = await request(app).get(`/api/reports/${requestId}`).expect(200);
+    expect(stored.body.status).toBe("failed");
+    expect(stored.body.errors[0]).toMatchObject({ code: "report_failed", retryable: true });
+  });
+
   it("sets the WebMCP permissions policy and blocks framing", async () => {
     const response = await request(testApp()).get("/api/health").expect(200);
     expect(response.headers["permissions-policy"]).toMatch(/tools=\(self\)/);
