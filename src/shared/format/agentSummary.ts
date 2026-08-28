@@ -1,5 +1,5 @@
 import { explainClassification, explainExpectation } from "./explainExpectation.js";
-import type { CapabilityResult, ReportRecord } from "../types/index.js";
+import type { CapabilityResult, ReportRecord, SiteEntity } from "../types/index.js";
 
 export interface StageCount {
   ready: number;
@@ -13,6 +13,8 @@ export interface AuditToolResult {
   classificationConfidence: string;
   /** How the site was read: the content and behavior that grounded the archetype. */
   classificationGrounding: string | null;
+  /** Source-backed entities the site's structured data names, so intent can meet an offer. */
+  keyEntities: Array<{ type: string; name: string; offer: string | null; sourceUrl: string }>;
   agentReadinessScore: number;
   foundationAuditScore: number | null;
   priorityGaps: Array<{ actionId: string; label: string; state: string; reason: string }>;
@@ -84,6 +86,12 @@ export function summarizeReportForAgent(report: ReportRecord, reportUrl: string)
     archetype: report.classification?.primaryArchetype ?? "other",
     classificationConfidence: report.classification?.confidence ?? "low",
     classificationGrounding: explainClassification(report.classification),
+    keyEntities: (report.entities ?? []).slice(0, 5).map((entity) => ({
+      type: entity.type,
+      name: entity.name,
+      offer: describeOffer(entity),
+      sourceUrl: entity.sourceUrl,
+    })),
     agentReadinessScore: report.score?.value ?? 0,
     foundationAuditScore: report.foundationAudit?.score ?? null,
     priorityGaps: (report.priorities ?? []).map((gap) => ({
@@ -108,6 +116,14 @@ export function auditSummaryText(result: AuditToolResult): string {
   const lines = [
     `${result.canonicalUrl} looks like a ${result.archetype.replace("-", "/")} site (${result.classificationConfidence} confidence).`,
     ...(result.classificationGrounding ? [result.classificationGrounding] : []),
+    ...(result.keyEntities.length > 0
+      ? [
+          `Key entities: ${result.keyEntities
+            .slice(0, 3)
+            .map((entity) => `${entity.name} (${entity.type}${entity.offer ? `, ${entity.offer}` : ""})`)
+            .join("; ")}.`,
+        ]
+      : []),
     `Verified agent readiness: ${result.agentReadinessScore}/100${
       result.foundationAuditScore === null ? "" : ` · AI Audit foundation score: ${result.foundationAuditScore}/100`
     }.`,
@@ -204,6 +220,12 @@ export function capabilitySummaryText(result: CapabilityToolResult): string {
 
 function yesNo(value: boolean): string {
   return value ? "required" : "not required";
+}
+
+function describeOffer(entity: SiteEntity): string | null {
+  const offer = entity.offer;
+  if (!offer?.price) return null;
+  return `from ${offer.price}${offer.priceCurrency ? ` ${offer.priceCurrency}` : ""}`;
 }
 
 function whyExpectedText(report: ReportRecord, capability: CapabilityResult): string {

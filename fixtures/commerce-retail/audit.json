@@ -1,1 +1,80 @@
-{"id":"commerce-retail","url":"https://shop.example/","archetype":"commerce-retail","categories":[{"name":"/Shopping/Apparel","confidence":0.94}],"signals":["schema:Product","path:checkout"],"foundation":{"score":78,"summary":"Strong product data, but most shopping actions remain page-bound.","findings":["Product and offer markup detected","Human search and checkout detected"],"provider":"fixture"},"evidence":[{"id":"shop-search","actionId":"site.search","audience":"human","kind":"form","sourceUrl":"https://shop.example/","claim":"A product search form is available","confidence":1,"verification":"observed","collectedAt":"2026-08-27T05:00:00.000Z"},{"id":"product-data","actionId":"detail.retrieve","audience":"agent","kind":"structured-data","sourceUrl":"https://shop.example/products/example","claim":"Product structured data is declared","confidence":0.9,"verification":"declared","collectedAt":"2026-08-27T05:00:00.000Z"}]}
+{
+  "id": "commerce-retail",
+  "url": "https://shop.example/",
+  "archetype": "commerce-retail",
+  "categories": [
+    {
+      "name": "/Shopping/Apparel",
+      "confidence": 0.94
+    }
+  ],
+  "signals": [
+    "schema:Product",
+    "path:checkout"
+  ],
+  "foundation": {
+    "score": 78,
+    "summary": "Strong product data, but most shopping actions remain page-bound.",
+    "findings": [
+      "Product and offer markup detected",
+      "Human search and checkout detected"
+    ],
+    "provider": "fixture"
+  },
+  "evidence": [
+    {
+      "id": "shop-search",
+      "actionId": "site.search",
+      "audience": "human",
+      "kind": "form",
+      "sourceUrl": "https://shop.example/",
+      "claim": "A product search form is available",
+      "confidence": 1,
+      "verification": "observed",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "product-data",
+      "actionId": "detail.retrieve",
+      "audience": "agent",
+      "kind": "structured-data",
+      "sourceUrl": "https://shop.example/products/example",
+      "claim": "Product structured data is declared",
+      "confidence": 0.9,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    }
+  ],
+  "entities": [
+    {
+      "id": "Product:alpine-trail-runner-2",
+      "type": "Product",
+      "name": "Alpine Trail Runner 2",
+      "description": "Lightweight trail running shoe with recycled upper.",
+      "sku": "ATR2-44-BLK",
+      "offer": {
+        "price": "129.00",
+        "priceCurrency": "EUR",
+        "availability": "InStock"
+      },
+      "sourceUrl": "https://shop.example/",
+      "method": "json-ld",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "Product:merino-base-layer",
+      "type": "Product",
+      "name": "Merino Base Layer",
+      "description": "Mid-weight merino layer for shoulder-season hikes.",
+      "sku": "MBL-M-NVY",
+      "offer": {
+        "price": "89.00",
+        "priceCurrency": "EUR",
+        "availability": "PreOrder"
+      },
+      "sourceUrl": "https://shop.example/",
+      "method": "json-ld",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    }
+  ]
+}

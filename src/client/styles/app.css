@@ -867,3 +867,47 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .why-expected p { margin: 0; font-size: 0.95rem; color: var(--ink); }
 .why-expected .why-caveat { margin-top: 6px; font-size: 0.85rem; color: var(--muted); }
 .classification-detail .provisional-note { margin: 2px 0 0; font-size: 0.85rem; color: var(--muted); }
+
+/* Key entities: the source-backed layer of the Service Map. */
+.key-entities { margin: 26px 0 6px; }
+.key-entities-heading h2 { margin: 2px 0 4px; font-size: 1.25rem; }
+.key-entities-heading > p:last-child { margin: 0 0 12px; color: var(--muted); font-size: 0.92rem; }
+.entity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.entity-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line-subtle);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.entity-type {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--page);
+  border: 1px solid var(--line-subtle);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.entity-card strong { font-size: 1.02rem; color: var(--ink); }
+.entity-description { margin: 0; font-size: 0.88rem; color: var(--muted); }
+.entity-offer { margin: 0; font-size: 0.9rem; color: var(--ink); font-weight: 600; }
+.entity-actions { margin: 2px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.entity-source {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+.entity-source:hover { color: var(--brand); }

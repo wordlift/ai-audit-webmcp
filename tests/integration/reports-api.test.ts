@@ -50,6 +50,28 @@ describe("fixture report API", () => {
     expect(response.body.classification.signals).toContain("agent:webmcp");
   });
 
+  it("stores source-backed entities and carries them into child revisions", async () => {
+    const { app } = testApp();
+    const parent = await request(app)
+      .post("/api/reports")
+      .send({ requestId: randomUUID(), url: "alpina.travel", fixtureId: "travel-hospitality" })
+      .expect(200);
+
+    expect(parent.body.entities).toHaveLength(2);
+    expect(parent.body.entities[0]).toMatchObject({
+      type: "Apartment",
+      name: "Samspitze 4",
+      method: "json-ld",
+      sourceUrl: "https://alpina.travel/",
+    });
+
+    const child = await request(app)
+      .post(`/api/reports/${parent.body.id}/recompile`)
+      .send({ archetype: "commerce-retail" })
+      .expect(200);
+    expect(child.body.entities).toEqual(parent.body.entities);
+  });
+
   it("uses the request UUID idempotently", async () => {
     const { app } = testApp();
     const payload = { requestId: randomUUID(), url: "alpina.travel", fixtureId: "travel-hospitality" };

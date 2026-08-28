@@ -7,7 +7,9 @@ import {
   capabilityEvidenceSchema,
   contentCategorySchema,
   foundationAuditSummarySchema,
+  MAX_SITE_ENTITIES,
   reportErrorSchema,
+  siteEntitySchema,
 } from "../../../shared/schemas/report.js";
 
 const fixtureSchema = z
@@ -21,6 +23,7 @@ const fixtureSchema = z
     foundation: foundationAuditSummarySchema.optional(),
     errors: z.array(reportErrorSchema).default([]),
     evidence: z.array(capabilityEvidenceSchema),
+    entities: z.array(siteEntitySchema).max(MAX_SITE_ENTITIES).optional(),
   })
   .strict();
 

@@ -381,5 +381,32 @@
       "verification": "declared",
       "collectedAt": "2026-08-27T05:00:00.000Z"
     }
+  ],
+  "entities": [
+    {
+      "id": "https://alpina.travel/#samspitze-4",
+      "type": "Apartment",
+      "name": "Samspitze 4",
+      "description": "Alpine holiday apartment for up to 6 guests in the Lungau region of Austria.",
+      "url": "https://alpina.travel/apartments/samspitze-4",
+      "offer": {
+        "price": "644.80",
+        "priceCurrency": "EUR",
+        "availability": "InStock"
+      },
+      "sourceUrl": "https://alpina.travel/",
+      "method": "json-ld",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "https://alpina.travel/#organization",
+      "type": "LodgingBusiness",
+      "name": "Alpina Travel",
+      "description": "Holiday apartments and alpine stays in the Lungau.",
+      "url": "https://alpina.travel/",
+      "sourceUrl": "https://alpina.travel/",
+      "method": "json-ld",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    }
   ]
 }

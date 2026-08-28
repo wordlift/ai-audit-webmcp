@@ -44,6 +44,7 @@ function snapshotWith(overrides: Partial<SiteSnapshot>): SiteSnapshot {
     linkLabels: [],
     forms: [],
     jsonLdTypes: [],
+    entities: [],
     discovery: [],
     pageTools: [],
     mcpEndpoints: [],

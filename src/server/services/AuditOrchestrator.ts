@@ -14,6 +14,7 @@ import type {
   ContentCategory,
   ReportError,
   ReportRecord,
+  SiteEntity,
 } from "../../shared/types/index.js";
 import type { AuditEvidenceBundle, AuditProvider } from "../adapters/audit/AuditProvider.js";
 import { auditErrorToReportError } from "../adapters/audit/WordLiftAudit.js";
@@ -41,6 +42,7 @@ interface CompiledInputs {
   canonicalUrl: string;
   categories: ContentCategory[];
   signals: string[];
+  entities: SiteEntity[];
   evidence: CapabilityEvidence[];
   foundation?: ReportRecord["foundationAudit"];
   classifierModel: string;
@@ -112,6 +114,7 @@ export class AuditOrchestrator {
       },
       foundationAudit: parent.foundationAudit,
       capabilities,
+      entities: parent.entities,
       score: scoreReadiness(capabilities),
       priorities: rankPriorities(capabilities),
       errors: parent.errors,
@@ -167,6 +170,7 @@ export class AuditOrchestrator {
       classification: parent.classification,
       foundationAudit: parent.foundationAudit,
       capabilities,
+      entities: parent.entities,
       score: scoreReadiness(capabilities),
       priorities: rankPriorities(capabilities),
       errors: parent.errors,
@@ -267,6 +271,7 @@ export class AuditOrchestrator {
       canonicalUrl: snapshot?.canonicalUrl ?? audit?.url ?? target.toString(),
       categories: classification.categories,
       signals: [...new Set([...detection.signals, ...auditSignals])].sort(),
+      entities: (snapshot?.entities ?? []).map((entity) => ({ ...entity, collectedAt })),
       evidence: sanitized.evidence,
       foundation: audit?.foundation,
       classifierModel: classification.model,
@@ -294,6 +299,7 @@ export class AuditOrchestrator {
         canonicalUrl: fixture.url,
         categories: fixture.categories,
         signals: fixture.signals,
+        entities: fixture.entities ?? [],
         evidence: sanitized.evidence,
         foundation: fixture.foundation,
         classifierModel: "google-v2-fixture",
@@ -335,6 +341,7 @@ export class AuditOrchestrator {
       },
       foundationAudit: inputs.foundation,
       capabilities,
+      ...(inputs.entities.length > 0 ? { entities: inputs.entities } : {}),
       score: scoreReadiness(capabilities),
       priorities: rankPriorities(capabilities),
       errors: inputs.errors,

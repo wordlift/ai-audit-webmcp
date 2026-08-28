@@ -7,6 +7,7 @@ import { ActionJourney } from "../components/ActionJourney";
 import { AlpinaSidecarPanel } from "../components/AlpinaSidecarPanel";
 import { ClassificationCard } from "../components/ClassificationCard";
 import { ExecutiveSummary } from "../components/ExecutiveSummary";
+import { KeyEntities } from "../components/KeyEntities";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { AlpinaAvailabilityTool } from "../webmcp/AlpinaAvailabilityTool";
 import { ExplainCapabilityTool } from "../webmcp/ExplainCapabilityTool";
@@ -60,6 +61,7 @@ export function ReportRoute() {
       {report.status === "partial" && <div className="partial-banner" role="status">Partial report: {report.errors[0]?.message}</div>}
       <ExecutiveSummary report={report} />
       {report.classification && <ClassificationCard classification={report.classification} onOverride={override} />}
+      <KeyEntities entities={report.entities ?? []} capabilities={report.capabilities ?? []} />
       <ActionJourney reportId={report.id} capabilities={report.capabilities ?? []} classification={report.classification} />
       {sidecarApplies(report) && (
         <AlpinaSidecarPanel

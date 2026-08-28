@@ -12,6 +12,8 @@ import type {
   readinessScoreSchema,
   reportErrorSchema,
   reportRecordSchema,
+  siteEntityOfferSchema,
+  siteEntitySchema,
 } from "../schemas/report.js";
 
 export type ActionContract = z.infer<typeof actionContractSchema>;
@@ -26,3 +28,5 @@ export type PriorityGap = z.infer<typeof priorityGapSchema>;
 export type ReadinessScore = z.infer<typeof readinessScoreSchema>;
 export type ReportError = z.infer<typeof reportErrorSchema>;
 export type ReportRecord = z.infer<typeof reportRecordSchema>;
+export type SiteEntity = z.infer<typeof siteEntitySchema>;
+export type SiteEntityOffer = z.infer<typeof siteEntityOfferSchema>;

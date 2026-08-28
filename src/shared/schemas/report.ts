@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const MAX_EVIDENCE_ITEMS = 100;
+export const MAX_SITE_ENTITIES = 24;
 export const MAX_EVIDENCE_SNIPPET_LENGTH = 500;
 export const DEFAULT_MAX_REPORT_BYTES = 900_000;
 
@@ -52,6 +53,36 @@ export const classificationResultSchema = z
     /** Behavioral signals that grounded the archetype, e.g. `path:booking`, `schema:Hotel`. */
     signals: z.array(z.string().min(1).max(80)).max(60).optional(),
     model: z.string().min(1).max(120),
+    collectedAt: z.string().datetime(),
+  })
+  .strict();
+
+export const siteEntityOfferSchema = z
+  .object({
+    price: z.string().min(1).max(40).optional(),
+    priceCurrency: z.string().min(1).max(10).optional(),
+    availability: z.string().min(1).max(80).optional(),
+    validFrom: z.string().min(1).max(40).optional(),
+    validThrough: z.string().min(1).max(40).optional(),
+  })
+  .strict();
+
+/**
+ * A named thing the site's own structured data says the business offers or is. Everything here is
+ * extracted, never inferred: the entity carries the page it was read from, the method that read
+ * it, and when — so every card in the Service Map links back to its source.
+ */
+export const siteEntitySchema = z
+  .object({
+    id: z.string().min(1).max(160),
+    type: z.string().min(1).max(60),
+    name: z.string().min(1).max(200),
+    description: z.string().min(1).max(300).optional(),
+    url: z.string().min(1).max(600).optional(),
+    sku: z.string().min(1).max(120).optional(),
+    offer: siteEntityOfferSchema.optional(),
+    sourceUrl: z.string().min(1).max(600),
+    method: z.literal("json-ld"),
     collectedAt: z.string().datetime(),
   })
   .strict();
@@ -193,6 +224,7 @@ export const reportRecordSchema = z
     classification: classificationResultSchema.optional(),
     foundationAudit: foundationAuditSummarySchema.optional(),
     capabilities: z.array(capabilityResultSchema).max(80).optional(),
+    entities: z.array(siteEntitySchema).max(MAX_SITE_ENTITIES).optional(),
     score: readinessScoreSchema.optional(),
     priorities: z.array(priorityGapSchema).max(3).optional(),
     errors: z.array(reportErrorSchema).max(30),

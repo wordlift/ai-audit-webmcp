@@ -9,6 +9,7 @@ import type {
   SiteForm,
   SiteSnapshot,
 } from "./ScrapeProvider.js";
+import { collectJsonLdEntities } from "./jsonLdEntities.js";
 import { collectDeclarativeTools, dedupePageTools, extractImperativeTools } from "./webmcpTools.js";
 
 const MAX_LINKS = 150;
@@ -92,6 +93,7 @@ export class NativeFetchCollector implements ScrapeProvider {
       linkLabels: unique(links.map((node) => text(node).toLowerCase()).filter(Boolean)).slice(0, 80),
       forms: collectForms(document, finalUrl),
       jsonLdTypes: collectJsonLdTypes(document),
+      entities: collectJsonLdEntities(document, page.finalUrl),
       discovery,
       pageTools,
       mcpEndpoints,

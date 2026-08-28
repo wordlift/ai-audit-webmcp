@@ -68,6 +68,30 @@ export interface McpToolProbe {
   note?: string;
 }
 
+export interface PageEntityOffer {
+  price?: string;
+  priceCurrency?: string;
+  availability?: string;
+  validFrom?: string;
+  validThrough?: string;
+}
+
+/**
+ * A named thing the page's own JSON-LD offers, read verbatim. `sourceUrl` is the document it came
+ * from; the orchestrator stamps the collection time when the entity enters a report.
+ */
+export interface PageEntity {
+  id: string;
+  type: string;
+  name: string;
+  description?: string;
+  url?: string;
+  sku?: string;
+  offer?: PageEntityOffer;
+  sourceUrl: string;
+  method: "json-ld";
+}
+
 /**
  * The result of talking to an MCP endpoint the page links to. `initialized` means the handshake
  * completed, which is a real round trip; a listed tool is a declaration until it is called.
@@ -99,6 +123,8 @@ export interface SiteSnapshot {
   linkLabels: string[];
   forms: SiteForm[];
   jsonLdTypes: string[];
+  /** Source-backed entities the page's structured data names. */
+  entities: PageEntity[];
   discovery: DiscoveryDocument[];
   /** WebMCP tools the page declares on elements or registers in script. */
   pageTools: PageAgentTool[];

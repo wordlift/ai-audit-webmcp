@@ -30,6 +30,16 @@ const snapshot: SiteSnapshot = {
     },
   ],
   jsonLdTypes: ["LodgingBusiness", "Offer", "Organization"],
+  entities: [
+    {
+      id: "https://alpina.travel/#samspitze-4",
+      type: "Apartment",
+      name: "Samspitze 4",
+      offer: { price: "644.80", priceCurrency: "EUR", availability: "InStock" },
+      sourceUrl: "https://alpina.travel/",
+      method: "json-ld",
+    },
+  ],
   discovery: [
     { kind: "llms", url: "https://alpina.travel/llms.txt", status: "valid", found: true, declaredNames: [] },
     { kind: "openapi", url: "https://alpina.travel/openapi.json", status: "invalid", found: false, declaredNames: [] },
