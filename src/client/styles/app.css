@@ -685,11 +685,11 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .inspect-label svg { width: 13px; }
 
 /* ---------- Dialog ---------- */
-.dialog-overlay { position: fixed; inset: 0; background: rgba(25, 25, 25, 0.55); backdrop-filter: blur(4px); z-index: 20; }
+.dialog-overlay { position: fixed; inset: 0; background: rgba(25, 25, 25, 0.55); backdrop-filter: blur(4px); z-index: 60; }
 
 .dialog-content {
   position: fixed;
-  z-index: 21;
+  z-index: 61;
   top: 3vh;
   right: 3vw;
   width: min(720px, 94vw);

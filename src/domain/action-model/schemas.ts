@@ -40,6 +40,8 @@ export const archetypeTemplateSchema = z
     id: archetypeSchema,
     label: z.string().min(1),
     actions: z.array(z.string()).min(1).max(12),
+    /** Vertical wording for an action, e.g. finance renames "Request a quote" to an evaluation. */
+    labels: z.record(z.string(), z.string().min(1).max(120)).optional(),
   })
   .strict();
 

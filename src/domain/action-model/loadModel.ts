@@ -46,6 +46,11 @@ export function loadActionModel(version = "0.1.0", root = process.cwd()): Action
     for (const actionId of template.actions) {
       if (!actions.has(actionId)) throw new Error(`Template ${archetype} references unknown action ${actionId}`);
     }
+    for (const actionId of Object.keys(template.labels ?? {})) {
+      if (!template.actions.includes(actionId)) {
+        throw new Error(`Template ${archetype} renames ${actionId}, which is not in its journey`);
+      }
+    }
     templates.set(archetype, template);
   }
 

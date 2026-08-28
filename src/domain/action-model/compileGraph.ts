@@ -25,12 +25,18 @@ export function compileActionGraph(
   const template = model.templates.get(archetype);
   if (!template) throw new Error(`No action template for ${archetype}`);
   const expectationSource = [`archetype:${archetype}`, ...categoryProvenance].sort();
-  const actions = template.actions.map((id, order) => ({
-    ...(model.actions.get(id) as ActionDefinition),
-    order,
-    expected: true as const,
-    expectationSource,
-  }));
+  const actions = template.actions.map((id, order) => {
+    const definition = model.actions.get(id) as ActionDefinition;
+    return {
+      ...definition,
+      // The vertical's own wording, when the template provides it: a finance site offers a free
+      // evaluation, not a generic quote.
+      label: template.labels?.[id] ?? definition.label,
+      order,
+      expected: true as const,
+      expectationSource,
+    };
+  });
   return {
     archetype,
     modelVersion: model.manifest.version,

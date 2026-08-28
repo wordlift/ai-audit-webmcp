@@ -1,6 +1,6 @@
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
-import { pickEntityPages, readableText } from "../../src/server/adapters/scrape/NativeFetch.js";
+import { firstPartyPath, pickEntityPages, readableText } from "../../src/server/adapters/scrape/NativeFetch.js";
 
 describe("readable text for classification", () => {
   it("excludes script, style, and JSON-LD text on a page without a main landmark", () => {
@@ -78,5 +78,24 @@ describe("picking pages for entity extraction", () => {
     expect(
       pickEntityPages(emptyDocument(), ["https://alpina.travel/products/"], new URL("https://alpina.travel/products/")),
     ).toEqual([]);
+  });
+});
+
+describe("first-party paths", () => {
+  const base = new URL("https://www.freedomdebtrelief.com/");
+
+  it("keeps same-host paths as before", () => {
+    expect(firstPartyPath("/how-it-works?src=nav", base)).toBe("/how-it-works?src=nav");
+  });
+
+  it("keeps a first-party subdomain as //host/path so path rules can read its name", () => {
+    expect(firstPartyPath("https://apply.freedomdebtrelief.com/start", base)).toBe(
+      "//apply.freedomdebtrelief.com/start",
+    );
+  });
+
+  it("drops third-party hosts entirely", () => {
+    expect(firstPartyPath("https://apply.example.com/", base)).toBe("");
+    expect(firstPartyPath("https://notfreedomdebtrelief.com/", base)).toBe("");
   });
 });

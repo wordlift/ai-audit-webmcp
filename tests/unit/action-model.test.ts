@@ -31,4 +31,17 @@ describe("action model", () => {
       "category:/Travel",
     ]);
   });
+
+  it("lets a vertical speak its own language for an action", () => {
+    const finance = compileActionGraph(model, "finance-insurance");
+    const quote = finance.actions.find((action) => action.id === "quote.request");
+    const eligibility = finance.actions.find((action) => action.id === "eligibility.explain");
+
+    expect(quote?.label).toBe("Get a free evaluation or quote");
+    expect(eligibility?.label).toBe("Check eligibility & qualification");
+
+    // Other verticals keep the model's generic wording.
+    const travel = compileActionGraph(model, "travel-hospitality");
+    expect(travel.actions.every((action) => action.label.length > 0)).toBe(true);
+  });
 });

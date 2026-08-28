@@ -290,6 +290,36 @@ describe("an executed SearchAction", () => {
   });
 });
 
+describe("the human workflow a homepage leads with", () => {
+  it("reads visible CTAs and first-party subdomain flows as human evidence", () => {
+    // freedomdebtrelief.com's real shape: calculator CTAs on the page, the application on a
+    // first-party subdomain, and nothing in the URL paths of the audited host itself.
+    const snapshot = snapshotWith({
+      canonicalUrl: "https://www.freedomdebtrelief.com/",
+      requestedUrl: "https://www.freedomdebtrelief.com/",
+      linkLabels: ["see if you qualify", "get your free debt evaluation", "how it works"],
+      linkPaths: ["//apply.freedomdebtrelief.com/", "/how-it-works"],
+    });
+    const evidence = detectSiteEvidence(snapshot, COLLECTED_AT).evidence;
+    const byAction = (actionId: string) => evidence.filter((item) => item.actionId === actionId);
+
+    expect(byAction("eligibility.explain").some((item) => item.audience === "human")).toBe(true);
+    expect(byAction("quote.request").some((item) => item.audience === "human")).toBe(true);
+    // The application lives on apply.<site>; the subdomain's own name is the path evidence.
+    expect(byAction("application.start").some((item) => item.audience === "human")).toBe(true);
+  });
+
+  it("does not read ordinary navigation as a workflow", () => {
+    const snapshot = snapshotWith({
+      linkLabels: ["about us", "our story", "press", "careers"],
+      linkPaths: ["/about", "/press"],
+    });
+    const evidence = detectSiteEvidence(snapshot, COLLECTED_AT).evidence;
+
+    expect(evidence.some((item) => item.id.startsWith("cta-"))).toBe(false);
+  });
+});
+
 describe("UCP discovery", () => {
   it("maps published commerce capabilities to declared agent evidence", () => {
     const snapshot = snapshotWith({

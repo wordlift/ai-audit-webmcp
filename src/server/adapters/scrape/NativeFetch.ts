@@ -112,7 +112,7 @@ export class NativeFetchCollector implements ScrapeProvider {
       description: document.querySelector('meta[name="description"]')?.getAttribute("content")?.slice(0, 500) ?? "",
       text: readableText(document),
       headings: [...document.querySelectorAll("h1, h2, h3")].slice(0, 40).map((node) => text(node)).filter(Boolean),
-      linkPaths: unique(links.map((node) => path(node.getAttribute("href"), finalUrl)).filter(Boolean)),
+      linkPaths: unique(links.map((node) => firstPartyPath(node.getAttribute("href"), finalUrl)).filter(Boolean)),
       linkLabels: unique(links.map((node) => text(node).toLowerCase()).filter(Boolean)).slice(0, 80),
       forms: collectForms(document, finalUrl),
       jsonLdTypes: collectJsonLdTypes(document),
@@ -362,7 +362,7 @@ function collectForms(document: Document, base: URL): SiteForm[] {
     return {
       name: (form.getAttribute("name") ?? form.getAttribute("id") ?? form.getAttribute("aria-label") ?? "").slice(0, 80),
       method: (form.getAttribute("method") ?? "get").toLowerCase(),
-      action: path(form.getAttribute("action"), base) || "/",
+      action: firstPartyPath(form.getAttribute("action"), base) || "/",
       inputNames,
       hasDateInput: types.includes("date") || inputNames.some((name) => /date|check.?in|check.?out|arrival|depart/.test(name)),
       hasSearchInput:
@@ -441,12 +441,22 @@ function sameOrigin(href: string, base: URL): boolean {
   }
 }
 
-function path(href: string | null | undefined, base: URL): string {
+/**
+ * The path a rule can read. A link to a first-party subdomain — apply.example.com,
+ * booking.example.com — is part of this site's workflow, so it is kept as `//host/path`: the
+ * leading slashes let every path-shaped rule match the subdomain's own name.
+ */
+export function firstPartyPath(href: string | null | undefined, base: URL): string {
   const resolved = resolve(href, base);
   if (!resolved) return "";
   try {
     const url = new URL(resolved);
-    return url.host === base.host ? `${url.pathname}${url.search}`.toLowerCase().slice(0, 200) : "";
+    if (url.host === base.host) return `${url.pathname}${url.search}`.toLowerCase().slice(0, 200);
+    const root = base.hostname.replace(/^www\./, "");
+    if (url.hostname === root || url.hostname.endsWith(`.${root}`)) {
+      return `//${url.host}${url.pathname}`.toLowerCase().slice(0, 200);
+    }
+    return "";
   } catch {
     return "";
   }

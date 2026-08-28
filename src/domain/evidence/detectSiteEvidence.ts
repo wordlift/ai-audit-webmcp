@@ -57,6 +57,49 @@ const NAMED_INTERFACES = new Set<SiteSnapshot["discovery"][number]["kind"]>([
   "agent-card",
 ]);
 
+/**
+ * Call-to-action language, matched against link labels. A site's central workflow often lives in
+ * its buttons, not its paths — "see if you qualify", "get a free evaluation", "apply now" — and a
+ * detector that only reads URLs misses the thing the homepage leads with.
+ */
+const CTA_RULES: Array<{ pattern: RegExp; actionId: string; claim: string }> = [
+  {
+    pattern: /see if (you|i) qualify|do i qualify|check (your |my )?eligibility|am i eligible/,
+    actionId: "eligibility.explain",
+    claim: "People can start an eligibility check from a visible call to action",
+  },
+  {
+    pattern: /free (debt )?(evaluation|assessment|estimate|consultation)|get (a |your )?(free )?(quote|estimate|evaluation)/,
+    actionId: "quote.request",
+    claim: "People are offered a free evaluation or quote through a visible call to action",
+  },
+  {
+    pattern: /apply now|start (your |an |my )?application/,
+    actionId: "application.start",
+    claim: "People can start an application from a visible call to action",
+  },
+  {
+    pattern: /add to (cart|bag|basket)|buy now/,
+    actionId: "checkout.create",
+    claim: "People can start a purchase from a visible call to action",
+  },
+  {
+    pattern: /book now|check availability|reserve now/,
+    actionId: "availability.check",
+    claim: "People can start a booking from a visible call to action",
+  },
+  {
+    pattern: /start (your |a )?free trial|try (it |for )?free/,
+    actionId: "trial.start",
+    claim: "People can start a trial from a visible call to action",
+  },
+  {
+    pattern: /contact us|get in touch|talk to (us|an? \w+)/,
+    actionId: "inquiry.submit",
+    claim: "People can reach the business from a visible call to action",
+  },
+];
+
 const SUBSCRIBE_INPUT = /email|newsletter|subscribe/;
 const CONTACT_INPUT = /message|subject|enquiry|inquiry|comment/;
 
@@ -137,6 +180,21 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
         verification: "observed",
       });
     }
+  }
+
+  const labelHaystack = snapshot.linkLabels.join(" · ");
+  for (const rule of CTA_RULES) {
+    if (!rule.pattern.test(labelHaystack)) continue;
+    add({
+      id: `cta-${rule.actionId}`,
+      actionId: rule.actionId,
+      audience: "human",
+      kind: "page",
+      sourceUrl: site,
+      claim: rule.claim,
+      confidence: 0.8,
+      verification: "observed",
+    });
   }
 
   const haystack = [...snapshot.linkPaths, ...snapshot.linkLabels].join(" ");

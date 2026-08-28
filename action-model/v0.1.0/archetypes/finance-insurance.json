@@ -1,1 +1,20 @@
-{"id":"finance-insurance","label":"Finance / insurance","actions":["site.search","site.browse","detail.retrieve","items.compare","eligibility.explain","policy.explain","quote.request","application.start","transaction.status"]}
+{
+  "id": "finance-insurance",
+  "label": "Finance / insurance",
+  "actions": [
+    "site.search",
+    "site.browse",
+    "detail.retrieve",
+    "items.compare",
+    "eligibility.explain",
+    "policy.explain",
+    "quote.request",
+    "application.start",
+    "transaction.status"
+  ],
+  "labels": {
+    "quote.request": "Get a free evaluation or quote",
+    "eligibility.explain": "Check eligibility & qualification",
+    "application.start": "Start an application"
+  }
+}
