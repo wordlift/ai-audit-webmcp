@@ -7,6 +7,43 @@ export interface SiteForm {
   hasSearchInput: boolean;
 }
 
+export interface ExtractedOffer {
+  id?: string;
+  name?: string;
+  price?: string | number;
+  priceCurrency?: string;
+  availability?: string;
+  url?: string;
+}
+
+/** A domain entity extracted from JSON-LD, with page provenance retained. */
+export interface ExtractedEntity {
+  id: string;
+  types: string[];
+  name: string;
+  alternateNames: string[];
+  description?: string;
+  sourceUrl: string;
+  sameAs: string[];
+  offers: ExtractedOffer[];
+}
+
+export interface SitePageSnapshot {
+  url: string;
+  title: string;
+  description: string;
+  role: "entry" | "detail" | "offer" | "policy" | "contact" | "other";
+  text: string;
+  headings: string[];
+  linkPaths: string[];
+  linkLabels: string[];
+  forms: SiteForm[];
+  jsonLdTypes: string[];
+  entities: ExtractedEntity[];
+  pageTools: PageAgentTool[];
+  truncated: boolean;
+}
+
 export interface DiscoveryDocument {
   kind:
     | "robots"
@@ -92,6 +129,8 @@ export interface SiteSnapshot {
   canonicalUrl: string;
   title: string;
   description: string;
+  /** Up to four representative pages, selected by role rather than link order. */
+  pages: SitePageSnapshot[];
   /** Readable text for classification only; never stored in a report. */
   text: string;
   headings: string[];

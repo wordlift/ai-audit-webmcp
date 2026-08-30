@@ -1,179 +1,153 @@
-# Devpost submission draft — WordLift AI Audit: Agent Capability Map
+# Devpost submission draft — WordLift AI Audit: Context Engine for Agents
 
-Status: draft for review. Items marked **[CONFIRM]** need Andrea's input or a completed action
-before submitting. Deadline: **3 September 2026, 1:00 PM PT** — after which the Devpost entry, the
-repository, and the live site must not be touched until winners are announced.
-
----
+Status: draft for review. Items marked **[CONFIRM]** require a final check before submission.
 
 ## Project name
 
-**WordLift AI Audit — Agent Capability Map**
+**WordLift AI Audit — Context Engine for Agents**
 
-## Elevator pitch (200 characters max)
+## Tagline
 
-Pages give AI agents knowledge. Functions let them act. Enter a URL: we map what an agent should be
-able to do on that site, prove what it actually can, and turn one gap into a working WebMCP tool.
+Turn any website into an evidence-backed service map: what it knows, what it offers, and what AI agents can actually do.
 
-## The problem
+## Inspiration
 
-Every "is my site AI-ready?" tool answers the wrong question. They check whether a crawler can read
-your pages. But an agent that can read your hotel page still cannot check whether the room is free
-on the twelfth. Knowledge is not capability.
+Websites were designed as pages for people. AI agents need something different: trusted knowledge about the things a business offers and functions they can safely call.
 
-Worse, the signals everyone checks are trivially faked. During this build we pointed the audit at a
-site that publishes `/.well-known/mcp.json`, `/.well-known/webmcp/tools.json`, and `/openapi.json`.
-All three returned HTTP 200. All three returned the site's HTML homepage. A checklist audit — the
-foundation audit we ourselves call — scored them as present. They were soft 404s. If the industry
-grades agent-readiness on whether a URL returns 200, everyone passes and no agent can do anything.
+Most “AI readiness” audits stop at crawlability, metadata, or the presence of a manifest. Those are useful foundations, but they do not answer the operational question: **which action can an agent perform, for which entity, through which interface, and what proves it works?**
+
+WordLift already delivers a context engine based on knowledge graphs. We extended that idea with an action layer so a site owner can move from content and entities to an implementable agent service map.
 
 ## What it does
 
-Enter a public URL and the application:
+Enter any safe public URL. WordLift AI Audit then:
 
-1. **Understands the site** — collects the page, its forms, its structured data, and its
-   agent-discovery documents, runs the WordLift AI Audit foundation analysis, and classifies the
-   content with Google Natural Language V2.
-2. **Maps what an agent should be able to do** — infers one of six operating archetypes
-   deterministically and compiles an ordered capability journey: Discover → Understand/Decide → Act
-   → Manage, drawn from a versioned model of 24 governed actions.
-3. **Checks what an agent actually can do** — derives one of six states per action from typed
-   evidence, keeping human support and agent support strictly separate.
-4. **Hands you the fix** — every incomplete action gets a plain-language recommendation and a
-   JSON-LD capability contract with inputs, outputs, governance, and provenance.
-5. **Closes one gap for real** — an approved read-only WebMCP sidecar makes a human-only capability
-   agent-callable, and the successful call is written back as evidence.
+1. **Analyzes four useful pages, not just the homepage.** It selects an entry page plus complementary detail, offer/action, and policy/contact pages when available.
+2. **Preserves the full WordLift foundation audit.** SEO, site files, structured data, content structure, image accessibility, automation readiness, JavaScript behavior, findings, and quick wins run in parallel and remain available as expandable technical evidence.
+3. **Classifies the site.** Google content categories and observed business signals infer one of six operating archetypes: commerce/retail, publisher/content, travel/hospitality, finance/insurance, SaaS, or other.
+4. **Builds the context graph.** The domain graph captures organizations, products, services, places, articles, people, offers, and provenance. The lexical graph captures categories, names, aliases, and topics.
+5. **Compiles the expected action layer.** Classification chooses a deterministic action journey; entity types bind each action to the real thing it applies to.
+6. **Checks interfaces and evidence.** Human pages and forms are separated from structured data, APIs, MCP, and WebMCP tools. A declaration is never confused with a successful invocation.
+7. **Shows the path forward.** Every gap has a recommendation and a JSON-LD contract describing the entity, inputs, outputs, governance, and delivery mechanism required.
 
-The whole thing is itself a WebMCP surface: `audit-website`, `explain-capability`, and
-`check-alpina-availability` register on `document.modelContext`, so an agent in ChatGPT's built-in
-browser can run the audit and read the findings without touching the UI.
+The user first receives an executive summary and three priority gaps. The complete WordLift audit, context graph, interface evidence, and contracts stay one click away, so technical depth never interrupts the conversational flow.
 
-## The rule that makes it honest
+## Why classification matters
 
-**Declaration earns zero points.** A `.well-known/mcp.json` that exists is `unverified`, not ready.
-An action only counts as agent-ready when a call actually succeeded. This is why alpina.travel —
-which publishes llms.txt, skill.md, an agent-skills index, and a working booking API — still scores
-**0/100 on verified agent readiness** against a **94/100 foundation score**. Those are two different
-questions and we refuse to average them into one comfortable number.
+Classification is not a decorative label. It is the compiler input for the capability model.
 
-## The demo: human-only → sidecar-enabled
+- A commerce site should expose product discovery, offers, availability, checkout, and order-management actions.
+- A publisher should expose content retrieval, author/source verification, recommendations, and subscriptions.
+- A travel site should expose property discovery, offers, availability, booking handoff, and reservation management.
+- Finance and insurance sites need product comparison, eligibility, quotes, applications, policies, and claims.
+- SaaS sites need feature and documentation discovery, plan comparison, trials, sales, support, and account management.
+- An uncertain site receives a conservative generic graph and an honest provisional classification.
 
-alpina.travel has a public availability API and a booking form. A person can check dates. But no
-agent call has ever been proven, so the capability map reads `human-only` — and the three
-`.well-known` agent files that answer with the homepage are recorded as broken declarations, not
-features.
+The same public compiler, schemas, scoring rules, and UI handle all six archetypes. Alpina.travel is one controlled proof case, not product-specific logic.
 
-Run the approved sidecar — from the page, or by asking an agent in ChatGPT — and it calls the real
-public read-only endpoint. Availability comes back with a real quote (€644.80 for 12–15 September,
-2 guests, with the cancellation policy and tourist tax). That successful invocation is written as
-`invoked` evidence into a **new immutable revision** of the report, where the same action now reads
-`sidecar-enabled` and verified readiness moves 0 → 13.
+## The Context Engine
 
-Nothing is booked, held, or paid. The tool says so in its description and in every response.
+The visual report makes one connected system clear:
 
-The parent report is unchanged — a link you already shared never mutates under its reader.
+**Domain graph → Lexical graph → Action layer → Delivery and evidence**
+
+Select an entity such as a product, article, software application, financial service, or lodging business. The action graph immediately highlights what an agent should be able to do with that entity, which interfaces currently support the action, and what contract would close the gap.
+
+This is ontology-backed internally, but the user never needs to learn an ontology. They see a capability map and a practical implementation plan.
+
+## WebMCP leverage
+
+The application is itself a browser-native WebMCP surface using the current `document.modelContext` API:
+
+- `audit-website` accepts any safe public URL, waits for the completed audit, and returns the archetype, scores, page and entity summary, priorities, and shareable report URL.
+- `explain-capability` returns the entity bindings, human and agent interfaces, evidence, recommendation, and contract for one action.
+- `check-alpina-availability` is one controlled read-only sidecar showing how an approved existing endpoint can become a verified WebMCP capability.
+
+The first two tools are generic. The third is deliberately narrow: it proves the adapter pattern without pretending a universal reverse proxy is safe.
+
+## Honest readiness
+
+**Declaration earns zero readiness points.** A discovery document, OpenAPI file, structured-data action, or declared tool is evidence, but remains `unverified` until a relevant call succeeds. Only invoked machine interfaces can mark an action `agent-ready` or `sidecar-enabled`.
+
+The WordLift foundation score and agent-readiness score remain separate because they answer different questions: is the site prepared for AI systems, and can an agent actually perform its expected actions?
+
+## Alpina.travel reference proof
+
+The stable Alpina fixture demonstrates the complete journey with four captured pages, domain entities, offers, lexical context, expected travel actions, interface evidence, and contracts. It currently records a **94/100 WordLift foundation score** and **22/100 verified action readiness, with 2 of 10 expected capabilities ready**.
+
+The report does not claim Alpina lacks an availability surface. It distinguishes the existing human/API functionality from browser-native WebMCP verification. The approved read-only sidecar proves the additional exposure and records successful invocation in an immutable child report.
+
+No room is booked, held, or paid for.
 
 ## How we built it
 
-One TypeScript package: React 19 + Vite in the browser, Express on Cloud Run, Firestore for
-immutable anonymous report revisions.
+One deployable TypeScript application combines React 19 and Vite with Express on Cloud Run. Firestore stores immutable anonymous report revisions. The public action model and context schemas are versioned data; the existing private WordLift AI Audit is an optional provider behind a server-side adapter.
 
-- **The action model is data, not code.** `action-model/v0.1.0/` holds 24 actions, six archetype
-  journeys, Google category weights, and behavioral rules. Adding a vertical means adding JSON.
-- **Deterministic compilation.** Same inputs and model version, same action IDs, order, scores, and
-  contracts. Golden snapshots for all six archetypes enforce it.
-- **Evidence has a verification level** — `observed`, `declared`, `invoked`, `failed` — and only
-  `invoked` raises the score. A discovery document that answers with HTML is recorded as `failed`,
-  and the collector's own reading overrides the foundation audit's claim that the file exists.
-- **WebMCP through the Chrome-maintained `use-webmcp-tool` hook**, on the current
-  `document.modelContext` API. Tools follow page context: the report-scoped tool unregisters on
-  unmount, and the sidecar registers only on the report it applies to. Tool names, descriptions, and
-  schemas are static constants — audited site text never reaches them.
-- **The URL policy is the product's spine.** The app fetches arbitrary URLs from anonymous callers,
-  so every request passes scheme, credential, port, host, and IP validation, with each redirect hop
-  revalidated and IPv4-mapped and NAT64 forms of private ranges blocked.
+Key implementation choices:
+
+- deterministic archetype compilation from stored category and behavior evidence;
+- representative-page selection by page role rather than the first links found;
+- normalized JSON-LD entity and offer extraction with page provenance;
+- explicit `EntityActionBinding` and `ActionInterface` records;
+- verification-only scoring and bounded evidence;
+- progressive disclosure for rich audit data;
+- generic fixtures and tests across all six archetypes;
+- SSRF protection, redirect validation, response limits, rate limits, and server-only credentials.
 
 ## Challenges
 
-**Proving a tool call, not just finding one.** A crawler can see a declaration; it cannot prove
-another origin's `document.modelContext` call succeeds. We scoped this honestly: runtime
-verification happens in a page we control, and everything else stays `unverified`. Refusing to claim
-verification we cannot perform shaped the entire scoring model.
+### Moving from pages to functions
 
-**The soft-404 problem.** Discovering that three "present" agent-discovery files were actually the
-homepage forced a real design change: parse every discovery document, record a broken declaration as
-failed evidence, and let the collector's verified reading outrank the upstream audit's boolean.
+The hard design problem was connecting what a site is about with what its users and agents need to do. Classification alone is too broad; entities alone do not define behavior. The solution is a deterministic compiler where archetype supplies expected actions, entity type supplies the object of each action, and observed interfaces supply the proof.
 
-**Telling the truth about a site that already tried.** Alpina is not a strawman with nothing — it
-scores 94/100 on foundations. The easy demo, "look, no API!", would have been a lie. The honest
-before-state is a capability people can use and no agent has been proven able to call, which makes a
-subtler but more valuable point: publishing a manifest is not the same as being callable.
+### Preserving detail without overwhelming the conversation
+
+The WordLift Audit API contains valuable technical depth. Returning all of it to the chat would bury the answer. We run it concurrently, summarize only what an agent and human reviewer need first, and retain the complete bounded sections and quick wins in the shareable report.
+
+### Proving rather than detecting
+
+A server crawler can find declarations but cannot prove arbitrary browser-origin WebMCP execution. We keep those states separate and use a controlled adapter for the one runtime proof instead of inflating readiness.
 
 ## What we learned
 
-The gap between "AI-readable" and "AI-actionable" is much wider than the industry's checklists
-suggest, and it is invisible unless you insist on invocation. Once you separate the two questions,
-the roadmap for a site owner becomes obvious — which is exactly what the contracts are for.
+The agentic web needs more than machine-readable pages. It needs an explicit connection between domain entities and governed actions, plus evidence that an agent can invoke the interface safely. Once those layers are separated, the migration path becomes visible and implementable.
 
 ## What's next
 
-Blended multi-archetype graphs, more approved sidecars, contributed detectors, and promoting the
-capability map into WordLift's knowledge graph as a queryable action layer.
+- richer multi-page entity reconciliation and relationship extraction;
+- blended archetypes for complex sites;
+- community-contributed entity/action rules and evidence detectors;
+- more approved sidecar adapters;
+- publication of the action layer into WordLift knowledge graphs and agentic storefronts.
 
 ## Built with
 
-TypeScript, React 19, Vite, Express, Node 22, Zod, WebMCP (`document.modelContext`),
-`use-webmcp-tool`, Google Cloud Run, Firestore, Google Natural Language V2, WordLift AI Audit API,
-Vitest, Testing Library, Supertest, Playwright, JSON-LD, Schema.org, Apache-2.0.
+TypeScript, React 19, Vite, Express, Node 22, Zod, WebMCP, `use-webmcp-tool`, Google Cloud Run, Firestore, Google Natural Language V2, WordLift AI Audit API, Vitest, Testing Library, Supertest, Playwright, JSON-LD, and Schema.org.
 
-## Try it (judge path, three minutes)
+## Judge path
 
-1. Open **https://beta.audit.wordlift.io**.
-2. Enter `alpina.travel` and press **Map capabilities**. You get the archetype, both scores, the top
-   three gaps, and the four-stage capability map.
-3. Click **Check availability** to see human vs agent evidence, the recommendation, and the JSON-LD
-   contract. Copy or download it.
-4. Scroll to **Approved sidecar**, keep the default dates, and press **Run agent function**. A real
-   read-only call returns live availability, and the report becomes a `sidecar-enabled` child
-   revision.
-5. Optional, with WebMCP: open the same URL in the **ChatGPT desktop app's built-in browser**
-   (GPT-5.6 Sol or Terra; not available in Enterprise or Edu workspaces) and ask it to audit a site.
-   Or use **Chrome 149+** with `chrome://flags/#enable-webmcp-testing` enabled plus the Model
-   Context Tool Inspector extension.
+1. Open [beta.audit.wordlift.io](https://beta.audit.wordlift.io).
+2. Enter any site URL and start the audit. Observe the uninterrupted understanding → mapping → checking flow.
+3. Review the classification, pages analyzed, and concise executive summary.
+4. In the Context Engine, select a domain entity and watch the action layer filter to the actions bound to it.
+5. Open one action to inspect human/agent evidence and its JSON-LD contract.
+6. Expand the WordLift foundation audit only if deeper technical evidence is useful.
+7. Open the [stable Alpina reference](https://beta.audit.wordlift.io/demo/alpina) for the controlled availability proof.
+8. In a compatible WebMCP browser, ask the app to audit a different site and explain one capability.
 
-No account, no key, no setup. To run it yourself: `npm ci && npm run dev:demo` works with no
-credentials at all.
+No account is required.
 
 ## Links
 
-- **Live app:** https://beta.audit.wordlift.io (deployed in live mode, verified 2026-08-27)
-- **Repository:** [CONFIRM — `https://github.com/wordlift/ai-audit-webmcp`, must be public]
-- **Demo video:** [CONFIRM — under 3 minutes, see `docs/submission/handoff.md` for the script]
-
-## Testing and verification
-
-163 unit, integration, and component tests plus 5 Playwright browser tests, all green. Coverage
-includes the compiled journeys for all six archetypes, the evidence state truth table, the
-verification-only scoring rule, JSON-LD contract expansion, adversarial URL cases, rate limits,
-WebMCP tool lifecycle against a stubbed `document.modelContext`, the live provider mappings, and the
-full sidecar transformation.
-
-Live verification against real services: WordLift AI Audit (`api.wordlift.io`), Google Natural
-Language V2, Firestore with an active TTL policy, and the real Alpina availability endpoint.
+- Live application: [beta.audit.wordlift.io](https://beta.audit.wordlift.io)
+- Stable reference: [beta.audit.wordlift.io/demo/alpina](https://beta.audit.wordlift.io/demo/alpina)
+- Repository: **[CONFIRM public URL before submission]** `https://github.com/wordlift/ai-audit-webmcp`
+- Demo video: **[CONFIRM after recording]**
 
 ## AI usage disclosure
 
-**[CONFIRM the exact wording with Andrea before submitting.]** The product scope, PRD, technical
-specification, and build checklist were developed in a guided AI-assisted process; implementation
-was written with AI coding assistants under review, with every checklist item gated on automated
-verification and four participant review pauses. The application's own runtime uses AI services only
-for content classification (Google Natural Language V2) and the WordLift AI Audit foundation
-analysis; the action model, archetype inference, evidence states, scoring, and contract compilation
-are deterministic code, not model output.
+The product direction, planning artifacts, implementation, tests, and submission narrative were developed with AI coding assistance under WordLift team review. The runtime may use Google Natural Language classification and the WordLift AI Audit provider. Context compilation, archetype inference from stored evidence, entity/action binding, state derivation, readiness scoring, prioritization, and contract generation are deterministic code.
 
 ## Open source
 
-Apache-2.0. Everything in the repository is new work for this challenge: the action model, evidence
-rules, scoring, contracts, UI, WebMCP tools, sidecar, security layer, fixtures, and tests. WordLift's
-private AI Audit service is one optional provider behind an interface; contributors without
-credentials get the complete deterministic experience in demo mode.
+Apache-2.0. The public repository contains the new context compiler, action model, evidence rules, schemas, UI, WebMCP tools, fixtures, adapters, security controls, and tests. Contributors without WordLift credentials can run the complete deterministic demo mode.

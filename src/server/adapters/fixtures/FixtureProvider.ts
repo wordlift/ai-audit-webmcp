@@ -9,6 +9,38 @@ import {
   foundationAuditSummarySchema,
   reportErrorSchema,
 } from "../../../shared/schemas/report.js";
+import type { SitePageSnapshot } from "../scrape/ScrapeProvider.js";
+
+const fixtureFormSchema = z.object({
+  name: z.string(), method: z.string(), action: z.string(), inputNames: z.array(z.string()),
+  hasDateInput: z.boolean(), hasSearchInput: z.boolean(),
+}).strict();
+
+const fixtureEntitySchema = z.object({
+  id: z.string(),
+  types: z.array(z.string()),
+  name: z.string(),
+  alternateNames: z.array(z.string()).default([]),
+  description: z.string().optional(),
+  sourceUrl: z.string().url(),
+  sameAs: z.array(z.string().url()).default([]),
+  offers: z.array(z.object({
+    id: z.string().optional(), name: z.string().optional(), price: z.union([z.string(), z.number()]).optional(),
+    priceCurrency: z.string().optional(), availability: z.string().optional(), url: z.string().url().optional(),
+  }).strict()).default([]),
+}).strict();
+
+const fixturePageSchema: z.ZodType<SitePageSnapshot> = z.object({
+  url: z.string().url(), title: z.string(), description: z.string(),
+  role: z.enum(["entry", "detail", "offer", "policy", "contact", "other"]),
+  text: z.string(), headings: z.array(z.string()), linkPaths: z.array(z.string()), linkLabels: z.array(z.string()),
+  forms: z.array(fixtureFormSchema), jsonLdTypes: z.array(z.string()), entities: z.array(fixtureEntitySchema),
+  pageTools: z.array(z.object({
+    name: z.string(), description: z.string(), origin: z.enum(["declarative", "imperative"]),
+    sourceUrl: z.string().url(), parameters: z.array(z.object({ name: z.string(), description: z.string() }).strict()),
+  }).strict()),
+  truncated: z.boolean(),
+}).strict();
 
 const fixtureSchema = z
   .object({
@@ -21,6 +53,7 @@ const fixtureSchema = z
     foundation: foundationAuditSummarySchema.optional(),
     errors: z.array(reportErrorSchema).default([]),
     evidence: z.array(capabilityEvidenceSchema),
+    pages: z.array(fixturePageSchema).max(4).optional(),
   })
   .strict();
 

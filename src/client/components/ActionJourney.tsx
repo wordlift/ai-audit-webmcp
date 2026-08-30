@@ -10,7 +10,15 @@ const stages = [
   { id: "manage", label: "Manage", description: "Track or change state" },
 ] as const;
 
-export function ActionJourney({ reportId, capabilities }: { reportId: string; capabilities: CapabilityResult[] }) {
+export function ActionJourney({
+  reportId,
+  capabilities,
+  selectedEntityId = null,
+}: {
+  reportId: string;
+  capabilities: CapabilityResult[];
+  selectedEntityId?: string | null;
+}) {
   const [selected, setSelected] = useState<CapabilityResult | null>(null);
   const [returnFocus, setReturnFocus] = useState<HTMLButtonElement | null>(null);
   function select(capability: CapabilityResult, trigger: HTMLButtonElement) {
@@ -34,7 +42,12 @@ export function ActionJourney({ reportId, capabilities }: { reportId: string; ca
             <header><span>{index + 1}</span><div><h3 id={`stage-${stage.id}`}>{stage.label}</h3><p>{stage.description}</p></div></header>
             <div className="action-list">
               {capabilities.filter((capability) => capability.stage === stage.id).map((capability) => (
-                <ActionNode key={capability.actionId} capability={capability} onSelect={select} />
+                <ActionNode
+                  key={capability.actionId}
+                  capability={capability}
+                  selectedEntityId={selectedEntityId}
+                  onSelect={select}
+                />
               ))}
             </div>
           </section>

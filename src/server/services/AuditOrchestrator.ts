@@ -5,6 +5,7 @@ import { deriveCapability } from "../../domain/action-model/deriveState.js";
 import type { ActionModel } from "../../domain/action-model/loadModel.js";
 import { recommendationFor, rankPriorities } from "../../domain/action-model/rankPriorities.js";
 import { scoreReadiness } from "../../domain/action-model/scoreReadiness.js";
+import { appliesToForAction, compileContextGraph, refreshContextGraph } from "../../domain/context/compileContextGraph.js";
 import { detectSiteEvidence } from "../../domain/evidence/detectSiteEvidence.js";
 import { inferArchetype } from "../../domain/classification/inferArchetype.js";
 import { createReportRequestSchema, recompileReportRequestSchema } from "../../shared/schemas/report.js";
@@ -19,7 +20,7 @@ import type { AuditEvidenceBundle, AuditProvider } from "../adapters/audit/Audit
 import { auditErrorToReportError } from "../adapters/audit/WordLiftAudit.js";
 import type { ClassifierProvider } from "../adapters/classify/ClassifierProvider.js";
 import { FixtureProvider, type FixtureAudit } from "../adapters/fixtures/FixtureProvider.js";
-import type { ScrapeProvider, SiteSnapshot } from "../adapters/scrape/ScrapeProvider.js";
+import type { ScrapeProvider, SitePageSnapshot, SiteSnapshot } from "../adapters/scrape/ScrapeProvider.js";
 import type { ReportStore } from "../adapters/store/ReportStore.js";
 import { ReportRequestError } from "../errors.js";
 import { sanitizeEvidence } from "../security/sanitizeEvidence.js";
@@ -37,6 +38,8 @@ export interface OrchestratorOptions {
   };
 }
 
+export const PINNED_ALPINA_REPORT_ID = "11111111-1111-4111-8111-111111111111";
+
 interface CompiledInputs {
   canonicalUrl: string;
   categories: ContentCategory[];
@@ -46,6 +49,7 @@ interface CompiledInputs {
   classifierModel: string;
   errors: ReportError[];
   evidenceTruncated: boolean;
+  pages: SitePageSnapshot[];
 }
 
 export class AuditOrchestrator {
@@ -80,6 +84,21 @@ export class AuditOrchestrator {
     return this.store.get(id);
   }
 
+  /** Stable, dated fixture for judges; live audits remain available from the same URL-first flow. */
+  async pinnedAlpina(): Promise<ReportRecord> {
+    const existing = await this.store.get(PINNED_ALPINA_REPORT_ID);
+    if (existing) return existing;
+    const base = this.baseRecord(PINNED_ALPINA_REPORT_ID, "https://alpina.travel/", this.now());
+    const report = this.compileFixture(base, this.fixtures.get("travel-hospitality"));
+    const pinned: ReportRecord = {
+      ...report,
+      mode: "demo",
+      expiresAt: "2099-12-31T23:59:59.000Z",
+    };
+    await this.store.put(pinned);
+    return pinned;
+  }
+
   async recompile(parentId: string, input: unknown): Promise<ReportRecord> {
     const { archetype } = recompileReportRequestSchema.parse(input);
     const parent = await this.required(parentId);
@@ -89,7 +108,14 @@ export class AuditOrchestrator {
     const evidence = parent.capabilities.flatMap((capability) => capability.evidence);
     const childBase = this.baseRecord(randomUUID(), parent.requestedUrl, this.now(), parent.id);
     const graph = compileActionGraph(this.model, archetype, [`override:${archetype}`]);
-    const capabilities = this.capabilities(graph.actions, evidence, parent.canonicalUrl ?? parent.requestedUrl);
+    const initialCapabilities = this.capabilities(
+      graph.actions,
+      evidence,
+      parent.canonicalUrl ?? parent.requestedUrl,
+      parent.contextGraph,
+    );
+    const contextGraph = parent.contextGraph ? refreshContextGraph(parent.contextGraph, initialCapabilities) : undefined;
+    const capabilities = this.capabilities(graph.actions, evidence, parent.canonicalUrl ?? parent.requestedUrl, contextGraph);
     const child: ReportRecord = {
       ...childBase,
       status: parent.status === "partial" ? "partial" : "completed",
@@ -104,6 +130,7 @@ export class AuditOrchestrator {
         provisionalReason: undefined,
       },
       foundationAudit: parent.foundationAudit,
+      contextGraph,
       capabilities,
       score: scoreReadiness(capabilities),
       priorities: rankPriorities(capabilities),
@@ -146,10 +173,18 @@ export class AuditOrchestrator {
     ]);
     const archetype = parent.classification.primaryArchetype;
     const graph = compileActionGraph(this.model, archetype, [`archetype:${archetype}`]);
+    const initialCapabilities = this.capabilities(
+      graph.actions,
+      merged.evidence,
+      parent.canonicalUrl ?? parent.requestedUrl,
+      parent.contextGraph,
+    );
+    const contextGraph = parent.contextGraph ? refreshContextGraph(parent.contextGraph, initialCapabilities) : undefined;
     const capabilities = this.capabilities(
       graph.actions,
       merged.evidence,
       parent.canonicalUrl ?? parent.requestedUrl,
+      contextGraph,
     );
     const child: ReportRecord = {
       ...this.baseRecord(randomUUID(), parent.requestedUrl, this.now(), parent.id),
@@ -159,6 +194,7 @@ export class AuditOrchestrator {
       completedAt: this.now().toISOString(),
       classification: parent.classification,
       foundationAudit: parent.foundationAudit,
+      contextGraph,
       capabilities,
       score: scoreReadiness(capabilities),
       priorities: rankPriorities(capabilities),
@@ -251,6 +287,7 @@ export class AuditOrchestrator {
       classifierModel: classification.model,
       errors,
       evidenceTruncated: sanitized.truncated || Boolean(snapshot?.truncated),
+      pages: snapshot?.pages ?? [],
     };
   }
 
@@ -278,6 +315,7 @@ export class AuditOrchestrator {
         classifierModel: "google-v2-fixture",
         errors: fixture.errors,
         evidenceTruncated: sanitized.truncated,
+        pages: fixture.pages ?? [],
       },
       override,
     );
@@ -288,7 +326,9 @@ export class AuditOrchestrator {
     const inference = inferArchetype(this.model, inputs.categories, inputs.signals, override);
     const provenance = inputs.categories.map((category) => `category:${category.name}`);
     const graph = compileActionGraph(this.model, inference.primaryArchetype, provenance);
-    const capabilities = this.capabilities(graph.actions, inputs.evidence, inputs.canonicalUrl);
+    const rawCapabilities = this.capabilities(graph.actions, inputs.evidence, inputs.canonicalUrl);
+    const contextGraph = compileContextGraph(inputs.pages, inputs.categories, rawCapabilities, inputs.canonicalUrl);
+    const capabilities = this.capabilities(graph.actions, inputs.evidence, inputs.canonicalUrl, contextGraph);
     const topScore = inference.rankedArchetypes[0]?.score ?? 0;
     const retryable = inputs.errors.some((error) => error.retryable);
 
@@ -311,6 +351,7 @@ export class AuditOrchestrator {
         collectedAt: this.now().toISOString(),
       },
       foundationAudit: inputs.foundation,
+      contextGraph,
       capabilities,
       score: scoreReadiness(capabilities),
       priorities: rankPriorities(capabilities),
@@ -323,6 +364,7 @@ export class AuditOrchestrator {
     actions: ReturnType<typeof compileActionGraph>["actions"],
     evidence: CapabilityEvidence[],
     siteUrl: string,
+    contextGraph?: ReportRecord["contextGraph"],
   ) {
     return actions.map((action) => {
       const actionEvidence = evidence.filter((item) => item.actionId === action.id);
@@ -331,9 +373,10 @@ export class AuditOrchestrator {
         (item) => item.verification === "invoked" && item.kind === "tool-result" && item.id.startsWith("sidecar:"),
       );
       const capability = deriveCapability(action, actionEvidence, { approvedSidecar });
+      capability.appliesTo = contextGraph ? appliesToForAction(contextGraph, action.id) : [];
       if (["missing", "human-only", "unverified"].includes(capability.state)) {
         capability.recommendation = recommendationFor(capability);
-        capability.contract = compileActionContract(action, siteUrl, capability.evidence);
+        capability.contract = compileActionContract(action, siteUrl, capability.evidence, capability.appliesTo[0]);
       }
       return capability;
     });

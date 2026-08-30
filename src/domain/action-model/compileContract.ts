@@ -6,6 +6,7 @@ export function compileActionContract(
   action: CompiledAction,
   siteUrl: string,
   evidence: CapabilityEvidence[] = [],
+  object?: { id: string; name: string; types: string[] },
 ): ActionContract {
   const canonicalSiteUrl = new URL(siteUrl).toString();
   const contract = {
@@ -16,7 +17,9 @@ export function compileActionContract(
     "@id": `urn:wordlift:capability:${action.id}`,
     "@type": ["Action", "wlcap:CapabilityContract"],
     name: action.label,
-    object: { "@id": canonicalSiteUrl },
+    object: object
+      ? { "@id": object.id, name: object.name, type: object.types }
+      : { "@id": canonicalSiteUrl },
     stage: action.stage,
     intent: action.intent,
     inputSchema: action.inputSchema,

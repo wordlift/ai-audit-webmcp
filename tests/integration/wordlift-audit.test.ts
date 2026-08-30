@@ -83,6 +83,17 @@ describe("WordLift audit provider", () => {
         expect.stringContaining("Automation gap: Agent Discovery"),
       ]),
     );
+    expect(bundle.foundation?.sections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "site-files", label: "Site files & agent discovery" }),
+        expect.objectContaining({ id: "structured-data", label: "Structured data inventory" }),
+        expect.objectContaining({ id: "automation-readiness", label: "Automation readiness" }),
+      ]),
+    );
+    expect(bundle.foundation?.quickWins).toContainEqual({
+      title: "Correct .well-known JSON endpoints",
+      impact: "High",
+    });
     // Foundation score is separate: the bundle contributes no verified invocation evidence.
     expect(bundle.evidence.every((item) => item.verification === "declared")).toBe(true);
   });

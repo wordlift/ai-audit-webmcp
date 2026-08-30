@@ -55,6 +55,7 @@ const auditResponseSchema = z
           })
           .optional(),
         contentStructure: sectionSchema.optional(),
+        imageAccessibility: sectionSchema.optional(),
         automationReadiness: sectionSchema
           .extend({
             issues: z
@@ -170,6 +171,11 @@ export class WordLiftAuditProvider implements AuditProvider {
       score: Math.max(0, Math.min(100, Math.round(score))),
       summary: clip(data.summary ?? "The foundation audit completed without a written summary.", 2_000),
       findings: findingsFrom(data),
+      sections: detailedSections(data),
+      quickWins: (data.quickWins?.wins ?? []).slice(0, 20).map((win) => ({
+        title: clip(win.title, 300),
+        impact: win.impact ? clip(win.impact, 120) : undefined,
+      })),
       provider: "wordlift-ai-audit",
     };
   }
@@ -201,9 +207,71 @@ function sections(data: NonNullable<WordLiftAuditResponse["data"]>): Array<[stri
     ["SEO fundamentals", data.seoFundamentals],
     ["Structured data", data.structuredData],
     ["Content structure", data.contentStructure],
+    ["Image accessibility", data.imageAccessibility],
     ["Automation readiness", data.automationReadiness],
     ["JavaScript rendering", data.jsRendering],
   ];
+}
+
+function detailedSections(data: NonNullable<WordLiftAuditResponse["data"]>): NonNullable<FoundationAuditSummary["sections"]> {
+  const entries: Array<[string, string, Record<string, unknown> | undefined]> = [
+    ["site-files", "Site files & agent discovery", data.siteFiles],
+    ["seo-fundamentals", "SEO fundamentals", data.seoFundamentals],
+    ["structured-data", "Structured data inventory", data.structuredData],
+    ["content-structure", "Content structure & token budget", data.contentStructure],
+    ["image-accessibility", "Image accessibility", data.imageAccessibility],
+    ["automation-readiness", "Automation readiness", data.automationReadiness],
+    ["javascript-rendering", "JavaScript rendering", data.jsRendering],
+  ];
+
+  return entries.flatMap(([id, label, section]) => {
+    if (!section) return [];
+    const score = typeof section.score === "number" ? section.score : undefined;
+    const status = typeof section.status === "string" ? clip(section.status, 120) : undefined;
+    const explanation = typeof section.explanation === "string" ? clip(section.explanation, 1_000) : undefined;
+    return [{ id, label, score, status, explanation, details: safeSectionDetails(id, section) }];
+  });
+}
+
+/** Keeps useful audit detail while excluding raw page/file bodies and unbounded provider payloads. */
+function safeSectionDetails(sectionId: string, section: Record<string, unknown>) {
+  const allowBySection: Record<string, string[]> = {
+    "site-files": ["robotsTxt", "llmsTxt", "hasLlmsTxt", "hasSkillMd", "botStatus", "wellKnown"],
+    "seo-fundamentals": ["title", "description", "h1", "canonical", "metaRobots"],
+    "structured-data": ["hasJsonLd", "detectedSchemas", "missingSchemas", "errors"],
+    "content-structure": ["tokenBudget", "estimatedTokens", "semanticHtml", "headings", "wordCount", "readability"],
+    "image-accessibility": ["totalImages", "imagesWithAlt", "imagesWithoutAlt", "decorativeImages"],
+    "automation-readiness": ["issues", "forms", "interactiveElements"],
+    "javascript-rendering": ["frameworkDetected", "renderingType", "botAccessible", "requiresJavaScript"],
+  };
+  return (allowBySection[sectionId] ?? [])
+    .flatMap((key) => summarizeDetail(key, section[key]))
+    .slice(0, 30);
+}
+
+function summarizeDetail(key: string, value: unknown): Array<{ label: string; value: string }> {
+  if (value === undefined || value === null || value === "") return [];
+  const label = key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (character) => character.toUpperCase());
+  if (["string", "number", "boolean"].includes(typeof value)) {
+    return [{ label, value: clip(String(value), 600) }];
+  }
+  if (Array.isArray(value)) {
+    const items = value.slice(0, 12).map((item) => summarizeObject(item)).filter(Boolean);
+    return items.length > 0 ? [{ label, value: clip(items.join(" · "), 600) }] : [];
+  }
+  const summary = summarizeObject(value);
+  return summary ? [{ label, value: clip(summary, 600) }] : [];
+}
+
+function summarizeObject(value: unknown): string {
+  if (!value || typeof value !== "object") return String(value ?? "");
+  return Object.entries(value as Record<string, unknown>)
+    .slice(0, 12)
+    .flatMap(([key, entry]) => {
+      if (["string", "number", "boolean"].includes(typeof entry)) return [`${key}: ${String(entry)}`];
+      return [];
+    })
+    .join(", ");
 }
 
 /** Behavioral signals for deterministic archetype inference. */
