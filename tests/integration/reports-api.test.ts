@@ -47,6 +47,23 @@ describe("fixture report API", () => {
     expect(second.body).toEqual(first.body);
   });
 
+  it("serves one stable Alpina reference report without making it the generic audit path", async () => {
+    const { app } = testApp();
+    const first = await request(app).get("/api/demo/alpina").expect(200);
+    const second = await request(app).get("/api/demo/alpina").expect(200);
+
+    expect(second.body.id).toBe(first.body.id);
+    expect(first.body.mode).toBe("demo");
+    expect(first.body.contextGraph.pages).toHaveLength(4);
+    expect(first.body.contextGraph.entities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "Alpina.travel" }),
+        expect.objectContaining({ name: "AlpiNest Feriendorf Lungau" }),
+      ]),
+    );
+    expect(new Date(first.body.expiresAt).getUTCFullYear()).toBe(2099);
+  });
+
   it("preserves truthful partial and failed fixtures", async () => {
     const { app } = testApp();
     const partial = await request(app)

@@ -73,101 +73,117 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
     evidence.push({ ...item, collectedAt });
   };
 
-  // The page itself is human evidence that the catalogue can be browsed.
-  if (snapshot.title || snapshot.headings.length > 0) {
-    add({
-      id: "page-browse",
-      actionId: "site.browse",
-      audience: "human",
-      kind: "page",
-      sourceUrl: site,
-      claim: "People can browse this site through its pages and navigation",
-      confidence: 1,
-      verification: "observed",
-    });
-  }
+  const pages = snapshot.pages.length > 0
+    ? snapshot.pages
+    : [{
+        url: site,
+        title: snapshot.title,
+        headings: snapshot.headings,
+        forms: snapshot.forms,
+        linkPaths: snapshot.linkPaths,
+        linkLabels: snapshot.linkLabels,
+        jsonLdTypes: snapshot.jsonLdTypes,
+      }];
 
-  for (const form of snapshot.forms) {
-    if (form.hasSearchInput) {
+  // Every representative page retains its own provenance; aggregate claims never hide where a
+  // human form, JSON-LD entity or action path was actually found.
+  for (const page of pages) {
+    const pageKey = slug(page.url);
+    if (page.title || page.headings.length > 0) {
       add({
-        id: `form-search-${form.action}`,
-        actionId: "site.search",
+        id: `page-browse-${pageKey}`.slice(0, 160),
+        actionId: "site.browse",
         audience: "human",
-        kind: "form",
-        sourceUrl: site,
-        claim: "People can search through an on-page form",
+        kind: "page",
+        sourceUrl: page.url,
+        claim: `People can browse ${page.title || "this page"} through the site's navigation`,
         confidence: 1,
         verification: "observed",
       });
     }
-    if (form.hasDateInput) {
-      add({
-        id: `form-dates-${form.action}`,
-        actionId: "availability.check",
-        audience: "human",
-        kind: "form",
-        sourceUrl: site,
-        claim: "People can check dates through a booking form",
-        confidence: 1,
-        verification: "observed",
-      });
-      signals.add("path:booking");
-    }
-    if (form.inputNames.some((name) => SUBSCRIBE_INPUT.test(name)) && form.inputNames.length <= 3) {
-      add({
-        id: `form-subscribe-${form.action}`,
-        actionId: "subscription.start",
-        audience: "human",
-        kind: "form",
-        sourceUrl: site,
-        claim: "People can subscribe through a form",
-        confidence: 0.8,
-        verification: "observed",
-      });
-    }
-    if (form.inputNames.some((name) => CONTACT_INPUT.test(name))) {
-      add({
-        id: `form-contact-${form.action}`,
-        actionId: "inquiry.submit",
-        audience: "human",
-        kind: "form",
-        sourceUrl: site,
-        claim: "People can send an inquiry through a form",
-        confidence: 0.9,
-        verification: "observed",
-      });
-    }
-  }
 
-  const haystack = [...snapshot.linkPaths, ...snapshot.linkLabels].join(" ");
-  for (const rule of PATH_RULES) {
-    if (!rule.pattern.test(haystack)) continue;
-    add({
-      id: `path-${rule.actionId}`,
-      actionId: rule.actionId,
-      audience: "human",
-      kind: "page",
-      sourceUrl: site,
-      claim: rule.claim,
-      confidence: 0.85,
-      verification: "observed",
-    });
-    if (rule.signal) signals.add(rule.signal);
-  }
+    for (const form of page.forms) {
+      if (form.hasSearchInput) {
+        add({
+          id: `form-search-${pageKey}-${form.action}`.slice(0, 160),
+          actionId: "site.search",
+          audience: "human",
+          kind: "form",
+          sourceUrl: page.url,
+          claim: "People can search through an on-page form",
+          confidence: 1,
+          verification: "observed",
+        });
+      }
+      if (form.hasDateInput) {
+        add({
+          id: `form-dates-${pageKey}-${form.action}`.slice(0, 160),
+          actionId: "availability.check",
+          audience: "human",
+          kind: "form",
+          sourceUrl: page.url,
+          claim: "People can check dates through a booking form",
+          confidence: 1,
+          verification: "observed",
+        });
+        signals.add("path:booking");
+      }
+      if (form.inputNames.some((name) => SUBSCRIBE_INPUT.test(name)) && form.inputNames.length <= 3) {
+        add({
+          id: `form-subscribe-${pageKey}-${form.action}`.slice(0, 160),
+          actionId: "subscription.start",
+          audience: "human",
+          kind: "form",
+          sourceUrl: page.url,
+          claim: "People can subscribe through a form",
+          confidence: 0.8,
+          verification: "observed",
+        });
+      }
+      if (form.inputNames.some((name) => CONTACT_INPUT.test(name))) {
+        add({
+          id: `form-contact-${pageKey}-${form.action}`.slice(0, 160),
+          actionId: "inquiry.submit",
+          audience: "human",
+          kind: "form",
+          sourceUrl: page.url,
+          claim: "People can send an inquiry through a form",
+          confidence: 0.9,
+          verification: "observed",
+        });
+      }
+    }
 
-  for (const type of snapshot.jsonLdTypes) {
-    signals.add(`schema:${type}`);
-    for (const actionId of SCHEMA_ACTION_MAP[type] ?? []) {
+    const haystack = [...page.linkPaths, ...page.linkLabels, page.url].join(" ");
+    for (const rule of PATH_RULES) {
+      if (!rule.pattern.test(haystack)) continue;
       add({
-        id: `jsonld-${type}-${actionId}`,
-        actionId,
-        audience: "agent",
-        kind: "structured-data",
-        sourceUrl: site,
-        claim: `${type} is published as JSON-LD, so an agent can read it`,
-        confidence: 0.9,
-        verification: "declared",
+        id: `path-${pageKey}-${rule.actionId}`.slice(0, 160),
+        actionId: rule.actionId,
+        audience: "human",
+        kind: "page",
+        sourceUrl: page.url,
+        claim: rule.claim,
+        confidence: 0.85,
+        verification: "observed",
       });
+      if (rule.signal) signals.add(rule.signal);
+    }
+
+    for (const type of page.jsonLdTypes) {
+      signals.add(`schema:${type}`);
+      for (const actionId of SCHEMA_ACTION_MAP[type] ?? []) {
+        add({
+          id: `jsonld-${pageKey}-${type}-${actionId}`.slice(0, 160),
+          actionId,
+          audience: "agent",
+          kind: "structured-data",
+          sourceUrl: page.url,
+          claim: `${type} is published as JSON-LD on ${page.title || page.url}, so an agent can read it`,
+          confidence: 0.9,
+          verification: "declared",
+        });
+      }
     }
   }
 
@@ -358,4 +374,8 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
   }
 
   return { evidence, signals: [...signals].sort() };
+}
+
+function slug(value: string): string {
+  return value.toLowerCase().replace(/^https?:\/\//, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 70);
 }

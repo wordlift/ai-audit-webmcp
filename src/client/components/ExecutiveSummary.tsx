@@ -9,6 +9,7 @@ export function ExecutiveSummary({ report }: { report: ReportRecord }) {
         <p className="section-kicker"><Bot size={18} /> AI agent perspective</p>
         <h1 id="summary-heading">We understand this as a <span>{archetype}</span> site.</h1>
         <p>{report.foundationAudit?.summary ?? "This report maps the functions an agent needs against the evidence available today."}</p>
+        {report.contextGraph && <p className="summary-context-count">Built from {report.contextGraph.pages.length} representative pages, {report.contextGraph.entities.length} named entities and {report.contextGraph.interfaces.length} observed interfaces.</p>}
       </div>
       <div className="score-grid" aria-label="Readiness scores">
         <ScoreCard

@@ -1,5 +1,4 @@
 import { useWebMCP } from "use-webmcp-tool";
-import { useNavigate } from "react-router-dom";
 import { auditSummaryText, summarizeReportForAgent, type AuditToolResult } from "../../shared/format/agentSummary.js";
 import type { Archetype } from "../../shared/types/index.js";
 import { createReport, reportPageUrl } from "../api/client";
@@ -23,8 +22,6 @@ function parseArchetype(value: unknown): Archetype | undefined {
  * terminal report exists, so an agent never receives "audit started" as a successful result.
  */
 export function AuditWebsiteTool() {
-  const navigate = useNavigate();
-
   const state = useWebMCP<AuditWebsiteArgs, AuditToolResult>({
     name: AUDIT_WEBSITE_TOOL.name,
     description: AUDIT_WEBSITE_TOOL.description,
@@ -41,7 +38,6 @@ export function AuditWebsiteTool() {
         throw new Error(`The audit could not be completed for ${url}: ${reason}`);
       }
 
-      navigate(`/reports/${report.id}`);
       return summarizeReportForAgent(report, reportPageUrl(report.id));
     },
     formatOutput: (result) => ({

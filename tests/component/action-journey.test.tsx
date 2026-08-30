@@ -15,6 +15,11 @@ const capability: CapabilityResult = {
   state: "unverified",
   humanSupport: true,
   agentSupport: false,
+  appliesTo: [{
+    id: "https://alpina.travel/#stay",
+    name: "AlpiNest",
+    types: ["LodgingBusiness"],
+  }],
   evidence: [{
     id: "availability-form",
     actionId: "availability.check",
@@ -43,5 +48,19 @@ describe("ActionJourney", () => {
     expect(screen.getByText("People can check dates")).toBeVisible();
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(node).toHaveFocus());
+  });
+
+  it("shows the entity directly on its action and emphasizes a selected binding", () => {
+    render(
+      <ActionJourney
+        reportId="4a8a04c0-e247-4bec-a440-d9f3506f9212"
+        capabilities={[capability]}
+        selectedEntityId="https://alpina.travel/#stay"
+      />,
+    );
+
+    const node = screen.getByRole("button", { name: /check availability for alpinest/i });
+    expect(node).toHaveTextContent("LodgingBusiness · AlpiNest");
+    expect(node).not.toHaveClass("action-node-dimmed");
   });
 });

@@ -32,6 +32,91 @@ export const contentCategorySchema = z
   })
   .strict();
 
+export const auditedPageSchema = z
+  .object({
+    url: z.string().url().max(2_048),
+    title: z.string().max(300),
+    role: z.enum(["entry", "detail", "offer", "policy", "contact", "other"]),
+    description: z.string().max(600).optional(),
+    headings: z.array(z.string().min(1).max(240)).max(20),
+    entityIds: z.array(z.string().min(1).max(500)).max(40),
+  })
+  .strict();
+
+export const entityOfferSchema = z
+  .object({
+    id: z.string().min(1).max(500).optional(),
+    name: z.string().min(1).max(240).optional(),
+    price: z.union([z.string().max(80), z.number().finite()]).optional(),
+    priceCurrency: z.string().min(3).max(8).optional(),
+    availability: z.string().max(240).optional(),
+    url: z.string().url().max(2_048).optional(),
+  })
+  .strict();
+
+export const domainEntitySchema = z
+  .object({
+    id: z.string().min(1).max(500),
+    types: z.array(z.string().min(1).max(160)).min(1).max(12),
+    name: z.string().min(1).max(300),
+    alternateNames: z.array(z.string().min(1).max(240)).max(20),
+    description: z.string().max(1_000).optional(),
+    sourceUrls: z.array(z.string().url().max(2_048)).min(1).max(12),
+    sameAs: z.array(z.string().url().max(2_048)).max(12),
+    offers: z.array(entityOfferSchema).max(12),
+    confidence: z.number().min(0).max(1),
+  })
+  .strict();
+
+export const lexicalEntrySchema = z
+  .object({
+    id: z.string().min(1).max(300),
+    label: z.string().min(1).max(240),
+    aliases: z.array(z.string().min(1).max(240)).max(20),
+    kind: z.enum(["category", "entity-name", "topic"]),
+    entityIds: z.array(z.string().min(1).max(500)).max(40),
+    sourceUrls: z.array(z.string().url().max(2_048)).max(12),
+    confidence: z.number().min(0).max(1),
+  })
+  .strict();
+
+export const actionInterfaceSchema = z
+  .object({
+    id: z.string().min(1).max(300),
+    actionId: z.string().min(1).max(160),
+    entityIds: z.array(z.string().min(1).max(500)).max(40),
+    name: z.string().min(1).max(300),
+    protocol: z.enum(["human-page", "human-form", "structured-data", "webmcp", "mcp", "openapi", "api", "agent-document"]),
+    audience: z.enum(["human", "agent"]),
+    status: z.enum(["observed", "declared", "invoked", "failed"]),
+    sourceUrl: z.string().url().max(2_048),
+    evidenceId: z.string().min(1).max(160),
+  })
+  .strict();
+
+export const entityActionBindingSchema = z
+  .object({
+    entityId: z.string().min(1).max(500),
+    actionId: z.string().min(1).max(160),
+    role: z.enum(["provider", "object"]),
+    basis: z.array(z.enum(["archetype", "structured-data", "observed-interface"])).min(1).max(3),
+    state: capabilityStateSchema,
+    evidenceIds: z.array(z.string().min(1).max(160)).max(MAX_EVIDENCE_ITEMS),
+    interfaceIds: z.array(z.string().min(1).max(300)).max(40),
+    confidence: z.number().min(0).max(1),
+  })
+  .strict();
+
+export const contextGraphSchema = z
+  .object({
+    pages: z.array(auditedPageSchema).min(1).max(4),
+    entities: z.array(domainEntitySchema).max(80),
+    lexicalEntries: z.array(lexicalEntrySchema).max(100),
+    interfaces: z.array(actionInterfaceSchema).max(120),
+    bindings: z.array(entityActionBindingSchema).max(240),
+  })
+  .strict();
+
 export const rankedArchetypeSchema = z
   .object({
     archetype: archetypeSchema,
@@ -98,7 +183,13 @@ export const actionContractSchema = z
     "@id": z.string().min(1).max(500),
     "@type": z.array(z.string().min(1).max(160)).min(1).max(10),
     name: z.string().min(1).max(240),
-    object: z.object({ "@id": z.string().url().max(2_048) }).strict(),
+    object: z
+      .object({
+        "@id": z.string().min(1).max(2_048),
+        name: z.string().min(1).max(300).optional(),
+        type: z.array(z.string().min(1).max(160)).max(12).optional(),
+      })
+      .strict(),
     stage: capabilityStageSchema,
     intent: z.enum(["informational", "transactional"]),
     inputSchema: jsonValueSchema,
@@ -123,6 +214,18 @@ export const capabilityResultSchema = z
     state: capabilityStateSchema,
     humanSupport: z.boolean(),
     agentSupport: z.boolean(),
+    appliesTo: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1).max(500),
+            name: z.string().min(1).max(300),
+            types: z.array(z.string().min(1).max(160)).min(1).max(12),
+          })
+          .strict(),
+      )
+      .max(40)
+      .default([]),
     evidence: z.array(capabilityEvidenceSchema).max(MAX_EVIDENCE_ITEMS),
     recommendation: z.string().max(1_500).optional(),
     contract: actionContractSchema.optional(),
@@ -161,6 +264,41 @@ export const foundationAuditSummarySchema = z
     score: z.number().int().min(0).max(100),
     summary: z.string().min(1).max(2_000),
     findings: z.array(z.string().min(1).max(600)).max(30),
+    sections: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1).max(80),
+            label: z.string().min(1).max(160),
+            score: z.number().finite().optional(),
+            status: z.string().max(120).optional(),
+            explanation: z.string().max(1_000).optional(),
+            details: z
+              .array(
+                z
+                  .object({
+                    label: z.string().min(1).max(160),
+                    value: z.string().min(1).max(600),
+                  })
+                  .strict(),
+              )
+              .max(30),
+          })
+          .strict(),
+      )
+      .max(12)
+      .default([]),
+    quickWins: z
+      .array(
+        z
+          .object({
+            title: z.string().min(1).max(300),
+            impact: z.string().max(120).optional(),
+          })
+          .strict(),
+      )
+      .max(20)
+      .default([]),
     provider: z.string().min(1).max(120),
   })
   .strict();
@@ -190,6 +328,7 @@ export const reportRecordSchema = z
     actionModelVersion: z.string().min(1).max(40),
     classification: classificationResultSchema.optional(),
     foundationAudit: foundationAuditSummarySchema.optional(),
+    contextGraph: contextGraphSchema.optional(),
     capabilities: z.array(capabilityResultSchema).max(80).optional(),
     score: readinessScoreSchema.optional(),
     priorities: z.array(priorityGapSchema).max(3).optional(),

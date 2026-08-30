@@ -38,6 +38,7 @@ function snapshotWith(overrides: Partial<SiteSnapshot>): SiteSnapshot {
     canonicalUrl: "https://alpina.travel/",
     title: "Lungau Holidays",
     description: "",
+    pages: [],
     text: "",
     headings: [],
     linkPaths: [],
