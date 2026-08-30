@@ -7,8 +7,8 @@ describe("application shell", () => {
   it("leads with the action-first product thesis", () => {
     render(<MemoryRouter><App /></MemoryRouter>);
 
-    expect(screen.getByRole("heading", { name: /agents need functions/i })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /agents need a service map/i })).toBeVisible();
     expect(screen.getByLabelText(/website url/i)).toBeVisible();
-    expect(screen.getByText(/understand the site/i)).toBeVisible();
+    expect(screen.getByText(/extract entities & meaning/i)).toBeVisible();
   });
 });

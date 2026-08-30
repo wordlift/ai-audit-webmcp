@@ -1,6 +1,7 @@
 import { Link, Route, Routes } from "react-router-dom";
 import { HomeRoute } from "./routes/HomeRoute";
 import { ReportRoute } from "./routes/ReportRoute";
+import { PinnedAlpinaRoute } from "./routes/PinnedAlpinaRoute";
 import { AuditWebsiteTool } from "./webmcp/AuditWebsiteTool";
 
 export function App() {
@@ -19,6 +20,7 @@ export function App() {
       <main>
         <Routes>
           <Route path="/" element={<HomeRoute />} />
+          <Route path="/demo/alpina" element={<PinnedAlpinaRoute />} />
           <Route path="/reports/:reportId" element={<ReportRoute />} />
         </Routes>
       </main>

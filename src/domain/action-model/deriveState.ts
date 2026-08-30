@@ -44,6 +44,7 @@ export function deriveCapability(
     state,
     humanSupport,
     agentSupport: invokedAgent,
+    appliesTo: [],
     evidence: [...evidence].sort((left, right) => left.id.localeCompare(right.id)),
   };
 }

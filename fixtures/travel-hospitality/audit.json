@@ -28,6 +28,114 @@
     "schema:SearchAction",
     "schema:WebSite"
   ],
+  "pages": [
+    {
+      "url": "https://alpina.travel/",
+      "title": "Alpina.travel — Alpine stays in Lungau",
+      "description": "Apartments, stays and travel guidance for Austria's Lungau region.",
+      "role": "entry",
+      "text": "Discover stays, apartments and mountain experiences in Lungau.",
+      "headings": ["Mountain days. One easy apartment base.", "Stay in Lungau"],
+      "linkPaths": ["/alpinest-feriendorf-lungau", "/booking", "/faq"],
+      "linkLabels": ["explore alpinest", "check availability", "frequently asked questions"],
+      "forms": [],
+      "jsonLdTypes": ["Organization", "LodgingBusiness", "Offer", "WebSite"],
+      "entities": [
+        {
+          "id": "https://data.wordlift.io/wl01855/alpina-travel",
+          "types": ["Organization"],
+          "name": "Alpina.travel",
+          "alternateNames": ["Alpina Travel"],
+          "description": "A travel service for stays and experiences in Lungau.",
+          "sourceUrl": "https://alpina.travel/",
+          "sameAs": [],
+          "offers": []
+        },
+        {
+          "id": "https://data.wordlift.io/wl01855/alpinest-feriendorf-lungau",
+          "types": ["LodgingBusiness"],
+          "name": "AlpiNest Feriendorf Lungau",
+          "alternateNames": ["AlpiNest"],
+          "description": "An alpine holiday village and apartment base in Lungau.",
+          "sourceUrl": "https://alpina.travel/",
+          "sameAs": [],
+          "offers": [{ "name": "Apartment stay", "priceCurrency": "EUR", "availability": "Live availability", "url": "https://alpina.travel/api/booking/availability" }]
+        }
+      ],
+      "pageTools": [],
+      "truncated": false
+    },
+    {
+      "url": "https://alpina.travel/alpinest-feriendorf-lungau",
+      "title": "AlpiNest Feriendorf Lungau",
+      "description": "Property details, amenities and accommodation information.",
+      "role": "detail",
+      "text": "Property details, apartment amenities and location information for AlpiNest.",
+      "headings": ["AlpiNest Feriendorf Lungau", "Apartments and amenities"],
+      "linkPaths": ["/booking"],
+      "linkLabels": ["check availability"],
+      "forms": [],
+      "jsonLdTypes": ["LodgingBusiness", "Offer"],
+      "entities": [{
+        "id": "https://data.wordlift.io/wl01855/alpinest-feriendorf-lungau",
+        "types": ["LodgingBusiness"],
+        "name": "AlpiNest Feriendorf Lungau",
+        "alternateNames": ["AlpiNest"],
+        "description": "An alpine holiday village and apartment base in Lungau.",
+        "sourceUrl": "https://alpina.travel/alpinest-feriendorf-lungau",
+        "sameAs": [],
+        "offers": [{ "name": "Apartment stay", "priceCurrency": "EUR", "availability": "Live availability", "url": "https://alpina.travel/api/booking/availability" }]
+      }],
+      "pageTools": [],
+      "truncated": false
+    },
+    {
+      "url": "https://alpina.travel/booking",
+      "title": "Check Alpina availability",
+      "description": "Choose dates and guests for a Lungau stay.",
+      "role": "offer",
+      "text": "Check dates, guest capacity, prices and availability.",
+      "headings": ["Check availability"],
+      "linkPaths": [],
+      "linkLabels": [],
+      "forms": [{ "name": "availability", "method": "get", "action": "/booking", "inputNames": ["checkin", "checkout", "adults"], "hasDateInput": true, "hasSearchInput": false }],
+      "jsonLdTypes": ["LodgingBusiness", "Offer"],
+      "entities": [{
+        "id": "https://data.wordlift.io/wl01855/alpinest-feriendorf-lungau",
+        "types": ["LodgingBusiness"],
+        "name": "AlpiNest Feriendorf Lungau",
+        "alternateNames": ["AlpiNest"],
+        "sourceUrl": "https://alpina.travel/booking",
+        "sameAs": [],
+        "offers": [{ "name": "Apartment stay", "priceCurrency": "EUR", "availability": "Live availability", "url": "https://alpina.travel/api/booking/availability" }]
+      }],
+      "pageTools": [],
+      "truncated": false
+    },
+    {
+      "url": "https://alpina.travel/faq",
+      "title": "Alpina travel questions",
+      "description": "Policies and practical guidance for guests.",
+      "role": "policy",
+      "text": "Arrival, cancellation, guest and stay policies.",
+      "headings": ["Frequently asked questions", "Arrival and cancellation"],
+      "linkPaths": ["/contact"],
+      "linkLabels": ["contact alpina"],
+      "forms": [],
+      "jsonLdTypes": ["Organization", "FAQPage"],
+      "entities": [{
+        "id": "https://data.wordlift.io/wl01855/alpina-travel",
+        "types": ["Organization"],
+        "name": "Alpina.travel",
+        "alternateNames": ["Alpina Travel"],
+        "sourceUrl": "https://alpina.travel/faq",
+        "sameAs": [],
+        "offers": []
+      }],
+      "pageTools": [],
+      "truncated": false
+    }
+  ],
   "foundation": {
     "score": 94,
     "summary": "An unusually complete agent surface: WebMCP tools in the page, a live MCP server the audit called, and published UCP, agent-card, and catalogue documents.",

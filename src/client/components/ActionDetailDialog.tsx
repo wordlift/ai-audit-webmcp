@@ -14,6 +14,12 @@ export function ActionDetailDialog({ reportId, capability, onOpenChange }: { rep
             <Dialog.Close className="dialog-close" aria-label="Close capability details"><X /></Dialog.Close>
             <p className="dialog-description">{capability.description}</p>
             <div className="dialog-state"><span className={`state-badge state-${capability.state}`}>{capability.state.replace("-", " ")}</span><span>{capability.intent} · importance {capability.importance}/3</span></div>
+            {capability.appliesTo.length > 0 && (
+              <section className="dialog-entities">
+                <h3>This action applies to</h3>
+                <div>{capability.appliesTo.map((entity) => <span key={entity.id}><small>{entity.types[0]}</small>{entity.name}</span>)}</div>
+              </section>
+            )}
             <section className="evidence-columns">
               <EvidenceColumn title="For humans" icon={<UserRound />} available={capability.humanSupport} evidence={capability.evidence.filter((item) => item.audience === "human")} />
               <EvidenceColumn title="For agents" icon={<Bot />} available={capability.agentSupport} evidence={capability.evidence.filter((item) => item.audience === "agent")} />

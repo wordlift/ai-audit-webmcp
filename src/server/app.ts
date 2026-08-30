@@ -47,6 +47,7 @@ export function createApp(options: AppOptions = {}): Express {
 
   if (options.orchestrator) {
     const limiters: RequestHandler[] = createAuditRateLimiters(options.rateLimits);
+    app.get("/api/demo/alpina", async (_request, response) => response.json(await options.orchestrator?.pinnedAlpina()));
     app.use("/api/reports", createReportsRouter(options.orchestrator, limiters));
     app.use(
       "/api/sidecars/alpina",
