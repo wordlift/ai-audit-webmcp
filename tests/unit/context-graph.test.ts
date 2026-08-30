@@ -56,7 +56,7 @@ describe("context graph", () => {
     expect(context.interfaces).toContainEqual(expect.objectContaining({
       actionId: "availability.check",
       protocol: "human-form",
-      entityIds: ["https://alpina.travel/#stay"],
+      entityIds: ["https://alpina.travel/#website", "https://alpina.travel/#stay"],
     }));
     expect(appliesToForAction(context, "availability.check")).toEqual([
       { id: "https://alpina.travel/#stay", name: "AlpiNest", types: ["LodgingBusiness"] },
