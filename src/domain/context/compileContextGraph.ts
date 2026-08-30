@@ -96,9 +96,12 @@ export function compileContextGraph(
 
 export function appliesToForAction(context: ContextGraph, actionId: string) {
   const matches = context.bindings.filter((binding) => binding.actionId === actionId);
-  const preferred = matches.some((binding) => binding.role === "object")
-    ? matches.filter((binding) => binding.role === "object")
-    : matches;
+  const objects = matches.filter((binding) => binding.role === "object");
+  const concreteProviders = matches.filter((binding) => {
+    const entity = context.entities.find((candidate) => candidate.id === binding.entityId);
+    return binding.role === "provider" && !entity?.types.includes("WebSite");
+  });
+  const preferred = objects.length > 0 ? objects : concreteProviders.length > 0 ? concreteProviders : matches;
   const ids = new Set(preferred.map((binding) => binding.entityId));
   return context.entities
     .filter((entity) => ids.has(entity.id))

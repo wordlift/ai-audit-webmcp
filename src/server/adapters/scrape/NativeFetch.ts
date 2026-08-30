@@ -380,7 +380,7 @@ export function selectRepresentativePages(links: Element[], base: URL): PageCand
 }
 
 function pageRole(value: string): SitePageSnapshot["role"] {
-  if (/\b(product|property|room|stay|accommodation|article|story|post|service|solution|feature)s?\b/.test(value)) return "detail";
+  if (/\b(products?|property|properties|rooms?|stays?|accommodations?|articles?|story|stories|posts?|services?|solutions?|features?)\b/.test(value)) return "detail";
   if (/\b(price|pricing|offer|availability|book|booking|reserve|shop|checkout|demo|trial|signup)\b/.test(value)) return "offer";
   if (/\b(faq|policy|terms|shipping|return|privacy|help|guide)\b/.test(value)) return "policy";
   if (/\b(contact|inquiry|enquiry|support)\b/.test(value)) return "contact";
