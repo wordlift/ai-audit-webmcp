@@ -6,7 +6,9 @@ import { getReport, recompileReport } from "../api/client";
 import { ActionJourney } from "../components/ActionJourney";
 import { AlpinaSidecarPanel } from "../components/AlpinaSidecarPanel";
 import { ClassificationCard } from "../components/ClassificationCard";
+import { ContextEngineMap } from "../components/ContextEngineMap";
 import { ExecutiveSummary } from "../components/ExecutiveSummary";
+import { FoundationAuditDetails } from "../components/FoundationAuditDetails";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { AlpinaAvailabilityTool } from "../webmcp/AlpinaAvailabilityTool";
 import { ExplainCapabilityTool } from "../webmcp/ExplainCapabilityTool";
@@ -28,6 +30,7 @@ export function ReportRoute() {
   const [report, setReport] = useState<ReportRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
 
   useEffect(() => {
     getReport(reportId).then(setReport).catch((caught) => setError(caught instanceof Error ? caught.message : "Report unavailable"));
@@ -60,7 +63,20 @@ export function ReportRoute() {
       {report.status === "partial" && <div className="partial-banner" role="status">Partial report: {report.errors[0]?.message}</div>}
       <ExecutiveSummary report={report} />
       {report.classification && <ClassificationCard classification={report.classification} onOverride={override} />}
-      <ActionJourney reportId={report.id} capabilities={report.capabilities ?? []} />
+      {report.contextGraph && (
+        <ContextEngineMap
+          context={report.contextGraph}
+          capabilities={report.capabilities ?? []}
+          selectedEntityId={selectedEntityId}
+          onSelectEntity={setSelectedEntityId}
+        />
+      )}
+      <ActionJourney
+        reportId={report.id}
+        capabilities={report.capabilities ?? []}
+        selectedEntityId={selectedEntityId}
+      />
+      {report.foundationAudit && <FoundationAuditDetails audit={report.foundationAudit} />}
       {sidecarApplies(report) && (
         <AlpinaSidecarPanel
           reportId={report.id}

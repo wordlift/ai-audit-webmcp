@@ -3,10 +3,12 @@ import { safeFetch, UrlPolicyError, type UrlPolicyOptions } from "../../security
 import { probeMcpEndpoint } from "./mcpProbe.js";
 import type {
   DiscoveryDocument,
+  ExtractedEntity,
   McpEndpointProbe,
   PageAgentTool,
   ScrapeProvider,
   SiteForm,
+  SitePageSnapshot,
   SiteSnapshot,
 } from "./ScrapeProvider.js";
 import { collectDeclarativeTools, dedupePageTools, extractImperativeTools } from "./webmcpTools.js";
@@ -14,6 +16,7 @@ import { collectDeclarativeTools, dedupePageTools, extractImperativeTools } from
 const MAX_LINKS = 150;
 const MAX_FORMS = 20;
 const MAX_TEXT = 20_000;
+const MAX_PAGES = 4;
 const MAX_SCRIPTS = 6;
 const MAX_SCRIPT_BYTES = 400_000;
 const MAX_MCP_ENDPOINTS = 3;
@@ -62,9 +65,7 @@ export class NativeFetchCollector implements ScrapeProvider {
   }
 
   async collect(url: URL): Promise<SiteSnapshot> {
-    const page = this.fetchPage
-      ? await this.fetchPage(url)
-      : await safeFetch(url, { ...this.options, timeoutMs: this.options.timeoutMs ?? 15_000 });
+    const page = await this.fetchPublicPage(url);
     const { document } = parseHTML(page.body);
     const finalUrl = new URL(page.finalUrl);
 
@@ -76,6 +77,29 @@ export class NativeFetchCollector implements ScrapeProvider {
       this.collectDiscovery(finalUrl),
       this.collectPageTools(document, finalUrl),
     ]);
+    const mainPage = extractPage(document, finalUrl, "entry", page.truncated, pageTools);
+    const pageCandidates = selectRepresentativePages(links, finalUrl);
+    const collectedPages = await Promise.allSettled(
+      pageCandidates.map(async (candidate) => {
+        const response = await this.fetchPublicPage(candidate.url);
+        const parsed = parseHTML(response.body).document;
+        // Across secondary pages we read declarative and inline tools but avoid re-fetching the
+        // same site-wide script bundle up to three more times.
+        const tools = [
+          ...collectDeclarativeTools(parsed, response.finalUrl),
+          ...[...parsed.querySelectorAll("script:not([src])")]
+            .slice(0, 25)
+            .flatMap((script) => extractImperativeTools(script.textContent ?? "", response.finalUrl)),
+        ];
+        return extractPage(parsed, new URL(response.finalUrl), candidate.role, response.truncated, dedupePageTools(tools));
+      }),
+    );
+    const pages = [
+      mainPage,
+      ...collectedPages
+        .map((result) => (result.status === "fulfilled" ? result.value : null))
+        .filter((item): item is SitePageSnapshot => item !== null),
+    ].slice(0, MAX_PAGES);
     // The server card names its own transports, so it has to be read before anything is probed.
     // A search term taken from the page, so a tool call never needs invented vocabulary.
     const seedQuery = text(document.querySelector("h1")) || text(document.querySelector("title")) || finalUrl.hostname;
@@ -86,18 +110,25 @@ export class NativeFetchCollector implements ScrapeProvider {
       canonicalUrl,
       title: text(document.querySelector("title")),
       description: document.querySelector('meta[name="description"]')?.getAttribute("content")?.slice(0, 500) ?? "",
-      text: readableText(document),
-      headings: [...document.querySelectorAll("h1, h2, h3")].slice(0, 40).map((node) => text(node)).filter(Boolean),
-      linkPaths: unique(links.map((node) => path(node.getAttribute("href"), finalUrl)).filter(Boolean)),
-      linkLabels: unique(links.map((node) => text(node).toLowerCase()).filter(Boolean)).slice(0, 80),
-      forms: collectForms(document, finalUrl),
-      jsonLdTypes: collectJsonLdTypes(document),
+      pages,
+      text: pages.map((entry) => entry.text).join("\n\n").slice(0, 60_000),
+      headings: unique(pages.flatMap((entry) => entry.headings)).slice(0, 80),
+      linkPaths: unique(pages.flatMap((entry) => entry.linkPaths)).slice(0, MAX_LINKS),
+      linkLabels: unique(pages.flatMap((entry) => entry.linkLabels)).slice(0, 120),
+      forms: pages.flatMap((entry) => entry.forms).slice(0, MAX_FORMS),
+      jsonLdTypes: unique(pages.flatMap((entry) => entry.jsonLdTypes)).sort().slice(0, 80),
       discovery,
-      pageTools,
+      pageTools: dedupePageTools(pages.flatMap((entry) => entry.pageTools)),
       mcpEndpoints,
       softNotFound,
-      truncated: page.truncated,
+      truncated: pages.some((entry) => entry.truncated) || collectedPages.some((result) => result.status === "rejected"),
     };
+  }
+
+  private async fetchPublicPage(url: URL) {
+    return this.fetchPage
+      ? this.fetchPage(url)
+      : safeFetch(url, { ...this.options, timeoutMs: this.options.timeoutMs ?? 15_000 });
   }
 
   private async collectDiscovery(base: URL): Promise<{ discovery: DiscoveryDocument[]; softNotFound: boolean }> {
@@ -305,6 +336,83 @@ function declaredNames(kind: DiscoveryDocument["kind"], body: string): string[] 
   }
 }
 
+export interface PageCandidate {
+  url: URL;
+  role: SitePageSnapshot["role"];
+  score: number;
+  order: number;
+}
+
+/**
+ * Selects complementary evidence surfaces. One product/detail page, one commercial/action page,
+ * and one policy/contact page tell us much more than the first three navigation links.
+ */
+export function selectRepresentativePages(links: Element[], base: URL): PageCandidate[] {
+  const candidates = links
+    .map((link, order) => {
+      const href = resolve(link.getAttribute("href"), base);
+      if (!href || !sameOrigin(href, base)) return null;
+      const url = new URL(href);
+      if (url.pathname === base.pathname || /\.(?:png|jpe?g|gif|svg|pdf|zip|xml)$/i.test(url.pathname)) return null;
+      url.hash = "";
+      const haystack = `${url.pathname} ${text(link)}`.toLowerCase();
+      const role = pageRole(haystack);
+      const roleWeight = { detail: 40, offer: 36, policy: 30, contact: 28, other: 8, entry: 0 }[role];
+      const depthBonus = Math.min(url.pathname.split("/").filter(Boolean).length, 4);
+      return { url, role, score: roleWeight + depthBonus, order } satisfies PageCandidate;
+    })
+    .filter((candidate): candidate is PageCandidate => candidate !== null)
+    .sort((left, right) => right.score - left.score || left.order - right.order);
+
+  const selected: PageCandidate[] = [];
+  const seenUrls = new Set<string>();
+  const seenRoles = new Set<SitePageSnapshot["role"]>();
+  for (const candidate of candidates) {
+    const key = candidate.url.toString();
+    if (seenUrls.has(key)) continue;
+    if (seenRoles.has(candidate.role) && candidates.some((item) => !seenRoles.has(item.role))) continue;
+    selected.push(candidate);
+    seenUrls.add(key);
+    seenRoles.add(candidate.role);
+    if (selected.length === MAX_PAGES - 1) break;
+  }
+  return selected;
+}
+
+function pageRole(value: string): SitePageSnapshot["role"] {
+  if (/\b(product|property|room|stay|accommodation|article|story|post|service|solution|feature)s?\b/.test(value)) return "detail";
+  if (/\b(price|pricing|offer|availability|book|booking|reserve|shop|checkout|demo|trial|signup)\b/.test(value)) return "offer";
+  if (/\b(faq|policy|terms|shipping|return|privacy|help|guide)\b/.test(value)) return "policy";
+  if (/\b(contact|inquiry|enquiry|support)\b/.test(value)) return "contact";
+  return "other";
+}
+
+function extractPage(
+  document: Document,
+  base: URL,
+  role: SitePageSnapshot["role"],
+  truncated: boolean,
+  pageTools: PageAgentTool[],
+): SitePageSnapshot {
+  const links = [...document.querySelectorAll("a[href]")].slice(0, MAX_LINKS);
+  const jsonLd = collectJsonLd(document, base);
+  return {
+    url: base.toString(),
+    title: text(document.querySelector("title")),
+    description: document.querySelector('meta[name="description"]')?.getAttribute("content")?.slice(0, 500) ?? "",
+    role,
+    text: readableText(document),
+    headings: [...document.querySelectorAll("h1, h2, h3")].slice(0, 40).map((node) => text(node)).filter(Boolean),
+    linkPaths: unique(links.map((node) => path(node.getAttribute("href"), base)).filter(Boolean)),
+    linkLabels: unique(links.map((node) => text(node).toLowerCase()).filter(Boolean)).slice(0, 80),
+    forms: collectForms(document, base),
+    jsonLdTypes: jsonLd.types,
+    entities: jsonLd.entities,
+    pageTools,
+    truncated,
+  };
+}
+
 function collectForms(document: Document, base: URL): SiteForm[] {
   return [...document.querySelectorAll("form")].slice(0, MAX_FORMS).map((form) => {
     const inputs = [...form.querySelectorAll("input, select, textarea")];
@@ -327,8 +435,9 @@ function collectForms(document: Document, base: URL): SiteForm[] {
   });
 }
 
-function collectJsonLdTypes(document: Document): string[] {
+function collectJsonLd(document: Document, base: URL): { types: string[]; entities: ExtractedEntity[] } {
   const types = new Set<string>();
+  const entities: ExtractedEntity[] = [];
 
   for (const script of [...document.querySelectorAll('script[type="application/ld+json"]')].slice(0, 25)) {
     let parsed: unknown;
@@ -338,9 +447,10 @@ function collectJsonLdTypes(document: Document): string[] {
       continue;
     }
     collectTypes(parsed, types, 0);
+    collectEntities(parsed, entities, base, 0);
   }
 
-  return [...types].sort().slice(0, 40);
+  return { types: [...types].sort().slice(0, 80), entities: dedupeEntities(entities).slice(0, 60) };
 }
 
 function collectTypes(node: unknown, types: Set<string>, depth: number): void {
@@ -362,6 +472,114 @@ function collectTypes(node: unknown, types: Set<string>, depth: number): void {
   for (const key of ["@graph", "mainEntity", "itemListElement", "offers", "hasOfferCatalog", "about"]) {
     if (record[key]) collectTypes(record[key], types, depth + 1);
   }
+}
+
+const DOMAIN_ENTITY_TYPES = new Set([
+  "Organization",
+  "LocalBusiness",
+  "LodgingBusiness",
+  "Hotel",
+  "Resort",
+  "Apartment",
+  "Accommodation",
+  "Product",
+  "ProductGroup",
+  "Service",
+  "SoftwareApplication",
+  "WebApplication",
+  "Article",
+  "NewsArticle",
+  "BlogPosting",
+  "Person",
+  "FinancialService",
+  "InsuranceAgency",
+  "Event",
+  "Place",
+]);
+
+function collectEntities(node: unknown, entities: ExtractedEntity[], base: URL, depth: number): void {
+  if (depth > 8 || !node) return;
+  if (Array.isArray(node)) {
+    for (const entry of node) collectEntities(entry, entities, base, depth + 1);
+    return;
+  }
+  if (typeof node !== "object") return;
+  const record = node as Record<string, unknown>;
+  const types = stringList(record["@type"]).map((type) => type.replace(/^https?:\/\/schema\.org\//, ""));
+  const name = firstString(record.name, record.headline);
+  if (name && types.some((type) => DOMAIN_ENTITY_TYPES.has(type))) {
+    entities.push({
+      id: entityId(record, types[0] ?? "Thing", name, base),
+      types: unique(types).slice(0, 12),
+      name: name.slice(0, 300),
+      alternateNames: stringList(record.alternateName).slice(0, 20),
+      description: firstString(record.description)?.slice(0, 1_000),
+      sourceUrl: base.toString(),
+      sameAs: stringList(record.sameAs).map((value) => resolve(value, base)).filter((value): value is string => Boolean(value)).slice(0, 12),
+      offers: extractOffers(record.offers, base),
+    });
+  }
+  for (const value of Object.values(record)) collectEntities(value, entities, base, depth + 1);
+}
+
+function entityId(record: Record<string, unknown>, type: string, name: string, base: URL): string {
+  for (const candidate of [record["@id"], record.url]) {
+    if (typeof candidate !== "string" || !candidate.trim()) continue;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(candidate) && !candidate.startsWith("/")) return candidate.slice(0, 500);
+    const resolved = resolve(candidate, base);
+    if (resolved) return resolved.slice(0, 500);
+  }
+  return `urn:wordlift:entity:${slug(type)}:${slug(name)}`.slice(0, 500);
+}
+
+function extractOffers(value: unknown, base: URL): ExtractedEntity["offers"] {
+  const entries = Array.isArray(value) ? value : value && typeof value === "object" ? [value] : [];
+  return entries.slice(0, 12).flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const offer = entry as Record<string, unknown>;
+    const url = firstString(offer.url);
+    return [{
+      id: firstString(offer["@id"])?.slice(0, 500),
+      name: firstString(offer.name)?.slice(0, 240),
+      price: typeof offer.price === "number" || typeof offer.price === "string" ? offer.price : undefined,
+      priceCurrency: firstString(offer.priceCurrency)?.slice(0, 8),
+      availability: firstString(offer.availability)?.replace(/^https?:\/\/schema\.org\//, "").slice(0, 240),
+      url: url ? resolve(url, base) ?? undefined : undefined,
+    }];
+  });
+}
+
+function dedupeEntities(entities: ExtractedEntity[]): ExtractedEntity[] {
+  const byId = new Map<string, ExtractedEntity>();
+  for (const entity of entities) {
+    const existing = byId.get(entity.id);
+    if (!existing) {
+      byId.set(entity.id, entity);
+      continue;
+    }
+    byId.set(entity.id, {
+      ...existing,
+      types: unique([...existing.types, ...entity.types]),
+      alternateNames: unique([...existing.alternateNames, ...entity.alternateNames]),
+      sameAs: unique([...existing.sameAs, ...entity.sameAs]),
+      offers: [...existing.offers, ...entity.offers].slice(0, 12),
+    });
+  }
+  return [...byId.values()];
+}
+
+function stringList(value: unknown): string[] {
+  if (typeof value === "string") return value.trim() ? [value.trim()] : [];
+  if (Array.isArray(value)) return value.flatMap(stringList);
+  return [];
+}
+
+function firstString(...values: unknown[]): string | undefined {
+  return values.flatMap(stringList).find(Boolean);
+}
+
+function slug(value: string): string {
+  return value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "unnamed";
 }
 
 function readableText(document: Document): string {

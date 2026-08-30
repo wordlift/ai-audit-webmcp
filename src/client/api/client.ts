@@ -86,6 +86,11 @@ export async function getReport(reportId: string): Promise<ReportRecord> {
   return reportRecordSchema.parse(body);
 }
 
+export async function getPinnedAlpinaReport(): Promise<ReportRecord> {
+  const { body } = await requestJson("/api/demo/alpina");
+  return reportRecordSchema.parse(body);
+}
+
 export async function recompileReport(reportId: string, archetype: Archetype): Promise<ReportRecord> {
   const { body } = await requestJson(`/api/reports/${reportId}/recompile`, {
     method: "POST",

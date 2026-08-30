@@ -15,6 +15,8 @@ describe("fixture providers", () => {
     const fixture = provider.get(fixtureId);
     expect(fixture.id).toBe(fixtureId);
     expect(fixture.url).toMatch(/^https:/);
+    expect(fixture.pages?.length).toBeGreaterThanOrEqual(3);
+    expect(fixture.pages?.flatMap((page) => page.entities).length).toBeGreaterThan(0);
     expect(serializedReportSize(fixture)).toBeLessThan(100_000);
     expect(JSON.stringify(fixture)).not.toMatch(/authorization|cookie|rawHtml/i);
   });

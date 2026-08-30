@@ -1,18 +1,20 @@
-import { ArrowRight, Bot, Network, ScanSearch, Sparkles } from "lucide-react";
+import { ArrowRight, Bot, Braces, ScanSearch, Sparkles, Tags } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createReport } from "../api/client";
 
 const journey = [
-  { label: "Understand the site", icon: ScanSearch },
-  { label: "Map expected actions", icon: Network },
-  { label: "Check agent readiness", icon: Bot },
+  { label: "Analyze 4 useful pages", icon: ScanSearch },
+  { label: "Extract entities & meaning", icon: Tags },
+  { label: "Map actions & interfaces", icon: Braces },
+  { label: "Verify agent readiness", icon: Bot },
 ];
 
 /** Real phase durations for a live audit, which takes about a minute end to end. */
 const PHASES = [
-  { label: "Understanding the site", holdMs: 30_000 },
-  { label: "Mapping expected actions", holdMs: 12_000 },
+  { label: "Selecting representative pages", holdMs: 22_000 },
+  { label: "Extracting entities and meaning", holdMs: 12_000 },
+  { label: "Mapping actions and interfaces", holdMs: 12_000 },
   { label: "Checking agent readiness", holdMs: Number.POSITIVE_INFINITY },
 ];
 
@@ -44,7 +46,7 @@ const WORD_MS = 2_200;
 
 export function HomeRoute() {
   const navigate = useNavigate();
-  const [url, setUrl] = useState("https://alpina.travel");
+  const [url, setUrl] = useState("");
   const [phaseIndex, setPhaseIndex] = useState<number | null>(null);
   const [wordIndex, setWordIndex] = useState(0);
   const [seconds, setSeconds] = useState(0);
@@ -97,17 +99,25 @@ export function HomeRoute() {
     <section className="home-page">
       <div className="hero" aria-labelledby="hero-title">
         <div className="eyebrow"><Sparkles size={16} /> Built for the agentic web</div>
-        <h1 id="hero-title">Your website has pages. Agents need functions.</h1>
+        <h1 id="hero-title">Your website has pages. Agents need a <span>service map.</span></h1>
         <p className="hero-copy">
-          Enter a URL. We identify the kind of site, map what an AI agent should be able to do,
-          and turn every capability gap into an implementation-ready contract.
+          Enter a URL. WordLift's Context Engine connects the site's entities and language to the
+          actions agents need, then verifies which interfaces actually work.
         </p>
         <form className="audit-form" onSubmit={submit}>
           <label htmlFor="site-url">Website URL</label>
           <div className="input-row">
-            <input id="site-url" name="url" type="url" value={url} onChange={(event) => setUrl(event.target.value)} required />
+            <input
+              id="site-url"
+              name="url"
+              type="url"
+              value={url}
+              placeholder="https://example.com"
+              onChange={(event) => setUrl(event.target.value)}
+              required
+            />
             <button type="submit" disabled={Boolean(phase)}>
-              {phase ? "Scanning" : "Map capabilities"} <ArrowRight size={18} />
+              {phase ? "Building the map" : "Build the service map"} <ArrowRight size={18} />
             </button>
           </div>
           <p>No account required. Public websites only.</p>
@@ -132,7 +142,7 @@ export function HomeRoute() {
           </article>
         ))}
       </section>
-      <p className="demo-note">Demo sites: alpina.travel · shop.example · publisher.example · insurance.example · saas.example</p>
+      <p className="demo-note">Open demo sites: shop.example · publisher.example · insurance.example · saas.example · organization.example · alpina.travel</p>
     </section>
   );
 }

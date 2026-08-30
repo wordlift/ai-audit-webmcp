@@ -54,6 +54,7 @@ describe("report schemas", () => {
           state: "human-only",
           humanSupport: true,
           agentSupport: false,
+          appliesTo: [],
           evidence: [
             {
               id: "search-form",

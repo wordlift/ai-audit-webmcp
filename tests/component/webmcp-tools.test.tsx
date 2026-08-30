@@ -35,6 +35,8 @@ const completedReport: ReportRecord = {
     score: 71,
     summary: "Strong content foundations with limited agent-facing functions.",
     findings: ["robots.txt allows major agents"],
+    sections: [],
+    quickWins: [],
     provider: "fixtures",
   },
   capabilities: [
@@ -50,6 +52,7 @@ const completedReport: ReportRecord = {
       state: "human-only",
       humanSupport: true,
       agentSupport: false,
+      appliesTo: [],
       evidence: [
         {
           id: "availability-form",
@@ -97,6 +100,7 @@ const completedReport: ReportRecord = {
       state: "agent-ready",
       humanSupport: true,
       agentSupport: true,
+      appliesTo: [],
       evidence: [],
     },
   ],

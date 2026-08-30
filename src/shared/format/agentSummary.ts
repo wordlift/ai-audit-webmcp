@@ -12,6 +12,8 @@ export interface AuditToolResult {
   classificationConfidence: string;
   agentReadinessScore: number;
   foundationAuditScore: number | null;
+  pagesAnalyzed: number;
+  entities: Array<{ id: string; name: string; types: string[] }>;
   priorityGaps: Array<{ actionId: string; label: string; state: string; reason: string }>;
   stages: {
     discover: StageCount;
@@ -36,6 +38,8 @@ export interface CapabilityToolResult {
   state: string;
   humanSupport: boolean;
   agentSupport: boolean;
+  appliesTo: Array<{ id: string; name: string; types: string[] }>;
+  interfaces: Array<{ name: string; protocol: string; status: string; sourceUrl: string }>;
   evidence: Array<{ audience: string; kind: string; verification: string; claim: string; sourceUrl: string; confidence: number }>;
   recommendation: string | null;
   governance: {
@@ -80,6 +84,12 @@ export function summarizeReportForAgent(report: ReportRecord, reportUrl: string)
     classificationConfidence: report.classification?.confidence ?? "low",
     agentReadinessScore: report.score?.value ?? 0,
     foundationAuditScore: report.foundationAudit?.score ?? null,
+    pagesAnalyzed: report.contextGraph?.pages.length ?? 1,
+    entities: (report.contextGraph?.entities ?? []).slice(0, 8).map((entity) => ({
+      id: entity.id,
+      name: entity.name,
+      types: entity.types,
+    })),
     priorityGaps: (report.priorities ?? []).map((gap) => ({
       actionId: gap.actionId,
       label: gap.label,
@@ -104,6 +114,7 @@ export function auditSummaryText(result: AuditToolResult): string {
     `Verified agent readiness: ${result.agentReadinessScore}/100${
       result.foundationAuditScore === null ? "" : ` · AI Audit foundation score: ${result.foundationAuditScore}/100`
     }.`,
+    `Context map: ${result.pagesAnalyzed} representative page${result.pagesAnalyzed === 1 ? "" : "s"} analyzed, ${result.entities.length} named domain entit${result.entities.length === 1 ? "y" : "ies"} extracted.`,
     `Stages ready/expected — discover ${stage(result.stages.discover)}, understand & decide ${stage(
       result.stages.understandDecide,
     )}, act ${stage(result.stages.act)}, manage ${stage(result.stages.manage)}.`,
@@ -149,6 +160,11 @@ export function describeCapabilityForAgent(
     state: capability.state,
     humanSupport: capability.humanSupport,
     agentSupport: capability.agentSupport,
+    appliesTo: capability.appliesTo,
+    interfaces: (report.contextGraph?.interfaces ?? [])
+      .filter((item) => item.actionId === capability.actionId)
+      .slice(0, 10)
+      .map((item) => ({ name: item.name, protocol: item.protocol, status: item.status, sourceUrl: item.sourceUrl })),
     evidence: capability.evidence.slice(0, MAX_AGENT_EVIDENCE).map((item) => ({
       audience: item.audience,
       kind: item.kind,
@@ -169,6 +185,12 @@ export function capabilitySummaryText(result: CapabilityToolResult): string {
     `${result.label} — ${result.state.replace("-", " ")} (${result.intent}, ${result.stage} stage).`,
     `Human support: ${result.humanSupport ? "yes" : "no"}. Agent support: ${result.agentSupport ? "yes" : "no"}.`,
   ];
+  if (result.appliesTo.length > 0) {
+    lines.push(`Applies to: ${result.appliesTo.map((entity) => `${entity.name} (${entity.types.join(", ")})`).join("; ")}.`);
+  }
+  if (result.interfaces.length > 0) {
+    lines.push(`Interfaces: ${result.interfaces.map((item) => `${item.name} [${item.protocol}/${item.status}]`).join("; ")}.`);
+  }
   if (result.evidence.length > 0) {
     lines.push("Evidence:");
     for (const item of result.evidence) {
