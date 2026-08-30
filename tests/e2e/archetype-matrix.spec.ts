@@ -4,9 +4,9 @@ const FIXTURES = [
   { url: "https://shop.example", archetype: /commerce \/ retail/i, entity: "Trail Jacket", action: /retrieve details/i, pages: 3 },
   { url: "https://publisher.example", archetype: /publisher \/ content/i, entity: "How agents change digital commerce", action: /retrieve details/i, pages: 3 },
   { url: "https://alpina.travel", archetype: /travel \/ hospitality/i, entity: "AlpiNest Feriendorf Lungau", action: /check availability/i, pages: 4 },
-  { url: "https://insurance.example", archetype: /finance \/ insurance/i, entity: "Travel Cover", action: /request quote/i, pages: 3 },
-  { url: "https://saas.example", archetype: /saas/i, entity: "Context Cloud", action: /start trial/i, pages: 3 },
-  { url: "https://organization.example", archetype: /other/i, entity: "Example Foundation", action: /submit inquiry/i, pages: 3 },
+  { url: "https://insurance.example", archetype: /finance \/ insurance/i, entity: "Travel Cover", action: /request a quote/i, pages: 3 },
+  { url: "https://saas.example", archetype: /saas/i, entity: "Context Cloud", action: /start a trial/i, pages: 3 },
+  { url: "https://organization.example", archetype: /other/i, entity: "Example Foundation", action: /submit an inquiry/i, pages: 3 },
 ] as const;
 
 for (const fixture of FIXTURES) {
