@@ -47,6 +47,20 @@ const completedReport: ReportRecord = {
         headings: ["Choose dates"],
         entityIds: ["https://alpina.travel/#stay"],
       },
+      {
+        url: "https://alpina.travel/experiences",
+        title: "Alpine experiences",
+        role: "detail",
+        headings: ["Things to do"],
+        entityIds: ["https://alpina.travel/#stay"],
+      },
+      {
+        url: "https://alpina.travel/faq",
+        title: "Guest information",
+        role: "policy",
+        headings: ["Guest information"],
+        entityIds: [],
+      },
     ],
     entities: [{
       id: "https://alpina.travel/#stay",
@@ -231,7 +245,7 @@ describe("WebMCP tool layer", () => {
       archetype: "travel-hospitality",
       agentReadinessScore: 38,
       partial: false,
-      pagesAnalyzed: 2,
+      pagesAnalyzed: 4,
       entities: [{ id: "https://alpina.travel/#stay", name: "AlpiNest", types: ["LodgingBusiness"] }],
       stages: { act: { ready: 0, expected: 1 }, discover: { ready: 1, expected: 1 } },
     });
