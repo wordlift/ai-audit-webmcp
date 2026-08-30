@@ -8,8 +8,8 @@ repository is a release action, not a testing step.
 - [x] Client and server TypeScript typechecks pass.
 - [x] Unit, integration, component, security, and WebMCP tests pass (209 tests).
 - [x] Production client and server builds pass.
-- [ ] Full Chromium suite passes in GitHub Actions, including all six archetype fixtures.
-- [ ] Browser artifacts show a readable desktop report, capability contract, and mobile report.
+- [x] Full Chromium suite passes in GitHub Actions, including all six archetype fixtures (run 33330673990).
+- [x] Browser artifacts show a readable desktop report, capability contract, and mobile report.
 
 ## Live beta gates
 
