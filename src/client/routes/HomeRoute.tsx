@@ -16,29 +16,72 @@ const PHASES = [
   { label: "Checking agent readiness", holdMs: Number.POSITIVE_INFINITY },
 ];
 
+/**
+ * Cosmetic. A live audit fetches the page, its scripts, its discovery documents and any MCP
+ * endpoint it advertises, which takes a while; these keep the wait feeling like work. The real
+ * phase and the elapsed seconds are shown alongside, so nothing here overstates progress.
+ */
+const SCAN_WORDS = [
+  "Sniffing",
+  "Probing",
+  "Parsing",
+  "Crawling",
+  "Enumerating",
+  "Fingerprinting",
+  "Triangulating",
+  "Interrogating",
+  "Disambiguating",
+  "Cross-referencing",
+  "Untangling",
+  "Auscultating",
+  "Sifting",
+  "Divining",
+  "Corroborating",
+  "Distilling",
+];
+
+const WORD_MS = 2_200;
+
 export function HomeRoute() {
   const navigate = useNavigate();
   const [url, setUrl] = useState("https://alpina.travel");
   const [phaseIndex, setPhaseIndex] = useState<number | null>(null);
+  const [wordIndex, setWordIndex] = useState(0);
+  const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
+  const tickers = useRef<number[]>([]);
   const phase = phaseIndex === null ? null : PHASES[phaseIndex].label;
+  const word = SCAN_WORDS[wordIndex % SCAN_WORDS.length];
 
-  useEffect(() => () => timers.current.forEach((timer) => window.clearTimeout(timer)), []);
+  const stopClocks = () => {
+    timers.current.forEach((timer) => window.clearTimeout(timer));
+    tickers.current.forEach((ticker) => window.clearInterval(ticker));
+    timers.current = [];
+    tickers.current = [];
+  };
 
-  function advanceThroughPhases() {
+  useEffect(() => stopClocks, []);
+
+  function startClocks() {
     let elapsed = 0;
     timers.current = PHASES.slice(0, -1).map((entry, index) => {
       elapsed += entry.holdMs;
       return window.setTimeout(() => setPhaseIndex(index + 1), elapsed);
     });
+    tickers.current = [
+      window.setInterval(() => setWordIndex((index) => index + 1), WORD_MS),
+      window.setInterval(() => setSeconds((value) => value + 1), 1_000),
+    ];
   }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setPhaseIndex(0);
-    advanceThroughPhases();
+    setWordIndex(0);
+    setSeconds(0);
+    startClocks();
     try {
       const report = await createReport(url);
       navigate(`/reports/${report.id}`);
@@ -46,8 +89,7 @@ export function HomeRoute() {
       setPhaseIndex(null);
       setError(caught instanceof Error ? caught.message : "The audit could not be completed");
     } finally {
-      timers.current.forEach((timer) => window.clearTimeout(timer));
-      timers.current = [];
+      stopClocks();
     }
   }
 
@@ -65,11 +107,21 @@ export function HomeRoute() {
           <div className="input-row">
             <input id="site-url" name="url" type="url" value={url} onChange={(event) => setUrl(event.target.value)} required />
             <button type="submit" disabled={Boolean(phase)}>
-              {phase ?? "Map capabilities"} <ArrowRight size={18} />
+              {phase ? "Scanning" : "Map capabilities"} <ArrowRight size={18} />
             </button>
           </div>
           <p>No account required. Public websites only.</p>
-          {phase && <div className="progress-message" role="status"><span /> {phase}…</div>}
+          {phase && (
+            <div className="progress-message">
+              {/* Only the real phase is announced: the rotating word would talk over a screen reader. */}
+              <span className="sr-only" role="status">{phase}</span>
+              <span className="progress-dot" aria-hidden="true" />
+              <span className="progress-word" aria-hidden="true">{word}…</span>
+              <span className="progress-detail" aria-hidden="true">
+                {phase} · {seconds}s
+              </span>
+            </div>
+          )}
           {error && <p className="form-error" role="alert">{error}</p>}
         </form>
       </div>

@@ -52,6 +52,9 @@ const NAME_ACTION_RULES: Array<{ pattern: RegExp; actionId: string }> = [
   { pattern: /plan|pricing|tier/, actionId: "plans.compare" },
   { pattern: /trial|signup|sign_up|register/, actionId: "trial.start" },
   { pattern: /book|reserv/, actionId: "checkout.create" },
+  // Broad fallbacks for namespaced capability ids such as `dev.ucp.shopping.checkout`.
+  { pattern: /fulfil/, actionId: "transaction.status" },
+  { pattern: /checkout/, actionId: "checkout.create" },
 ];
 
 export function actionForDeclaredName(name: string): string | null {
