@@ -621,6 +621,8 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .context-engine-heading > div > p:last-child { max-width: 66ch; margin: 0; color: var(--muted); line-height: 1.5; }
 .page-count { display: flex; align-items: baseline; gap: 7px; margin: 0; color: var(--muted); white-space: nowrap; }
 .page-count strong { color: var(--brand); font-family: var(--font-display); font-size: 2.2rem; }
+.context-compiler-note { margin: 0; padding: 11px 14px; border-left: 3px solid var(--brand); border-radius: 0 10px 10px 0; background: color-mix(in srgb, var(--brand) 6%, white); color: var(--muted); font-size: 0.76rem; line-height: 1.5; }
+.context-compiler-note strong { color: var(--ink); text-transform: capitalize; }
 
 .context-layers { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: 10px; }
 .layer-arrow { align-self: center; color: var(--brand); opacity: 0.65; }

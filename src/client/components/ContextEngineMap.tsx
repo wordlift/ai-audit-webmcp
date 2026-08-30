@@ -1,13 +1,15 @@
 import { ArrowRight, Braces, ExternalLink, Link2, Network, Tags } from "lucide-react";
-import type { CapabilityResult, ContextGraph } from "../../shared/types/index.js";
+import type { CapabilityResult, ClassificationResult, ContextGraph } from "../../shared/types/index.js";
 
 export function ContextEngineMap({
   context,
+  classification,
   capabilities,
   selectedEntityId,
   onSelectEntity,
 }: {
   context: ContextGraph;
+  classification: ClassificationResult;
   capabilities: CapabilityResult[];
   selectedEntityId: string | null;
   onSelectEntity: (entityId: string | null) => void;
@@ -35,6 +37,11 @@ export function ContextEngineMap({
         </div>
         <p className="page-count"><strong>{context.pages.length}</strong> representative pages analyzed</p>
       </div>
+
+      <p className="context-compiler-note">
+        <strong>{classification.primaryArchetype.replaceAll("-", " / ")}</strong> classification selects the expected
+        action journey; observed entities and interfaces determine what is supported and what is missing.
+      </p>
 
       <div className="context-layers">
         <Layer icon={<Network />} eyebrow="Domain graph" title="Entities & offers">

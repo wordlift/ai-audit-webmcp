@@ -87,7 +87,7 @@ export class AuditOrchestrator {
   /** Stable, dated fixture for judges; live audits remain available from the same URL-first flow. */
   async pinnedAlpina(): Promise<ReportRecord> {
     const existing = await this.store.get(PINNED_ALPINA_REPORT_ID);
-    if (existing) return existing;
+    if (existing?.contextGraph && existing.contextGraph.pages.length >= 4) return existing;
     const base = this.baseRecord(PINNED_ALPINA_REPORT_ID, "https://alpina.travel/", this.now());
     const report = this.compileFixture(base, this.fixtures.get("travel-hospitality"));
     const pinned: ReportRecord = {

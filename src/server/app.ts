@@ -42,7 +42,12 @@ export function createApp(options: AppOptions = {}): Express {
   app.use(express.json({ limit: "256kb" }));
 
   app.get("/api/health", (_request, response) => {
-    response.status(200).json({ status: "ok", service: "ai-audit-webmcp" });
+    response.status(200).json({
+      status: "ok",
+      service: "ai-audit-webmcp",
+      revision: process.env.K_REVISION ?? "local",
+      release: process.env.BUILD_SHA ?? "development",
+    });
   });
 
   if (options.orchestrator) {

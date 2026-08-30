@@ -31,6 +31,56 @@ const completedReport: ReportRecord = {
     model: "google-v2-fixture",
     collectedAt: "2026-08-27T05:00:10.000Z",
   },
+  contextGraph: {
+    pages: [
+      {
+        url: "https://alpina.travel/",
+        title: "Alpina.travel",
+        role: "entry",
+        headings: ["Find an alpine stay"],
+        entityIds: ["https://alpina.travel/#stay"],
+      },
+      {
+        url: "https://alpina.travel/booking",
+        title: "Check availability",
+        role: "offer",
+        headings: ["Choose dates"],
+        entityIds: ["https://alpina.travel/#stay"],
+      },
+    ],
+    entities: [{
+      id: "https://alpina.travel/#stay",
+      types: ["LodgingBusiness"],
+      name: "AlpiNest",
+      alternateNames: [],
+      sourceUrls: ["https://alpina.travel/", "https://alpina.travel/booking"],
+      sameAs: [],
+      offers: [],
+      confidence: 0.95,
+    }],
+    lexicalEntries: [],
+    interfaces: [{
+      id: "interface:availability-form",
+      actionId: "availability.check",
+      entityIds: ["https://alpina.travel/#stay"],
+      name: "Check availability via form",
+      protocol: "human-form",
+      audience: "human",
+      status: "observed",
+      sourceUrl: "https://alpina.travel/booking",
+      evidenceId: "availability-form",
+    }],
+    bindings: [{
+      entityId: "https://alpina.travel/#stay",
+      actionId: "availability.check",
+      role: "object",
+      basis: ["archetype", "observed-interface"],
+      state: "human-only",
+      evidenceIds: ["availability-form"],
+      interfaceIds: ["interface:availability-form"],
+      confidence: 0.9,
+    }],
+  },
   foundationAudit: {
     score: 71,
     summary: "Strong content foundations with limited agent-facing functions.",
@@ -52,7 +102,7 @@ const completedReport: ReportRecord = {
       state: "human-only",
       humanSupport: true,
       agentSupport: false,
-      appliesTo: [],
+      appliesTo: [{ id: "https://alpina.travel/#stay", name: "AlpiNest", types: ["LodgingBusiness"] }],
       evidence: [
         {
           id: "availability-form",
@@ -181,6 +231,8 @@ describe("WebMCP tool layer", () => {
       archetype: "travel-hospitality",
       agentReadinessScore: 38,
       partial: false,
+      pagesAnalyzed: 2,
+      entities: [{ id: "https://alpina.travel/#stay", name: "AlpiNest", types: ["LodgingBusiness"] }],
       stages: { act: { ready: 0, expected: 1 }, discover: { ready: 1, expected: 1 } },
     });
   });
@@ -233,7 +285,12 @@ describe("WebMCP tool layer", () => {
     expect(text).toMatch(/Human support: yes\. Agent support: no\./);
     expect(text).toMatch(/Expose availability as a read-only agent function/);
     expect(text).toMatch(/contracts\/availability.check/);
-    expect(result.structuredContent).toMatchObject({ actionId: "availability.check", state: "human-only" });
+    expect(result.structuredContent).toMatchObject({
+      actionId: "availability.check",
+      state: "human-only",
+      appliesTo: [{ id: "https://alpina.travel/#stay", name: "AlpiNest" }],
+      interfaces: [{ protocol: "human-form", status: "observed" }],
+    });
 
     const missing = await act(async () => modelContext.call("explain-capability", { actionId: "does.not.exist" }));
     expect(missing.isError).toBe(true);
