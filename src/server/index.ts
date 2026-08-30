@@ -42,6 +42,7 @@ const app = createApp({
   staticDirectory: path.resolve(process.cwd(), "dist"),
   orchestrator,
   trustProxy: config.NODE_ENV === "production",
+  rateLimits: config.NODE_ENV === "test" ? { enabled: false } : undefined,
 });
 
 const server = app.listen(config.PORT, () => {
