@@ -1,1 +1,385 @@
-{"id":"travel-hospitality","url":"https://alpina.travel/","archetype":"travel-hospitality","categories":[{"name":"/Travel/Hotels & Accommodations","confidence":0.97}],"signals":["schema:LodgingBusiness","path:booking"],"foundation":{"score":86,"summary":"Rich property knowledge and booking discovery are present; current browser-native invocation still needs proof.","findings":["LodgingBusiness data detected","Availability form and public API discovery detected"],"provider":"fixture"},"evidence":[{"id":"alpina-search","actionId":"site.search","audience":"human","kind":"page","sourceUrl":"https://alpina.travel/","claim":"Travel properties can be browsed by people","confidence":1,"verification":"observed","collectedAt":"2026-08-27T05:00:00.000Z"},{"id":"alpina-detail","actionId":"detail.retrieve","audience":"agent","kind":"structured-data","sourceUrl":"https://alpina.travel/samspitze-4","claim":"Lodging details are declared as structured data","confidence":0.95,"verification":"declared","collectedAt":"2026-08-27T05:00:00.000Z"},{"id":"alpina-form","actionId":"availability.check","audience":"human","kind":"form","sourceUrl":"https://alpina.travel/samspitze-4","claim":"People can check dates through the booking interface","confidence":1,"verification":"observed","collectedAt":"2026-08-27T05:00:00.000Z"},{"id":"alpina-openapi","actionId":"availability.check","audience":"agent","kind":"openapi","sourceUrl":"https://alpina.travel/api/booking/openapi.json","claim":"A public availability operation is declared","confidence":1,"verification":"declared","collectedAt":"2026-08-27T05:00:00.000Z"}]}
+{
+  "id": "travel-hospitality",
+  "url": "https://alpina.travel/",
+  "archetype": "travel-hospitality",
+  "status": "completed",
+  "categories": [
+    {
+      "name": "/Travel/Hotels & Accommodations",
+      "confidence": 0.97
+    }
+  ],
+  "signals": [
+    "agent:agent-card",
+    "agent:agent-skills",
+    "agent:api-catalog",
+    "agent:llms-txt",
+    "agent:mcp-endpoint",
+    "agent:mcp-server-card",
+    "agent:ucp",
+    "agent:webmcp",
+    "agent:webmcp-declarative",
+    "agent:webmcp-imperative",
+    "path:booking",
+    "schema:DataCatalog",
+    "schema:ImageObject",
+    "schema:LodgingBusiness",
+    "schema:Organization",
+    "schema:SearchAction",
+    "schema:WebSite"
+  ],
+  "foundation": {
+    "score": 94,
+    "summary": "An unusually complete agent surface: WebMCP tools in the page, a live MCP server the audit called, and published UCP, agent-card, and catalogue documents.",
+    "findings": [
+      "WebMCP tools registered in the page, declaratively and through navigator.modelContext",
+      "MCP server reachable over streamable HTTP; the SSE endpoint linked from the homepage refuses requests",
+      "Search results carry no product identifier, so an agent cannot chain search to detail or availability"
+    ],
+    "provider": "fixture"
+  },
+  "errors": [],
+  "evidence": [
+    {
+      "id": "form-dates-/",
+      "actionId": "availability.check",
+      "audience": "human",
+      "kind": "form",
+      "sourceUrl": "https://alpina.travel/",
+      "claim": "People can check dates through a booking form",
+      "confidence": 1,
+      "verification": "observed",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "mcp-tool-check_booking_availability",
+      "actionId": "availability.check",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/mcp/alpina/http/mcp",
+      "claim": "\"check_booking_availability\" is listed by the site's live MCP server, but it was not called: this server's own search results carry no usable identifier",
+      "confidence": 0.9,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "webmcp-declarative-prepare_samspitze_availability_check",
+      "actionId": "availability.check",
+      "audience": "agent",
+      "kind": "webmcp",
+      "sourceUrl": "https://alpina.travel/",
+      "claim": "\"prepare_samspitze_availability_check\" is annotated on this page as a WebMCP tool, but no call has been verified",
+      "confidence": 0.85,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "webmcp-imperative-check_samspitze_availability",
+      "actionId": "availability.check",
+      "audience": "agent",
+      "kind": "webmcp",
+      "sourceUrl": "https://alpina.travel/_astro/BaseLayout.astro_astro_type_script_index_0_lang.DyuLaO0N.js",
+      "claim": "\"check_samspitze_availability\" is registered for agents through navigator.modelContext, but no call has been verified",
+      "confidence": 0.8,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "declared-agent-card-Create booking link",
+      "actionId": "checkout.create",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/.well-known/agent-card.json",
+      "claim": "\"Create booking link\" is declared for agents, but no successful call has been verified",
+      "confidence": 0.75,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "declared-ucp-dev.ucp.shopping.checkout",
+      "actionId": "checkout.create",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/.well-known/ucp",
+      "claim": "\"dev.ucp.shopping.checkout\" is declared for agents, but no successful call has been verified",
+      "confidence": 0.75,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "webmcp-imperative-start_samspitze_checkout",
+      "actionId": "checkout.create",
+      "audience": "agent",
+      "kind": "webmcp",
+      "sourceUrl": "https://alpina.travel/_astro/BaseLayout.astro_astro_type_script_index_0_lang.DyuLaO0N.js",
+      "claim": "\"start_samspitze_checkout\" is registered for agents through navigator.modelContext, but no call has been verified",
+      "confidence": 0.8,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "declared-agent-card-Get property details",
+      "actionId": "detail.retrieve",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/.well-known/agent-card.json",
+      "claim": "\"Get property details\" is declared for agents, but no successful call has been verified",
+      "confidence": 0.75,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "jsonld-LodgingBusiness-detail.retrieve",
+      "actionId": "detail.retrieve",
+      "audience": "agent",
+      "kind": "structured-data",
+      "sourceUrl": "https://alpina.travel/",
+      "claim": "LodgingBusiness is published as JSON-LD, so an agent can read it",
+      "confidence": 0.9,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "mcp-tool-get_product",
+      "actionId": "detail.retrieve",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/mcp/alpina/http/mcp",
+      "claim": "\"get_product\" is listed by the site's live MCP server, but it was not called: this server's own search results carry no usable identifier",
+      "confidence": 0.9,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "path-features.search",
+      "actionId": "features.search",
+      "audience": "human",
+      "kind": "page",
+      "sourceUrl": "https://alpina.travel/",
+      "claim": "Product documentation exists for people",
+      "confidence": 0.85,
+      "verification": "observed",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "declared-agent-card-Recommend a stay",
+      "actionId": "items.recommend",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/.well-known/agent-card.json",
+      "claim": "\"Recommend a stay\" is declared for agents, but no successful call has been verified",
+      "confidence": 0.75,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "discovery-agent-skills",
+      "actionId": "site.browse",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/.well-known/agent-skills/index.json",
+      "claim": "The site publishes an agent-skills index",
+      "confidence": 0.8,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "discovery-api-catalog",
+      "actionId": "site.browse",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/.well-known/api-catalog",
+      "claim": "The site publishes an API catalogue for agents",
+      "confidence": 0.8,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "discovery-llms",
+      "actionId": "site.browse",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/llms.txt",
+      "claim": "The site publishes llms.txt for agents",
+      "confidence": 0.8,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "discovery-mcp-server-card",
+      "actionId": "site.browse",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/.well-known/mcp/server-card.json",
+      "claim": "The site publishes an MCP server card naming its transports",
+      "confidence": 0.8,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "mcp-endpoint-https://alpina.travel/mcp/alpina/http/mcp",
+      "actionId": "site.browse",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/mcp/alpina/http/mcp",
+      "claim": "An agent opened an MCP session here and completed the initialize handshake with \"Alpina Travel Commerce\"",
+      "confidence": 1,
+      "verification": "invoked",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "mcp-endpoint-https://alpina.travel/mcp/alpina/sse",
+      "actionId": "site.browse",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/mcp/alpina/sse",
+      "claim": "An agent opened an MCP session here and completed the initialize handshake with \"Alpina Travel Commerce\"",
+      "confidence": 1,
+      "verification": "invoked",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "page-browse",
+      "actionId": "site.browse",
+      "audience": "human",
+      "kind": "page",
+      "sourceUrl": "https://alpina.travel/",
+      "claim": "People can browse this site through its pages and navigation",
+      "confidence": 1,
+      "verification": "observed",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "soft-not-found",
+      "actionId": "site.browse",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/",
+      "claim": "This site answers unknown paths with its HTML page and a 200, so an agent cannot tell which agent documents exist",
+      "confidence": 1,
+      "verification": "observed",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "declared-ucp-dev.ucp.shopping.catalog.search",
+      "actionId": "site.search",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/.well-known/ucp",
+      "claim": "\"dev.ucp.shopping.catalog.search\" is declared for agents, but no successful call has been verified",
+      "confidence": 0.75,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "jsonld-SearchAction-site.search",
+      "actionId": "site.search",
+      "audience": "agent",
+      "kind": "structured-data",
+      "sourceUrl": "https://alpina.travel/",
+      "claim": "SearchAction is published as JSON-LD, so an agent can read it",
+      "confidence": 0.9,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "jsonld-WebSite-site.search",
+      "actionId": "site.search",
+      "audience": "agent",
+      "kind": "structured-data",
+      "sourceUrl": "https://alpina.travel/",
+      "claim": "WebSite is published as JSON-LD, so an agent can read it",
+      "confidence": 0.9,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "mcp-call-search_products",
+      "actionId": "site.search",
+      "audience": "agent",
+      "kind": "tool-result",
+      "sourceUrl": "https://alpina.travel/mcp/alpina/http/mcp",
+      "claim": "An agent called \"search_products\" on the site's live MCP server with {\"query\":\"Mountain days. One easy apartment base.\"} and it returned a result",
+      "confidence": 1,
+      "verification": "invoked",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "mcp-endpoint-failed-https://alpina.travel/mcp/sse",
+      "actionId": "site.search",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/mcp/sse",
+      "claim": "This linked MCP endpoint did not complete a handshake: the session endpoint refused the initialize request with HTTP 405",
+      "confidence": 0.9,
+      "verification": "failed",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "mcp-tool-search_products",
+      "actionId": "site.search",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/mcp/alpina/sse",
+      "claim": "\"search_products\" is listed by the site's live MCP server, but it was not called: listed over the deprecated SSE transport, which the audit does not call",
+      "confidence": 0.9,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "webmcp-imperative-list_lungau_itineraries",
+      "actionId": "site.search",
+      "audience": "agent",
+      "kind": "webmcp",
+      "sourceUrl": "https://alpina.travel/_astro/BaseLayout.astro_astro_type_script_index_0_lang.DyuLaO0N.js",
+      "claim": "\"list_lungau_itineraries\" is registered for agents through navigator.modelContext, but no call has been verified",
+      "confidence": 0.8,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "webmcp-imperative-list_lungau_places",
+      "actionId": "site.search",
+      "audience": "agent",
+      "kind": "webmcp",
+      "sourceUrl": "https://alpina.travel/_astro/BaseLayout.astro_astro_type_script_index_0_lang.DyuLaO0N.js",
+      "claim": "\"list_lungau_places\" is registered for agents through navigator.modelContext, but no call has been verified",
+      "confidence": 0.8,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "webmcp-imperative-search_lungau",
+      "actionId": "site.search",
+      "audience": "agent",
+      "kind": "webmcp",
+      "sourceUrl": "https://alpina.travel/_astro/BaseLayout.astro_astro_type_script_index_0_lang.DyuLaO0N.js",
+      "claim": "\"search_lungau\" is registered for agents through navigator.modelContext, but no call has been verified",
+      "confidence": 0.8,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "jsonld-Organization-source.verify",
+      "actionId": "source.verify",
+      "audience": "agent",
+      "kind": "structured-data",
+      "sourceUrl": "https://alpina.travel/",
+      "claim": "Organization is published as JSON-LD, so an agent can read it",
+      "confidence": 0.9,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    },
+    {
+      "id": "declared-ucp-dev.ucp.shopping.fulfillment",
+      "actionId": "transaction.status",
+      "audience": "agent",
+      "kind": "discovery",
+      "sourceUrl": "https://alpina.travel/.well-known/ucp",
+      "claim": "\"dev.ucp.shopping.fulfillment\" is declared for agents, but no successful call has been verified",
+      "confidence": 0.75,
+      "verification": "declared",
+      "collectedAt": "2026-08-27T05:00:00.000Z"
+    }
+  ]
+}

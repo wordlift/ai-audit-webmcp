@@ -25,7 +25,9 @@ describe("capability state truth table", () => {
     [[evidence({ verification: "declared" })], {}, "unverified"],
     [[evidence({ verification: "invoked" })], {}, "agent-ready"],
     [[evidence({ verification: "invoked", kind: "tool-result" })], { approvedSidecar: true }, "sidecar-enabled"],
-    [[evidence({ verification: "invoked" }), evidence({ id: "failed", verification: "failed" })], {}, "unverified"],
+    // A broken route alongside a working one does not undo a call the audit completed.
+    [[evidence({ verification: "invoked" }), evidence({ id: "failed", verification: "failed" })], {}, "agent-ready"],
+    [[evidence({ verification: "declared" }), evidence({ id: "failed", verification: "failed" })], {}, "unverified"],
     [[], { expected: false }, "not-expected"],
   ] as const)("derives %s", (items, options, expected) => {
     expect(deriveCapability(action, [...items], options).state).toBe(expected);

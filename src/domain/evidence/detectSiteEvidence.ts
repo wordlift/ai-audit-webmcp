@@ -39,6 +39,24 @@ const PATH_RULES: PathRule[] = [
   { pattern: /\/(support|tickets|helpdesk)/, actionId: "support.request", claim: "A support channel exists for people" },
 ];
 
+/** Documents that say "agents are expected here", without naming individual operations. */
+const DOCUMENT_DECLARATIONS: Partial<Record<SiteSnapshot["discovery"][number]["kind"], string>> = {
+  llms: "The site publishes llms.txt for agents",
+  skill: "The site publishes a skill description for agents",
+  "agent-skills": "The site publishes an agent-skills index",
+  "api-catalog": "The site publishes an API catalogue for agents",
+  "mcp-server-card": "The site publishes an MCP server card naming its transports",
+};
+
+/** Documents that name the operations an agent could call. */
+const NAMED_INTERFACES = new Set<SiteSnapshot["discovery"][number]["kind"]>([
+  "mcp",
+  "openapi",
+  "ucp",
+  "webmcp-tools",
+  "agent-card",
+]);
+
 const SUBSCRIBE_INPUT = /email|newsletter|subscribe/;
 const CONTACT_INPUT = /message|subject|enquiry|inquiry|comment/;
 
@@ -153,14 +171,133 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
     }
   }
 
+  // WebMCP is registered in the page, not published at a path, so it is read from the page itself.
+  for (const tool of snapshot.pageTools) {
+    signals.add("agent:webmcp");
+    signals.add(`agent:webmcp-${tool.origin}`);
+    add({
+      id: `webmcp-${tool.origin}-${tool.name}`.slice(0, 160),
+      actionId: actionForDeclaredName(tool.name) ?? "site.search",
+      audience: "agent",
+      kind: "webmcp",
+      sourceUrl: tool.sourceUrl,
+      claim:
+        tool.origin === "declarative"
+          ? `"${tool.name}" is annotated on this page as a WebMCP tool, but no call has been verified`
+          : `"${tool.name}" is registered for agents through navigator.modelContext, but no call has been verified`,
+      confidence: tool.origin === "declarative" ? 0.85 : 0.8,
+      verification: "declared",
+    });
+  }
+
+  for (const probe of snapshot.mcpEndpoints) {
+    if (!probe.initialized) {
+      // The site links this endpoint as an agent interface, so a handshake that never lands is a
+      // broken declaration rather than a path that happens not to exist.
+      add({
+        id: `mcp-endpoint-failed-${probe.url}`.slice(0, 160),
+        actionId: "site.search",
+        audience: "agent",
+        kind: "discovery",
+        sourceUrl: probe.url,
+        claim: `This linked MCP endpoint did not complete a handshake${probe.error ? `: ${probe.error}` : ""}`,
+        confidence: 0.9,
+        verification: "failed",
+      });
+      continue;
+    }
+
+    signals.add("agent:mcp-endpoint");
+    add({
+      id: `mcp-endpoint-${probe.url}`.slice(0, 160),
+      actionId: "site.browse",
+      audience: "agent",
+      kind: "discovery",
+      sourceUrl: probe.url,
+      claim: `An agent opened an MCP session here and completed the initialize handshake${
+        probe.serverName ? ` with "${probe.serverName}"` : ""
+      }`,
+      confidence: 1,
+      verification: "invoked",
+    });
+
+    for (const tool of probe.tools.slice(0, 20)) {
+      const actionId = actionForDeclaredName(tool.name);
+      if (!actionId) continue;
+
+      // A tool that was called and answered is the only thing that earns verified readiness.
+      if (tool.called && tool.ok) {
+        add({
+          id: `mcp-call-${tool.name}`.slice(0, 160),
+          actionId,
+          audience: "agent",
+          kind: "tool-result",
+          sourceUrl: probe.url,
+          claim: `An agent called "${tool.name}" on the site's live MCP server with ${
+            tool.arguments ?? "{}"
+          } and it returned a result`,
+          confidence: 1,
+          verification: "invoked",
+        });
+        continue;
+      }
+
+      if (tool.called) {
+        add({
+          id: `mcp-call-failed-${tool.name}`.slice(0, 160),
+          actionId,
+          audience: "agent",
+          kind: "tool-result",
+          sourceUrl: probe.url,
+          claim: `"${tool.name}" is declared by the site's live MCP server but the call failed${
+            tool.note ? `: ${tool.note}` : ""
+          }`,
+          confidence: 0.9,
+          verification: "failed",
+        });
+        continue;
+      }
+
+      add({
+        id: `mcp-tool-${tool.name}`.slice(0, 160),
+        actionId,
+        audience: "agent",
+        kind: "discovery",
+        sourceUrl: probe.url,
+        claim: `"${tool.name}" is listed by the site's live MCP server, but it was not called${
+          tool.note ? `: ${tool.note}` : ""
+        }`,
+        confidence: 0.9,
+        verification: "declared",
+      });
+    }
+  }
+
+  if (snapshot.softNotFound) {
+    // One accurate finding about the site, instead of a broken-declaration claim per probed path.
+    // It is `observed`, not `failed`: the site behaves this way, but no declared interface broke, so
+    // it must not cancel an interface that was proven to work.
+    add({
+      id: "soft-not-found",
+      actionId: "site.browse",
+      audience: "agent",
+      kind: "discovery",
+      sourceUrl: site,
+      claim:
+        "This site answers unknown paths with its HTML page and a 200, so an agent cannot tell which agent documents exist",
+      confidence: 1,
+      verification: "observed",
+    });
+  }
+
   for (const document of snapshot.discovery) {
     // A path that answers with the site's HTML shell is a broken declaration, not an interface.
     if (document.status === "invalid") {
       add({
         id: `invalid-${document.kind}`,
-        actionId: document.kind === "webmcp-tools" || document.kind === "mcp" ? "site.search" : "site.browse",
+        actionId: document.kind === "mcp" || document.kind === "ucp" ? "site.search" : "site.browse",
         audience: "agent",
-        kind: document.kind === "openapi" ? "openapi" : document.kind === "webmcp-tools" ? "webmcp" : "discovery",
+        kind: document.kind === "openapi" ? "openapi" : "discovery",
         sourceUrl: document.url,
         claim: "This agent-discovery path answers with the site's HTML page instead of a valid document",
         confidence: 0.9,
@@ -169,7 +306,8 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
       continue;
     }
     if (!document.found) continue;
-    if (document.kind === "llms" || document.kind === "skill" || document.kind === "agent-skills") {
+    const declaration = DOCUMENT_DECLARATIONS[document.kind];
+    if (declaration) {
       signals.add(document.kind === "llms" ? "agent:llms-txt" : `agent:${document.kind}`);
       add({
         id: `discovery-${document.kind}`,
@@ -177,13 +315,13 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
         audience: "agent",
         kind: "discovery",
         sourceUrl: document.url,
-        claim: `The site publishes ${document.kind === "llms" ? "llms.txt" : document.kind} for agents`,
+        claim: declaration,
         confidence: 0.8,
         verification: "declared",
       });
     }
 
-    if (document.kind === "mcp" || document.kind === "webmcp-tools" || document.kind === "openapi") {
+    if (NAMED_INTERFACES.has(document.kind)) {
       signals.add(document.kind === "openapi" ? "agent:openapi" : `agent:${document.kind}`);
       const kind = document.kind === "openapi" ? "openapi" : document.kind === "webmcp-tools" ? "webmcp" : "discovery";
       const named = document.declaredNames
