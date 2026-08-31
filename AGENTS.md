@@ -1,6 +1,6 @@
 # Working agreement for agents and humans
 
-This file is read by Codex, Claude Code, and people. It states what the repository is, what is
+This file is read by coding agents and people. It states what the repository is, what is
 frozen, and how a change travels to production. Product rationale is in [README.md](README.md);
 engineering conventions in [CONTRIBUTING.md](CONTRIBUTING.md); running and deploying in
 [docs/OPERATIONS.md](docs/OPERATIONS.md).
