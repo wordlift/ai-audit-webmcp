@@ -166,10 +166,37 @@ export class WordLiftAuditProvider implements AuditProvider {
   private foundation(data: NonNullable<WordLiftAuditResponse["data"]>): FoundationAuditSummary | undefined {
     const score = data.overallScore ?? data.score;
     if (typeof score !== "number") return undefined;
+
+    const sectionsList = sections(data)
+      .filter(([, section]) => section && (typeof section.score === "number" || (section.status && section.status !== "Unknown")))
+      .map(([label, section]) => ({
+        label: clip(label, 60),
+        ...(typeof section?.score === "number" ? { score: Math.max(0, Math.min(100, Math.round(section.score))) } : {}),
+        ...(section?.status ? { status: clip(section.status, 60) } : {}),
+      }))
+      .slice(0, 8);
+
+    const botAccess = (data.siteFiles?.botStatus ?? [])
+      .filter((bot) => bot.name && bot.status)
+      .map((bot) => ({
+        name: clip(bot.name, 60),
+        ...(bot.vendor ? { vendor: clip(bot.vendor, 60) } : {}),
+        status: clip(bot.status, 40),
+      }))
+      .slice(0, 12);
+
+    const quickWins = (data.quickWins?.wins ?? [])
+      .filter((win) => win.title)
+      .map((win) => ({ title: clip(win.title, 200), ...(win.impact ? { impact: clip(win.impact, 20) } : {}) }))
+      .slice(0, 6);
+
     return {
       score: Math.max(0, Math.min(100, Math.round(score))),
       summary: clip(data.summary ?? "The foundation audit completed without a written summary.", 2_000),
       findings: findingsFrom(data),
+      ...(sectionsList.length > 0 ? { sections: sectionsList } : {}),
+      ...(botAccess.length > 0 ? { botAccess } : {}),
+      ...(quickWins.length > 0 ? { quickWins } : {}),
       provider: "wordlift-ai-audit",
     };
   }

@@ -1,7 +1,7 @@
 import { ArrowRight, Bot, Network, ScanSearch, Sparkles } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createReport } from "../api/client";
+import { ApiError, getReport, startReport } from "../api/client";
 
 const journey = [
   { label: "Understand the site", icon: ScanSearch },
@@ -41,6 +41,18 @@ const SCAN_WORDS = [
 ];
 
 const WORD_MS = 2_200;
+
+async function waitUntilVisible(reportId: string): Promise<void> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      await getReport(reportId);
+      return;
+    } catch (caught) {
+      if (!(caught instanceof ApiError) || caught.status !== 404) throw caught;
+      await new Promise((resolve) => window.setTimeout(resolve, 600));
+    }
+  }
+}
 
 export function HomeRoute() {
   const navigate = useNavigate();
@@ -96,8 +108,12 @@ export function HomeRoute() {
     setSeconds(0);
     startClocks();
     try {
-      const report = await createReport(url);
-      navigate(`/reports/${report.id}`);
+      const { reportId, ready } = startReport(url);
+      // Leave for the report page as soon as the running record exists — it renders live
+      // progress from there. A request refused outright still surfaces here.
+      await Promise.race([ready, waitUntilVisible(reportId)]);
+      ready.catch(() => undefined);
+      navigate(`/reports/${reportId}`);
     } catch (caught) {
       setPhaseIndex(null);
       setError(caught instanceof Error ? caught.message : "The audit could not be completed");

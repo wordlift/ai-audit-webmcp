@@ -87,6 +87,22 @@ export const siteEntitySchema = z
   })
   .strict();
 
+export const foundationSectionSchema = z
+  .object({
+    label: z.string().min(1).max(60),
+    score: z.number().min(0).max(100).optional(),
+    status: z.string().min(1).max(60).optional(),
+  })
+  .strict();
+
+export const botAccessSchema = z
+  .object({
+    name: z.string().min(1).max(60),
+    vendor: z.string().min(1).max(60).optional(),
+    status: z.string().min(1).max(40),
+  })
+  .strict();
+
 export const capabilityEvidenceSchema = z
   .object({
     id: z.string().min(1).max(160),
@@ -194,6 +210,11 @@ export const foundationAuditSummarySchema = z
     score: z.number().int().min(0).max(100),
     summary: z.string().min(1).max(2_000),
     findings: z.array(z.string().min(1).max(600)).max(30),
+    /** Per-section scores from the AI Audit, so the foundation is a breakdown, not one number. */
+    sections: z.array(foundationSectionSchema).max(8).optional(),
+    /** Which AI crawlers the site's robots policy admits — the front door of agent access. */
+    botAccess: z.array(botAccessSchema).max(12).optional(),
+    quickWins: z.array(z.object({ title: z.string().min(1).max(200), impact: z.string().min(1).max(20).optional() }).strict()).max(6).optional(),
     provider: z.string().min(1).max(120),
   })
   .strict();

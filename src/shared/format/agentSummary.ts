@@ -16,6 +16,9 @@ export interface AuditToolResult {
   classificationGrounding: string | null;
   /** Source-backed entities the site's structured data names, so intent can meet an offer. */
   keyEntities: Array<{ type: string; name: string; offer: string | null; sourceUrl: string }>;
+  /** Which AI crawlers the robots policy admits — the front door of agent access. */
+  botAccess: Array<{ name: string; status: string }>;
+  quickWins: string[];
   agentReadinessScore: number;
   foundationAuditScore: number | null;
   priorityGaps: Array<{ actionId: string; label: string; state: string; reason: string }>;
@@ -95,6 +98,8 @@ export function summarizeReportForAgent(report: ReportRecord, reportUrl: string)
       offer: describeOffer(entity),
       sourceUrl: entity.sourceUrl,
     })),
+    botAccess: (report.foundationAudit?.botAccess ?? []).slice(0, 8).map((bot) => ({ name: bot.name, status: bot.status })),
+    quickWins: (report.foundationAudit?.quickWins ?? []).slice(0, 3).map((win) => win.title),
     agentReadinessScore: report.score?.value ?? 0,
     foundationAuditScore: report.foundationAudit?.score ?? null,
     priorityGaps: (report.priorities ?? []).map((gap) => ({
@@ -125,6 +130,14 @@ export function auditSummaryText(result: AuditToolResult): string {
             .slice(0, 3)
             .map((entity) => `${entity.name} (${entity.type}${entity.offer ? `, ${entity.offer}` : ""})`)
             .join("; ")}.`,
+        ]
+      : []),
+    ...(result.botAccess.length > 0
+      ? [
+          `AI crawler access: ${result.botAccess
+            .slice(0, 4)
+            .map((bot) => `${bot.name} ${bot.status.toLowerCase()}`)
+            .join(" · ")}.`,
         ]
       : []),
     `Verified agent readiness: ${result.agentReadinessScore}/100${

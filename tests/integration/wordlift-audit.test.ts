@@ -70,6 +70,44 @@ describe("WordLift audit provider", () => {
     expect(JSON.stringify(bundle)).not.toMatch(/test-key/);
   });
 
+  it("maps the audit's structure: sections, crawler access, and quick wins", async () => {
+    const response = {
+      success: true,
+      data: {
+        url: "https://alpina.travel/",
+        overallScore: 90,
+        summary: "Solid foundations.",
+        siteFiles: {
+          score: 62,
+          status: "Needs Improvement",
+          botStatus: [
+            { name: "GPTBot", vendor: "OpenAI", status: "Allowed" },
+            { name: "ClaudeBot", vendor: "Anthropic", status: "Allowed" },
+            { name: "CCBot", status: "Blocked" },
+          ],
+        },
+        seoFundamentals: { score: 95, status: "Excellent" },
+        quickWins: { wins: [{ title: "Publish llms.txt", impact: "High" }] },
+      },
+    };
+    const bundle = await provider(vi.fn(async () => jsonResponse(response)) as unknown as typeof fetch).audit(
+      new URL("https://alpina.travel/"),
+    );
+
+    expect(bundle.foundation?.botAccess).toEqual([
+      { name: "GPTBot", vendor: "OpenAI", status: "Allowed" },
+      { name: "ClaudeBot", vendor: "Anthropic", status: "Allowed" },
+      { name: "CCBot", status: "Blocked" },
+    ]);
+    expect(bundle.foundation?.sections).toEqual(
+      expect.arrayContaining([
+        { label: "Site files", score: 62, status: "Needs Improvement" },
+        { label: "SEO fundamentals", score: 95, status: "Excellent" },
+      ]),
+    );
+    expect(bundle.foundation?.quickWins).toEqual([{ title: "Publish llms.txt", impact: "High" }]);
+  });
+
   it("maps the foundation score, summary, and findings without blending them into readiness", async () => {
     const bundle = await provider(vi.fn(async () => jsonResponse(liveShapedResponse)) as unknown as typeof fetch).audit(
       new URL("https://alpina.travel/"),

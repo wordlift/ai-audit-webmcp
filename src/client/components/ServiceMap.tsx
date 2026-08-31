@@ -4,6 +4,7 @@ import type { Archetype, ReportRecord } from "../../shared/types/index.js";
 import { ActionJourney } from "./ActionJourney";
 import { Chapter } from "./Chapter";
 import { ClassificationCard } from "./ClassificationCard";
+import { FoundationPanel } from "./FoundationPanel";
 import { KeyEntities } from "./KeyEntities";
 
 /**
@@ -78,6 +79,7 @@ export function ServiceMap({ report, onOverride }: { report: ReportRecord; onOve
           lede="How the site was read: the content, behavior, and confidence behind every expectation on this map."
         >
           <ClassificationCard classification={report.classification} onOverride={onOverride} />
+          {report.foundationAudit && <FoundationPanel foundation={report.foundationAudit} />}
         </Chapter>
       )}
 

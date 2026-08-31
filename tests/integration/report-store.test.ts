@@ -47,6 +47,19 @@ describe("MemoryReportStore", () => {
     expect((await store.get(child.id))?.parentReportId).toBe(parent.id);
   });
 
+  it("updates a running record with progress, and only a running one", async () => {
+    const store = new MemoryReportStore(900_000, () => currentTime);
+    const running = await store.put(report({ status: "running", phase: "understanding", completedAt: undefined }));
+
+    const progressed = await store.update({ ...running, phase: "mapping" });
+    expect(progressed.phase).toBe("mapping");
+    expect((await store.get(running.id))?.phase).toBe("mapping");
+
+    await expect(store.update({ ...running, status: "completed" })).rejects.toThrow(/must stay running/);
+    await store.finalize({ ...running, status: "failed", phase: "complete" });
+    await expect(store.update({ ...running, phase: "checking" })).rejects.toThrow(/not an active running report/);
+  });
+
   it("finalizes a running record exactly once", async () => {
     const store = new MemoryReportStore(900_000, () => currentTime);
     const running = report({ status: "running", phase: "understanding", completedAt: undefined });

@@ -2,7 +2,7 @@ import { useWebMCP } from "use-webmcp-tool";
 import { useNavigate } from "react-router-dom";
 import { auditSummaryText, summarizeReportForAgent, type AuditToolResult } from "../../shared/format/agentSummary.js";
 import type { Archetype } from "../../shared/types/index.js";
-import { createReport, reportPageUrl } from "../api/client";
+import { reportPageUrl, startReport } from "../api/client";
 import { ARCHETYPE_VALUES, AUDIT_WEBSITE_TOOL } from "./toolSchemas";
 import { WebMcpBadge } from "./WebMcpBadge";
 
@@ -35,13 +35,15 @@ export function AuditWebsiteTool() {
       if (!url) throw new Error("Provide the public http(s) URL of the website to audit.");
       const archetype = parseArchetype(args?.archetype);
 
-      const report = await createReport(url, { archetype });
+      const { reportId, ready } = startReport(url, { archetype });
+      // The window shows live progress from the first second; the tool answers when it is true.
+      navigate(`/reports/${reportId}`);
+
+      const report = await ready;
       if (report.status === "failed") {
         const reason = report.errors[0]?.message ?? "No usable evidence could be collected from this site.";
         throw new Error(`The audit could not be completed for ${url}: ${reason}`);
       }
-
-      navigate(`/reports/${report.id}`);
       return summarizeReportForAgent(report, reportPageUrl(report.id));
     },
     formatOutput: (result) => ({

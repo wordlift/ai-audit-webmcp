@@ -120,6 +120,19 @@ function liveOrchestrator(providers: OrchestratorOptions["providers"]) {
 
 const travelCategories = [{ name: "/Travel & Transportation/Hotels & Accommodations", confidence: 0.92 }];
 
+class RecordingStore extends MemoryReportStore {
+  readonly progress: Array<{ phase: string; foundation: boolean; entities: number }> = [];
+
+  override async update(report: Parameters<MemoryReportStore["update"]>[0]) {
+    this.progress.push({
+      phase: report.phase,
+      foundation: Boolean(report.foundationAudit),
+      entities: report.entities?.length ?? 0,
+    });
+    return super.update(report);
+  }
+}
+
 describe("live orchestrator", () => {
   it("compiles the same domain objects as fixture mode from live inputs", async () => {
     const { orchestrator } = liveOrchestrator({
@@ -142,6 +155,30 @@ describe("live orchestrator", () => {
     const search = report.capabilities?.find((capability) => capability.actionId === "site.search");
     expect(search?.state).toBe("agent-ready");
     expect(search?.evidence.some((item) => item.id === "search-action-executed")).toBe(true);
+  });
+
+  it("publishes progress while the audit is still running", async () => {
+    const store = new RecordingStore(900_000, () => fixedNow);
+    const orchestrator = new AuditOrchestrator(store, loadActionModel(), new FixtureProvider(), {
+      publicAppUrl: "https://audit.example/",
+      ttlDays: 30,
+      now: () => fixedNow,
+      mode: "live",
+      providers: {
+        scrape: stubScraper(snapshot),
+        audit: stubAudit(auditBundle),
+        classify: stubClassifier(travelCategories),
+      },
+    });
+
+    const report = await orchestrator.create({ requestId: randomUUID(), url: "alpina.travel" });
+
+    expect(report.status).toBe("completed");
+    // The record was updated mid-flight: entities from the collector, the foundation from the
+    // audit — each published as it landed, before the final report replaced them.
+    expect(store.progress.some((update) => update.entities > 0)).toBe(true);
+    expect(store.progress.some((update) => update.foundation)).toBe(true);
+    expect(store.progress.every((update) => update.phase !== "complete")).toBe(true);
   });
 
   it("keeps a declared WebMCP tool unverified so it adds no readiness points", async () => {
