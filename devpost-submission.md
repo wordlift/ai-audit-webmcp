@@ -27,10 +27,10 @@ Enter any safe public URL. WordLift AI Audit then:
 3. **Classifies the site.** Google content categories and observed business signals infer one of six operating archetypes: commerce/retail, publisher/content, travel/hospitality, finance/insurance, SaaS, or other.
 4. **Builds the context graph.** The domain graph captures organizations, products, services, places, articles, people, offers, and provenance. The lexical graph captures categories, names, aliases, and topics.
 5. **Compiles the expected action layer.** Classification chooses a deterministic action journey; entity types bind each action to the real thing it applies to.
-6. **Checks interfaces and evidence.** Human pages and forms are separated from structured data, APIs, MCP, and WebMCP tools. A declaration is never confused with a successful invocation.
+6. **Checks interfaces and evidence — by calling them.** Human pages and forms are separated from structured data, APIs, MCP, and WebMCP tools. Linked MCP endpoints get a handshake and safe read-only calls; a declared schema.org SearchAction template is executed once with a query taken from the page, and only results that acknowledge the query count as a completed call. A declaration is never confused with a successful invocation.
 7. **Shows the path forward.** Every gap has a recommendation and a JSON-LD contract describing the entity, inputs, outputs, governance, and delivery mechanism required.
 
-The user first receives an executive summary and three priority gaps. The complete WordLift audit, context graph, interface evidence, and contracts stay one click away, so technical depth never interrupts the conversational flow.
+The report page opens the moment the audit starts and fills in as each provider lands — entities from the collector, the foundation score from the audit — so the wait is spent reading results. The user then gets an executive summary and three priority gaps. The complete WordLift audit (score, AI-crawler access, quick wins, audited dimensions with details folded away), the context graph, interface evidence, and contracts stay one click away, so technical depth never interrupts the conversational flow.
 
 ## Why classification matters
 
@@ -57,13 +57,14 @@ This is ontology-backed internally, but the user never needs to learn an ontolog
 
 ## WebMCP leverage
 
-The application is itself a browser-native WebMCP surface using the current `document.modelContext` API:
+The application is itself a browser-native WebMCP surface using the imperative `navigator.modelContext` API (it also serves the Community Group draft's `document.modelContext`, so the tools register wherever the browser looks):
 
-- `audit-website` accepts any safe public URL, waits for the completed audit, and returns the archetype, scores, page and entity summary, priorities, and shareable report URL.
+- `audit-website` accepts any safe public URL, opens the report page at once, waits for the completed audit, and returns the archetype, scores, page and entity summary, AI-crawler access, priorities, and shareable report URL.
 - `explain-capability` returns the entity bindings, human and agent interfaces, evidence, recommendation, and contract for one action.
-- `check-alpina-availability` is one controlled read-only sidecar showing how an approved existing endpoint can become a verified WebMCP capability.
+- `explain-foundation-audit` returns the WordLift foundation audit of the open report: score, dimensions, findings, and quick wins.
+- `check-alpina-availability` is one controlled read-only sidecar showing how an approved existing endpoint can become a verified WebMCP capability. Its answer is grounded in the report's own entity — the apartment the site itself published — with source and collection time, and it claims no entity when the site published none.
 
-The first two tools are generic. The third is deliberately narrow: it proves the adapter pattern without pretending a universal reverse proxy is safe.
+The first three tools are generic. The fourth is deliberately narrow: it proves the adapter pattern without pretending a universal reverse proxy is safe.
 
 ## Honest readiness
 
@@ -89,7 +90,10 @@ Key implementation choices:
 - representative-page selection by page role rather than the first links found;
 - normalized JSON-LD entity and offer extraction with page provenance;
 - explicit `EntityActionBinding` and `ActionInterface` records;
+- probes that call what a site declares — MCP endpoints and SearchAction templates — read-only, with nothing invented;
 - verification-only scoring and bounded evidence;
+- a running report record that fills in as providers land, so the page never shows a bare spinner;
+- rendered collection through ScrapingBee with a native-fetch fallback, so a renderer outage degrades the audit instead of blanking it;
 - progressive disclosure for rich audit data;
 - generic fixtures and tests across all six archetypes;
 - SSRF protection, redirect validation, response limits, rate limits, and server-only credentials.
@@ -127,11 +131,11 @@ TypeScript, React 19, Vite, Express, Node 22, Zod, WebMCP, `use-webmcp-tool`, Go
 ## Judge path
 
 1. Open [beta.audit.wordlift.io](https://beta.audit.wordlift.io).
-2. Enter any site URL and start the audit. Observe the uninterrupted understanding → mapping → checking flow.
+2. Enter any site URL, or click one of the suggested sites under the field. The report page opens immediately and fills in through understanding → mapping → checking.
 3. Review the classification, pages analyzed, and concise executive summary.
 4. In the Context Engine, select a domain entity and watch the action layer filter to the actions bound to it.
 5. Open one action to inspect human/agent evidence and its JSON-LD contract.
-6. Expand the WordLift foundation audit only if deeper technical evidence is useful.
+6. Expand the Full WordLift audit only if deeper technical evidence is useful: it opens on its scoreboard, lists the dimensions that need attention first, and folds raw details away.
 7. Open the [stable Alpina reference](https://beta.audit.wordlift.io/demo/alpina) for the controlled availability proof.
 8. In a compatible WebMCP browser, ask the app to audit a different site and explain one capability.
 
