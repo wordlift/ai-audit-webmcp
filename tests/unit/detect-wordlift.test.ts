@@ -32,6 +32,30 @@ describe("detecting that a site publishes with WordLift", () => {
     expect(result?.name).toBe("WordLift");
   });
 
+  it("reads the server-side pattern: the dataset on the site's own data. subdomain", () => {
+    const result = detectWordLift(
+      [entity({
+        id: "https://data.freedomdebtrelief.com/freedomdebtrelief-com/organization/freedom-debt-relief",
+        name: "Freedom Debt Relief",
+        sourceUrls: ["https://www.freedomdebtrelief.com/"],
+      })],
+      undefined,
+      "https://www.freedomdebtrelief.com/",
+    );
+
+    expect(result?.name).toBe("WordLift");
+    expect(result?.evidence).toMatch(/data\.freedomdebtrelief\.com.*server-side/);
+  });
+
+  it("does not claim another site's data. subdomain as this site's dataset", () => {
+    const result = detectWordLift(
+      [entity({ id: "https://data.othersite.example/x/organization/y" })],
+      undefined,
+      "https://www.freedomdebtrelief.com/",
+    );
+    expect(result).toBeUndefined();
+  });
+
   it("falls back to a page marker the collector saw, and claims nothing without one", () => {
     const marked = detectWordLift([entity({})], {
       marker: "The WordLift WordPress plugin is installed",

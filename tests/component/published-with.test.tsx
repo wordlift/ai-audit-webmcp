@@ -32,11 +32,13 @@ describe("the published-with badge", () => {
     );
 
     expect(screen.getByText("WordLift")).toBeVisible();
-    expect(screen.getByText(/Structured data published with/)).toHaveAttribute("title", expect.stringMatching(/data\.wordlift\.io/));
+    expect(screen.getByText(/Entity ids are published on data\.wordlift\.io/)).toBeVisible();
+    expect(screen.getByRole("link", { name: /WordLift dashboard/ })).toHaveAttribute("href", "https://my.wordlift.io");
   });
 
   it("shows nothing when the site names no platform", () => {
     render(<ExecutiveSummary report={report} />);
-    expect(screen.queryByText(/Structured data published with/)).toBeNull();
+    expect(screen.queryByText(/runs/)).toBeNull();
+    expect(screen.queryByRole("link", { name: /WordLift dashboard/ })).toBeNull();
   });
 });
