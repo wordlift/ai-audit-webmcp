@@ -20,6 +20,19 @@ describe("readable text for classification", () => {
     expect(text).not.toContain("color: red");
   });
 
+  it("reads the whole body when the main landmark is an empty shell", () => {
+    const { document } = parseHTML(`<!doctype html><html><body>
+      <header><h1>Makeup, Skincare, Fragrance</h1></header>
+      <main id="root"></main>
+      <section><h2>Today Only: 50% Off Select Beauty</h2><p>${"Transformative products for frizzy hair, now at the counter. ".repeat(6)}</p></section>
+    </body></html>`);
+
+    const text = readableText(document as unknown as Document);
+
+    expect(text).toContain("50% Off Select Beauty");
+    expect(text).toContain("Transformative products");
+  });
+
   it("leaves the document intact for the extractors that still need its scripts", () => {
     const { document } = parseHTML(
       `<html><body><script type="application/ld+json">{"@type":"Product"}</script><p>Copy</p></body></html>`,
