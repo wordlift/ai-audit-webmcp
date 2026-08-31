@@ -666,9 +666,20 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .context-compiler-note { margin: 0; padding: 11px 14px; border-left: 3px solid var(--brand); border-radius: 0 10px 10px 0; background: color-mix(in srgb, var(--brand) 6%, white); color: var(--muted); font-size: 0.76rem; line-height: 1.5; }
 .context-compiler-note strong { color: var(--ink); text-transform: capitalize; }
 
-.context-layers { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: 10px; }
-.layer-arrow { align-self: center; color: var(--brand); opacity: 0.65; }
-.context-layer { display: grid; align-content: start; gap: 14px; min-width: 0; padding: 18px; border: 1px solid var(--line-subtle); border-radius: 18px; background: var(--surface); box-shadow: 0 8px 30px rgba(25, 25, 25, 0.045); }
+.context-layers { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; gap: 30px; }
+.layer-arrow { position: relative; z-index: 1; align-self: center; color: var(--brand); opacity: 0.65; }
+/* The wiring over the cards: every entity–action binding, drawn. Focusing an entity or an
+   action lights its circuit; a halo keeps lit threads legible where they cross a card. */
+.context-edges { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.context-edge { fill: none; stroke: var(--line); stroke-width: 1.25; opacity: 0.45; transition: stroke 0.18s ease, opacity 0.18s ease, stroke-width 0.18s ease; }
+.context-edge-lit { stroke: var(--brand); stroke-width: 2.25; opacity: 1; }
+.context-edge-dim { opacity: 0.08; }
+.context-edge-halo { fill: none; stroke: var(--surface); stroke-width: 6.5; opacity: 0.9; }
+.map-dimmed { opacity: 0.32; }
+.context-layer { position: relative; display: grid; align-content: start; gap: 14px; min-width: 0; padding: 18px; border: 1px solid var(--line-subtle); border-radius: 18px; background: var(--surface); box-shadow: 0 8px 30px rgba(25, 25, 25, 0.045); }
+/* Card content rides above the wiring on an opaque block (the card itself stays below it), so
+   threads dive behind content and re-emerge in whitespace instead of striking through words. */
+.context-layer > * { position: relative; z-index: 3; background: var(--surface); }
 .context-layer > header { display: flex; align-items: center; gap: 10px; }
 .context-layer > header > svg { width: 20px; color: var(--brand); }
 .context-layer > header span { color: var(--muted); font-family: var(--font-mono); font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.12em; }
@@ -684,6 +695,20 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .lexical-chip small { color: var(--muted); font-family: var(--font-mono); font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.08em; }
 .lexical-entity-name { color: var(--brand); background: color-mix(in srgb, var(--brand) 8%, white); }
 .layer-note, .empty-layer { margin: 0; color: var(--muted); font-size: 0.72rem; line-height: 1.45; }
+.lexical-more {
+  align-self: center; padding: 6px 11px; border: 1px dashed var(--line); border-radius: 999px;
+  background: none; color: var(--brand); font: inherit; font-size: 0.7rem; font-weight: 600; cursor: pointer;
+}
+.lexical-more:hover { border-color: var(--brand); }
+.layer-tally { display: flex; flex-wrap: wrap; gap: 6px; }
+.layer-tally-chip {
+  padding: 2px 9px; border: 1px solid var(--line-subtle); border-radius: 999px;
+  color: var(--muted); font-size: 0.66rem; font-style: normal; font-weight: 600;
+}
+.tally-ready { color: var(--state-agent-ready); border-color: color-mix(in srgb, var(--state-agent-ready) 40%, white); }
+.tally-unverified { color: var(--state-unverified); border-color: color-mix(in srgb, var(--state-unverified) 45%, white); }
+.tally-human-only { color: var(--state-human-only); border-color: color-mix(in srgb, var(--state-human-only) 45%, white); }
+.tally-missing { color: var(--state-missing); border-color: color-mix(in srgb, var(--state-missing) 40%, white); }
 .context-action { display: grid; gap: 3px; padding: 9px 10px; border: 1px solid var(--line-subtle); border-left-width: 3px; border-radius: 9px; }
 .context-action strong { font-size: 0.76rem; }
 .context-action small { color: var(--muted); font-family: var(--font-mono); font-size: 0.54rem; text-transform: uppercase; }
@@ -1113,6 +1138,7 @@ button:disabled { opacity: 0.6; cursor: wait; }
   .priority-panel ol { grid-template-columns: 1fr; }
   .classification-detail { grid-template-columns: 1fr; }
   .context-layers { grid-template-columns: 1fr; }
+  .context-edges { display: none; }
   .journey-preview { grid-template-columns: repeat(2, 1fr); }
   .layer-arrow { justify-self: center; transform: rotate(90deg); }
 }

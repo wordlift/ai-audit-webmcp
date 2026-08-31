@@ -7,7 +7,7 @@ import { ApiError, getReport, recompileReport } from "../api/client";
 import { ActionJourney } from "../components/ActionJourney";
 import { AlpinaSidecarPanel } from "../components/AlpinaSidecarPanel";
 import { ClassificationCard } from "../components/ClassificationCard";
-import { ContextEngineMap } from "../components/ContextEngineMap";
+import { ContextEngineMap, heroEntityId } from "../components/ContextEngineMap";
 import { ExecutiveSummary } from "../components/ExecutiveSummary";
 import { FoundationAuditDetails } from "../components/FoundationAuditDetails";
 import { ReportErrorState } from "../components/ReportErrorState";
@@ -46,6 +46,11 @@ export function ReportRoute() {
         if (cancelled) return;
         setReport(record);
         setError(null);
+        // The map arrives with its best story already lit: the entity with the most bound actions.
+        if (record.status !== "running" && record.contextGraph) {
+          const graph = record.contextGraph;
+          setSelectedEntityId((current) => current ?? heroEntityId(graph));
+        }
         // A running report is watched until it lands; the page fills in as the audit works.
         if (record.status === "running") timer = window.setTimeout(load, 1_500);
       } catch (caught) {
