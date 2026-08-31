@@ -25,8 +25,13 @@ describe("FoundationAuditDetails", () => {
     expect(screen.getByText("Content freshness — Recommendation: Publish modification dates")).not.toBeVisible();
     fireEvent.click(screen.getByText("Full WordLift audit"));
     expect(screen.getByText("Content freshness — Recommendation: Publish modification dates")).toBeVisible();
-    expect(screen.getByText("Publish modification dates")).toBeVisible();
     expect(screen.getByText("Foundation score")).toBeVisible();
+    expect(screen.getByText("1 to improve")).toBeVisible();
+    expect(screen.getByText("Needs Improvement")).toBeVisible();
+    // A dimension's raw details stay folded until asked for.
+    expect(screen.getByText("Publish modification dates")).not.toBeVisible();
+    fireEvent.click(screen.getByText("1 detail"));
+    expect(screen.getByText("Publish modification dates")).toBeVisible();
     expect(screen.getByRole("link", { name: /audited site/i })).toHaveAttribute("href", "https://example.com/");
     // The way back to the full audit is offered both inside the panel and beside it.
     const backLinks = screen.getAllByRole("link", { name: /audit\.wordlift\.io/i });
