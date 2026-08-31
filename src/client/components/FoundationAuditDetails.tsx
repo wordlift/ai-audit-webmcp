@@ -73,7 +73,7 @@ export function FoundationAuditDetails({ audit }: { audit: FoundationAuditSummar
             ))}
           </div>
           <footer className="foundation-footer">
-            <p>The foundation score is WordLift's site-level AI readiness. It sits beside agent readiness and is never blended into it.</p>
+            <p>The foundation score is WordLift's site-level AI readiness. It is shown beside the agent score and never blended into it.</p>
             <a href={MAIN_AI_AUDIT_URL} target="_blank" rel="noreferrer">Run the complete audit on audit.wordlift.io <ExternalLink /></a>
           </footer>
         </div>
