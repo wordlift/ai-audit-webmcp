@@ -571,6 +571,14 @@ button:disabled { opacity: 0.6; cursor: wait; }
   line-height: 1.35;
 }
 
+/* A score that could not be produced: stated in words, with an empty meter — never a zero. */
+.score-card-unavailable .score-card-value strong {
+  color: var(--score-soft);
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+  line-height: 1.9;
+}
+
 .priority-panel { grid-column: 1 / -1; }
 .priority-panel ol { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0 0; padding: 0; list-style: none; counter-reset: gap; }
 
@@ -643,6 +651,7 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .classification-detail form { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
 .classification-detail label { grid-column: 1 / -1; font-weight: 600; }
 .classification-detail select { padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.classification-error { grid-column: 1 / -1; margin: 0; color: var(--wl-danger); font-size: 0.85rem; }
 
 /* ---------- Context engine ---------- */
 .context-engine {

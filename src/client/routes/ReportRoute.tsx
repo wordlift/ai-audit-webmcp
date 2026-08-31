@@ -109,7 +109,8 @@ export function ReportRoute() {
         <div className="partial-banner" role="status">Partial report: {visibleErrors(report.errors).map(explainReportError).join(" ")}</div>
       )}
       <ExecutiveSummary report={report} />
-      {report.classification && <ClassificationCard classification={report.classification} onOverride={override} />}
+      {/* Keyed by report so a recompile that lands on the child report hands back a fresh form. */}
+      {report.classification && <ClassificationCard key={report.id} classification={report.classification} onOverride={override} />}
       {report.contextGraph && report.classification && (
         <ContextEngineMap
           context={report.contextGraph}

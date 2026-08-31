@@ -16,22 +16,24 @@ export function ExecutiveSummary({ report }: { report: ReportRecord }) {
               <Sparkles size={15} aria-hidden="true" /> This site runs <strong>{report.publishedWith.name}</strong>
             </p>
             <small>{report.publishedWith.evidence}.</small>
-            <a href="https://my.wordlift.io" target="_blank" rel="noreferrer">Manage it in your WordLift dashboard →</a>
+            <a href="https://my.wordlift.io" target="_blank" rel="noreferrer">Own this site? Manage it in your WordLift dashboard →</a>
           </aside>
         )}
       </div>
       <div className="score-grid" aria-label="Readiness scores">
         <ScoreCard
           label="Agent readiness"
-          value={report.score?.value ?? 0}
+          value={report.score?.value}
           caption="Actions an agent is proven to complete"
+          unavailableCaption="Readiness could not be computed for this run"
           icon={<CheckCircle2 />}
           accent
         />
         <ScoreCard
           label="AI Audit foundation"
-          value={report.foundationAudit?.score ?? 0}
+          value={report.foundationAudit?.score}
           caption="Knowledge and discovery signals published"
+          unavailableCaption="The foundation audit did not complete, so there is no score to show"
           icon={<ShieldCheck />}
         />
       </div>
@@ -54,15 +56,28 @@ function ScoreCard({
   label,
   value,
   caption,
+  unavailableCaption,
   icon,
   accent = false,
 }: {
   label: string;
-  value: number;
+  value?: number;
   caption: string;
+  unavailableCaption: string;
   icon: React.ReactNode;
   accent?: boolean;
 }) {
+  // A score that could not be produced is unavailable, never zero: 0/100 is a measured result.
+  if (value === undefined) {
+    return (
+      <article className={`score-card score-card-unavailable ${accent ? "score-card-accent" : ""}`}>
+        <div className="score-card-head">{icon}<span>{label}</span></div>
+        <p className="score-card-value"><strong>Unavailable</strong></p>
+        <div className="score-meter" role="img" aria-label="No score available" />
+        <p className="score-card-caption">{unavailableCaption}</p>
+      </article>
+    );
+  }
   const bounded = Math.max(0, Math.min(100, Math.round(value)));
   return (
     <article className={`score-card ${accent ? "score-card-accent" : ""}`}>
