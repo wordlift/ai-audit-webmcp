@@ -6,6 +6,7 @@ import type { ClassifierProvider } from "../../src/server/adapters/classify/Clas
 import { FixtureProvider } from "../../src/server/adapters/fixtures/FixtureProvider.js";
 import type { ScrapeProvider, SiteSnapshot } from "../../src/server/adapters/scrape/ScrapeProvider.js";
 import { MemoryReportStore } from "../../src/server/adapters/store/MemoryReportStore.js";
+import { UrlPolicyError } from "../../src/server/security/urlPolicy.js";
 import { AuditOrchestrator, type OrchestratorOptions } from "../../src/server/services/AuditOrchestrator.js";
 
 const fixedNow = new Date("2026-08-27T05:00:00.000Z");
@@ -187,6 +188,39 @@ describe("live orchestrator", () => {
     expect(report.foundationAudit?.score).toBe(94);
     expect(report.capabilities?.length).toBeGreaterThan(0);
     expect(report.score?.value).toBeGreaterThanOrEqual(0);
+  });
+
+  it("reports a site that blocks collection as blocked, keeping the foundation audit it still got", async () => {
+    const blocked = new UrlPolicyError("site_blocked", "The site refused automated access (HTTP 403); an agent cannot read it either.", 403);
+    const { orchestrator } = liveOrchestrator({
+      scrape: stubScraper(blocked),
+      audit: stubAudit(auditBundle),
+      classify: stubClassifier(travelCategories),
+    });
+
+    const report = await orchestrator.create({ requestId: randomUUID(), url: "blocked.example" });
+
+    expect(report.status).toBe("partial");
+    expect(report.foundationAudit?.score).toBe(94);
+    expect(report.errors[0]).toMatchObject({ code: "site_blocked", phase: "understanding" });
+    expect(report.errors[0].message).toMatch(/HTTP 403/);
+    // Nothing was read from the site, so nothing is claimed as observed on it.
+    expect(report.capabilities?.some((capability) => capability.evidence.some((item) => item.audience === "human"))).toBe(false);
+  });
+
+  it("fails honestly when the site blocks collection and the foundation audit cannot run either", async () => {
+    const blocked = new UrlPolicyError("site_blocked", "The site answered with a bot challenge instead of its page; an agent cannot read it either.", 403);
+    const { orchestrator } = liveOrchestrator({
+      scrape: stubScraper(blocked),
+      audit: stubAudit(new AuditProviderError("audit_upstream_error", "The audit service returned status 502.", true)),
+      classify: stubClassifier(travelCategories),
+    });
+
+    const report = await orchestrator.create({ requestId: randomUUID(), url: "blocked.example" });
+
+    expect(report.status).toBe("failed");
+    expect(report.errors.map((error) => error.code)).toEqual(expect.arrayContaining(["site_blocked", "audit_upstream_error"]));
+    expect(report.capabilities).toBeUndefined();
   });
 
   it("keeps a declared WebMCP tool unverified so it adds no readiness points", async () => {
