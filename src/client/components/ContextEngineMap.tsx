@@ -38,6 +38,23 @@ export function ContextEngineMap({
         <p className="page-count"><strong>{context.pages.length}</strong> representative pages analyzed</p>
       </div>
 
+      <section className="context-provenance-block" aria-labelledby="context-provenance-title">
+        <div className="context-provenance-heading">
+          <div>
+            <p className="section-kicker">Evidence provenance</p>
+            <h3 id="context-provenance-title">Pages used to understand this site</h3>
+          </div>
+          <p>Every entity, term and capability below traces back to this representative evidence set.</p>
+        </div>
+        <div className="context-provenance" aria-label="Analyzed pages">
+          {context.pages.map((page) => (
+            <a key={page.url} href={page.url} target="_blank" rel="noreferrer">
+              <span>{page.role}</span>{page.title || new URL(page.url).pathname}<ExternalLink />
+            </a>
+          ))}
+        </div>
+      </section>
+
       <p className="context-compiler-note">
         <strong>{classification.primaryArchetype.replaceAll("-", " / ")}</strong> classification selects the expected
         action journey; observed entities and interfaces determine what is supported and what is missing.
@@ -92,13 +109,6 @@ export function ContextEngineMap({
         </Layer>
       </div>
 
-      <div className="context-provenance" aria-label="Analyzed pages">
-        {context.pages.map((page) => (
-          <a key={page.url} href={page.url} target="_blank" rel="noreferrer">
-            <span>{page.role}</span>{page.title || new URL(page.url).pathname}<ExternalLink />
-          </a>
-        ))}
-      </div>
     </section>
   );
 }
