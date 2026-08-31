@@ -87,6 +87,7 @@ Reports expose:
 - up to four audited pages and their roles;
 - normalized domain entities, lexical entries, action interfaces, and entity–action bindings;
 - a separate WordLift foundation score (with dimensions, quick wins, and crawler access) and a verification-only agent-readiness score;
+- the publishing platform when the site's own structured data names one (WordLift's `data.wordlift.io` entity ids, plugin, or SDK) — detected, never guessed;
 - three prioritized gaps;
 - JSON-LD capability contracts with entity target, inputs, outputs, governance, and recommended delivery;
 - bounded evidence and immutable child revisions for overrides, reverification, and sidecar invocations.

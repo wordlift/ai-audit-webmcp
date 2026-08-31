@@ -11,6 +11,7 @@ import type {
   SitePageSnapshot,
   SiteSnapshot,
 } from "./ScrapeProvider.js";
+import { detectWordLiftMarker, wordLiftDatasetEntity } from "../../../domain/evidence/detectWordLift.js";
 import { executeSearchAction, findSearchActionTemplate } from "./searchAction.js";
 import { collectDeclarativeTools, dedupePageTools, extractImperativeTools } from "./webmcpTools.js";
 
@@ -167,6 +168,14 @@ export class NativeFetchCollector implements ScrapeProvider {
       ? await executeSearchAction(searchTemplate, seedQuery.slice(0, 60), this.options)
       : undefined;
 
+    // The entry page's raw body is only in hand here, so its platform fingerprints are read now.
+    // Without one, a server-side install still shows itself: entity ids on the site's own data.
+    // subdomain, confirmed by the one header the dataset portal answers with.
+    const wordliftMarker = detectWordLiftMarker(page.body);
+    const wordlift = wordliftMarker
+      ? { marker: wordliftMarker, sourceUrl: page.finalUrl }
+      : await this.confirmWordLiftDataset(pages.flatMap((entry) => entry.entities), finalUrl);
+
     return {
       requestedUrl: url.toString(),
       canonicalUrl,
@@ -188,9 +197,36 @@ export class NativeFetchCollector implements ScrapeProvider {
       pageTools: dedupePageTools(pages.flatMap((entry) => entry.pageTools)),
       mcpEndpoints,
       ...(searchAction ? { searchAction } : {}),
+      ...(wordlift ? { wordlift } : {}),
       softNotFound,
       truncated: pages.some((entry) => entry.truncated) || collectedPages.some((result) => result.status === "rejected"),
     };
+  }
+
+  /** One bounded call confirms a server-side install: the dataset portal names itself in a header. */
+  private async confirmWordLiftDataset(
+    entities: ExtractedEntity[],
+    base: URL,
+  ): Promise<{ marker: string; sourceUrl: string } | null> {
+    const match = wordLiftDatasetEntity(entities, base.toString());
+    if (!match) return null;
+    try {
+      const response = await safeFetch(match.id, {
+        ...this.options,
+        timeoutMs: 6_000,
+        maxBytes: 50_000,
+        captureHeaders: ["x-wordlift-service"],
+      });
+      if (response.headers["x-wordlift-service"]) {
+        return {
+          marker: `The site's dataset subdomain answers as a WordLift data portal (${new URL(match.id).hostname})`,
+          sourceUrl: match.id,
+        };
+      }
+    } catch {
+      // An unreachable dataset id proves nothing either way; the entity-id pattern still speaks.
+    }
+    return null;
   }
 
   private async fetchPublicPage(url: URL) {

@@ -120,6 +120,25 @@ describe("safeFetch", () => {
     vi.unstubAllGlobals();
   });
 
+  it("captures a requested header from whichever hop answers with it", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        response("", {
+          status: 303,
+          headers: { location: "https://example.com/thing.json", "x-wordlift-service": "data-portal" },
+        }),
+      )
+      .mockResolvedValueOnce(response("{}", { status: 200, headers: { "content-type": "application/ld+json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await safeFetch("https://example.com/thing", { resolve, captureHeaders: ["x-wordlift-service"] });
+
+    expect(result.status).toBe(200);
+    expect(result.headers).toEqual({ "x-wordlift-service": "data-portal" });
+    vi.unstubAllGlobals();
+  });
+
   it("truncates an oversized body instead of buffering it", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => response("x".repeat(5_000), { status: 200 })));
 

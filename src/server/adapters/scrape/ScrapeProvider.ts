@@ -158,6 +158,8 @@ export interface SiteSnapshot {
   mcpEndpoints: McpEndpointProbe[];
   /** The declared SearchAction template and what happened when an agent executed it. */
   searchAction?: SearchActionProbe;
+  /** A WordLift fingerprint the entry page itself carries (plugin path, SDK host, dataset URI). */
+  wordlift?: { marker: string; sourceUrl: string };
   /**
    * True when the site answers unknown paths with its HTML page and a 200. On such a site the
    * absence of a document proves nothing, so a probe that comes back as HTML is not a broken

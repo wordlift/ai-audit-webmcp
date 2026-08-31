@@ -1,4 +1,4 @@
-import { Bot, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Bot, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
 import type { ReportRecord } from "../../shared/types/index.js";
 
 export function ExecutiveSummary({ report }: { report: ReportRecord }) {
@@ -10,6 +10,15 @@ export function ExecutiveSummary({ report }: { report: ReportRecord }) {
         <h1 id="summary-heading">We understand this as a <span>{archetype}</span> site.</h1>
         <p>{report.foundationAudit?.summary ?? "This report maps the functions an agent needs against the evidence available today."}</p>
         {report.contextGraph && <p className="summary-context-count">Built from {report.contextGraph.pages.length} representative pages, {report.contextGraph.entities.length} named entities and {report.contextGraph.interfaces.length} observed interfaces.</p>}
+        {report.publishedWith && (
+          <aside className="published-with" aria-label="Publishing platform">
+            <p>
+              <Sparkles size={15} aria-hidden="true" /> This site runs <strong>{report.publishedWith.name}</strong>
+            </p>
+            <small>{report.publishedWith.evidence}.</small>
+            <a href="https://my.wordlift.io" target="_blank" rel="noreferrer">Manage it in your WordLift dashboard →</a>
+          </aside>
+        )}
       </div>
       <div className="score-grid" aria-label="Readiness scores">
         <ScoreCard

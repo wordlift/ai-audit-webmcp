@@ -470,6 +470,22 @@ button:disabled { opacity: 0.6; cursor: wait; }
 }
 
 .summary-copy > .summary-context-count { margin-top: 14px; color: var(--brand); font-family: var(--font-mono); font-size: 0.72rem; }
+.published-with {
+  display: grid;
+  gap: 3px;
+  margin: 14px 0 0;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, white);
+  border-left: 4px solid var(--brand);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--brand) 6%, white);
+  font-size: 0.85rem;
+}
+.published-with p { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--ink); }
+.published-with p svg { color: var(--brand); }
+.published-with strong { font-weight: 700; color: var(--brand); }
+.published-with small { color: var(--muted); font-size: 0.74rem; }
+.published-with a { justify-self: start; margin-top: 4px; color: var(--brand); font-weight: 600; font-size: 0.78rem; }
 
 .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-self: start; }
 
