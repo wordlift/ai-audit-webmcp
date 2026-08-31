@@ -173,7 +173,12 @@ export class NativeFetchCollector implements ScrapeProvider {
       title: text(document.querySelector("title")),
       description: document.querySelector('meta[name="description"]')?.getAttribute("content")?.slice(0, 500) ?? "",
       pages,
-      text: pages.map((entry) => entry.text).join("\n\n").slice(0, 60_000),
+      // What a person reads on a page includes its title, description, and headings — on an
+      // image-led homepage they are most of it — so they lead each page's classification text.
+      text: pages
+        .map((entry) => [entry.title, entry.description, ...entry.headings, entry.text].filter(Boolean).join("\n"))
+        .join("\n\n")
+        .slice(0, 60_000),
       headings: unique(pages.flatMap((entry) => entry.headings)).slice(0, 80),
       linkPaths: unique(pages.flatMap((entry) => entry.linkPaths)).slice(0, MAX_LINKS),
       linkLabels: unique(pages.flatMap((entry) => entry.linkLabels)).slice(0, 120),
@@ -645,14 +650,24 @@ function slug(value: string): string {
   return value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "unnamed";
 }
 
+/** A landmark with less text than this is a shell or a hero, not what the person read. */
+const MIN_LANDMARK_TEXT = 300;
+
 /** Classifier input: what a person reads on the page, never its script, style, or JSON-LD text. */
 export function readableText(document: Document): string {
-  const main = document.querySelector("main") ?? document.querySelector("article") ?? document.body;
-  if (!main) return "";
+  const landmark = document.querySelector("main") ?? document.querySelector("article");
+  const fromLandmark = landmark ? strippedText(landmark) : "";
+  // A near-empty <main> — a client-rendered shell, a hero region — hides the page that surrounds
+  // it; the body is read instead so an image-led homepage still classifies.
+  const text = fromLandmark.length >= MIN_LANDMARK_TEXT || !document.body ? fromLandmark : strippedText(document.body);
+  return text.slice(0, MAX_TEXT);
+}
+
+function strippedText(root: Element): string {
   // Cloned so the removal never mutates the document the other extractors still read.
-  const clone = main.cloneNode(true) as Element;
+  const clone = root.cloneNode(true) as Element;
   for (const node of [...clone.querySelectorAll("script, style, noscript, template")]) node.remove();
-  return (clone.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_TEXT);
+  return (clone.textContent ?? "").replace(/\s+/g, " ").trim();
 }
 
 function text(node: Element | null): string {
