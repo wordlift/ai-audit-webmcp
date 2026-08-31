@@ -37,8 +37,15 @@ export function inferArchetype(
   const top = rankedArchetypes[0];
   const second = rankedArchetypes[1];
   const margin = Number((top.score - second.score).toFixed(4));
-  const insufficient = top.score < model.manifest.classification.evidenceFloor;
-  const ambiguous = margin < model.manifest.classification.marginFloor;
+  const { evidenceFloor, marginFloor, dominanceShare } = model.manifest.classification;
+  // Google spreads low confidence over many categories on a large homepage, so the absolute score
+  // can miss the floor while everything that was scored points the same way. An archetype that
+  // holds the clear majority of the evidence is accepted at half the floor; "other" is kept for
+  // sites whose evidence is thin or points two ways.
+  const mass = rankedArchetypes.reduce((sum, entry) => sum + entry.score, 0);
+  const dominant = mass > 0 && top.score >= evidenceFloor / 2 && top.score / mass >= dominanceShare;
+  const insufficient = top.score < evidenceFloor && !dominant;
+  const ambiguous = margin < marginFloor;
   const inferred = insufficient ? "other" : top.archetype;
   return {
     primaryArchetype: override ?? inferred,
