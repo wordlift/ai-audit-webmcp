@@ -66,6 +66,21 @@ export async function createReport(url: string, options: CreateReportOptions = {
   return report.status === "running" ? waitForTerminalReport(report.id, options) : report;
 }
 
+export interface StartedReport {
+  /** The report id is the caller's requestId, so the page exists as soon as the record does. */
+  reportId: string;
+  ready: Promise<ReportRecord>;
+}
+
+/**
+ * Starts an audit and returns immediately with the id. `ready` resolves at the terminal report;
+ * the caller can navigate to /reports/{reportId} right away and watch the record fill in.
+ */
+export function startReport(url: string, options: CreateReportOptions = {}): StartedReport {
+  const requestId = options.requestId ?? crypto.randomUUID();
+  return { reportId: requestId, ready: createReport(url, { ...options, requestId }) };
+}
+
 export async function waitForTerminalReport(reportId: string, options: CreateReportOptions = {}): Promise<ReportRecord> {
   const wait = options.waitMs ?? defaultWait;
   const now = options.now ?? (() => Date.now());
@@ -128,6 +143,7 @@ export interface AlpinaAvailabilityResponse {
   requiresRevalidation: boolean;
   readOnly: true;
   notice: string;
+  entity?: { id: string; type: string; name: string; sourceUrl: string; method: string; collectedAt: string };
   updatedReportId?: string;
   updatedReportUrl?: string;
   reportUpdateError?: string;
