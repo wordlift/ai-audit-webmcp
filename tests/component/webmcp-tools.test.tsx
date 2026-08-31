@@ -2,6 +2,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { App } from "../../src/client/App";
+import { AuditWebsiteTool } from "../../src/client/webmcp/AuditWebsiteTool";
 import { installModelContextStub, toolText, type ModelContextStub } from "../../src/client/webmcp/testing/modelContextStub";
 import type { ReportRecord } from "../../src/shared/types/index.js";
 
@@ -206,7 +207,7 @@ describe("WebMCP tool layer", () => {
   it("registers audit-website globally with a static, safe description", async () => {
     render(<MemoryRouter><App /></MemoryRouter>);
 
-    await waitFor(() => expect(modelContext.toolNames()).toEqual(["audit-website"]));
+    await waitFor(() => expect(modelContext.toolNames()).toEqual(["audit-website", "get-audit-report"]));
     const tool = modelContext.get("audit-website");
     expect(tool?.description).toMatch(/verified action-readiness score/);
     expect(tool?.annotations).toMatchObject({ readOnlyHint: true });
@@ -255,6 +256,121 @@ describe("WebMCP tool layer", () => {
     });
   });
 
+  it("answers with the report id and the status tool when the audit outlives the grace window", async () => {
+    // The tool mints its own report id; the stub answers whichever id it asks about.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === "/api/reports" && init?.method === "POST") {
+          const body = JSON.parse(String(init?.body)) as { requestId: string };
+          return jsonResponse({ reportId: body.requestId, phase: "mapping", retryUrl: `/api/reports/${body.requestId}` }, 202);
+        }
+        const match = url.match(/^\/api\/reports\/([0-9a-f-]{36})$/);
+        if (match) {
+          return jsonResponse({
+            id: match[1],
+            status: "running",
+            phase: "mapping",
+            mode: "live",
+            requestedUrl: "https://slow.example/",
+            createdAt: "2026-08-27T05:00:00.000Z",
+            expiresAt: "2026-09-26T05:00:00.000Z",
+            actionModelVersion: "0.1.0",
+            contextGraph: completedReport.contextGraph,
+            errors: [],
+            evidenceTruncated: false,
+          } satisfies ReportRecord);
+        }
+        throw new Error(`Unexpected request ${url}`);
+      }),
+    );
+
+    // The grace window is tiny and the background poll is frozen, so the early answer is forced.
+    render(<AuditWebsiteTool graceMs={10} pollWaitMs={() => new Promise(() => undefined)} />);
+    await waitFor(() => expect(modelContext.get("audit-website")).toBeDefined());
+
+    const result = await act(async () => modelContext.call("audit-website", { url: "slow.example" }));
+
+    expect(result.isError).toBeFalsy();
+    const payload = result.structuredContent as { reportId: string };
+    expect(result.structuredContent).toMatchObject({
+      status: "running",
+      phase: "mapping",
+      statusTool: "get-audit-report",
+      pagesAnalyzed: 4,
+    });
+    const text = toolText(result);
+    expect(text).toMatch(/still running \(phase: mapping\)/);
+    expect(text).toMatch(/get-audit-report/);
+    expect(text).toContain(payload.reportId);
+    expect(text).not.toMatch(/Verified agent readiness/);
+  });
+
+  it("turns a reportId into progress while running and into the finished summary once terminal", async () => {
+    const runningReport: ReportRecord = {
+      id: REPORT_ID,
+      status: "running",
+      phase: "checking",
+      mode: "live",
+      requestedUrl: "https://alpina.travel/",
+      createdAt: "2026-08-27T05:00:00.000Z",
+      expiresAt: "2026-09-26T05:00:00.000Z",
+      actionModelVersion: "0.1.0",
+      foundationAudit: completedReport.foundationAudit,
+      errors: [],
+      evidenceTruncated: false,
+    };
+    const responses = [jsonResponse(runningReport), jsonResponse(completedReport)];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        // The home page's own health probe is not the audit API.
+        if (String(input).endsWith("/api/health")) return jsonResponse({ status: "ok", mode: "demo" });
+        return responses.shift() ?? jsonResponse(completedReport);
+      }),
+    );
+
+    render(<MemoryRouter><App /></MemoryRouter>);
+    await waitFor(() => expect(modelContext.get("get-audit-report")).toBeDefined());
+
+    const pending = await act(async () => modelContext.call("get-audit-report", { reportId: REPORT_ID }));
+    expect(pending.isError).toBeFalsy();
+    expect(toolText(pending)).toMatch(/still running \(phase: checking\)/);
+    expect(toolText(pending)).toMatch(/foundation audit has landed/);
+
+    const finished = await act(async () => modelContext.call("get-audit-report", { reportId: REPORT_ID }));
+    expect(finished.isError).toBeFalsy();
+    expect(toolText(finished)).toMatch(/Verified agent readiness: 38\/100/);
+    expect(finished.structuredContent).toMatchObject({ reportId: REPORT_ID, agentReadinessScore: 38 });
+  });
+
+  it("reports a failed audit as an error through get-audit-report", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          ...completedReport,
+          status: "failed",
+          capabilities: undefined,
+          score: undefined,
+          priorities: undefined,
+          contextGraph: undefined,
+          classification: undefined,
+          foundationAudit: undefined,
+          errors: [{ code: "site_blocked", phase: "understanding", message: "The site refused automated access.", retryable: false }],
+        }),
+      ),
+    );
+
+    render(<MemoryRouter><App /></MemoryRouter>);
+    await waitFor(() => expect(modelContext.get("get-audit-report")).toBeDefined());
+
+    const result = await act(async () => modelContext.call("get-audit-report", { reportId: REPORT_ID }));
+    expect(result.isError).toBe(true);
+    expect(toolText(result)).toMatch(/could not be completed/);
+  });
+
   it("returns tool errors as errors instead of throwing into the agent", async () => {
     vi.stubGlobal(
       "fetch",
@@ -301,6 +417,7 @@ describe("WebMCP tool layer", () => {
         "check-alpina-availability",
         "explain-capability",
         "explain-foundation-audit",
+        "get-audit-report",
       ]),
     );
 

@@ -34,6 +34,21 @@ export const AUDIT_WEBSITE_TOOL = {
   annotations: { readOnlyHint: true, untrustedContentHint: true },
 } as const;
 
+export const GET_AUDIT_REPORT_TOOL = {
+  name: "get-audit-report",
+  description:
+    "Check on an audit started with audit-website using its reportId: returns the current phase and progress while the audit is still running, and the finished result — site archetype, verified action-readiness score, priority capability gaps, action-stage summary, and shareable evidence report — once it completes.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      reportId: { type: "string", description: "The reportId returned by audit-website." },
+    },
+    required: ["reportId"],
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: true, untrustedContentHint: true },
+} as const;
+
 export const EXPLAIN_CAPABILITY_TOOL = {
   name: "explain-capability",
   description:

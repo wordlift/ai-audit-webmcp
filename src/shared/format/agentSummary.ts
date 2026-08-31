@@ -61,6 +61,52 @@ export interface CapabilityToolResult {
   contractUrl: string | null;
 }
 
+/** What an agent gets back while an audit is still running: an address, not an answer. */
+export interface AuditRunningResult {
+  reportId: string;
+  status: "running";
+  phase: string;
+  reportUrl: string;
+  /** The tool that turns this reportId into progress or the finished result. */
+  statusTool: "get-audit-report";
+  pagesAnalyzed?: number;
+  foundationAuditReady?: boolean;
+  note: string;
+}
+
+export function summarizeRunningReport(
+  report: Pick<ReportRecord, "id" | "phase"> & Partial<Pick<ReportRecord, "contextGraph" | "foundationAudit">>,
+  reportUrl: string,
+): AuditRunningResult {
+  return {
+    reportId: report.id,
+    status: "running",
+    phase: report.phase,
+    reportUrl,
+    statusTool: "get-audit-report",
+    ...(report.contextGraph ? { pagesAnalyzed: report.contextGraph.pages.length } : {}),
+    ...(report.foundationAudit ? { foundationAuditReady: true } : {}),
+    note: "The audit is still running. Call get-audit-report with this reportId to check progress and fetch the finished result.",
+  };
+}
+
+export function auditRunningText(result: AuditRunningResult): string {
+  const progress = [
+    result.pagesAnalyzed ? `${result.pagesAnalyzed} representative page${result.pagesAnalyzed === 1 ? "" : "s"} mapped` : null,
+    result.foundationAuditReady ? "the foundation audit has landed" : null,
+  ]
+    .filter(Boolean)
+    .join(" and ");
+  return [
+    `The audit is still running (phase: ${result.phase}). Report id: ${result.reportId}.`,
+    progress ? `Progress so far: ${progress}.` : null,
+    `Call get-audit-report with {"reportId": "${result.reportId}"} to check progress and fetch the finished result.`,
+    `Watch it fill in live: ${result.reportUrl}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 const READY_STATES = new Set(["agent-ready", "sidecar-enabled"]);
 const MAX_AGENT_EVIDENCE = 6;
 
