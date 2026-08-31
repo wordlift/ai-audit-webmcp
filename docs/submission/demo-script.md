@@ -10,11 +10,12 @@ Show the landing page headline and briefly point to the four stages. Mention tha
 
 ## 0:20–0:50 — An uninterrupted audit
 
-Enter a non-Alpina URL that is publicly reachable and representative of one supported archetype.
+Click one of the suggested public sites under the URL field, or type a publicly reachable site
+representative of one supported archetype. Never a WordLift client other than alpina.travel.
 
-**Voiceover:** “I enter one URL. The app analyzes up to four useful pages while the full WordLift foundation audit runs in parallel. It classifies the business, extracts entities and language, maps expected actions, and checks the interfaces that support them.”
+**Voiceover:** “I enter one URL. The report opens right away and fills in while the app reads up to four useful pages and the full WordLift foundation audit runs in parallel. It classifies the business, extracts entities and language, maps expected actions, and checks the interfaces that support them — by calling them.”
 
-Keep the progress view visible. Do not open technical details during collection.
+Keep the progress view visible; point out the entities and the foundation score arriving before the report is complete. Do not open technical details during collection.
 
 ## 0:50–1:20 — Classification becomes a service map
 
@@ -34,9 +35,10 @@ Open one action drawer. Point to `applies to`, the evidence provenance, and the 
 
 ## 1:55–2:15 — Full audit detail without interrupting the flow
 
-Expand two WordLift foundation sections and one quick win.
+Open the Full WordLift audit: it lands on the scoreboard, the dimensions that need attention are
+listed first, and raw details stay folded. Expand one dimension's details and point to a quick win.
 
-**Voiceover:** “The conversational result stays concise, but none of the WordLift audit depth is lost. SEO, structured data, content, images, automation, JavaScript, findings, and quick wins remain available as bounded technical evidence.”
+**Voiceover:** “The conversational result stays concise, but none of the WordLift audit depth is lost. Score, crawler access, quick wins, every audited dimension, findings — all there, in the order that matters, with the complete audit one click away on audit.wordlift.io.”
 
 ## 2:15–2:35 — Controlled WebMCP proof
 
@@ -52,7 +54,8 @@ Show the WebMCP result or the final action state.
 
 ## Recording checklist
 
-- Use one generic site for the main audit; reserve Alpina for the final controlled proof.
+- Use one generic, non-client site for the main audit; reserve Alpina for the final controlled proof.
+- Run the sidecar from the stable reference (`/demo/alpina`) so the answer shows the entity it is grounded in.
 - Ensure the generic report analyzes at least three pages and shows a meaningful named entity.
 - Keep the full audit collapsed until the progressive-disclosure segment.
 - Show one entity selection visibly changing the highlighted action layer.

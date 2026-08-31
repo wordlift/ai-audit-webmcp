@@ -11,6 +11,13 @@ npm run dev:demo        # web app on :5173, API on :3000
 npm run verify          # typecheck + tests + build — run this before opening a PR
 ```
 
+## How a change ships
+
+`main` is the only long-lived branch and the one production runs. Branch from it, open a pull
+request, let CI run the same gates (`verify`, then the Playwright `browser` job), merge, and deploy
+from `main` with the command in [docs/OPERATIONS.md](docs/OPERATIONS.md). The working agreement for
+agent-assisted development — what is frozen and what is never done — is in [AGENTS.md](AGENTS.md).
+
 ## Principles that shape every change
 
 1. **Never claim support that was not observed.** A declaration is `unverified` until an invocation
@@ -49,6 +56,10 @@ Detectors turn collected evidence into typed `CapabilityEvidence`.
 - Human-facing page and form signals: `src/domain/evidence/detectSiteEvidence.ts`.
 - Schema.org and declared-name mappings: `src/domain/evidence/schemaActions.ts`.
 - Foundation-audit findings: `src/server/adapters/audit/WordLiftAudit.ts`.
+- Probes that run at collection time and produce `invoked`/`failed` evidence — MCP endpoints
+  (`mcpProbe.ts`), the declared SearchAction template (`searchAction.ts`): `src/server/adapters/scrape/`.
+  A probe calls only what is safe and read-only, never invents an identifier, and reports a blind
+  200 as a declaration rather than a success.
 
 Pick `verification` deliberately: `observed` (seen on the page), `declared` (announced but
 uncalled), `invoked` (a call succeeded), `failed` (checked and it did not hold up). Only `invoked`
@@ -56,23 +67,47 @@ evidence may raise the readiness score.
 
 ## Add a fixture
 
-Fixtures are sanitized, dated snapshots — never a live capture with personal data or secrets.
+Fixtures are sanitized, dated snapshots — never a live capture with personal data or secrets, and
+never a WordLift client site other than alpina.travel. Invent a host under `.example`.
 
 ```jsonc
 {
   "id": "your-archetype",
-  "url": "https://example.com/",
+  "url": "https://your-site.example/",
   "archetype": "your-archetype",
   "status": "completed",              // or "partial" / "failed"
   "categories": [{ "name": "/Shopping", "confidence": 0.9 }],
   "signals": ["schema:Product", "path:checkout"],
-  "foundation": { "score": 71, "summary": "…", "findings": ["…"], "provider": "fixtures" },
-  "evidence": [ /* CapabilityEvidence items */ ]
+  "foundation": {                     // optional sections, quickWins, botAccess as in the report schema
+    "score": 71, "summary": "…", "findings": ["…"], "provider": "fixture"
+  },
+  "evidence": [ /* CapabilityEvidence items */ ],
+  "pages": [                          // up to four; these feed the context graph
+    {
+      "url": "https://your-site.example/", "title": "…", "description": "…",
+      "role": "entry",                // entry | detail | offer | policy | contact | other
+      "text": "…", "headings": ["…"], "linkPaths": ["/products/…"], "linkLabels": ["…"],
+      "forms": [], "jsonLdTypes": ["Organization"],
+      "entities": [{ "id": "https://your-site.example/#org", "types": ["Organization"], "name": "…",
+                     "alternateNames": [], "sourceUrl": "https://your-site.example/", "sameAs": [], "offers": [] }],
+      "pageTools": [], "truncated": false
+    }
+  ]
 }
 ```
 
-Register the file in `src/server/adapters/fixtures/FixtureProvider.ts`, then confirm
-`tests/integration/fixture-providers.test.ts` still passes.
+Register the file in `src/server/adapters/fixtures/FixtureProvider.ts` (demo mode resolves a
+fixture by its host), then confirm `tests/integration/fixture-providers.test.ts`, the golden
+snapshots, and `tests/e2e/archetype-matrix.spec.ts` still pass. The travel fixture must keep the
+`Samspitze 4` apartment entity: it is what the alpina sidecar grounds its answer in.
+
+## Stores and the running record
+
+A `ReportStore` has `put`, `update`, `finalize`, `get`, and `createRevision`. `update` replaces a
+record that is still `running` — it is how the orchestrator publishes progress (entities as the
+collector lands, the foundation score as the audit lands) so the report page can show them before
+the final report exists. Any new store must keep the invariant: `update` refuses a record that is
+not running, `finalize` happens exactly once, and a finalized report never changes.
 
 ## Add a sidecar
 
@@ -103,11 +138,15 @@ import { installModelContextStub, toolText } from "../../src/client/webmcp/testi
 
 | Suite | Covers |
 |---|---|
-| `tests/unit` | Model compilation, state derivation, scoring, contracts, URL policy, sanitization, sidecar schemas |
-| `tests/integration` | Report API, providers, stores, error paths, rate limits, live orchestration, sidecar |
-| `tests/component` | Capability map, dialog focus, WebMCP tool lifecycle |
+| `tests/unit` | Model compilation, context graph, state derivation, scoring, contracts, URL policy, sanitization, collectors and probes (native fetch, ScrapingBee fallback, MCP probe, SearchAction), sidecar schemas and entity grounding |
+| `tests/integration` | Report API, providers, stores (including running-record updates), error paths, rate limits, live orchestration and progress, the WordLift audit mapping, sidecar |
+| `tests/component` | Executive summary, context map, capability map, foundation panel, report progress, dialog focus, WebMCP tool lifecycle |
 | `tests/golden` | Compiled journeys for all six archetypes |
-| `tests/e2e` | Fixture URL to shareable report in a real browser |
+| `tests/e2e` | Landing, every archetype fixture to a report, the alpina sidecar flow, visual proof at desktop and mobile widths |
+
+Run `npm run test:e2e` locally before shipping anything user-visible; it builds and serves the app
+itself. Component tests that render the home page stub `fetch` — the page probes `/api/health`
+once to learn whether it is in demo or live mode.
 
 ## Pull requests
 
