@@ -1,6 +1,7 @@
 import { ArrowLeft, Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { explainReportError, failureTitle, visibleErrors } from "../../shared/format/explainError.js";
 import type { Archetype, ReportRecord } from "../../shared/types/index.js";
 import { ApiError, getReport, recompileReport } from "../api/client";
 import { ActionJourney } from "../components/ActionJourney";
@@ -81,7 +82,14 @@ export function ReportRoute() {
   if (error) return <ReportErrorState title="Report unavailable" message={error} />;
   if (!report) return <div className="report-loading" role="status">Loading the capability map…</div>;
   if (report.status === "running") return <ReportProgress report={report} />;
-  if (report.status === "failed") return <ReportErrorState title="We could not understand this site" message={report.errors[0]?.message ?? "No usable evidence was collected."} />;
+  if (report.status === "failed") {
+    return (
+      <ReportErrorState
+        title={failureTitle(report.errors)}
+        message={visibleErrors(report.errors).map(explainReportError).join(" ") || "No usable evidence was collected."}
+      />
+    );
+  }
 
   return (
     <div className="report-page">
@@ -92,7 +100,9 @@ export function ReportRoute() {
         <Link to="/"><ArrowLeft size={17} /> New audit</Link>
         <button type="button" onClick={share}><Share2 size={17} /> {copied ? "Copied" : "Share report"}</button>
       </nav>
-      {report.status === "partial" && <div className="partial-banner" role="status">Partial report: {report.errors[0]?.message}</div>}
+      {report.status === "partial" && (
+        <div className="partial-banner" role="status">Partial report: {visibleErrors(report.errors).map(explainReportError).join(" ")}</div>
+      )}
       <ExecutiveSummary report={report} />
       {report.classification && <ClassificationCard classification={report.classification} onOverride={override} />}
       {report.contextGraph && report.classification && (
