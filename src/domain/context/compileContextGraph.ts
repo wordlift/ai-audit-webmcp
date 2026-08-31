@@ -138,11 +138,18 @@ function compileBindings(
 
 function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string): DomainEntity[] {
   const byId = new Map<string, DomainEntity>();
+  // The same real-world thing often carries a different @id on each page that embeds it. Its
+  // name and types are its identity: the first @id seen becomes canonical, and later sightings
+  // merge into it instead of appearing as duplicate entities.
+  const idByIdentity = new Map<string, string>();
   for (const page of pages) {
     for (const extracted of page.entities) {
-      const existing = byId.get(extracted.id);
+      const identity = `${[...extracted.types].sort().join("+")}|${extracted.name.trim().toLowerCase()}`;
+      const id = byId.has(extracted.id) ? extracted.id : (idByIdentity.get(identity) ?? extracted.id);
+      if (!idByIdentity.has(identity)) idByIdentity.set(identity, id);
+      const existing = byId.get(id);
       const next: DomainEntity = {
-        id: extracted.id,
+        id,
         types: unique([...(existing?.types ?? []), ...extracted.types]).slice(0, 12),
         name: existing?.name ?? extracted.name,
         alternateNames: unique([...(existing?.alternateNames ?? []), ...extracted.alternateNames]).slice(0, 20),
@@ -152,7 +159,7 @@ function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string): DomainE
         offers: [...(existing?.offers ?? []), ...extracted.offers].slice(0, 12),
         confidence: 0.95,
       };
-      byId.set(extracted.id, next);
+      byId.set(id, next);
     }
   }
   const websiteId = `${new URL(canonicalUrl).origin}/#website`;

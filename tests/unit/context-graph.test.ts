@@ -147,6 +147,26 @@ describe("context graph", () => {
     }));
     expect(context.interfaces[0]?.entityIds).not.toContain(`${secondUrl}#product`);
   });
+
+  it("merges the same named entity carried under different ids on different pages", () => {
+    const author = (id: string, sourceUrl: string) => ({
+      ...entity(id, "Person", "Stefanie Zimmerebner", sourceUrl),
+    });
+    const context = compileContextGraph(
+      [
+        page("https://tourism.example/huts", "detail", [author("https://tourism.example/huts#author", "https://tourism.example/huts")]),
+        page("https://tourism.example/lakes", "detail", [author("https://tourism.example/lakes#author", "https://tourism.example/lakes")]),
+      ],
+      [],
+      [],
+      "https://tourism.example/",
+    );
+
+    const people = context.entities.filter((item) => item.name === "Stefanie Zimmerebner");
+    expect(people).toHaveLength(1);
+    expect(people[0].id).toBe("https://tourism.example/huts#author");
+    expect(people[0].sourceUrls).toEqual(["https://tourism.example/huts", "https://tourism.example/lakes"]);
+  });
 });
 
 function page(url: string, role: SitePageSnapshot["role"], entities: SitePageSnapshot["entities"]): SitePageSnapshot {
