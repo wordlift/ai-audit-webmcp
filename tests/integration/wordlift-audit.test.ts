@@ -94,8 +94,68 @@ describe("WordLift audit provider", () => {
       title: "Correct .well-known JSON endpoints",
       impact: "High",
     });
+    expect(bundle.foundation).toMatchObject({
+      collectedAt: "2026-08-27T09:00:00.000Z",
+      sourceUrl: "https://alpina.travel/",
+    });
+    expect(bundle.foundation?.sections).toContainEqual(
+      expect.objectContaining({
+        id: "experimental-new-criterion",
+        label: "Experimental New Criterion",
+        score: 3,
+        details: [{ label: "Note", value: "added after this build shipped" }],
+      }),
+    );
     // Foundation score is separate: the bundle contributes no verified invocation evidence.
     expect(bundle.evidence.every((item) => item.verification === "declared")).toBe(true);
+  });
+
+  it("preserves the documented nested response and every safe future criterion", async () => {
+    const response = {
+      success: true,
+      data: {
+        url: "https://example.com/",
+        timestamp: "2026-08-31T04:00:00.000Z",
+        status: "completed",
+        results: {
+          score: 67,
+          summary: "A documented nested audit response.",
+          robotsTxt: { status: "found", botStatus: [{ name: "GPTBot", status: "Allowed" }] },
+          llmsTxt: { status: "found" },
+          semanticHtml: { score: 8, status: "Good", headings: ["Products", "Support"] },
+          contentFreshness: {
+            score: 4,
+            status: "Needs Improvement",
+            recommendations: ["Publish visible modification dates", "Refresh the product documentation"],
+            diagnostics: { oldestPageDays: 721, rawHtml: "<html>must not survive</html>", apiKey: "secret" },
+          },
+          jsRendering: {
+            status: "Good",
+            aiAccessibility: "Excellent",
+            contentAvailability: "All content in HTML",
+            recommendations: [],
+          },
+        },
+      },
+    };
+
+    const bundle = await provider(vi.fn(async () => jsonResponse(response)) as unknown as typeof fetch).audit(
+      new URL("https://example.com/"),
+    );
+
+    expect(bundle.foundation).toMatchObject({ score: 67, summary: "A documented nested audit response." });
+    expect(bundle.signals).toContain("agent:llms-txt");
+    const freshness = bundle.foundation?.sections.find((section) => section.id === "content-freshness");
+    expect(freshness).toMatchObject({ score: 4, status: "Needs Improvement" });
+    expect(freshness?.details).toEqual(expect.arrayContaining([
+      { label: "Recommendations · 1", value: "Publish visible modification dates" },
+      { label: "Diagnostics · Oldest Page Days", value: "721" },
+    ]));
+    expect(JSON.stringify(bundle.foundation)).not.toMatch(/must not survive|secret/);
+    expect(bundle.foundation?.findings).toEqual(expect.arrayContaining([
+      expect.stringContaining("Content Freshness"),
+      expect.stringContaining("Publish visible modification dates"),
+    ]));
   });
 
   it("derives archetype signals and declared agent evidence from the real response shape", async () => {

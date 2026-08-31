@@ -263,7 +263,7 @@ export const foundationAuditSummarySchema = z
   .object({
     score: z.number().int().min(0).max(100),
     summary: z.string().min(1).max(2_000),
-    findings: z.array(z.string().min(1).max(600)).max(30),
+    findings: z.array(z.string().min(1).max(600)).max(60),
     sections: z
       .array(
         z
@@ -282,11 +282,11 @@ export const foundationAuditSummarySchema = z
                   })
                   .strict(),
               )
-              .max(30),
+              .max(80),
           })
           .strict(),
       )
-      .max(12)
+      .max(24)
       .default([]),
     quickWins: z
       .array(
@@ -297,9 +297,11 @@ export const foundationAuditSummarySchema = z
           })
           .strict(),
       )
-      .max(20)
+      .max(30)
       .default([]),
     provider: z.string().min(1).max(120),
+    collectedAt: z.string().datetime().optional(),
+    sourceUrl: z.string().url().max(2_048).optional(),
   })
   .strict();
 

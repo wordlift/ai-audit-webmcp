@@ -12,6 +12,10 @@ test("visual proof captures the desktop capability map", async ({ page }, testIn
   await page.setViewportSize({ width: 1440, height: 1000 });
   await openTravelReport(page);
   await page.screenshot({ path: testInfo.outputPath("travel-report-desktop.png"), fullPage: true });
+  await page.getByText("Full WordLift audit").click();
+  await expect(page.getByRole("heading", { name: "Audit findings" })).toBeVisible();
+  await expect(page.getByText("Structured data inventory")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("foundation-audit-desktop.png"), fullPage: true });
   await page.getByRole("button", { name: /check availability/i }).click();
   await expect(page.getByRole("dialog")).toContainText("How to close the gap");
   await page.screenshot({ path: testInfo.outputPath("availability-contract-desktop.png"), fullPage: true });

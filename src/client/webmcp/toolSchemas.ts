@@ -53,6 +53,20 @@ export const EXPLAIN_CAPABILITY_TOOL = {
   annotations: { readOnlyHint: true, untrustedContentHint: true },
 } as const;
 
+export const EXPLAIN_FOUNDATION_AUDIT_TOOL = {
+  name: "explain-foundation-audit",
+  description:
+    "Return the complete safe WordLift foundation audit for the open report, including every normalized audit dimension, findings, quick wins, scores, provenance, and detailed data points.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      reportId: { type: "string", description: "Optional identifier of the report currently open in the page." },
+    },
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: true, untrustedContentHint: true },
+} as const;
+
 export const CHECK_ALPINA_AVAILABILITY_TOOL = {
   name: "check-alpina-availability",
   description:

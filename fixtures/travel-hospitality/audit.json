@@ -144,7 +144,95 @@
       "MCP server reachable over streamable HTTP; the SSE endpoint linked from the homepage refuses requests",
       "Search results carry no product identifier, so an agent cannot chain search to detail or availability"
     ],
-    "provider": "fixture"
+    "sections": [
+      {
+        "id": "site-files",
+        "label": "Site files & agent discovery",
+        "score": 18,
+        "status": "Good",
+        "explanation": "Agent discovery files are unusually complete and expose multiple machine-readable entry points.",
+        "details": [
+          { "label": "LLMs.txt", "value": "found" },
+          { "label": "Skill.md", "value": "found" },
+          { "label": "Well known · MCP server card", "value": "true" }
+        ]
+      },
+      {
+        "id": "seo-fundamentals",
+        "label": "SEO fundamentals",
+        "score": 20,
+        "status": "Good",
+        "explanation": "Titles, descriptions, canonicals and crawl directives are present on representative pages.",
+        "details": [
+          { "label": "Title", "value": "Lungau Holidays | Alpina.travel" },
+          { "label": "Meta robots", "value": "index, follow" }
+        ]
+      },
+      {
+        "id": "structured-data",
+        "label": "Structured data inventory",
+        "score": 15,
+        "status": "Good",
+        "explanation": "The site publishes organization, lodging, offer and place entities as JSON-LD.",
+        "details": [
+          { "label": "Detected schemas · 1 · Type", "value": "LodgingBusiness" },
+          { "label": "Detected schemas · 2 · Type", "value": "Offer" },
+          { "label": "Detected schemas · 3 · Type", "value": "TouristDestination" }
+        ]
+      },
+      {
+        "id": "content-structure",
+        "label": "Content structure & token budget",
+        "score": 13,
+        "status": "Good",
+        "explanation": "The representative pages expose concise headings and readable server-rendered content.",
+        "details": [
+          { "label": "Semantic HTML", "value": "true" },
+          { "label": "Representative pages", "value": "4" }
+        ]
+      },
+      {
+        "id": "image-accessibility",
+        "label": "Image accessibility",
+        "score": 10,
+        "status": "Needs Improvement",
+        "explanation": "Most key imagery is described, but some gallery alternatives remain generic.",
+        "details": [
+          { "label": "Images with alt", "value": "18" },
+          { "label": "Images without useful alt", "value": "3" }
+        ]
+      },
+      {
+        "id": "automation-readiness",
+        "label": "Automation readiness",
+        "score": 13,
+        "status": "Good",
+        "explanation": "Search and availability interfaces are declared, but some calls still need verified identifiers.",
+        "details": [
+          { "label": "Issues · 1 · Priority", "value": "P1" },
+          { "label": "Issues · 1 · What", "value": "Return stable product identifiers from search results." }
+        ]
+      },
+      {
+        "id": "javascript-rendering",
+        "label": "JavaScript rendering",
+        "score": 5,
+        "status": "Good",
+        "explanation": "Astro renders the primary content into HTML that agents can read without executing JavaScript.",
+        "details": [
+          { "label": "Framework detected", "value": "Astro" },
+          { "label": "Rendering type", "value": "SSR" },
+          { "label": "AI accessibility", "value": "Excellent" }
+        ]
+      }
+    ],
+    "quickWins": [
+      { "title": "Return stable identifiers from search and availability tools", "impact": "High" },
+      { "title": "Verify the declared availability call in the browser", "impact": "High" }
+    ],
+    "provider": "fixture",
+    "collectedAt": "2026-08-31T00:00:00.000Z",
+    "sourceUrl": "https://alpina.travel/"
   },
   "errors": [],
   "evidence": [
