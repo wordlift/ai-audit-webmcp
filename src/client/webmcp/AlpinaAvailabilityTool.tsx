@@ -71,6 +71,11 @@ export function describeAvailability(result: AlpinaAvailabilityResponse): string
       : `${result.propertyId} is ${result.status} for ${result.checkIn} to ${result.checkOut}.`,
   ];
 
+  if (result.entity) {
+    lines.push(
+      `Grounded in ${result.entity.name} (${result.entity.type}) — read as ${result.entity.method} from ${result.entity.sourceUrl} on ${result.entity.collectedAt.slice(0, 10)}.`,
+    );
+  }
   if (result.quote) {
     lines.push(`Quoted total: ${result.quote.total.toFixed(2)} ${result.quote.currency}.`);
     if (result.quote.cancellationSummary) lines.push(`Cancellation policy: ${result.quote.cancellationSummary}`);

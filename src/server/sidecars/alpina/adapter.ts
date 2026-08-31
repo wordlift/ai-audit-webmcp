@@ -1,13 +1,18 @@
 import { z } from "zod";
-import type { CapabilityEvidence } from "../../../shared/types/index.js";
+import type { CapabilityEvidence, DomainEntity } from "../../../shared/types/index.js";
 import {
   ALPINA_AVAILABILITY_ENDPOINT,
   READ_ONLY_NOTICE,
   alpinaAvailabilityInputSchema,
   alpinaAvailabilityResultSchema,
+  sidecarEntityContextSchema,
   type AlpinaAvailabilityRequest,
   type AlpinaAvailabilityResult,
+  type SidecarEntityContext,
 } from "./schemas.js";
+
+/** Container types that never name what a stay is about. */
+const GENERIC_TYPES = new Set(["Thing", "WebSite", "WebPage"]);
 
 /** Upstream shape, read loosely: only allowlisted fields below are ever forwarded. */
 const upstreamSchema = z
@@ -160,6 +165,35 @@ export class AlpinaAvailabilitySidecar {
   private now(): Date {
     return this.options.now?.() ?? new Date();
   }
+}
+
+/**
+ * Finds the report entity this availability answer is about, so the tool result carries the
+ * source-backed context an agent grounded its intent in. Matching is by identity, not guesswork:
+ * the property identifier must appear in the entity's id or URLs, or slug-match one of its names.
+ */
+export function resolveSidecarEntity(
+  entities: DomainEntity[],
+  propertyId: string,
+  collectedAt: string,
+): SidecarEntityContext | null {
+  const needle = propertyId.toLowerCase();
+  const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const match = entities.find(
+    (entity) =>
+      entity.id.toLowerCase().includes(needle) ||
+      [...entity.sourceUrls, ...entity.sameAs].some((url) => url.toLowerCase().includes(needle)) ||
+      [entity.name, ...entity.alternateNames].some((name) => slugify(name) === needle),
+  );
+  if (!match) return null;
+  return sidecarEntityContextSchema.parse({
+    id: match.id,
+    type: match.types.find((type) => !GENERIC_TYPES.has(type)) ?? match.types[0] ?? "Thing",
+    name: match.name,
+    sourceUrl: match.sourceUrls[0],
+    method: "json-ld",
+    collectedAt,
+  });
 }
 
 /**

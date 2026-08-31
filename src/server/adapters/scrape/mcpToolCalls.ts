@@ -82,7 +82,8 @@ function isoDate(offsetDays: number): string {
 }
 
 function synthesize(key: string, property: JsonSchema | undefined, seed: ProbeSeed): unknown {
-  const name = key.toLowerCase();
+  // Matched on words, so `productId`, `product_id`, and `product-id` all read the same way.
+  const name = nameWords(key);
   if (property?.default !== undefined) return property.default;
   if (Array.isArray(property?.enum) && property.enum.length > 0) return property.enum[0];
 
@@ -91,7 +92,7 @@ function synthesize(key: string, property: JsonSchema | undefined, seed: ProbeSe
   if (/query|search|keyword|term|prompt|question|^q$|text/.test(name)) return seed.query;
   if (/locale|language|lang/.test(name)) return "en";
   // An identifier is never invented: it is either harvested from this server or the tool is skipped.
-  if (/(^|_)id$|identifier|slug|sku/.test(name)) return seed.id;
+  if (/\bid$|identifier|slug|sku/.test(name)) return seed.id;
 
   if (property?.type === "integer" || property?.type === "number") {
     return typeof property.minimum === "number" ? property.minimum : 1;

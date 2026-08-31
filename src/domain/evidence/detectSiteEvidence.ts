@@ -206,10 +206,62 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
     });
   }
 
+  // Endpoints the site's own server card names as transports. A failed handshake on one of these
+  // is a broken declaration even when the endpoint never spoke MCP at all.
+  const cardEndpoints = new Set(
+    snapshot.discovery
+      .filter((document) => document.kind === "mcp-server-card" && document.found)
+      .flatMap((document) => document.declaredNames.map(normalizeEndpoint))
+      .filter((value) => value.length > 0),
+  );
+
+  const search = snapshot.searchAction;
+  if (search) {
+    if (search.confirmed) {
+      signals.add("agent:search-action");
+      add({
+        id: "search-action-executed",
+        actionId: "site.search",
+        audience: "agent",
+        kind: "api-result",
+        sourceUrl: search.url,
+        claim: `An agent executed the site's declared SearchAction template with "${search.query}" and the site returned results for it`,
+        confidence: 1,
+        verification: "invoked",
+      });
+    } else if (search.status !== 200) {
+      add({
+        id: "search-action-failed",
+        actionId: "site.search",
+        audience: "agent",
+        kind: "api-result",
+        sourceUrl: search.url,
+        claim: `The site's declared SearchAction template did not answer when an agent executed it${search.note ? `: ${search.note}` : ""}`,
+        confidence: 0.9,
+        verification: "failed",
+      });
+    } else {
+      // A blind 200 proves nothing either way: results may render client-side, and the audit
+      // will not turn that blind spot into an award or an accusation.
+      add({
+        id: "search-action-unconfirmed",
+        actionId: "site.search",
+        audience: "agent",
+        kind: "api-result",
+        sourceUrl: search.url,
+        claim: "The declared SearchAction template answered, but results could not be confirmed without executing site scripts",
+        confidence: 0.7,
+        verification: "declared",
+      });
+    }
+  }
+
   for (const probe of snapshot.mcpEndpoints) {
     if (!probe.initialized) {
-      // The site links this endpoint as an agent interface, so a handshake that never lands is a
-      // broken declaration rather than a path that happens not to exist.
+      // A broken declaration needs a declaration: the endpoint opened a session and then failed,
+      // or the server card names it as a transport. A merely linked path that never spoke MCP —
+      // a blog post the endpoint pattern happened to match — made no claim, so nothing is said.
+      if (!probe.sessionOpened && !cardEndpoints.has(normalizeEndpoint(probe.url))) continue;
       add({
         id: `mcp-endpoint-failed-${probe.url}`.slice(0, 160),
         actionId: "site.search",
@@ -378,4 +430,13 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
 
 function slug(value: string): string {
   return value.toLowerCase().replace(/^https?:\/\//, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 70);
+}
+
+/** Parses an endpoint for comparison; an unparseable one can never match. */
+function normalizeEndpoint(value: string): string {
+  try {
+    return new URL(value).toString();
+  } catch {
+    return "";
+  }
 }

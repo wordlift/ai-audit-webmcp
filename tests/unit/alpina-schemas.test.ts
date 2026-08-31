@@ -1,5 +1,6 @@
-import { AlpinaAvailabilitySidecar, AlpinaSidecarError } from "../../src/server/sidecars/alpina/adapter.js";
+import { AlpinaAvailabilitySidecar, AlpinaSidecarError, resolveSidecarEntity } from "../../src/server/sidecars/alpina/adapter.js";
 import { alpinaAvailabilityInputSchema } from "../../src/server/sidecars/alpina/schemas.js";
+import type { DomainEntity } from "../../src/shared/types/index.js";
 
 const sidecar = new AlpinaAvailabilitySidecar();
 
@@ -49,5 +50,44 @@ describe("Alpina sidecar input contract", () => {
         expect(requested[0]).toContain("checkIn=2026-09-12");
         expect(requested[0]).toContain("adults=2");
       });
+  });
+});
+
+describe("resolving the entity a sidecar answer is about", () => {
+  const COLLECTED_AT = "2026-08-27T05:00:00.000Z";
+  const entity = (overrides: Partial<DomainEntity>): DomainEntity => ({
+    id: "https://alpina.travel/#organization",
+    types: ["LodgingBusiness"],
+    name: "Alpina Travel",
+    alternateNames: [],
+    sourceUrls: ["https://alpina.travel/"],
+    sameAs: [],
+    offers: [],
+    confidence: 0.9,
+    ...overrides,
+  });
+  const entities = [
+    entity({}),
+    entity({ id: "https://alpina.travel/#samspitze-4", types: ["Apartment"], name: "Samspitze 4" }),
+  ];
+
+  it("matches the property identifier against the entity's identity", () => {
+    expect(resolveSidecarEntity(entities, "samspitze-4", COLLECTED_AT)).toEqual({
+      id: "https://alpina.travel/#samspitze-4",
+      type: "Apartment",
+      name: "Samspitze 4",
+      sourceUrl: "https://alpina.travel/",
+      method: "json-ld",
+      collectedAt: COLLECTED_AT,
+    });
+  });
+
+  it("slug-matches a name when the id carries no hint", () => {
+    const renamed = [entity({ id: "urn:entity:2", types: ["WebPage", "Apartment"], name: "Samspitze 4" })];
+    expect(resolveSidecarEntity(renamed, "samspitze-4", COLLECTED_AT)?.type).toBe("Apartment");
+  });
+
+  it("returns nothing rather than guessing", () => {
+    expect(resolveSidecarEntity(entities, "some-other-property", COLLECTED_AT)).toBeNull();
   });
 });

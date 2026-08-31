@@ -70,6 +70,35 @@ describe("WordLift audit provider", () => {
     expect(JSON.stringify(bundle)).not.toMatch(/test-key/);
   });
 
+  it("maps which AI crawlers the robots policy admits", async () => {
+    const response = {
+      success: true,
+      data: {
+        url: "https://alpina.travel/",
+        overallScore: 90,
+        summary: "Solid foundations.",
+        siteFiles: {
+          score: 62,
+          status: "Needs Improvement",
+          botStatus: [
+            { name: "GPTBot", vendor: "OpenAI", status: "Allowed" },
+            { name: "ClaudeBot", vendor: "Anthropic", status: "Allowed" },
+            { name: "CCBot", status: "Blocked" },
+          ],
+        },
+      },
+    };
+    const bundle = await provider(vi.fn(async () => jsonResponse(response)) as unknown as typeof fetch).audit(
+      new URL("https://alpina.travel/"),
+    );
+
+    expect(bundle.foundation?.botAccess).toEqual([
+      { name: "GPTBot", vendor: "OpenAI", status: "Allowed" },
+      { name: "ClaudeBot", vendor: "Anthropic", status: "Allowed" },
+      { name: "CCBot", status: "Blocked" },
+    ]);
+  });
+
   it("maps the foundation score, summary, and findings without blending them into readiness", async () => {
     const bundle = await provider(vi.fn(async () => jsonResponse(liveShapedResponse)) as unknown as typeof fetch).audit(
       new URL("https://alpina.travel/"),

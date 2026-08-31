@@ -106,6 +106,19 @@ export interface McpToolProbe {
 }
 
 /**
+ * The site's declared schema.org SearchAction template, executed once. `confirmed` means the
+ * results page acknowledged the query; a blind 200 confirms nothing and accuses nothing.
+ */
+export interface SearchActionProbe {
+  template: string;
+  url: string;
+  query: string;
+  status: number;
+  confirmed: boolean;
+  note?: string;
+}
+
+/**
  * The result of talking to an MCP endpoint the page links to. `initialized` means the handshake
  * completed, which is a real round trip; a listed tool is a declaration until it is called.
  */
@@ -143,6 +156,8 @@ export interface SiteSnapshot {
   pageTools: PageAgentTool[];
   /** MCP endpoints linked from the page or declared on its server card, and what they answered. */
   mcpEndpoints: McpEndpointProbe[];
+  /** The declared SearchAction template and what happened when an agent executed it. */
+  searchAction?: SearchActionProbe;
   /**
    * True when the site answers unknown paths with its HTML page and a 200. On such a site the
    * absence of a document proves nothing, so a probe that comes back as HTML is not a broken

@@ -184,6 +184,14 @@ export class WordLiftAuditProvider implements AuditProvider {
         title: clip(win.title, 300),
         impact: win.impact ? clip(win.impact, 120) : undefined,
       })),
+      botAccess: (data.siteFiles?.botStatus ?? [])
+        .filter((bot) => bot.name && bot.status)
+        .slice(0, 12)
+        .map((bot) => ({
+          name: clip(bot.name, 60),
+          ...(bot.vendor ? { vendor: clip(bot.vendor, 60) } : {}),
+          status: clip(bot.status, 40),
+        })),
       provider: "wordlift-ai-audit",
       collectedAt,
       sourceUrl,

@@ -40,6 +40,9 @@ export interface OrchestratorOptions {
 
 export const PINNED_ALPINA_REPORT_ID = "11111111-1111-4111-8111-111111111111";
 
+/** Receives partial records while an audit runs; each patch replaces the stored running record. */
+type ProgressListener = (patch: Partial<ReportRecord>) => Promise<void>;
+
 interface CompiledInputs {
   canonicalUrl: string;
   categories: ContentCategory[];
@@ -76,8 +79,30 @@ export class AuditOrchestrator {
 
     const running = this.baseRecord(request.requestId, target.toString(), this.now());
     await this.store.put(running);
-    const finalReport = await this.run(running, target, request.fixtureId ?? null, request.archetypeOverride ?? undefined);
-    return this.store.finalize(finalReport);
+
+    // Progress is visible before the audit finishes: each patch replaces the running record, so
+    // a reader polling the report watches it fill in. A failed update never fails the audit.
+    let latest = running;
+    const onProgress = async (patch: Partial<ReportRecord>) => {
+      latest = { ...latest, ...patch };
+      await this.store.update(latest).catch(() => undefined);
+    };
+
+    try {
+      const finalReport = await this.run(
+        running,
+        target,
+        request.fixtureId ?? null,
+        request.archetypeOverride ?? undefined,
+        onProgress,
+      );
+      return await this.store.finalize(finalReport);
+    } catch (error) {
+      // A record left `running` traps every retry of this requestId in polling until it expires,
+      // so the failure itself becomes the terminal state before the error reaches the caller.
+      await this.finalizeFailed(running, error).catch(() => undefined);
+      throw error;
+    }
   }
 
   async get(id: string): Promise<ReportRecord | null> {
@@ -204,21 +229,41 @@ export class AuditOrchestrator {
     return this.store.createRevision(parent.id, child);
   }
 
+  /** Stores a terminal failed revision of a running report, with a caller-safe message. */
+  private async finalizeFailed(base: ReportRecord, cause: unknown): Promise<void> {
+    const message = cause instanceof ReportRequestError || cause instanceof UrlPolicyError
+      ? cause.message
+      : "The audit could not be completed.";
+    await this.store.finalize({
+      ...base,
+      status: "failed",
+      phase: "complete",
+      completedAt: this.now().toISOString(),
+      errors: [failure("report_failed", "understanding", message)],
+    });
+  }
+
   private async run(
     base: ReportRecord,
     target: URL,
     fixtureId: string | null,
     override?: Archetype,
+    onProgress?: ProgressListener,
   ): Promise<ReportRecord> {
     if (this.mode === "demo") {
       return this.compileFixture(base, this.fixtures.resolve(fixtureId, target.toString()), override);
     }
-    return this.compileLive(base, target, override);
+    return this.compileLive(base, target, override, onProgress);
   }
 
   /** Three phases: understand the site, map its expected actions, check what an agent can do. */
-  private async compileLive(base: ReportRecord, target: URL, override?: Archetype): Promise<ReportRecord> {
-    const inputs = await this.collectLiveInputs(target);
+  private async compileLive(
+    base: ReportRecord,
+    target: URL,
+    override?: Archetype,
+    onProgress?: ProgressListener,
+  ): Promise<ReportRecord> {
+    const inputs = await this.collectLiveInputs(target, onProgress);
 
     if (inputs.evidence.length === 0 && !inputs.foundation) {
       return {
@@ -234,15 +279,38 @@ export class AuditOrchestrator {
     return this.compile(base, inputs, override);
   }
 
-  private async collectLiveInputs(target: URL): Promise<CompiledInputs> {
+  private async collectLiveInputs(target: URL, onProgress?: ProgressListener): Promise<CompiledInputs> {
     const providers = this.options.providers ?? {};
     const collectedAt = this.now().toISOString();
     const errors: ReportError[] = [];
 
-    const [snapshotResult, auditResult] = await Promise.allSettled([
-      providers.scrape ? providers.scrape.collect(target) : Promise.resolve(null),
-      providers.audit ? providers.audit.audit(target) : Promise.resolve(null),
-    ]);
+    const scrapePromise = providers.scrape ? providers.scrape.collect(target) : Promise.resolve(null);
+    const auditPromise = providers.audit ? providers.audit.audit(target) : Promise.resolve(null);
+
+    // Each provider's arrival is published as soon as it lands — the page shows the entities
+    // while the foundation audit is still thinking, and vice versa. The progress jobs sit inside
+    // the same allSettled, so every partial is persisted before the final report overwrites it.
+    const progressJobs: Array<Promise<unknown>> = [];
+    if (onProgress) {
+      progressJobs.push(
+        scrapePromise
+          .then((snapshot) =>
+            snapshot
+              ? onProgress({
+                  phase: "mapping",
+                  canonicalUrl: snapshot.canonicalUrl,
+                  contextGraph: compileContextGraph(snapshot.pages, [], [], snapshot.canonicalUrl),
+                })
+              : undefined,
+          )
+          .catch(() => undefined),
+        auditPromise
+          .then((audit) => (audit?.foundation ? onProgress({ foundationAudit: audit.foundation }) : undefined))
+          .catch(() => undefined),
+      );
+    }
+
+    const [snapshotResult, auditResult] = await Promise.allSettled([scrapePromise, auditPromise, ...progressJobs]);
 
     let snapshot: SiteSnapshot | null = null;
     if (snapshotResult.status === "fulfilled") {
