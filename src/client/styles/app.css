@@ -470,6 +470,19 @@ button:disabled { opacity: 0.6; cursor: wait; }
 }
 
 .summary-copy > .summary-context-count { margin-top: 14px; color: var(--brand); font-family: var(--font-mono); font-size: 0.72rem; }
+.published-with {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 4px 12px;
+  border: 1px solid color-mix(in srgb, var(--wl-moss) 35%, white);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wl-moss) 8%, white);
+  color: var(--wl-moss);
+  font-size: 0.78rem;
+}
+.published-with strong { font-weight: 700; }
 
 .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-self: start; }
 
