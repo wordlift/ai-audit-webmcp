@@ -8,7 +8,7 @@ const running: ReportRecord = {
   status: "running",
   phase: "mapping",
   mode: "live",
-  requestedUrl: "https://www.freedomdebtrelief.com/",
+  requestedUrl: "https://www.northstar-lending.example/",
   createdAt: "2026-08-28T05:00:00.000Z",
   expiresAt: "2026-09-28T05:00:00.000Z",
   actionModelVersion: "0.1.0",
@@ -23,14 +23,14 @@ const running: ReportRecord = {
     provider: "wordlift-ai-audit",
   },
   contextGraph: {
-    pages: [{ url: "https://www.freedomdebtrelief.com/", title: "Freedom Debt Relief", role: "entry", headings: [], entityIds: [] }],
+    pages: [{ url: "https://www.northstar-lending.example/", title: "Northstar Lending", role: "entry", headings: [], entityIds: [] }],
     entities: [
       {
-        id: "https://www.freedomdebtrelief.com/#org",
+        id: "https://www.northstar-lending.example/#org",
         types: ["Organization"],
-        name: "Freedom Debt Relief",
+        name: "Northstar Lending",
         alternateNames: [],
-        sourceUrls: ["https://www.freedomdebtrelief.com/"],
+        sourceUrls: ["https://www.northstar-lending.example/"],
         sameAs: [],
         offers: [],
         confidence: 0.9,
@@ -46,10 +46,10 @@ describe("ReportProgress", () => {
   it("shows what has landed while the audit still runs", () => {
     render(<ReportProgress report={running} />);
 
-    expect(screen.getByText("freedomdebtrelief.com")).toBeVisible();
+    expect(screen.getByText("northstar-lending.example")).toBeVisible();
     expect(screen.getByText("Mapping expected actions")).toBeVisible();
     expect(screen.getByText("85/100")).toBeVisible();
-    expect(screen.getByText("Freedom Debt Relief")).toBeVisible();
+    expect(screen.getByText("Northstar Lending")).toBeVisible();
     expect(screen.getByText(/declared interfaces are being called/)).toBeVisible();
   });
 
