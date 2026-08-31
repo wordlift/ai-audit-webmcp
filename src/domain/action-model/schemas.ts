@@ -64,10 +64,10 @@ export const categoryRuleSchema = z
   .object({ prefix: z.string().startsWith("/"), archetype: archetypeSchema, weight: z.number().positive() })
   .strict();
 
-/** Rewords a generic action label when the site's content categories make it concrete. */
+/** Rewords a generic action label when the site's own context — its content categories or the entities it publishes — makes it concrete. */
 export const labelOverrideSchema = z
   .object({
-    categoryIncludes: z.string().min(2).max(120),
+    contextIncludes: z.string().min(2).max(120),
     actionId: z.string().min(1).max(160),
     label: z.string().min(1).max(120),
     description: z.string().min(1).max(500).optional(),

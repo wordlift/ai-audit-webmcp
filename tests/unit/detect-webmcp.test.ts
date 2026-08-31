@@ -374,12 +374,16 @@ describe("evidence provenance from representative pages", () => {
         },
       ],
     });
+    // The homepage renders the widget twice — header and footer — like a real global booking bar.
+    const home = widgetPage("/", "Home");
+    home.forms = [...home.forms, ...home.forms];
     const evidence = detectSiteEvidence(
-      snapshotWith({ pages: [widgetPage("/", "Home"), widgetPage("/huts", "Huts"), widgetPage("/imprint", "Imprint")] }),
+      snapshotWith({ pages: [home, widgetPage("/huts", "Huts"), widgetPage("/imprint", "Imprint")] }),
       COLLECTED_AT,
     ).evidence;
 
-    // One booking widget on three pages is one interface, not three findings.
+    // One booking widget on three pages is one interface, not three findings — and reach is
+    // counted in pages, so the doubled instance on the homepage does not inflate it to four.
     const forms = evidence.filter((item) => item.actionId === "availability.check" && item.kind === "form");
     expect(forms).toHaveLength(1);
     expect(forms[0].claim).toMatch(/present on 3 of the sampled pages/);

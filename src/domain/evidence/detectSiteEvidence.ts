@@ -91,17 +91,20 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
   // The first pass counts each distinct interface; the second emits it once, citing where it was
   // first observed, so provenance is never hidden behind an aggregate.
   const occurrences = new Map<string, number>();
-  const tally = (key: string) => occurrences.set(key, (occurrences.get(key) ?? 0) + 1);
   for (const page of pages) {
+    // The claim states reach in pages, so a widget rendered twice on one page — header and
+    // footer — still counts that page once.
+    const pageKeys = new Set<string>();
     for (const form of page.forms) {
-      if (form.hasSearchInput) tally(`form-search:${form.action}`);
-      if (form.hasDateInput) tally(`form-dates:${form.action}`);
-      if (form.inputNames.some((name) => SUBSCRIBE_INPUT.test(name)) && form.inputNames.length <= 3) tally(`form-subscribe:${form.action}`);
-      if (form.inputNames.some((name) => CONTACT_INPUT.test(name))) tally(`form-contact:${form.action}`);
+      if (form.hasSearchInput) pageKeys.add(`form-search:${form.action}`);
+      if (form.hasDateInput) pageKeys.add(`form-dates:${form.action}`);
+      if (form.inputNames.some((name) => SUBSCRIBE_INPUT.test(name)) && form.inputNames.length <= 3) pageKeys.add(`form-subscribe:${form.action}`);
+      if (form.inputNames.some((name) => CONTACT_INPUT.test(name))) pageKeys.add(`form-contact:${form.action}`);
     }
-    for (const type of new Set(page.jsonLdTypes)) tally(`jsonld:${type}`);
+    for (const type of page.jsonLdTypes) pageKeys.add(`jsonld:${type}`);
     const offerEntity = page.entities.find((entity) => entity.offers.length > 0);
-    if (offerEntity) tally(`offer:${offerEntity.name}`);
+    if (offerEntity) pageKeys.add(`offer:${offerEntity.name}`);
+    for (const key of pageKeys) occurrences.set(key, (occurrences.get(key) ?? 0) + 1);
   }
   const emitted = new Set<string>();
   const onPages = (key: string, singular: string): string => {

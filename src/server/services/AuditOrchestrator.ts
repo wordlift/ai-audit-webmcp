@@ -461,9 +461,12 @@ export class AuditOrchestrator {
   ) {
     // Observed evidence survives any archetype: actions the template does not expect, but the
     // audit saw on the site, stay in the map as unexpected instead of silently disappearing.
+    // Labels specialize from what the audit read on the site itself: its categories and the
+    // names of its entities — a "WordPress hosting" product makes availability mean domains.
+    const contextTerms = [...categoryNames, ...(contextGraph?.entities.map((entity) => entity.name) ?? [])];
     const graphActions = specializeActionLabels(
       withObservedActions(this.model, actions, evidence.map((item) => item.actionId)),
-      categoryNames,
+      contextTerms,
       this.model.labelOverrides,
     );
     return graphActions.map((action) => {

@@ -1,12 +1,30 @@
 [
   {
-    "categoryIncludes": "Web Hosting",
+    "contextIncludes": "web hosting",
     "actionId": "availability.check",
     "label": "Check domain availability",
     "description": "Check whether a domain name is available to register."
   },
   {
-    "categoryIncludes": "Domain Registration",
+    "contextIncludes": "wordpress hosting",
+    "actionId": "availability.check",
+    "label": "Check domain availability",
+    "description": "Check whether a domain name is available to register."
+  },
+  {
+    "contextIncludes": "vps hosting",
+    "actionId": "availability.check",
+    "label": "Check domain availability",
+    "description": "Check whether a domain name is available to register."
+  },
+  {
+    "contextIncludes": "domain registration",
+    "actionId": "availability.check",
+    "label": "Check domain availability",
+    "description": "Check whether a domain name is available to register."
+  },
+  {
+    "contextIncludes": "domain name",
     "actionId": "availability.check",
     "label": "Check domain availability",
     "description": "Check whether a domain name is available to register."
