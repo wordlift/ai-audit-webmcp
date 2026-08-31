@@ -10,6 +10,7 @@ describe("GET /api/health", () => {
       service: "ai-audit-webmcp",
       revision: "local",
       release: "development",
+      mode: "demo",
     });
     expect(response.headers["x-powered-by"]).toBeUndefined();
   });

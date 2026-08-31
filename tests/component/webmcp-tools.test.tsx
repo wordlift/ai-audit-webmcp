@@ -280,7 +280,9 @@ describe("WebMCP tool layer", () => {
 
     expect(result.isError).toBe(true);
     expect(toolText(result)).toMatch(/Unknown archetype/);
-    expect(fetchMock).not.toHaveBeenCalled();
+    // The home page's own health probe is not the audit API.
+    const auditCalls = fetchMock.mock.calls.filter(([input]) => !String(input).endsWith("/api/health"));
+    expect(auditCalls).toHaveLength(0);
   });
 
   it("scopes explain-capability to the visible report and unregisters it on unmount", async () => {
