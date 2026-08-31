@@ -1,7 +1,9 @@
-import { ChevronDown, ExternalLink, Gauge, ListChecks, Sparkles } from "lucide-react";
+import { Bot, ChevronDown, ExternalLink, Gauge, ListChecks, Sparkles } from "lucide-react";
 import type { FoundationAuditSummary } from "../../shared/types/index.js";
 
 const MAIN_AI_AUDIT_URL = "https://audit.wordlift.io";
+const ALLOWED = /allow|full|open|granted|ok/i;
+const BLOCKED = /block|disallow|denied|forbidden|no access/i;
 
 export function FoundationAuditDetails({ audit }: { audit: FoundationAuditSummary }) {
   return (
@@ -17,6 +19,23 @@ export function FoundationAuditDetails({ audit }: { audit: FoundationAuditSummar
             <p><strong>Source:</strong> WordLift AI Audit API{audit.collectedAt ? ` · collected ${new Date(audit.collectedAt).toLocaleString()}` : ""}</p>
             {audit.sourceUrl && <a href={audit.sourceUrl} target="_blank" rel="noreferrer">Audited site <ExternalLink /></a>}
           </div>
+          {(audit.botAccess?.length ?? 0) > 0 && (
+            <section className="crawler-access" aria-label="AI crawler access">
+              <h3><Bot /> AI crawler access</h3>
+              <p className="foundation-note">The robots policy is the front door: an agent that cannot crawl cannot ground.</p>
+              <div className="bot-chips">
+                {(audit.botAccess ?? []).map((bot) => (
+                  <span
+                    key={bot.name}
+                    className={`bot-chip ${BLOCKED.test(bot.status) ? "bot-blocked" : ALLOWED.test(bot.status) ? "bot-allowed" : ""}`}
+                    title={bot.vendor ? `${bot.vendor} · ${bot.status}` : bot.status}
+                  >
+                    {bot.name} · {bot.status.toLowerCase()}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
           {audit.quickWins.length > 0 && (
             <section className="quick-wins">
               <h3><Sparkles /> Quick wins</h3>

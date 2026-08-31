@@ -18,6 +18,8 @@ export interface AuditToolResult {
   foundationDimensions: Array<{ id: string; label: string; score?: number; status?: string }>;
   pagesAnalyzed: number;
   entities: Array<{ id: string; name: string; types: string[] }>;
+  /** Which AI crawlers the robots policy admits — the front door of agent access. */
+  botAccess: Array<{ name: string; status: string }>;
   priorityGaps: Array<{ actionId: string; label: string; state: string; reason: string }>;
   stages: {
     discover: StageCount;
@@ -103,6 +105,7 @@ export function summarizeReportForAgent(report: ReportRecord, reportUrl: string)
       name: entity.name,
       types: entity.types,
     })),
+    botAccess: (report.foundationAudit?.botAccess ?? []).slice(0, 8).map((bot) => ({ name: bot.name, status: bot.status })),
     priorityGaps: (report.priorities ?? []).map((gap) => ({
       actionId: gap.actionId,
       label: gap.label,
@@ -143,6 +146,11 @@ export function auditSummaryText(result: AuditToolResult): string {
   }
 
   if (result.foundationSummary) lines.push(`Foundation audit: ${result.foundationSummary}`);
+  if (result.botAccess.length > 0) {
+    lines.push(
+      `AI crawler access: ${result.botAccess.slice(0, 4).map((bot) => `${bot.name} ${bot.status.toLowerCase()}`).join(" · ")}.`,
+    );
+  }
   if (result.foundationFindings.length > 0) {
     lines.push("Top foundation findings:");
     for (const finding of result.foundationFindings.slice(0, 3)) lines.push(`- ${finding}`);
