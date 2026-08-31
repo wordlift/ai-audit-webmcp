@@ -2,99 +2,103 @@
 
 **Pages describe a site. Agents need an evidence-backed service map.**
 
-WordLift AI Audit accepts any public URL, classifies the site, analyzes up to four representative pages, extracts its business entities and language, infers the actions an agent should be able to perform, and verifies which human and machine interfaces actually support them.
+WordLift AI Audit takes any public URL, classifies the site, reads up to four representative pages, extracts the business entities and language, compiles the actions an agent should be able to perform, and verifies — by calling them — which human and machine interfaces actually support those actions.
 
 - Live application: [beta.audit.wordlift.io](https://beta.audit.wordlift.io)
 - Stable reference report: [beta.audit.wordlift.io/demo/alpina](https://beta.audit.wordlift.io/demo/alpina)
 - WordLift: [wordlift.io](https://wordlift.io)
 
-## The context engine
+## What a report contains
 
-The report is compiled from four separate layers. Classification is an input to the model—not the conclusion.
+1. **Executive summary** — the archetype and its confidence, the WordLift foundation score and the verified agent-readiness score side by side (never blended into one number), and the three highest-impact gaps.
+2. **The Context Engine** — a domain graph (organizations, products, services, places, articles, people, and offers, each with page provenance), a lexical graph (categories, names, aliases, topics), and the action layer (expected actions, entity–action bindings, interfaces, evidence, contracts). Selecting an entity filters the actions bound to it.
+3. **Capability map** — the expected journey for the archetype (discover → understand & decide → act → manage), each action with its human and agent evidence, a recommendation, and a JSON-LD contract.
+4. **Full WordLift audit** — the foundation audit behind progressive disclosure: score and summary, AI-crawler access, quick wins, the audited dimensions (those needing attention first, raw details folded away), remaining findings, and the way back to [audit.wordlift.io](https://audit.wordlift.io).
+5. **Approved sidecar** (alpina.travel only) — a read-only availability adapter that turns one human-only action into a verified agent function and records the proof in an immutable child revision.
 
-| Layer | What it contains | What it answers |
-| --- | --- | --- |
-| Classification | Google content categories plus observed business signals | What kind of site is this? |
-| Domain graph | Organizations, products, services, places, articles, people, offers, and their provenance | What does this business know and offer? |
-| Lexical graph | Categories, entity names, aliases, and page topics | How does the site describe those things? |
-| Action layer | Expected actions, entity-action bindings, interfaces, evidence, and contracts | What should an agent be able to do, to which entity, and can it do it now? |
+The report page exists from the first second: it polls the running record and shows each provider's result as it lands — entities from the collector, the foundation score from the audit — before the final report replaces them.
 
-The compiler supports six operating archetypes: commerce/retail, publisher/content, travel/hospitality, finance/insurance, SaaS, and a conservative fallback for other sites. Archetype rules select the expected journey; page and API evidence determine the actual state.
+## What gets verified, not just detected
 
-## End-to-end flow
+| Signal | What the audit does with it |
+| --- | --- |
+| WebMCP tools registered through `navigator.modelContext` or declared in markup | Read from the page and its scripts; they stay `declared` |
+| MCP endpoints linked from the page or named in its server card | Handshake, list tools, call the safe read-only ones; results are `invoked` or `failed` |
+| A schema.org `SearchAction` template | Executed once, read-only, with a query taken from the page; confirmed only when the results acknowledge it — a blind 200 stays `declared`, a non-200 is `failed` |
+| Discovery documents (`llms.txt`, `skill.md`, `.well-known/*`) | Fetched and validated; a soft 404 is a finding, not a presence |
+| Forms, links, structured data | `observed` human evidence and `declared` agent evidence |
+| The alpina.travel availability API | Called through the approved sidecar; only a real answer earns `sidecar-enabled` |
 
-1. Collect the entry page and up to three complementary same-origin pages: detail, offer/action, and policy/contact.
-2. Run the WordLift AI Audit foundation analysis in parallel, preserving its detailed sections and quick wins behind progressive disclosure.
-3. Classify the content and infer the operating archetype deterministically.
-4. Extract JSON-LD entities, offers, aliases, headings, forms, links, discovery documents, and declared agent tools.
-5. Compile the expected action model for the archetype and bind each relevant action to its entity or provider.
-6. Compare human and agent interfaces using typed, page-level evidence.
-7. Return a concise WebMCP summary and a shareable visual report with the complete context map, readiness gaps, and implementation contracts.
-
-An action is never marked agent-ready because a manifest exists. Only a successful invocation can raise verified readiness; declarations remain `unverified`.
+**Declaration earns zero readiness points.** Only `invoked` evidence raises the verified agent-readiness score. The compiler supports six operating archetypes — commerce/retail, publisher/content, travel/hospitality, finance/insurance, SaaS, and a conservative fallback — and archetype rules select the expected journey while page and API evidence determine the actual state.
 
 ## WebMCP tools
 
-The browser registers current-spec tools through `document.modelContext`:
+The application is itself a WebMCP surface. It registers tools through the WebMCP imperative API via `use-webmcp-tool` — on `navigator.modelContext` where the browser exposes it (Chrome's preview) and on `document.modelContext` per the Community Group draft; `src/client/webmcp/modelContextAlias.ts` points whichever is missing at the other, so the tools register wherever the browser looks:
 
-- `audit-website` — audits any safe public URL and returns a compact completed result plus the report URL.
-- `explain-capability` — explains one action, the entities it applies to, supporting interfaces, evidence, and contract.
-- `check-alpina-availability` — a controlled read-only reference adapter proving one safe sidecar pattern.
+- `audit-website` — audits any safe public URL and returns the archetype, both scores, pages and entities, crawler access, priorities, and the report URL. The report page opens immediately and fills in while the audit runs.
+- `explain-capability` — one action: the entities it applies to, its interfaces, evidence, governance, recommendation, and contract.
+- `explain-foundation-audit` — the WordLift foundation audit of the open report: score, dimensions, findings, quick wins.
+- `check-alpina-availability` — the approved read-only sidecar. When the report's context graph contains the property, the answer says which entity it is grounded in and where that entity was read.
 
-Alpina.travel is the pinned travel fixture and live adapter demonstration. It is not embedded in the classifier, entity model, action compiler, scoring system, or report UI. The same pipeline is covered by fixtures and tests for every supported archetype.
+Tool names and descriptions are identifiers agents key on; changing them is a breaking change.
 
 ## Run locally
 
 ```bash
 npm ci
-npm run dev:demo
+npm run dev:demo      # web app on :5173, API on :3000, no credentials
 ```
 
-Demo mode needs no WordLift, Google, Firestore, or ScrapingBee credentials. It uses deterministic fixtures for all six archetypes.
-
-For live mode, copy `.env.example`, configure the server-side providers, and run:
+Demo mode is the full pipeline fed by deterministic fixtures for all six archetypes; the home page offers the sample hosts as one-click chips. Live mode needs the providers described in [docs/OPERATIONS.md](docs/OPERATIONS.md):
 
 ```bash
+cp .env.example .env    # fill in live values
 npm run dev
 ```
 
-Useful verification commands:
+Gates, all of which CI runs on every push and pull request:
 
 ```bash
-npm run verify
-npm run test:e2e
+npm run verify          # typecheck + unit/integration/component tests + production build
+npm run test:e2e        # Playwright; builds and serves the app itself
 ```
+
+## Repository map
+
+| Path | What lives there |
+| --- | --- |
+| `action-model/v0.1.0/` | Versioned data: actions, archetype journeys, category and behavior mappings |
+| `src/domain/` | Pure compilation: classification, context graph, evidence detection, state derivation, scoring, contracts |
+| `src/server/` | Express API, providers (WordLift audit, native-fetch or ScrapingBee collection, Google NLP), stores (memory, Firestore), the alpina sidecar, security (URL policy, sanitization, rate limits) |
+| `src/client/` | React app, report UI, WebMCP tools |
+| `src/shared/` | Zod schemas (the report contract) and the agent-facing summaries |
+| `fixtures/` | Sanitized, dated site snapshots, one per archetype |
+| `tests/` | Unit, integration, component, golden, and e2e suites |
+| `docs/` | [Operations](docs/OPERATIONS.md), [brand](docs/BRAND.md), [submission](docs/submission/); `docs/hackathon-build/` is the historical planning record |
+
+Developer conventions are in [CONTRIBUTING.md](CONTRIBUTING.md); the working agreement for agent-assisted development is in [AGENTS.md](AGENTS.md).
 
 ## Public report contract
 
 Reports expose:
 
 - the inferred archetype, category evidence, confidence, and model version;
-- an account-free shareable URL;
+- an account-free shareable URL that resolves while the audit is still running;
 - up to four audited pages and their roles;
-- normalized domain entities, lexical entries, action interfaces, and entity-action bindings;
-- a separate WordLift foundation score and verification-only agent-readiness score;
+- normalized domain entities, lexical entries, action interfaces, and entity–action bindings;
+- a separate WordLift foundation score (with dimensions, quick wins, and crawler access) and a verification-only agent-readiness score;
 - three prioritized gaps;
 - JSON-LD capability contracts with entity target, inputs, outputs, governance, and recommended delivery;
-- bounded evidence and immutable child revisions for overrides or reverification.
+- bounded evidence and immutable child revisions for overrides, reverification, and sidecar invocations.
 
-Raw HTML, secrets, cookies, private identifiers, and unbounded provider responses are not stored.
+Raw HTML, secrets, cookies, private identifiers, and unbounded provider responses are never stored.
 
 ## Extend the model
 
-The versioned action model lives in `action-model/v0.1.0/`. Contributors can add or revise:
-
-- Google-category and behavior mappings;
-- archetype action journeys;
-- action definitions and governance;
-- evidence detectors;
-- entity-to-action expectations;
-- approved adapters and sidecars.
-
-The user-facing result remains a capability map and implementation plan. The ontology is the internal discipline that keeps the graph consistent and ready for future publication as the action layer of a WordLift knowledge graph.
+The versioned action model lives in `action-model/v0.1.0/`. Contributors can add or revise Google-category and behavior mappings, archetype journeys, action definitions and governance, evidence detectors, entity-to-action expectations, and approved adapters. The user-facing result remains a capability map and an implementation plan; the ontology is the internal discipline that keeps the graph consistent and ready for publication as the action layer of a WordLift knowledge graph.
 
 ## Hackathon boundary
 
-This public application, its schemas, context compiler, action model, evidence rules, UI, WebMCP tools, fixtures, security controls, and tests are new WebMCP Challenge work. The existing private WordLift AI Audit is an optional provider behind a public adapter boundary.
+This public application, its schemas, context compiler, action model, evidence rules, UI, WebMCP tools, fixtures, security controls, and tests are new WebMCP Challenge work. The existing private WordLift AI Audit is an optional provider behind a public adapter boundary. alpina.travel is the one client site shown with permission; every other example is a fixture or an unrelated public site.
 
 Licensed under [Apache-2.0](LICENSE).
