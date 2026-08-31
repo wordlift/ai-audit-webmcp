@@ -1,7 +1,8 @@
 /**
- * Minimal ambient types for the experimental WebMCP surface this build targets:
- * `document.modelContext.registerTool`, per the WebMCP Community Group draft.
- * The older `navigator.modelContext` shape is deliberately not declared.
+ * Minimal ambient types for the experimental WebMCP surface. The Community Group draft (and the
+ * `use-webmcp-tool` hook) put the imperative API on `document.modelContext`; Chrome's preview
+ * exposes it on `navigator.modelContext`. Both are declared because `modelContextAlias.ts` points
+ * whichever is missing at the other.
  */
 export interface WebMCPToolContent {
   type: string;
@@ -29,6 +30,9 @@ export interface WebMCPModelContext {
 
 declare global {
   interface Document {
+    modelContext?: WebMCPModelContext;
+  }
+  interface Navigator {
     modelContext?: WebMCPModelContext;
   }
 }

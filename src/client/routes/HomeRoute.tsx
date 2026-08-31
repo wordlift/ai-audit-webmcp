@@ -44,8 +44,11 @@ const SCAN_WORDS = [
 
 const WORD_MS = 2_200;
 
-/** Real sites verified to complete on the live deployment; the sample hosts only resolve in demo mode. */
-const LIVE_SITES = ["alpina.travel", "zurichna.com", "freedomdebtrelief.com"];
+/**
+ * Public sites verified to complete on the live deployment, one per archetype; the sample hosts
+ * only resolve in demo mode. alpina.travel is the only WordLift client that may appear here.
+ */
+const LIVE_SITES = ["alpina.travel", "allbirds.com", "wordlift.io"];
 const DEMO_SITES = ["alpina.travel", "shop.example", "publisher.example", "insurance.example", "saas.example", "organization.example"];
 
 async function waitUntilVisible(reportId: string): Promise<void> {

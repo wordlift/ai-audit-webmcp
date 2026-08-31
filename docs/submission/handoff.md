@@ -15,10 +15,17 @@ announced.
 | 5 | Paste the submission | https://webmcp.devpost.com | Your account |
 
 The deployed service is live in WordLift mode: real audit, Google V2 categories, Firestore reports,
-and the real Alpina endpoint. Verified in production on 2026-08-27: a live `alpina.travel` audit
-completed in 60s (foundation 94, readiness 0, archetype travel-hospitality high), and the sidecar
-turned `availability.check` from `human-only` into `sidecar-enabled` (readiness 13) in a child
-report naming its immutable parent.
+rendered collection through ScrapingBee, and the real Alpina endpoint. Verified in production on
+2026-08-31 (`/api/health` release matches `main`): a live `alpina.travel` audit completed in 42s
+(foundation 94, verified readiness 13 with `site.search` agent-ready through the executed
+SearchAction, archetype travel-hospitality high, three pages, four entities, no errors), the report
+page filled in while the audit ran, and the sidecar turns `availability.check` into
+`sidecar-enabled` in a child report naming its immutable parent (verified live on 2026-08-28 and in
+the browser suite on every run).
+
+Production runs `main`; deploys come from `main` with `SCRAPE_PROVIDER=scrapingbee` and the custom
+domain, as described in `docs/OPERATIONS.md`. Only alpina.travel may appear as a client site; the
+home page's suggested sites are unrelated public sites verified to complete on production.
 
 Google Cloud is already prepared: Natural Language enabled, Firestore TTL active on
 `reports.expiresAt`, `AI_AUDIT_WEBMCP_WORDLIFT_KEY` in Secret Manager, and the runtime service
@@ -41,9 +48,11 @@ curl -s -X POST "$URL/api/reports" -H 'content-type: application/json' \
 | Google V2 classification works | Same run: Mountain & Ski Resorts 0.86, Vacation Rentals 0.73 |
 | Firestore persistence works | Verified live: create, finalize, read back, immutable child revision, TTL ACTIVE |
 | Real Alpina API call works | In production: `human-only` → `sidecar-enabled`, readiness 0 → 13, child report names its parent |
-| WebMCP registration works | 11 component tests against a stubbed `document.modelContext` |
+| WebMCP registration works | Component tests against a stubbed model context for all four tools; the page registers on `navigator.modelContext` or `document.modelContext`, whichever the browser exposes |
+| Declared SearchAction is executed, not counted | Live: alpina's template confirmed (`search-action-executed`, invoked); a template answering HTTP 500 elsewhere was recorded as `failed` |
+| The report fills in while running | Live: the record went `running/understanding` → `running/mapping` (4 entities) → foundation 93 → `completed` over ~45s |
 | Nothing gets booked | Sidecar issues a GET with no body; asserted in tests |
-| The suite is green | 163 Vitest tests, 5 Playwright tests |
+| The suite is green | 246 Vitest tests, 11 Playwright tests, both jobs green in CI on every PR |
 
 Not yet proven, and stated as such everywhere: an end-to-end invocation from ChatGPT's built-in
 browser has not been recorded. Do that during the video if the setup cooperates; if it does not, the
@@ -106,9 +115,12 @@ new revision."
 ## Judge path (three minutes, no setup)
 
 1. Open the live URL.
-2. Enter `alpina.travel`, press **Map capabilities**.
+2. Click the **alpina.travel** chip (or type it and press **Build the service map**). The report
+   page opens at once and fills in.
 3. Click **Check availability** for evidence, recommendation, and contract.
-4. Scroll to **Approved sidecar**, press **Run agent function**, watch the state change.
+4. Scroll to **Approved sidecar**, press **Run agent function**, watch the state change. The
+   "Grounded in Samspitze 4 (Apartment)" line appears on the stable reference at `/demo/alpina`;
+   a fresh live audit only shows it when the collector happened to read the apartment page.
 5. Optional WebMCP: ChatGPT desktop built-in browser (GPT-5.6 Sol or Terra), or Chrome 149+ with
    `chrome://flags/#enable-webmcp-testing` and the Model Context Tool Inspector extension.
 
@@ -131,4 +143,8 @@ Fully offline alternative: `npm ci && npm run dev:demo`, no credentials.
 - Action model `0.1.0` is provisional; its vocabulary URI is not stable.
 - Archetype inference can be provisional on thin evidence; the user can override, which creates a
   child report.
-- ScrapingBee rendered collection is implemented but untested without a key.
+- Rendered collection (ScrapingBee) is what production uses; a renderer failure falls back to
+  native fetch, so a site that only publishes its catalogue after scripts run may come back with
+  fewer entities during an outage.
+- The collector reads up to four representative pages chosen by role; a specific detail page (such
+  as the alpina apartment) is not guaranteed to be among them on a live run.
