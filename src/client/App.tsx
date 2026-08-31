@@ -26,7 +26,7 @@ export function App() {
       </main>
       <footer>
         <p>Agent perspective. Human-readable evidence. Implementation-ready contracts.</p>
-        <a href="https://wordlift.io" target="_blank" rel="noreferrer">Build your agent-ready site with WordLift</a>
+        <a href="https://wordlift.io" target="_blank" rel="noreferrer">Build your Context Engine with WordLift</a>
       </footer>
     </div>
   );

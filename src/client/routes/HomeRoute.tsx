@@ -44,6 +44,10 @@ const SCAN_WORDS = [
 
 const WORD_MS = 2_200;
 
+/** Real sites verified to complete on the live deployment; the sample hosts only resolve in demo mode. */
+const LIVE_SITES = ["alpina.travel", "zurichna.com", "freedomdebtrelief.com"];
+const DEMO_SITES = ["alpina.travel", "shop.example", "publisher.example", "insurance.example", "saas.example", "organization.example"];
+
 async function waitUntilVisible(reportId: string): Promise<void> {
   for (let attempt = 0; attempt < 20; attempt += 1) {
     try {
@@ -63,6 +67,7 @@ export function HomeRoute() {
   const [wordIndex, setWordIndex] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<"demo" | "live" | null>(null);
   const timers = useRef<number[]>([]);
   const tickers = useRef<number[]>([]);
   const phase = phaseIndex === null ? null : PHASES[phaseIndex].label;
@@ -77,6 +82,23 @@ export function HomeRoute() {
 
   useEffect(() => stopClocks, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const response = await fetch("/api/health");
+        const health = (await response.json()) as { mode?: string };
+        if (!cancelled) setMode(health.mode === "demo" ? "demo" : "live");
+      } catch {
+        if (!cancelled) setMode("live");
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function startClocks() {
     let elapsed = 0;
     timers.current = PHASES.slice(0, -1).map((entry, index) => {
@@ -89,15 +111,15 @@ export function HomeRoute() {
     ];
   }
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
+  async function run(target: string) {
+    setUrl(target);
     setError(null);
     setPhaseIndex(0);
     setWordIndex(0);
     setSeconds(0);
     startClocks();
     try {
-      const { reportId, ready } = startReport(url);
+      const { reportId, ready } = startReport(target);
       // Leave for the report page as soon as the running record exists — it renders live
       // progress from there. A request refused outright still surfaces here.
       await Promise.race([ready, waitUntilVisible(reportId)]);
@@ -110,6 +132,13 @@ export function HomeRoute() {
       stopClocks();
     }
   }
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    void run(url);
+  }
+
+  const suggested = mode === "demo" ? DEMO_SITES : LIVE_SITES;
 
   return (
     <section className="home-page">
@@ -137,6 +166,24 @@ export function HomeRoute() {
             </button>
           </div>
           <p>No account required. Public websites only.</p>
+          {mode && (
+            <div className="try-sites" aria-label="Suggested sites">
+              <span className="try-sites-label">
+                {mode === "demo" ? "Demo mode — pick a sample site:" : "No site handy? Try one of these:"}
+              </span>
+              {suggested.map((host) => (
+                <button
+                  key={host}
+                  type="button"
+                  className="try-site"
+                  disabled={Boolean(phase)}
+                  onClick={() => void run(`https://${host}`)}
+                >
+                  {host} <ArrowRight size={13} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+          )}
           {phase && (
             <div className="progress-message">
               {/* Only the real phase is announced: the rotating word would talk over a screen reader. */}
@@ -158,7 +205,6 @@ export function HomeRoute() {
           </article>
         ))}
       </section>
-      <p className="demo-note">Open demo sites: shop.example · publisher.example · insurance.example · saas.example · organization.example · alpina.travel</p>
     </section>
   );
 }

@@ -26,7 +26,11 @@ describe("FoundationAuditDetails", () => {
     fireEvent.click(screen.getByText("Full WordLift audit"));
     expect(screen.getByText("Content freshness — Recommendation: Publish modification dates")).toBeVisible();
     expect(screen.getByText("Publish modification dates")).toBeVisible();
+    expect(screen.getByText("Foundation score")).toBeVisible();
     expect(screen.getByRole("link", { name: /audited site/i })).toHaveAttribute("href", "https://example.com/");
-    expect(screen.getByRole("link", { name: /main wordlift ai audit/i })).toHaveAttribute("href", "https://audit.wordlift.io");
+    // The way back to the full audit is offered both inside the panel and beside it.
+    const backLinks = screen.getAllByRole("link", { name: /audit\.wordlift\.io/i });
+    expect(backLinks.length).toBeGreaterThanOrEqual(2);
+    for (const link of backLinks) expect(link).toHaveAttribute("href", "https://audit.wordlift.io");
   });
 });
