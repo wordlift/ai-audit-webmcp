@@ -24,6 +24,17 @@ export class MemoryReportStore implements ReportStore {
     return structuredClone(report);
   }
 
+  async update(input: ReportRecord): Promise<ReportRecord> {
+    const report = parseStoredReport(input, this.maximumBytes);
+    const existing = this.#records.get(report.id);
+    if (!existing || existing.status !== "running") {
+      throw new Error(`Report ${report.id} is not an active running report`);
+    }
+    if (report.status !== "running") throw new Error("A progress update must stay running");
+    this.#records.set(report.id, structuredClone(report));
+    return structuredClone(report);
+  }
+
   async finalize(input: ReportRecord): Promise<ReportRecord> {
     const report = parseStoredReport(input, this.maximumBytes);
     const existing = this.#records.get(report.id);

@@ -135,16 +135,13 @@ async function callSafeTools(
   let nextId = TOOLS_LIST_ID + 1;
   let listingRan = false;
 
-  const attempt = async (tool: McpToolDescriptor): Promise<void> => {
+  /** Returns false when a required argument would have to be guessed; the caller decides what that means. */
+  const attempt = async (tool: McpToolDescriptor): Promise<boolean> => {
     const args = buildArguments(tool.inputSchema, seed);
-    if (args === null) {
-      // Every unfilled argument is an identifier; it may exist after an earlier call returns one.
-      deferred.push(tool);
-      return;
-    }
+    if (args === null) return false;
     if (budget <= 0) {
       results.set(tool.name, skipped(tool.name, "the per-endpoint call budget was already spent"));
-      return;
+      return true;
     }
 
     budget -= 1;
@@ -173,6 +170,7 @@ async function callSafeTools(
       listingRan = true;
       seed.id ??= harvestIdentifier(outcome);
     }
+    return true;
   };
 
   for (const tool of declared) {
@@ -181,21 +179,24 @@ async function callSafeTools(
       results.set(tool.name, skipped(tool.name, note ?? "not safe to call"));
       continue;
     }
-    await attempt(tool);
+    // Every unfilled argument is an identifier or something like one; it may exist after an
+    // earlier call returns one.
+    if (!(await attempt(tool))) deferred.push(tool);
   }
 
   // Second pass: a tool that needed an identifier can now be tried with one this server returned.
+  // Nothing is ever re-deferred here — what still cannot be filled is skipped — so the pass ends.
   const shortfall = listingRan
     ? "this server's own search results carry no usable identifier"
     : "it needs an identifier the audit will not invent";
 
   for (const tool of deferred) {
-    if (seed.id === undefined) {
-      results.set(tool.name, skipped(tool.name, shortfall));
-      continue;
+    if (seed.id === undefined || !(await attempt(tool))) {
+      results.set(
+        tool.name,
+        skipped(tool.name, seed.id === undefined ? shortfall : "it needs an argument the audit will not invent"),
+      );
     }
-    await attempt(tool);
-    if (!results.has(tool.name)) results.set(tool.name, skipped(tool.name, shortfall));
   }
 
   return declared.map((tool) => results.get(tool.name) ?? skipped(tool.name, "not attempted"));

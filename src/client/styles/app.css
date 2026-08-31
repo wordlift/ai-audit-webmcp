@@ -901,6 +901,49 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .sidecar-guardrail { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--muted); font-size: 0.8rem; }
 .sidecar-result { margin: 0; padding: 15px; border-radius: 12px; background: var(--wl-neutral-900); color: #e9eef8; font-family: var(--font-mono); font-size: 0.74rem; line-height: 1.5; white-space: pre-wrap; overflow: auto; max-height: 280px; }
 
+/* ---------- The report while it is being made ---------- */
+.report-progress h1 { font-size: 2.2rem; margin: 8px 0 18px; }
+.report-progress h1 span { color: var(--brand); }
+.progress-phases { list-style: none; display: flex; flex-wrap: wrap; gap: 18px; margin: 0 0 22px; padding: 0; }
+.progress-phases li { display: flex; align-items: center; gap: 8px; color: var(--faint); font-size: 0.95rem; }
+.progress-phases li.active { color: var(--ink); font-weight: 600; }
+.progress-phases li.done { color: var(--wl-moss); }
+.progress-phases li svg { width: 17px; height: 17px; }
+.progress-phases li i {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid var(--line);
+  font-style: normal; font-size: 0.72rem;
+}
+.spin { animation: progress-spin 1.1s linear infinite; }
+@keyframes progress-spin { to { transform: rotate(360deg); } }
+@keyframes arrival-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.progress-arrival {
+  margin: 0 0 16px; padding: 14px 16px;
+  border: 1px solid var(--line-subtle); border-radius: 10px; background: var(--surface);
+  animation: arrival-in 0.45s ease both;
+}
+.progress-arrival header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; color: var(--muted); font-size: 0.85rem; }
+.progress-arrival header strong { font-size: 1.4rem; color: var(--ink); }
+.progress-arrival p { margin: 0; color: var(--muted); font-size: 0.92rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.progress-entities { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.progress-entities li {
+  display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px;
+  border: 1px solid var(--line-subtle); border-radius: 999px; background: var(--page); font-size: 0.85rem;
+}
+.progress-entities li span { color: var(--faint); font-size: 0.75rem; }
+.progress-footnote { color: var(--faint); font-size: 0.88rem; }
+
+/* AI crawler access inside the foundation audit. */
+.crawler-access h3 { display: flex; align-items: center; gap: 6px; }
+.foundation-note { margin: 0 0 8px; font-size: 0.85rem; color: var(--faint); }
+.bot-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.bot-chip {
+  padding: 3px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;
+  border: 1px solid var(--line-subtle); background: var(--page); color: var(--muted);
+}
+.bot-allowed { color: var(--wl-moss); background: rgba(34, 162, 134, 0.1); border-color: rgba(34, 162, 134, 0.3); }
+.bot-blocked { color: var(--wl-danger); background: rgba(197, 48, 48, 0.08); border-color: rgba(197, 48, 48, 0.3); }
+
 /* ---------- States ---------- */
 .report-loading, .report-error { min-height: 60vh; display: grid; place-content: center; text-align: center; }
 .report-error svg { margin: auto; color: var(--wl-danger); width: 42px; height: 42px; }
@@ -927,7 +970,7 @@ button:disabled { opacity: 0.6; cursor: wait; }
 @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .progress-dot, .progress-word { animation: none; }
+  .progress-dot, .progress-word, .spin, .progress-arrival { animation: none; }
 }
 
 @media (max-width: 1000px) {

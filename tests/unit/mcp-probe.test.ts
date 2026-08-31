@@ -196,6 +196,58 @@ describe("calling the tools a live MCP server says are safe", () => {
     expect(probe.tools[0]).toMatchObject({ called: false, note: "it needs an identifier the audit will not invent" });
   });
 
+  it("skips a deferred tool whose other required argument cannot be filled, and always terminates", async () => {
+    vi.stubGlobal("fetch", streamableServer({
+      tools: [
+        {
+          name: "get_section",
+          annotations: READ_ONLY,
+          inputSchema: { type: "object", properties: { section: { type: "string" } }, required: ["section"] },
+        },
+        {
+          name: "search_products",
+          annotations: READ_ONLY,
+          inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+        },
+      ],
+    }));
+
+    const probe = await probeMcpEndpoint(ENDPOINT, POLICY);
+
+    // The search call harvested an identifier, but `section` is not one. Re-deferring this
+    // combination inside the second pass once spun the event loop forever.
+    expect(probe.tools.find((tool) => tool.name === "search_products")).toMatchObject({ called: true, ok: true });
+    expect(probe.tools.find((tool) => tool.name === "get_section")).toMatchObject({
+      called: false,
+      note: "it needs an argument the audit will not invent",
+    });
+  });
+
+  it("fills a camelCase identifier with one the server returned", async () => {
+    vi.stubGlobal("fetch", streamableServer({
+      tools: [
+        {
+          name: "get_product",
+          annotations: READ_ONLY,
+          inputSchema: { type: "object", properties: { productId: { type: "string" } }, required: ["productId"] },
+        },
+        {
+          name: "search_products",
+          annotations: READ_ONLY,
+          inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+        },
+      ],
+    }));
+
+    const probe = await probeMcpEndpoint(ENDPOINT, POLICY);
+
+    expect(probe.tools.find((tool) => tool.name === "get_product")).toMatchObject({
+      called: true,
+      ok: true,
+      arguments: '{"productId":"samspitze-4"}',
+    });
+  });
+
   it("records a call the server rejected as a failure", async () => {
     vi.stubGlobal("fetch", streamableServer({
       tools: [{

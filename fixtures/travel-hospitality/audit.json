@@ -85,6 +85,15 @@
         "sourceUrl": "https://alpina.travel/alpinest-feriendorf-lungau",
         "sameAs": [],
         "offers": [{ "name": "Apartment stay", "priceCurrency": "EUR", "availability": "Live availability", "url": "https://alpina.travel/api/booking/availability" }]
+      }, {
+        "id": "https://data.wordlift.io/wl01855/samspitze-4",
+        "types": ["Apartment"],
+        "name": "Samspitze 4",
+        "alternateNames": [],
+        "description": "A family apartment at AlpiNest Feriendorf Lungau, the unit the availability sidecar checks.",
+        "sourceUrl": "https://alpina.travel/alpinest-feriendorf-lungau",
+        "sameAs": [],
+        "offers": [{ "name": "Apartment stay", "priceCurrency": "EUR", "availability": "Live availability", "url": "https://alpina.travel/api/booking/availability" }]
       }],
       "pageTools": [],
       "truncated": false
