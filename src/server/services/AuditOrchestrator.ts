@@ -402,7 +402,7 @@ export class AuditOrchestrator {
     const rawCapabilities = this.capabilities(graph.actions, inputs.evidence, inputs.canonicalUrl);
     const contextGraph = compileContextGraph(inputs.pages, inputs.categories, rawCapabilities, inputs.canonicalUrl);
     const capabilities = this.capabilities(graph.actions, inputs.evidence, inputs.canonicalUrl, contextGraph);
-    const publishedWith = detectWordLift(contextGraph.entities, inputs.wordlift);
+    const publishedWith = detectWordLift(contextGraph.entities, inputs.wordlift, inputs.canonicalUrl);
     const topScore = inference.rankedArchetypes[0]?.score ?? 0;
     const retryable = inputs.errors.some((error) => error.retryable);
 

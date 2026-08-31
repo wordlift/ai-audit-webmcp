@@ -11,7 +11,8 @@ async function openTravelReport(page: Page) {
 test("visual proof captures the desktop capability map", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await openTravelReport(page);
-  await expect(page.getByText(/Structured data published with/)).toBeVisible();
+  await expect(page.getByText(/This site runs/)).toBeVisible();
+  await expect(page.getByRole("link", { name: /WordLift dashboard/ })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("travel-report-desktop.png"), fullPage: true });
   await page.getByText("Full WordLift audit").click();
   await expect(page.getByRole("heading", { name: "Audit findings" })).toBeVisible();

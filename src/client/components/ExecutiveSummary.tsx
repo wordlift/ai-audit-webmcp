@@ -11,9 +11,13 @@ export function ExecutiveSummary({ report }: { report: ReportRecord }) {
         <p>{report.foundationAudit?.summary ?? "This report maps the functions an agent needs against the evidence available today."}</p>
         {report.contextGraph && <p className="summary-context-count">Built from {report.contextGraph.pages.length} representative pages, {report.contextGraph.entities.length} named entities and {report.contextGraph.interfaces.length} observed interfaces.</p>}
         {report.publishedWith && (
-          <p className="published-with" title={report.publishedWith.evidence}>
-            <Sparkles size={14} aria-hidden="true" /> Structured data published with <strong>{report.publishedWith.name}</strong>
-          </p>
+          <aside className="published-with" aria-label="Publishing platform">
+            <p>
+              <Sparkles size={15} aria-hidden="true" /> This site runs <strong>{report.publishedWith.name}</strong>
+            </p>
+            <small>{report.publishedWith.evidence}.</small>
+            <a href="https://my.wordlift.io" target="_blank" rel="noreferrer">Manage it in your WordLift dashboard →</a>
+          </aside>
         )}
       </div>
       <div className="score-grid" aria-label="Readiness scores">

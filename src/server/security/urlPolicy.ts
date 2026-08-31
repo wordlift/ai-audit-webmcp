@@ -35,6 +35,8 @@ export interface UrlPolicyOptions {
   maxBytes?: number;
   timeoutMs?: number;
   userAgent?: string;
+  /** Response headers to surface in the result — the first hop that carries one wins. */
+  captureHeaders?: string[];
 }
 
 const DEFAULTS = {
@@ -207,6 +209,8 @@ export interface SafeFetchResult {
   contentType: string;
   body: string;
   truncated: boolean;
+  /** The requested captureHeaders that any hop answered with. */
+  headers: Record<string, string>;
 }
 
 /**
@@ -220,6 +224,7 @@ export async function safeFetch(target: string | URL, options: UrlPolicyOptions 
 
   let current = target instanceof URL ? normalizeTargetUrl(target.toString()) : normalizeTargetUrl(target);
   const started = Date.now();
+  const captured: Record<string, string> = {};
 
   for (let hop = 0; hop <= maxRedirects; hop += 1) {
     await assertPublicDestination(current, options);
@@ -227,6 +232,10 @@ export async function safeFetch(target: string | URL, options: UrlPolicyOptions 
     if (remaining <= 0) throw new UrlPolicyError("collection_timeout", "Collecting this page took too long.", 504);
 
     const response = await request(current, remaining, options);
+    for (const name of options.captureHeaders ?? []) {
+      const value = response.headers.get(name);
+      if (value && !(name in captured)) captured[name] = value;
+    }
 
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");
@@ -245,6 +254,7 @@ export async function safeFetch(target: string | URL, options: UrlPolicyOptions 
       contentType: response.headers.get("content-type") ?? "",
       body,
       truncated,
+      headers: captured,
     };
   }
 
