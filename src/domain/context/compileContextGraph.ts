@@ -38,44 +38,11 @@ export function compileContextGraph(
   canonicalUrl: string,
 ): ContextGraph {
   const entities = mergeEntities(pages, canonicalUrl);
-  const actionIdsByEntity = new Map(
-    entities.map((entity) => [
-      entity.id,
-      new Set(
-        entity.types.includes("WebSite")
-          ? capabilities.map((capability) => capability.actionId)
-          : entity.types.flatMap((type) => ENTITY_ACTIONS[type] ?? []),
-      ),
-    ]),
-  );
+  const actionIdsByEntity = actionMapForEntities(entities, capabilities);
   const interfaces = capabilities.flatMap((capability) =>
     capability.evidence.map((evidence) => interfaceFrom(evidence, capability, entities, actionIdsByEntity)),
   );
-  const bindings = entities.flatMap((entity) =>
-    capabilities
-      .filter((capability) => actionIdsByEntity.get(entity.id)?.has(capability.actionId))
-      .map((capability) => {
-        const evidence = capability.evidence.filter((item) => evidenceApplies(item, entity));
-        const interfaceIds = interfaces
-          .filter((item) => item.actionId === capability.actionId && item.entityIds.includes(entity.id))
-          .map((item) => item.id);
-        const basis = new Set<"archetype" | "structured-data" | "observed-interface">(["archetype"]);
-        if (evidence.some((item) => item.kind === "structured-data")) basis.add("structured-data");
-        if (evidence.some((item) => item.kind !== "structured-data")) basis.add("observed-interface");
-        return {
-          entityId: entity.id,
-          actionId: capability.actionId,
-          role: entity.types.some((type) => type === "Organization" || type === "WebSite")
-            ? ("provider" as const)
-            : ("object" as const),
-          basis: [...basis],
-          state: capability.state,
-          evidenceIds: evidence.map((item) => item.id),
-          interfaceIds,
-          confidence: capability.agentSupport ? 1 : evidence.length > 0 ? 0.9 : 0.7,
-        };
-      }),
-  );
+  const bindings = compileBindings(entities, capabilities, interfaces, actionIdsByEntity);
 
   const auditedPages = pages.length > 0 ? pages : [emptyPage(canonicalUrl)];
   return {
@@ -108,37 +75,65 @@ export function appliesToForAction(context: ContextGraph, actionId: string) {
     .map((entity) => ({ id: entity.id, name: entity.name, types: entity.types }));
 }
 
-/** Revisions keep the same entity/lexical graph while invocation evidence advances interfaces and bindings. */
+/** Revisions keep the entity/lexical graph while rebuilding the action layer from current capabilities. */
 export function refreshContextGraph(context: ContextGraph, capabilities: CapabilityResult[]): ContextGraph {
-  const entityActions = new Map<string, Set<string>>();
-  for (const binding of context.bindings) {
-    const actions = entityActions.get(binding.entityId) ?? new Set<string>();
-    actions.add(binding.actionId);
-    entityActions.set(binding.entityId, actions);
-  }
-  const generated = capabilities.flatMap((capability) =>
-    capability.evidence.map((evidence) => interfaceFrom(evidence, capability, context.entities, entityActions)),
+  const actionIdsByEntity = actionMapForEntities(context.entities, capabilities);
+  const interfaces = dedupeInterfaces(capabilities.flatMap((capability) =>
+    capability.evidence.map((evidence) => interfaceFrom(evidence, capability, context.entities, actionIdsByEntity)),
+  ));
+  const bindings = compileBindings(
+    context.entities,
+    capabilities,
+    interfaces,
+    actionIdsByEntity,
   );
-  const interfaces = dedupeInterfaces([...context.interfaces, ...generated]);
-  const byAction = new Map(capabilities.map((capability) => [capability.actionId, capability]));
-  const bindings = context.bindings.map((binding) => {
-    const capability = byAction.get(binding.actionId);
-    if (!capability) return binding;
-    const evidence = capability.evidence.filter((item) => {
-      const entity = context.entities.find((candidate) => candidate.id === binding.entityId);
-      return entity ? evidenceApplies(item, entity) : false;
-    });
-    return {
-      ...binding,
-      state: capability.state,
-      evidenceIds: evidence.map((item) => item.id),
-      interfaceIds: interfaces
-        .filter((item) => item.actionId === binding.actionId && item.entityIds.includes(binding.entityId))
-        .map((item) => item.id),
-      confidence: capability.agentSupport ? 1 : evidence.length > 0 ? 0.9 : binding.confidence,
-    };
-  });
   return { ...context, interfaces, bindings: bindings.slice(0, 240) };
+}
+
+function actionMapForEntities(entities: DomainEntity[], capabilities: CapabilityResult[]) {
+  return new Map(
+    entities.map((entity) => [
+      entity.id,
+      new Set(
+        entity.types.includes("WebSite")
+          ? capabilities.map((capability) => capability.actionId)
+          : entity.types.flatMap((type) => ENTITY_ACTIONS[type] ?? []),
+      ),
+    ]),
+  );
+}
+
+function compileBindings(
+  entities: DomainEntity[],
+  capabilities: CapabilityResult[],
+  interfaces: ActionInterface[],
+  actionIdsByEntity: Map<string, Set<string>>,
+): ContextGraph["bindings"] {
+  return entities.flatMap((entity) =>
+    capabilities
+      .filter((capability) => actionIdsByEntity.get(entity.id)?.has(capability.actionId))
+      .map((capability) => {
+        const evidence = capability.evidence.filter((item) => evidenceApplies(item, entity));
+        const interfaceIds = interfaces
+          .filter((item) => item.actionId === capability.actionId && item.entityIds.includes(entity.id))
+          .map((item) => item.id);
+        const basis = new Set<"archetype" | "structured-data" | "observed-interface">(["archetype"]);
+        if (evidence.some((item) => item.kind === "structured-data")) basis.add("structured-data");
+        if (evidence.some((item) => item.kind !== "structured-data")) basis.add("observed-interface");
+        return {
+          entityId: entity.id,
+          actionId: capability.actionId,
+          role: entity.types.some((type) => type === "Organization" || type === "WebSite")
+            ? ("provider" as const)
+            : ("object" as const),
+          basis: [...basis],
+          state: capability.state,
+          evidenceIds: evidence.map((item) => item.id),
+          interfaceIds,
+          confidence: capability.agentSupport ? 1 : evidence.length > 0 ? 0.9 : 0.7,
+        };
+      }),
+  ).slice(0, 240);
 }
 
 function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string): DomainEntity[] {
@@ -230,10 +225,15 @@ function interfaceFrom(
   entities: DomainEntity[],
   actionIdsByEntity: Map<string, Set<string>>,
 ): ActionInterface {
+  const candidates = entities.filter((entity) => actionIdsByEntity.get(entity.id)?.has(capability.actionId));
+  const sourceMatches = candidates.filter((entity) => evidenceApplies(evidence, entity));
+  const scopedEntities = sourceMatches.length > 0
+    ? sourceMatches
+    : candidates.filter((entity) => entity.types.includes("WebSite"));
   return {
     id: `interface:${evidence.id}`,
     actionId: capability.actionId,
-    entityIds: entities.filter((entity) => actionIdsByEntity.get(entity.id)?.has(capability.actionId)).map((entity) => entity.id),
+    entityIds: (scopedEntities.length > 0 ? scopedEntities : candidates).map((entity) => entity.id),
     name: interfaceName(evidence, capability.label),
     protocol: protocolFor(evidence),
     audience: evidence.audience,
@@ -260,8 +260,7 @@ function protocolFor(evidence: CapabilityEvidence): ActionInterface["protocol"] 
 }
 
 function evidenceApplies(evidence: CapabilityEvidence, entity: DomainEntity): boolean {
-  if (entity.sourceUrls.includes(evidence.sourceUrl)) return true;
-  return evidence.kind === "structured-data" && entity.types.some((type) => evidence.claim.includes(type));
+  return entity.sourceUrls.includes(evidence.sourceUrl);
 }
 
 function entityRank(entity: DomainEntity): number {

@@ -15,6 +15,7 @@ set -euo pipefail
 PROJECT="${1:-${GOOGLE_CLOUD_PROJECT:-ai-audit-wordlift}}"
 REGION="${2:-us-west1}"
 SERVICE="ai-audit-webmcp"
+RELEASE_SHA="${BUILD_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)}"
 
 PROJECT_NUMBER="$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')"
 # Share links are baked into stored reports, so a custom domain must survive a redeploy.
@@ -33,9 +34,10 @@ gcloud run deploy "$SERVICE" \
   --cpu 1 \
   --max-instances 5 \
   --concurrency 20 \
-  --set-env-vars "^##^NODE_ENV=production##AUDIT_PROVIDER=wordlift##AI_AUDIT_BASE_URL=https://api.wordlift.io##SCRAPE_PROVIDER=native-fetch##CLASSIFIER_PROVIDER=google-nlp##REPORT_STORE=firestore##GOOGLE_CLOUD_PROJECT=${PROJECT}##PUBLIC_APP_URL=${PUBLIC_URL}##REPORT_TTL_DAYS=30" \
+  --set-env-vars "^##^NODE_ENV=production##AUDIT_PROVIDER=wordlift##AI_AUDIT_BASE_URL=https://api.wordlift.io##SCRAPE_PROVIDER=native-fetch##CLASSIFIER_PROVIDER=google-nlp##REPORT_STORE=firestore##GOOGLE_CLOUD_PROJECT=${PROJECT}##PUBLIC_APP_URL=${PUBLIC_URL}##REPORT_TTL_DAYS=30##BUILD_SHA=${RELEASE_SHA}" \
   --set-secrets "WORDLIFT_API_KEY=AI_AUDIT_WEBMCP_WORDLIFT_KEY:latest"
 
 echo
 echo "Smoke test:"
 echo "  curl -s ${PUBLIC_URL}/api/health"
+echo "Expected release: ${RELEASE_SHA}"

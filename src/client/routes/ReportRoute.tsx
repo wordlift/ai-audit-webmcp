@@ -63,9 +63,10 @@ export function ReportRoute() {
       {report.status === "partial" && <div className="partial-banner" role="status">Partial report: {report.errors[0]?.message}</div>}
       <ExecutiveSummary report={report} />
       {report.classification && <ClassificationCard classification={report.classification} onOverride={override} />}
-      {report.contextGraph && (
+      {report.contextGraph && report.classification && (
         <ContextEngineMap
           context={report.contextGraph}
+          classification={report.classification}
           capabilities={report.capabilities ?? []}
           selectedEntityId={selectedEntityId}
           onSelectEntity={setSelectedEntityId}
