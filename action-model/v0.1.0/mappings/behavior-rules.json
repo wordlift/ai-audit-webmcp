@@ -1,5 +1,6 @@
 [
   {"signal":"schema:Product","archetype":"commerce-retail","weight":2},
+  {"signal":"path:cart","archetype":"commerce-retail","weight":2},
   {"signal":"path:checkout","archetype":"commerce-retail","weight":2},
   {"signal":"schema:Article","archetype":"publisher-content","weight":2},
   {"signal":"schema:LodgingBusiness","archetype":"travel-hospitality","weight":3},

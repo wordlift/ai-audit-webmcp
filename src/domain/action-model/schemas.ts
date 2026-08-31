@@ -49,7 +49,12 @@ export const manifestSchema = z
     releasedAt: z.string().date(),
     provisional: z.boolean(),
     classification: z
-      .object({ evidenceFloor: z.number().positive(), marginFloor: z.number().nonnegative() })
+      .object({
+        evidenceFloor: z.number().positive(),
+        marginFloor: z.number().nonnegative(),
+        /** Share of all scored evidence one archetype must hold to be accepted below the floor. */
+        dominanceShare: z.number().min(0.5).max(1).default(0.75),
+      })
       .strict(),
     provenance: z.array(z.string().min(1)).min(1),
   })

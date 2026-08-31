@@ -2,7 +2,7 @@
   "version": "0.1.0",
   "releasedAt": "2026-08-27",
   "provisional": true,
-  "classification": { "evidenceFloor": 1.5, "marginFloor": 0.4 },
+  "classification": { "evidenceFloor": 1.5, "marginFloor": 0.4, "dominanceShare": 0.75 },
   "provenance": [
     "Google Natural Language V2 content categories",
     "WordLift Agentic Commerce action patterns",
