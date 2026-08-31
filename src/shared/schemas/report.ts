@@ -299,6 +299,19 @@ export const foundationAuditSummarySchema = z
       )
       .max(30)
       .default([]),
+    /** Which AI crawlers the robots policy admits — the front door of agent access. */
+    botAccess: z
+      .array(
+        z
+          .object({
+            name: z.string().min(1).max(60),
+            vendor: z.string().min(1).max(60).optional(),
+            status: z.string().min(1).max(40),
+          })
+          .strict(),
+      )
+      .max(12)
+      .optional(),
     provider: z.string().min(1).max(120),
     collectedAt: z.string().datetime().optional(),
     sourceUrl: z.string().url().max(2_048).optional(),
