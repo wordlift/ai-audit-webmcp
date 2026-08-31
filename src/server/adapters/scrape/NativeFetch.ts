@@ -11,6 +11,7 @@ import type {
   SitePageSnapshot,
   SiteSnapshot,
 } from "./ScrapeProvider.js";
+import { executeSearchAction, findSearchActionTemplate } from "./searchAction.js";
 import { collectDeclarativeTools, dedupePageTools, extractImperativeTools } from "./webmcpTools.js";
 
 const MAX_LINKS = 150;
@@ -105,6 +106,13 @@ export class NativeFetchCollector implements ScrapeProvider {
     const seedQuery = text(document.querySelector("h1")) || text(document.querySelector("title")) || finalUrl.hostname;
     const mcpEndpoints = await this.probeMcpEndpoints(document, finalUrl, discovery, seedQuery.slice(0, 60));
 
+    // The most widespread declared interface on the web gets the same treatment as an MCP tool:
+    // it is executed, once and read-only, and only a page that acknowledges the query confirms it.
+    const searchTemplate = findSearchActionTemplate(document, finalUrl);
+    const searchAction = searchTemplate
+      ? await executeSearchAction(searchTemplate, seedQuery.slice(0, 60), this.options)
+      : undefined;
+
     return {
       requestedUrl: url.toString(),
       canonicalUrl,
@@ -120,6 +128,7 @@ export class NativeFetchCollector implements ScrapeProvider {
       discovery,
       pageTools: dedupePageTools(pages.flatMap((entry) => entry.pageTools)),
       mcpEndpoints,
+      ...(searchAction ? { searchAction } : {}),
       softNotFound,
       truncated: pages.some((entry) => entry.truncated) || collectedPages.some((result) => result.status === "rejected"),
     };
