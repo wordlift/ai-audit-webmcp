@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { compileActionGraph } from "../../domain/action-model/compileGraph.js";
+import {
+  compileActionGraph,
+  specializeActionLabels,
+  withObservedActions,
+} from "../../domain/action-model/compileGraph.js";
 import { compileActionContract } from "../../domain/action-model/compileContract.js";
 import { deriveCapability } from "../../domain/action-model/deriveState.js";
 import type { ActionModel } from "../../domain/action-model/loadModel.js";
@@ -135,14 +139,22 @@ export class AuditOrchestrator {
     const evidence = parent.capabilities.flatMap((capability) => capability.evidence);
     const childBase = this.baseRecord(randomUUID(), parent.requestedUrl, this.now(), parent.id);
     const graph = compileActionGraph(this.model, archetype, [`override:${archetype}`]);
+    const categoryNames = parent.classification.categories.map((category) => category.name);
     const initialCapabilities = this.capabilities(
       graph.actions,
       evidence,
       parent.canonicalUrl ?? parent.requestedUrl,
       parent.contextGraph,
+      categoryNames,
     );
     const contextGraph = parent.contextGraph ? refreshContextGraph(parent.contextGraph, initialCapabilities) : undefined;
-    const capabilities = this.capabilities(graph.actions, evidence, parent.canonicalUrl ?? parent.requestedUrl, contextGraph);
+    const capabilities = this.capabilities(
+      graph.actions,
+      evidence,
+      parent.canonicalUrl ?? parent.requestedUrl,
+      contextGraph,
+      categoryNames,
+    );
     const child: ReportRecord = {
       ...childBase,
       status: parent.status === "partial" ? "partial" : "completed",
@@ -201,11 +213,13 @@ export class AuditOrchestrator {
     ]);
     const archetype = parent.classification.primaryArchetype;
     const graph = compileActionGraph(this.model, archetype, [`archetype:${archetype}`]);
+    const categoryNames = parent.classification.categories.map((category) => category.name);
     const initialCapabilities = this.capabilities(
       graph.actions,
       merged.evidence,
       parent.canonicalUrl ?? parent.requestedUrl,
       parent.contextGraph,
+      categoryNames,
     );
     const contextGraph = parent.contextGraph ? refreshContextGraph(parent.contextGraph, initialCapabilities) : undefined;
     const capabilities = this.capabilities(
@@ -213,6 +227,7 @@ export class AuditOrchestrator {
       merged.evidence,
       parent.canonicalUrl ?? parent.requestedUrl,
       contextGraph,
+      categoryNames,
     );
     const child: ReportRecord = {
       ...this.baseRecord(randomUUID(), parent.requestedUrl, this.now(), parent.id),
@@ -397,11 +412,13 @@ export class AuditOrchestrator {
 
   private compile(base: ReportRecord, inputs: CompiledInputs, override?: Archetype): ReportRecord {
     const inference = inferArchetype(this.model, inputs.categories, inputs.signals, override);
-    const provenance = inputs.categories.map((category) => `category:${category.name}`);
+    // Capped so expectationSource stays inside the report schema's 20-entry bound.
+    const provenance = inputs.categories.slice(0, 8).map((category) => `category:${category.name}`);
     const graph = compileActionGraph(this.model, inference.primaryArchetype, provenance);
-    const rawCapabilities = this.capabilities(graph.actions, inputs.evidence, inputs.canonicalUrl);
+    const categoryNames = inputs.categories.map((category) => category.name);
+    const rawCapabilities = this.capabilities(graph.actions, inputs.evidence, inputs.canonicalUrl, undefined, categoryNames);
     const contextGraph = compileContextGraph(inputs.pages, inputs.categories, rawCapabilities, inputs.canonicalUrl);
-    const capabilities = this.capabilities(graph.actions, inputs.evidence, inputs.canonicalUrl, contextGraph);
+    const capabilities = this.capabilities(graph.actions, inputs.evidence, inputs.canonicalUrl, contextGraph, categoryNames);
     const publishedWith = detectWordLift(contextGraph.entities, inputs.wordlift, inputs.canonicalUrl);
     const topScore = inference.rankedArchetypes[0]?.score ?? 0;
     const retryable = inputs.errors.some((error) => error.retryable);
@@ -440,18 +457,30 @@ export class AuditOrchestrator {
     evidence: CapabilityEvidence[],
     siteUrl: string,
     contextGraph?: ReportRecord["contextGraph"],
+    categoryNames: string[] = [],
   ) {
-    return actions.map((action) => {
+    // Observed evidence survives any archetype: actions the template does not expect, but the
+    // audit saw on the site, stay in the map as unexpected instead of silently disappearing.
+    const graphActions = specializeActionLabels(
+      withObservedActions(this.model, actions, evidence.map((item) => item.actionId)),
+      categoryNames,
+      this.model.labelOverrides,
+    );
+    return graphActions.map((action) => {
       const actionEvidence = evidence.filter((item) => item.actionId === action.id);
       // Only an approved sidecar's own verified invocation may claim `sidecar-enabled`.
       const approvedSidecar = actionEvidence.some(
         (item) => item.verification === "invoked" && item.kind === "tool-result" && item.id.startsWith("sidecar:"),
       );
-      const capability = deriveCapability(action, actionEvidence, { approvedSidecar });
+      const capability = deriveCapability(action, actionEvidence, { approvedSidecar, expected: action.expected });
       capability.appliesTo = contextGraph ? appliesToForAction(contextGraph, action.id) : [];
       if (["missing", "human-only", "unverified"].includes(capability.state)) {
         capability.recommendation = recommendationFor(capability);
-        capability.contract = compileActionContract(action, siteUrl, capability.evidence, capability.appliesTo[0]);
+        const subject = capability.appliesTo[0];
+        const offers = subject
+          ? contextGraph?.entities.find((entity) => entity.id === subject.id)?.offers
+          : undefined;
+        capability.contract = compileActionContract(action, siteUrl, capability.evidence, subject, offers);
       }
       return capability;
     });

@@ -1,0 +1,14 @@
+[
+  {
+    "categoryIncludes": "Web Hosting",
+    "actionId": "availability.check",
+    "label": "Check domain availability",
+    "description": "Check whether a domain name is available to register."
+  },
+  {
+    "categoryIncludes": "Domain Registration",
+    "actionId": "availability.check",
+    "label": "Check domain availability",
+    "description": "Check whether a domain name is available to register."
+  }
+]

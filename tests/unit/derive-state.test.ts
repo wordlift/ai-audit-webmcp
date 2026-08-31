@@ -29,6 +29,10 @@ describe("capability state truth table", () => {
     [[evidence({ verification: "invoked" }), evidence({ id: "failed", verification: "failed" })], {}, "agent-ready"],
     [[evidence({ verification: "declared" }), evidence({ id: "failed", verification: "failed" })], {}, "unverified"],
     [[], { expected: false }, "not-expected"],
+    // Observed evidence outranks the archetype: an unexpected action keeps its evidence-based state.
+    [[evidence({ audience: "human", kind: "form", verification: "observed" })], { expected: false }, "human-only"],
+    [[evidence({ verification: "declared" })], { expected: false }, "unverified"],
+    [[evidence({ verification: "invoked" })], { expected: false }, "agent-ready"],
   ] as const)("derives %s", (items, options, expected) => {
     expect(deriveCapability(action, [...items], options).state).toBe(expected);
   });

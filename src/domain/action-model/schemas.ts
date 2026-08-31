@@ -64,6 +64,16 @@ export const categoryRuleSchema = z
   .object({ prefix: z.string().startsWith("/"), archetype: archetypeSchema, weight: z.number().positive() })
   .strict();
 
+/** Rewords a generic action label when the site's content categories make it concrete. */
+export const labelOverrideSchema = z
+  .object({
+    categoryIncludes: z.string().min(2).max(120),
+    actionId: z.string().min(1).max(160),
+    label: z.string().min(1).max(120),
+    description: z.string().min(1).max(500).optional(),
+  })
+  .strict();
+
 export const behaviorRuleSchema = z
   .object({ signal: z.string().min(1), archetype: archetypeSchema, weight: z.number().positive() })
   .strict();
@@ -73,3 +83,4 @@ export type ArchetypeTemplate = z.infer<typeof archetypeTemplateSchema>;
 export type ActionModelManifest = z.infer<typeof manifestSchema>;
 export type CategoryRule = z.infer<typeof categoryRuleSchema>;
 export type BehaviorRule = z.infer<typeof behaviorRuleSchema>;
+export type LabelOverride = z.infer<typeof labelOverrideSchema>;

@@ -22,7 +22,9 @@ export function ActionNode({
     >
       <span className="action-node-meta">
         <span className={`state-badge state-${capability.state}`}>{capability.state.replace("-", " ")}</span>
-        {capability.importance === 3 && <span className="importance-label">Core action</span>}
+        {/* Observed on the site even though the current site type does not expect it. */}
+        {!capability.expected && <span className="importance-label">Beyond site type</span>}
+        {capability.expected && capability.importance === 3 && <span className="importance-label">Core action</span>}
       </span>
       <span className="action-node-copy">
         <strong>{capability.label}{selectedEntity ? <> for <em>{selectedEntity.name}</em></> : ""}</strong>

@@ -1,11 +1,11 @@
 import type { z } from "zod";
 import type { archetypeSchema, capabilityStageSchema } from "../../shared/schemas/report.js";
 import type { ActionModel } from "./loadModel.js";
-import type { ActionDefinition } from "./schemas.js";
+import type { ActionDefinition, LabelOverride } from "./schemas.js";
 
 export interface CompiledAction extends ActionDefinition {
   order: number;
-  expected: true;
+  expected: boolean;
   expectationSource: string[];
 }
 export interface CompiledActionGraph {
@@ -37,4 +37,50 @@ export function compileActionGraph(
     stages: stageOrder.map((stage) => ({ stage, actions: actions.filter((action) => action.stage === stage) })),
     actions,
   };
+}
+
+/**
+ * Evidence the audit collected never disappears because the archetype changed: an action the
+ * template does not expect, but the site was observed to offer, joins the graph as unexpected.
+ * It keeps its evidence-based state while staying out of the readiness score and the priorities.
+ */
+export function withObservedActions(
+  model: ActionModel,
+  actions: CompiledAction[],
+  observedActionIds: Iterable<string>,
+): CompiledAction[] {
+  const known = new Set(actions.map((action) => action.id));
+  const observed = [...new Set(observedActionIds)]
+    .sort()
+    .filter((id) => !known.has(id) && model.actions.has(id))
+    .map((id, index) => ({
+      ...(model.actions.get(id) as ActionDefinition),
+      order: actions.length + index,
+      expected: false,
+      expectationSource: ["evidence:observed"],
+    }));
+  return observed.length > 0 ? [...actions, ...observed] : actions;
+}
+
+/**
+ * The model's labels are generic on purpose; the site's own categories make them concrete —
+ * "Check availability" reads as "Check domain availability" on a hosting registrar. Only the
+ * wording specializes: identity, governance, and schemas stay the model's.
+ */
+export function specializeActionLabels(
+  actions: CompiledAction[],
+  categoryNames: string[],
+  overrides: LabelOverride[],
+): CompiledAction[] {
+  if (overrides.length === 0 || categoryNames.length === 0) return actions;
+  const lowered = categoryNames.map((name) => name.toLowerCase());
+  return actions.map((action) => {
+    const rule = overrides.find(
+      (candidate) =>
+        candidate.actionId === action.id &&
+        lowered.some((name) => name.includes(candidate.categoryIncludes.toLowerCase())),
+    );
+    if (!rule) return action;
+    return { ...action, label: rule.label, description: rule.description ?? action.description };
+  });
 }

@@ -23,14 +23,18 @@ export function deriveCapability(
    * complete it. Without a proof any agent evidence already lands on `unverified`, so blocking
    * on a failed check here would only ever cancel something the audit had actually done. The
    * failure stays in the evidence list either way.
+   *
+   * Observed evidence outranks the archetype's expectations: a flow the audit saw on the site
+   * keeps its evidence-based state even when the current site type does not expect it. Only an
+   * action with nothing observed at all collapses to `not-expected`.
    */
   let state: CapabilityResult["state"];
-  if (!expected) state = "not-expected";
+  if (!expected && evidence.length === 0) state = "not-expected";
   else if (options.approvedSidecar && invokedAgent) state = "sidecar-enabled";
   else if (invokedAgent) state = "agent-ready";
   else if (agentEvidence.length > 0) state = "unverified";
   else if (humanSupport) state = "human-only";
-  else state = "missing";
+  else state = expected ? "missing" : "not-expected";
 
   return {
     actionId: action.id,

@@ -83,6 +83,7 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
         linkPaths: snapshot.linkPaths,
         linkLabels: snapshot.linkLabels,
         jsonLdTypes: snapshot.jsonLdTypes,
+        entities: [],
       }];
 
   // Every representative page retains its own provenance; aggregate claims never hide where a
@@ -154,15 +155,16 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
       }
     }
 
-    const haystack = [...page.linkPaths, ...page.linkLabels, page.url].join(" ");
     for (const rule of PATH_RULES) {
-      if (!rule.pattern.test(haystack)) continue;
+      // The citation is the page that offers the flow, not merely wherever a link to it was seen.
+      const target = flowTarget(rule.pattern, page);
+      if (!target) continue;
       add({
         id: `path-${pageKey}-${rule.actionId}`.slice(0, 160),
         actionId: rule.actionId,
         audience: "human",
         kind: "page",
-        sourceUrl: page.url,
+        sourceUrl: target,
         claim: rule.claim,
         confidence: 0.85,
         verification: "observed",
@@ -179,11 +181,27 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
           audience: "agent",
           kind: "structured-data",
           sourceUrl: page.url,
-          claim: `${type} is published as JSON-LD on ${page.title || page.url}, so an agent can read it`,
+          claim: `"${type}" is published as JSON-LD on ${page.title || page.url}, so an agent can read it`,
           confidence: 0.9,
           verification: "declared",
         });
       }
+    }
+
+    // An offer published in the page's structured data describes what the page shows people:
+    // the price is on the page, so the human side of "check price or offer" is observed, not absent.
+    const offerEntity = page.entities.find((entity) => entity.offers.length > 0);
+    if (offerEntity) {
+      add({
+        id: `page-offer-${pageKey}`.slice(0, 160),
+        actionId: "offer.lookup",
+        audience: "human",
+        kind: "page",
+        sourceUrl: page.url,
+        claim: `Prices and offers for ${offerEntity.name} are presented on this page for people`,
+        confidence: 0.9,
+        verification: "observed",
+      });
     }
   }
 
@@ -426,6 +444,27 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
   }
 
   return { evidence, signals: [...signals].sort() };
+}
+
+/**
+ * Where a path rule's flow actually lives: the audited page itself when its own URL matches,
+ * else the linked page the rule matched, resolved to an absolute URL. A match on a link label
+ * alone proves the flow is reachable from here, so the current page is the honest citation.
+ */
+function flowTarget(
+  pattern: RegExp,
+  page: { url: string; linkPaths: string[]; linkLabels: string[] },
+): string | null {
+  if (pattern.test(page.url.toLowerCase())) return page.url;
+  const linkedPath = page.linkPaths.find((path) => pattern.test(path));
+  if (linkedPath) {
+    try {
+      return new URL(linkedPath, page.url).toString();
+    } catch {
+      return page.url;
+    }
+  }
+  return page.linkLabels.some((label) => pattern.test(label)) ? page.url : null;
 }
 
 function slug(value: string): string {

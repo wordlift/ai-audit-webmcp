@@ -13,7 +13,7 @@ export function ActionDetailDialog({ reportId, capability, onOpenChange }: { rep
             <Dialog.Title>{capability.label}</Dialog.Title>
             <Dialog.Close className="dialog-close" aria-label="Close capability details"><X /></Dialog.Close>
             <p className="dialog-description">{capability.description}</p>
-            <div className="dialog-state"><span className={`state-badge state-${capability.state}`}>{capability.state.replace("-", " ")}</span><span>{capability.intent} · importance {capability.importance}/3</span></div>
+            <div className="dialog-state"><span className={`state-badge state-${capability.state}`}>{capability.state.replace("-", " ")}</span><span>{capability.intent} · importance {capability.importance}/3{!capability.expected && " · observed on the site, beyond this site type's expected actions"}</span></div>
             {capability.appliesTo.length > 0 && (
               <section className="dialog-entities">
                 <h3>This action applies to</h3>

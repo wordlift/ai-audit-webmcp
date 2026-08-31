@@ -314,6 +314,57 @@ describe("UCP discovery", () => {
   });
 });
 
+describe("evidence provenance from representative pages", () => {
+  const page = {
+    url: "https://shop.example/",
+    title: "Shop",
+    description: "",
+    role: "entry" as const,
+    text: "",
+    headings: ["Shop"],
+    linkPaths: ["/cart", "/about"],
+    linkLabels: ["view cart", "about us"],
+    forms: [],
+    jsonLdTypes: ["Product", "AggregateOffer"],
+    entities: [
+      {
+        id: "https://shop.example/#product",
+        types: ["Product"],
+        name: "WordPress hosting",
+        alternateNames: [],
+        sourceUrl: "https://shop.example/",
+        sameAs: [],
+        offers: [{ id: "https://shop.example/#offer", name: "Basic", price: 2.95, priceCurrency: "USD" }],
+      },
+    ],
+    pageTools: [],
+    truncated: false,
+  };
+
+  it("cites the page that offers the flow, not the page that merely links to it", () => {
+    const evidence = detectSiteEvidence(snapshotWith({ pages: [page] }), COLLECTED_AT).evidence;
+    const cart = evidence.find((item) => item.actionId === "checkout.create");
+    expect(cart?.sourceUrl).toBe("https://shop.example/cart");
+  });
+
+  it("names the JSON-LD type in the claim so Product and AggregateOffer stay distinguishable", () => {
+    const evidence = detectSiteEvidence(snapshotWith({ pages: [page] }), COLLECTED_AT).evidence;
+    const offerClaims = evidence
+      .filter((item) => item.actionId === "offer.lookup" && item.kind === "structured-data")
+      .map((item) => item.claim);
+    expect(offerClaims.some((claim) => claim.startsWith('"Product"'))).toBe(true);
+    expect(offerClaims.some((claim) => claim.startsWith('"AggregateOffer"'))).toBe(true);
+  });
+
+  it("counts a published offer as human evidence too: the price is on the page", () => {
+    const evidence = detectSiteEvidence(snapshotWith({ pages: [page] }), COLLECTED_AT).evidence;
+    const human = evidence.find((item) => item.actionId === "offer.lookup" && item.audience === "human");
+    expect(human?.verification).toBe("observed");
+    expect(human?.claim).toMatch(/WordPress hosting/);
+    expect(human?.sourceUrl).toBe("https://shop.example/");
+  });
+});
+
 describe("a site that answers unknown paths with its own page", () => {
   it("reports the soft 404 once instead of accusing each probed path of being broken", () => {
     const snapshot = snapshotWith({
