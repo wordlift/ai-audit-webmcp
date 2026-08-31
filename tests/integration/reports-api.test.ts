@@ -96,6 +96,8 @@ describe("fixture report API", () => {
     expect(child.body.parentReportId).toBe(parent.body.id);
     expect(child.body.classification.primaryArchetype).toBe("publisher-content");
     expect(child.body.capabilities.flatMap((item: { evidence: unknown[] }) => item.evidence).length).toBeGreaterThan(0);
+    expect(child.body.contextGraph.bindings.some((item: { actionId: string }) => item.actionId === "source.verify")).toBe(true);
+    expect(child.body.contextGraph.bindings.some((item: { actionId: string }) => item.actionId === "availability.check")).toBe(false);
     const unchanged = await request(app).get(`/api/reports/${parent.body.id}`).expect(200);
     expect(unchanged.body.classification.primaryArchetype).toBe("travel-hospitality");
 

@@ -1,13 +1,15 @@
 import { ArrowRight, Braces, ExternalLink, Link2, Network, Tags } from "lucide-react";
-import type { CapabilityResult, ContextGraph } from "../../shared/types/index.js";
+import type { CapabilityResult, ClassificationResult, ContextGraph } from "../../shared/types/index.js";
 
 export function ContextEngineMap({
   context,
+  classification,
   capabilities,
   selectedEntityId,
   onSelectEntity,
 }: {
   context: ContextGraph;
+  classification: ClassificationResult;
   capabilities: CapabilityResult[];
   selectedEntityId: string | null;
   onSelectEntity: (entityId: string | null) => void;
@@ -35,6 +37,28 @@ export function ContextEngineMap({
         </div>
         <p className="page-count"><strong>{context.pages.length}</strong> representative pages analyzed</p>
       </div>
+
+      <section className="context-provenance-block" aria-labelledby="context-provenance-title">
+        <div className="context-provenance-heading">
+          <div>
+            <p className="section-kicker">Evidence provenance</p>
+            <h3 id="context-provenance-title">Pages used to understand this site</h3>
+          </div>
+          <p>Every entity, term and capability below traces back to this representative evidence set.</p>
+        </div>
+        <div className="context-provenance" aria-label="Analyzed pages">
+          {context.pages.map((page) => (
+            <a key={page.url} href={page.url} target="_blank" rel="noreferrer">
+              <span>{page.role}</span>{page.title || new URL(page.url).pathname}<ExternalLink />
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <p className="context-compiler-note">
+        <strong>{classification.primaryArchetype.replaceAll("-", " / ")}</strong> classification selects the expected
+        action journey; observed entities and interfaces determine what is supported and what is missing.
+      </p>
 
       <div className="context-layers">
         <Layer icon={<Network />} eyebrow="Domain graph" title="Entities & offers">
@@ -85,13 +109,6 @@ export function ContextEngineMap({
         </Layer>
       </div>
 
-      <div className="context-provenance" aria-label="Analyzed pages">
-        {context.pages.map((page) => (
-          <a key={page.url} href={page.url} target="_blank" rel="noreferrer">
-            <span>{page.role}</span>{page.title || new URL(page.url).pathname}<ExternalLink />
-          </a>
-        ))}
-      </div>
     </section>
   );
 }

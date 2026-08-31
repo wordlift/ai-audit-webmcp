@@ -112,6 +112,41 @@ describe("context graph", () => {
       role: "provider",
     }));
   });
+
+  it("does not attach one product page's interface to a different product", () => {
+    const firstUrl = "https://shop.example/products/first";
+    const secondUrl = "https://shop.example/products/second";
+    const detailCapability: CapabilityResult = {
+      ...capability,
+      actionId: "detail.retrieve",
+      label: "Retrieve details",
+      evidence: [{
+        ...capability.evidence[0],
+        id: "first-product-data",
+        actionId: "detail.retrieve",
+        kind: "structured-data",
+        sourceUrl: firstUrl,
+        claim: "Product structured data is declared",
+        verification: "declared",
+      }],
+    };
+    const context = compileContextGraph(
+      [
+        page("https://shop.example/", "entry", []),
+        page(firstUrl, "detail", [entity(`${firstUrl}#product`, "Product", "First Product", firstUrl)]),
+        page(secondUrl, "detail", [entity(`${secondUrl}#product`, "Product", "Second Product", secondUrl)]),
+      ],
+      [{ name: "/Shopping", confidence: 0.9 }],
+      [detailCapability],
+      "https://shop.example/",
+    );
+
+    expect(context.interfaces).toContainEqual(expect.objectContaining({
+      evidenceId: "first-product-data",
+      entityIds: ["https://shop.example/#website", `${firstUrl}#product`],
+    }));
+    expect(context.interfaces[0]?.entityIds).not.toContain(`${secondUrl}#product`);
+  });
 });
 
 function page(url: string, role: SitePageSnapshot["role"], entities: SitePageSnapshot["entities"]): SitePageSnapshot {
