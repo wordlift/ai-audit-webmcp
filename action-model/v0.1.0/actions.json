@@ -1,26 +1,848 @@
 [
-  {"id":"site.search","label":"Search the site","description":"Find relevant products, content, services, or records.","stage":"discover","intent":"informational","importance":3,"governance":{"requiresAuthentication":false,"requiresAuthorization":false,"requiresConfirmation":false,"sideEffects":"none"},"evidenceRules":["search-form","search-api","webmcp-search"],"recommendedDelivery":"native-webmcp"},
-  {"id":"site.browse","label":"Browse categories","description":"Navigate the site's main topics or catalog structure.","stage":"discover","intent":"informational","importance":2,"governance":{"requiresAuthentication":false,"requiresAuthorization":false,"requiresConfirmation":false,"sideEffects":"none"},"evidenceRules":["navigation","item-list"],"recommendedDelivery":"native-webmcp"},
-  {"id":"detail.retrieve","label":"Retrieve details","description":"Return a structured, canonical representation of one item.","stage":"understand-decide","intent":"informational","importance":3,"governance":{"requiresAuthentication":false,"requiresAuthorization":false,"requiresConfirmation":false,"sideEffects":"none"},"evidenceRules":["detail-page","structured-data","detail-api"],"recommendedDelivery":"api-adapter"},
-  {"id":"items.compare","label":"Compare options","description":"Compare relevant attributes across candidate options.","stage":"understand-decide","intent":"informational","importance":2,"governance":{"requiresAuthentication":false,"requiresAuthorization":false,"requiresConfirmation":false,"sideEffects":"none"},"evidenceRules":["comparison-ui","comparison-api"],"recommendedDelivery":"native-webmcp"},
-  {"id":"items.recommend","label":"Recommend an option","description":"Recommend suitable options using explicit user criteria.","stage":"understand-decide","intent":"informational","importance":2,"governance":{"requiresAuthentication":false,"requiresAuthorization":false,"requiresConfirmation":false,"sideEffects":"none"},"evidenceRules":["recommendation-ui","recommendation-api"],"recommendedDelivery":"native-webmcp"},
-  {"id":"policy.explain","label":"Explain policies","description":"Retrieve the terms, policies, or constraints relevant to a decision.","stage":"understand-decide","intent":"informational","importance":2,"governance":{"requiresAuthentication":false,"requiresAuthorization":false,"requiresConfirmation":false,"sideEffects":"none"},"evidenceRules":["policy-page","faq","policy-api"],"recommendedDelivery":"api-adapter"},
-  {"id":"offer.lookup","label":"Check price or offer","description":"Return current offer, price, and applicable commercial terms.","stage":"act","intent":"informational","importance":3,"governance":{"requiresAuthentication":false,"requiresAuthorization":false,"requiresConfirmation":false,"sideEffects":"none"},"evidenceRules":["offer-data","price-ui","offer-api"],"recommendedDelivery":"api-adapter"},
-  {"id":"availability.check","label":"Check availability","description":"Check time-sensitive availability for a product, service, stay, or experience.","stage":"act","intent":"informational","importance":3,"governance":{"requiresAuthentication":false,"requiresAuthorization":false,"requiresConfirmation":false,"sideEffects":"none"},"evidenceRules":["availability-ui","availability-api","availability-tool"],"recommendedDelivery":"approved-sidecar"},
-  {"id":"inquiry.submit","label":"Submit an inquiry","description":"Send a structured request for information or assistance.","stage":"act","intent":"transactional","importance":2,"governance":{"requiresAuthentication":false,"requiresAuthorization":true,"requiresConfirmation":true,"sideEffects":"reversible"},"evidenceRules":["contact-form","inquiry-api"],"recommendedDelivery":"approved-sidecar"},
-  {"id":"checkout.create","label":"Create checkout","description":"Create a reviewable checkout or booking session without completing payment.","stage":"act","intent":"transactional","importance":2,"governance":{"requiresAuthentication":false,"requiresAuthorization":true,"requiresConfirmation":true,"sideEffects":"reversible"},"evidenceRules":["cart","checkout-api"],"recommendedDelivery":"api-adapter"},
-  {"id":"checkout.complete","label":"Complete purchase","description":"Complete a purchase only after explicit authorization and confirmation.","stage":"act","intent":"transactional","importance":3,"governance":{"requiresAuthentication":true,"requiresAuthorization":true,"requiresConfirmation":true,"sideEffects":"irreversible"},"evidenceRules":["checkout-ui","payment-api"],"recommendedDelivery":"api-adapter"},
-  {"id":"transaction.status","label":"Check status","description":"Retrieve the current state of an order, booking, application, claim, or request.","stage":"manage","intent":"informational","importance":2,"governance":{"requiresAuthentication":true,"requiresAuthorization":true,"requiresConfirmation":false,"sideEffects":"none"},"evidenceRules":["status-page","status-api"],"recommendedDelivery":"api-adapter"},
-  {"id":"transaction.modify","label":"Modify or cancel","description":"Modify or cancel an existing transaction with explicit confirmation.","stage":"manage","intent":"transactional","importance":2,"governance":{"requiresAuthentication":true,"requiresAuthorization":true,"requiresConfirmation":true,"sideEffects":"reversible"},"evidenceRules":["manage-ui","manage-api"],"recommendedDelivery":"api-adapter"},
-  {"id":"content.related","label":"Find related content","description":"Retrieve content connected by topic, entity, or editorial intent.","stage":"understand-decide","intent":"informational","importance":2,"governance":{"requiresAuthentication":false,"requiresAuthorization":false,"requiresConfirmation":false,"sideEffects":"none"},"evidenceRules":["related-links","content-api"],"recommendedDelivery":"api-adapter"},
-  {"id":"source.verify","label":"Verify source and author","description":"Return provenance, author, dates, and editorial source information.","stage":"understand-decide","intent":"informational","importance":3,"governance":{"requiresAuthentication":false,"requiresAuthorization":false,"requiresConfirmation":false,"sideEffects":"none"},"evidenceRules":["author-data","publisher-data"],"recommendedDelivery":"api-adapter"},
-  {"id":"subscription.start","label":"Start subscription","description":"Begin a subscription flow with review and confirmation.","stage":"act","intent":"transactional","importance":2,"governance":{"requiresAuthentication":false,"requiresAuthorization":true,"requiresConfirmation":true,"sideEffects":"reversible"},"evidenceRules":["subscribe-form","subscription-api"],"recommendedDelivery":"api-adapter"},
-  {"id":"subscription.manage","label":"Manage subscription","description":"View or change subscription and preference state.","stage":"manage","intent":"transactional","importance":2,"governance":{"requiresAuthentication":true,"requiresAuthorization":true,"requiresConfirmation":true,"sideEffects":"reversible"},"evidenceRules":["account-ui","subscription-api"],"recommendedDelivery":"api-adapter"},
-  {"id":"eligibility.explain","label":"Explain eligibility","description":"Explain eligibility requirements without making a binding decision.","stage":"understand-decide","intent":"informational","importance":3,"governance":{"requiresAuthentication":false,"requiresAuthorization":false,"requiresConfirmation":false,"sideEffects":"none"},"evidenceRules":["eligibility-page","eligibility-tool"],"recommendedDelivery":"native-webmcp"},
-  {"id":"quote.request","label":"Request a quote","description":"Submit authorized inputs to receive a non-binding quote.","stage":"act","intent":"transactional","importance":3,"governance":{"requiresAuthentication":false,"requiresAuthorization":true,"requiresConfirmation":true,"sideEffects":"reversible"},"evidenceRules":["quote-form","quote-api"],"recommendedDelivery":"api-adapter"},
-  {"id":"application.start","label":"Start application","description":"Create an application draft after authorization and confirmation.","stage":"act","intent":"transactional","importance":2,"governance":{"requiresAuthentication":true,"requiresAuthorization":true,"requiresConfirmation":true,"sideEffects":"reversible"},"evidenceRules":["application-form","application-api"],"recommendedDelivery":"api-adapter"},
-  {"id":"features.search","label":"Search features and docs","description":"Find product features, integrations, and documentation.","stage":"discover","intent":"informational","importance":3,"governance":{"requiresAuthentication":false,"requiresAuthorization":false,"requiresConfirmation":false,"sideEffects":"none"},"evidenceRules":["docs-search","feature-list"],"recommendedDelivery":"native-webmcp"},
-  {"id":"plans.compare","label":"Compare plans","description":"Compare plan features, constraints, and current pricing.","stage":"understand-decide","intent":"informational","importance":3,"governance":{"requiresAuthentication":false,"requiresAuthorization":false,"requiresConfirmation":false,"sideEffects":"none"},"evidenceRules":["pricing-table","plans-api"],"recommendedDelivery":"api-adapter"},
-  {"id":"trial.start","label":"Start a trial","description":"Start a trial only after the user reviews the account implications.","stage":"act","intent":"transactional","importance":3,"governance":{"requiresAuthentication":false,"requiresAuthorization":true,"requiresConfirmation":true,"sideEffects":"reversible"},"evidenceRules":["trial-form","trial-api"],"recommendedDelivery":"api-adapter"},
-  {"id":"support.request","label":"Request support","description":"Create a support request with authorized context.","stage":"manage","intent":"transactional","importance":2,"governance":{"requiresAuthentication":true,"requiresAuthorization":true,"requiresConfirmation":true,"sideEffects":"reversible"},"evidenceRules":["support-form","support-api"],"recommendedDelivery":"api-adapter"}
+  {
+    "id": "site.search",
+    "label": "Search the site",
+    "description": "Find relevant products, content, services, or records.",
+    "stage": "discover",
+    "intent": "informational",
+    "importance": 3,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": { "type": "string", "description": "Free-text search query." },
+        "maxResults": { "type": "integer", "minimum": 1, "maximum": 50, "default": 10 }
+      },
+      "required": ["query"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "url": { "type": "string", "format": "uri" },
+              "type": { "type": "string", "description": "Schema.org type of the result." },
+              "summary": { "type": "string" }
+            },
+            "required": ["name", "url"]
+          }
+        },
+        "totalResults": { "type": "integer" }
+      },
+      "required": ["results"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": false, "requiresConfirmation": false, "sideEffects": "none" },
+    "evidenceRules": ["search-form", "search-api", "webmcp-search"],
+    "recommendedDelivery": "native-webmcp"
+  },
+  {
+    "id": "site.browse",
+    "label": "Browse categories",
+    "description": "Navigate the site's main topics or catalog structure.",
+    "stage": "discover",
+    "intent": "informational",
+    "importance": 2,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "category": { "type": "string", "description": "Category name or path to open; omit for the top level." }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "url": { "type": "string", "format": "uri" },
+              "itemCount": { "type": "integer" }
+            },
+            "required": ["name", "url"]
+          }
+        }
+      },
+      "required": ["sections"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": false, "requiresConfirmation": false, "sideEffects": "none" },
+    "evidenceRules": ["navigation", "item-list"],
+    "recommendedDelivery": "native-webmcp"
+  },
+  {
+    "id": "detail.retrieve",
+    "label": "Retrieve details",
+    "description": "Return a structured, canonical representation of one item.",
+    "stage": "understand-decide",
+    "intent": "informational",
+    "importance": 3,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "itemId": { "type": "string", "description": "Stable identifier of the item, e.g. a SKU or entity id." },
+        "url": { "type": "string", "format": "uri", "description": "Canonical URL of the item's page." }
+      },
+      "anyOf": [{ "required": ["itemId"] }, { "required": ["url"] }]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "description": "Schema.org type of the item." },
+        "description": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "attributes": { "type": "object", "description": "Item attributes as key/value pairs." }
+      },
+      "required": ["id", "name"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": false, "requiresConfirmation": false, "sideEffects": "none" },
+    "evidenceRules": ["detail-page", "structured-data", "detail-api"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "items.compare",
+    "label": "Compare options",
+    "description": "Compare relevant attributes across candidate options.",
+    "stage": "understand-decide",
+    "intent": "informational",
+    "importance": 2,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "itemIds": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 8 }
+      },
+      "required": ["itemIds"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "attributes": { "type": "object", "description": "The compared attributes as key/value pairs." }
+            },
+            "required": ["id", "name", "attributes"]
+          }
+        }
+      },
+      "required": ["items"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": false, "requiresConfirmation": false, "sideEffects": "none" },
+    "evidenceRules": ["comparison-ui", "comparison-api"],
+    "recommendedDelivery": "native-webmcp"
+  },
+  {
+    "id": "items.recommend",
+    "label": "Recommend an option",
+    "description": "Recommend suitable options using explicit user criteria.",
+    "stage": "understand-decide",
+    "intent": "informational",
+    "importance": 2,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "criteria": { "type": "object", "description": "Explicit user criteria as key/value pairs, e.g. budget, use case." },
+        "maxResults": { "type": "integer", "minimum": 1, "maximum": 20, "default": 5 }
+      },
+      "required": ["criteria"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "recommendations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "reason": { "type": "string", "description": "Why this option fits the stated criteria." },
+              "url": { "type": "string", "format": "uri" }
+            },
+            "required": ["name", "reason"]
+          }
+        }
+      },
+      "required": ["recommendations"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": false, "requiresConfirmation": false, "sideEffects": "none" },
+    "evidenceRules": ["recommendation-ui", "recommendation-api"],
+    "recommendedDelivery": "native-webmcp"
+  },
+  {
+    "id": "policy.explain",
+    "label": "Explain policies",
+    "description": "Retrieve the terms, policies, or constraints relevant to a decision.",
+    "stage": "understand-decide",
+    "intent": "informational",
+    "importance": 2,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "topic": { "type": "string", "description": "Policy topic, e.g. returns, shipping, privacy, cancellation." }
+      },
+      "required": ["topic"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "updatedAt": { "type": "string", "format": "date" }
+      },
+      "required": ["title", "summary"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": false, "requiresConfirmation": false, "sideEffects": "none" },
+    "evidenceRules": ["policy-page", "faq", "policy-api"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "offer.lookup",
+    "label": "Check price or offer",
+    "description": "Return current offer, price, and applicable commercial terms.",
+    "stage": "act",
+    "intent": "informational",
+    "importance": 3,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "offerId": { "type": "string", "description": "Identifier of the offer, e.g. from the site's structured data." },
+        "itemId": { "type": "string", "description": "Identifier of the product or service the offer applies to." },
+        "plan": { "type": "string", "description": "Plan or variant name when the item is sold in tiers." },
+        "billingTerm": { "type": "string", "enum": ["one-time", "monthly", "annual", "multi-year"] },
+        "currency": { "type": "string", "description": "ISO 4217 currency code, e.g. USD." }
+      },
+      "anyOf": [{ "required": ["offerId"] }, { "required": ["itemId"] }, { "required": ["plan"] }]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "offerId": { "type": "string" },
+        "item": { "type": "string", "description": "The product or service the offer applies to." },
+        "plan": { "type": "string" },
+        "price": { "type": "number", "description": "Current price for the stated billing term." },
+        "introductoryPrice": { "type": "number", "description": "Promotional first-term price, when one applies." },
+        "renewalPrice": { "type": "number", "description": "Price after the introductory term ends." },
+        "currency": { "type": "string" },
+        "billingTerm": { "type": "string" },
+        "availability": { "type": "string", "description": "Schema.org availability, e.g. InStock." },
+        "validUntil": { "type": "string", "format": "date" },
+        "url": { "type": "string", "format": "uri", "description": "Where this offer can be accepted." }
+      },
+      "required": ["price", "currency"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": false, "requiresConfirmation": false, "sideEffects": "none" },
+    "evidenceRules": ["offer-data", "price-ui", "offer-api"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "availability.check",
+    "label": "Check availability",
+    "description": "Check time-sensitive availability for a product, service, stay, or experience.",
+    "stage": "act",
+    "intent": "informational",
+    "importance": 3,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "itemId": { "type": "string", "description": "Identifier of the product, room, or service to check." },
+        "query": { "type": "string", "description": "What to check when there is no id, e.g. a domain name." },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "quantity": { "type": "integer", "minimum": 1, "default": 1 }
+      },
+      "anyOf": [{ "required": ["itemId"] }, { "required": ["query"] }]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "available": { "type": "boolean" },
+        "status": { "type": "string", "description": "Human-readable availability status." },
+        "alternatives": {
+          "type": "array",
+          "items": { "type": "object", "properties": { "name": { "type": "string" }, "url": { "type": "string", "format": "uri" } } },
+          "description": "Nearby alternatives when the requested item is unavailable."
+        },
+        "checkedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["available", "checkedAt"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": false, "requiresConfirmation": false, "sideEffects": "none" },
+    "evidenceRules": ["availability-ui", "availability-api", "availability-tool"],
+    "recommendedDelivery": "approved-sidecar"
+  },
+  {
+    "id": "inquiry.submit",
+    "label": "Submit an inquiry",
+    "description": "Send a structured request for information or assistance.",
+    "stage": "act",
+    "intent": "transactional",
+    "importance": 2,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "topic": { "type": "string" },
+        "message": { "type": "string" },
+        "email": { "type": "string", "format": "email", "description": "Reply address the user authorized." },
+        "name": { "type": "string" }
+      },
+      "required": ["topic", "message", "email"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "acknowledged": { "type": "boolean" },
+        "ticketId": { "type": "string" },
+        "expectedResponseTime": { "type": "string" }
+      },
+      "required": ["acknowledged"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": true, "requiresConfirmation": true, "sideEffects": "reversible" },
+    "evidenceRules": ["contact-form", "inquiry-api"],
+    "recommendedDelivery": "approved-sidecar"
+  },
+  {
+    "id": "checkout.create",
+    "label": "Create checkout",
+    "description": "Create a reviewable checkout or booking session without completing payment.",
+    "stage": "act",
+    "intent": "transactional",
+    "importance": 2,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "offerId": { "type": "string", "description": "The offer being added, e.g. a plan at a billing term." },
+              "quantity": { "type": "integer", "minimum": 1, "default": 1 },
+              "options": { "type": "object", "description": "Item options, e.g. a chosen domain name or dates." }
+            },
+            "required": ["offerId"]
+          }
+        },
+        "currency": { "type": "string", "description": "ISO 4217 currency code, e.g. USD." },
+        "customerEmail": { "type": "string", "format": "email" }
+      },
+      "required": ["items"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "checkoutId": { "type": "string" },
+        "checkoutUrl": { "type": "string", "format": "uri", "description": "Where a person reviews and completes this checkout." },
+        "subtotal": { "type": "number" },
+        "total": { "type": "number" },
+        "currency": { "type": "string" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "nextStep": { "type": "string", "description": "What must happen before payment, e.g. review and confirm." }
+      },
+      "required": ["checkoutId", "checkoutUrl", "total", "currency"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": true, "requiresConfirmation": true, "sideEffects": "reversible" },
+    "evidenceRules": ["cart", "checkout-api"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "checkout.complete",
+    "label": "Complete purchase",
+    "description": "Complete a purchase only after explicit authorization and confirmation.",
+    "stage": "act",
+    "intent": "transactional",
+    "importance": 3,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checkoutId": { "type": "string", "description": "The reviewable checkout session being completed." },
+        "paymentMethod": { "type": "string", "description": "Tokenized payment reference; never raw card data." },
+        "confirm": { "type": "boolean", "const": true, "description": "Explicit user confirmation for this exact total." }
+      },
+      "required": ["checkoutId", "paymentMethod", "confirm"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "orderId": { "type": "string" },
+        "status": { "type": "string" },
+        "total": { "type": "number" },
+        "currency": { "type": "string" },
+        "receiptUrl": { "type": "string", "format": "uri" }
+      },
+      "required": ["orderId", "status"]
+    },
+    "governance": { "requiresAuthentication": true, "requiresAuthorization": true, "requiresConfirmation": true, "sideEffects": "irreversible" },
+    "evidenceRules": ["checkout-ui", "payment-api"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "transaction.status",
+    "label": "Check status",
+    "description": "Retrieve the current state of an order, booking, application, claim, or request.",
+    "stage": "manage",
+    "intent": "informational",
+    "importance": 2,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "transactionId": { "type": "string", "description": "Order, booking, application, or claim identifier." },
+        "email": { "type": "string", "format": "email", "description": "Email the transaction was made under, when required to authorize the lookup." }
+      },
+      "required": ["transactionId"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "transactionId": { "type": "string" },
+        "status": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "detailUrl": { "type": "string", "format": "uri" }
+      },
+      "required": ["status"]
+    },
+    "governance": { "requiresAuthentication": true, "requiresAuthorization": true, "requiresConfirmation": false, "sideEffects": "none" },
+    "evidenceRules": ["status-page", "status-api"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "transaction.modify",
+    "label": "Modify or cancel",
+    "description": "Modify or cancel an existing transaction with explicit confirmation.",
+    "stage": "manage",
+    "intent": "transactional",
+    "importance": 2,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "transactionId": { "type": "string" },
+        "change": { "type": "string", "enum": ["cancel", "modify"] },
+        "details": { "type": "object", "description": "The requested modification as key/value pairs." },
+        "confirm": { "type": "boolean", "const": true, "description": "Explicit user confirmation for this change." }
+      },
+      "required": ["transactionId", "change", "confirm"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "transactionId": { "type": "string" },
+        "status": { "type": "string" },
+        "effectiveAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["status"]
+    },
+    "governance": { "requiresAuthentication": true, "requiresAuthorization": true, "requiresConfirmation": true, "sideEffects": "reversible" },
+    "evidenceRules": ["manage-ui", "manage-api"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "content.related",
+    "label": "Find related content",
+    "description": "Retrieve content connected by topic, entity, or editorial intent.",
+    "stage": "understand-decide",
+    "intent": "informational",
+    "importance": 2,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": { "type": "string", "format": "uri", "description": "The page to find related content for." },
+        "topic": { "type": "string", "description": "A topic or entity name to find related content for." }
+      },
+      "anyOf": [{ "required": ["url"] }, { "required": ["topic"] }]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "url": { "type": "string", "format": "uri" },
+              "relation": { "type": "string", "description": "Why this content is related." }
+            },
+            "required": ["title", "url"]
+          }
+        }
+      },
+      "required": ["items"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": false, "requiresConfirmation": false, "sideEffects": "none" },
+    "evidenceRules": ["related-links", "content-api"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "source.verify",
+    "label": "Verify source and author",
+    "description": "Return provenance, author, dates, and editorial source information.",
+    "stage": "understand-decide",
+    "intent": "informational",
+    "importance": 3,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": { "type": "string", "format": "uri", "description": "The page whose provenance is being verified." }
+      },
+      "required": ["url"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "publisher": { "type": "string" },
+        "author": { "type": "string" },
+        "publishedAt": { "type": "string", "format": "date" },
+        "modifiedAt": { "type": "string", "format": "date" },
+        "sameAs": { "type": "array", "items": { "type": "string", "format": "uri" }, "description": "Authoritative profiles confirming the source's identity." }
+      },
+      "required": ["publisher"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": false, "requiresConfirmation": false, "sideEffects": "none" },
+    "evidenceRules": ["author-data", "publisher-data"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "subscription.start",
+    "label": "Start subscription",
+    "description": "Begin a subscription flow with review and confirmation.",
+    "stage": "act",
+    "intent": "transactional",
+    "importance": 2,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plan": { "type": "string", "description": "The plan or publication being subscribed to." },
+        "billingTerm": { "type": "string", "enum": ["monthly", "annual", "multi-year"] },
+        "email": { "type": "string", "format": "email" },
+        "currency": { "type": "string", "description": "ISO 4217 currency code, e.g. USD." }
+      },
+      "required": ["plan", "email"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "subscriptionId": { "type": "string" },
+        "status": { "type": "string" },
+        "checkoutUrl": { "type": "string", "format": "uri", "description": "Where a person reviews and confirms the subscription." },
+        "renewalPrice": { "type": "number" },
+        "currency": { "type": "string" }
+      },
+      "required": ["status"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": true, "requiresConfirmation": true, "sideEffects": "reversible" },
+    "evidenceRules": ["subscribe-form", "subscription-api"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "subscription.manage",
+    "label": "Manage subscription",
+    "description": "View or change subscription and preference state.",
+    "stage": "manage",
+    "intent": "transactional",
+    "importance": 2,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "subscriptionId": { "type": "string" },
+        "change": { "type": "string", "enum": ["view", "pause", "resume", "cancel", "change-plan", "update-billing"] },
+        "newPlan": { "type": "string", "description": "Target plan when the change is change-plan." }
+      },
+      "required": ["subscriptionId", "change"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "subscriptionId": { "type": "string" },
+        "status": { "type": "string" },
+        "effectiveAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["status"]
+    },
+    "governance": { "requiresAuthentication": true, "requiresAuthorization": true, "requiresConfirmation": true, "sideEffects": "reversible" },
+    "evidenceRules": ["account-ui", "subscription-api"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "eligibility.explain",
+    "label": "Explain eligibility",
+    "description": "Explain eligibility requirements without making a binding decision.",
+    "stage": "understand-decide",
+    "intent": "informational",
+    "importance": 3,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "product": { "type": "string", "description": "The product, service, or program eligibility applies to." },
+        "profile": { "type": "object", "description": "Only the attributes the user chose to share, e.g. region or age band." }
+      },
+      "required": ["product"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "requirements": { "type": "array", "items": { "type": "string" } },
+        "notes": { "type": "string", "description": "Constraints or exceptions relevant to the stated profile." },
+        "url": { "type": "string", "format": "uri", "description": "The authoritative eligibility page." }
+      },
+      "required": ["requirements"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": false, "requiresConfirmation": false, "sideEffects": "none" },
+    "evidenceRules": ["eligibility-page", "eligibility-tool"],
+    "recommendedDelivery": "native-webmcp"
+  },
+  {
+    "id": "quote.request",
+    "label": "Request a quote",
+    "description": "Submit authorized inputs to receive a non-binding quote.",
+    "stage": "act",
+    "intent": "transactional",
+    "importance": 3,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "product": { "type": "string", "description": "The product or service being quoted." },
+        "inputs": { "type": "object", "description": "The quote inputs the user authorized sharing." },
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["product", "inputs"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "quoteId": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "validUntil": { "type": "string", "format": "date" },
+        "followUpUrl": { "type": "string", "format": "uri" }
+      },
+      "required": ["quoteId"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": true, "requiresConfirmation": true, "sideEffects": "reversible" },
+    "evidenceRules": ["quote-form", "quote-api"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "application.start",
+    "label": "Start application",
+    "description": "Create an application draft after authorization and confirmation.",
+    "stage": "act",
+    "intent": "transactional",
+    "importance": 2,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "product": { "type": "string", "description": "The product or program being applied for." },
+        "applicant": { "type": "object", "description": "Only the applicant details the user authorized sharing." }
+      },
+      "required": ["product", "applicant"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "applicationId": { "type": "string" },
+        "status": { "type": "string" },
+        "nextSteps": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["applicationId", "status"]
+    },
+    "governance": { "requiresAuthentication": true, "requiresAuthorization": true, "requiresConfirmation": true, "sideEffects": "reversible" },
+    "evidenceRules": ["application-form", "application-api"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "features.search",
+    "label": "Search features and docs",
+    "description": "Find product features, integrations, and documentation.",
+    "stage": "discover",
+    "intent": "informational",
+    "importance": 3,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": { "type": "string", "description": "Feature, integration, or documentation topic to find." }
+      },
+      "required": ["query"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "summary": { "type": "string" },
+              "url": { "type": "string", "format": "uri" }
+            },
+            "required": ["title", "url"]
+          }
+        }
+      },
+      "required": ["results"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": false, "requiresConfirmation": false, "sideEffects": "none" },
+    "evidenceRules": ["docs-search", "feature-list"],
+    "recommendedDelivery": "native-webmcp"
+  },
+  {
+    "id": "plans.compare",
+    "label": "Compare plans",
+    "description": "Compare plan features, constraints, and current pricing.",
+    "stage": "understand-decide",
+    "intent": "informational",
+    "importance": 3,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plans": { "type": "array", "items": { "type": "string" }, "description": "Plan names to compare; omit to compare all." },
+        "billingTerm": { "type": "string", "enum": ["monthly", "annual", "multi-year"] },
+        "currency": { "type": "string", "description": "ISO 4217 currency code, e.g. USD." }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "plans": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "plan": { "type": "string" },
+              "price": { "type": "number" },
+              "introductoryPrice": { "type": "number" },
+              "renewalPrice": { "type": "number" },
+              "currency": { "type": "string" },
+              "billingTerm": { "type": "string" },
+              "features": { "type": "array", "items": { "type": "string" } }
+            },
+            "required": ["plan", "price", "currency"]
+          }
+        }
+      },
+      "required": ["plans"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": false, "requiresConfirmation": false, "sideEffects": "none" },
+    "evidenceRules": ["pricing-table", "plans-api"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "trial.start",
+    "label": "Start a trial",
+    "description": "Start a trial only after the user reviews the account implications.",
+    "stage": "act",
+    "intent": "transactional",
+    "importance": 3,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plan": { "type": "string", "description": "The plan the trial runs on." },
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["plan", "email"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "trialId": { "type": "string" },
+        "status": { "type": "string" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "activationUrl": { "type": "string", "format": "uri", "description": "Where a person confirms and activates the trial." }
+      },
+      "required": ["status"]
+    },
+    "governance": { "requiresAuthentication": false, "requiresAuthorization": true, "requiresConfirmation": true, "sideEffects": "reversible" },
+    "evidenceRules": ["trial-form", "trial-api"],
+    "recommendedDelivery": "api-adapter"
+  },
+  {
+    "id": "support.request",
+    "label": "Request support",
+    "description": "Create a support request with authorized context.",
+    "stage": "manage",
+    "intent": "transactional",
+    "importance": 2,
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "topic": { "type": "string" },
+        "description": { "type": "string" },
+        "severity": { "type": "string", "enum": ["low", "normal", "high", "urgent"], "default": "normal" },
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["topic", "description"]
+    },
+    "outputSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "ticketId": { "type": "string" },
+        "status": { "type": "string" },
+        "responseEta": { "type": "string" }
+      },
+      "required": ["ticketId"]
+    },
+    "governance": { "requiresAuthentication": true, "requiresAuthorization": true, "requiresConfirmation": true, "sideEffects": "reversible" },
+    "evidenceRules": ["support-form", "support-api"],
+    "recommendedDelivery": "api-adapter"
+  }
 ]
