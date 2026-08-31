@@ -54,7 +54,7 @@ export type PageFetcher = (url: URL) => Promise<{ finalUrl: string; body: string
 const REFUSAL_STATUSES = new Set([401, 403, 451]);
 /** Challenge pages name themselves in the title, whatever status they ship with. */
 const CHALLENGE_TITLE =
-  /<title>[^<]*(just a moment|access denied|attention required|pardon our interruption|verify you are human|are you a human|bot verification|request unsuccessful|security check)/i;
+  /<title>[^<]*(just a moment|access denied|attention required|pardon our interruption|verify you are human|are you a human|bot verification|request unsuccessful|security check|the request could not be satisfied|403 forbidden)/i;
 /** Fingerprints of the usual bot walls, for challenge pages with a bland title. */
 const CHALLENGE_TOKENS = /cf-chl-bypass|cf-browser-verification|\/cdn-cgi\/challenge-platform\/|_Incapsula_Resource|distil_r_captcha|px-captcha|awswaf-captcha/i;
 
