@@ -29,7 +29,7 @@ The report page exists from the first second: it polls the running record and sh
 | Forms, links, structured data | `observed` human evidence and `declared` agent evidence |
 | The alpina.travel availability API | Called through the approved sidecar; only a real answer earns `sidecar-enabled` |
 
-**Declaration earns zero readiness points.** Only `invoked` evidence raises the verified agent-readiness score. The compiler supports six operating archetypes — commerce/retail, publisher/content, travel/hospitality, finance/insurance, SaaS, and a conservative fallback — and archetype rules select the expected journey while page and API evidence determine the actual state.
+**Declaration earns zero readiness points.** Only `invoked` evidence raises the verified agent-readiness score. A site that refuses automated access — a 403, a rate limit, a bot challenge — is reported as blocked rather than audited from its block page; that refusal is exactly what an agent would meet. The compiler supports six operating archetypes — commerce/retail, publisher/content, travel/hospitality, finance/insurance, SaaS, and a conservative fallback — and archetype rules select the expected journey while page and API evidence determine the actual state.
 
 ## WebMCP tools
 
