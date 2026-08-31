@@ -11,6 +11,7 @@ import type {
   SitePageSnapshot,
   SiteSnapshot,
 } from "./ScrapeProvider.js";
+import { detectWordLiftMarker } from "../../../domain/evidence/detectWordLift.js";
 import { executeSearchAction, findSearchActionTemplate } from "./searchAction.js";
 import { collectDeclarativeTools, dedupePageTools, extractImperativeTools } from "./webmcpTools.js";
 
@@ -167,6 +168,9 @@ export class NativeFetchCollector implements ScrapeProvider {
       ? await executeSearchAction(searchTemplate, seedQuery.slice(0, 60), this.options)
       : undefined;
 
+    // The entry page's raw body is only in hand here, so its platform fingerprints are read now.
+    const wordliftMarker = detectWordLiftMarker(page.body);
+
     return {
       requestedUrl: url.toString(),
       canonicalUrl,
@@ -188,6 +192,7 @@ export class NativeFetchCollector implements ScrapeProvider {
       pageTools: dedupePageTools(pages.flatMap((entry) => entry.pageTools)),
       mcpEndpoints,
       ...(searchAction ? { searchAction } : {}),
+      ...(wordliftMarker ? { wordlift: { marker: wordliftMarker, sourceUrl: page.finalUrl } } : {}),
       softNotFound,
       truncated: pages.some((entry) => entry.truncated) || collectedPages.some((result) => result.status === "rejected"),
     };

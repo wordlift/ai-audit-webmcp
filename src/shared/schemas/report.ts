@@ -343,6 +343,15 @@ export const reportRecordSchema = z
     actionModelVersion: z.string().min(1).max(40),
     classification: classificationResultSchema.optional(),
     foundationAudit: foundationAuditSummarySchema.optional(),
+    /** The publishing platform the site's own structured data names — detected, never guessed. */
+    publishedWith: z
+      .object({
+        name: z.literal("WordLift"),
+        evidence: z.string().min(1).max(300),
+        sourceUrl: z.string().url().max(2_048),
+      })
+      .strict()
+      .optional(),
     contextGraph: contextGraphSchema.optional(),
     capabilities: z.array(capabilityResultSchema).max(80).optional(),
     score: readinessScoreSchema.optional(),

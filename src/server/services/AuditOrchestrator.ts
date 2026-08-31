@@ -7,6 +7,7 @@ import { recommendationFor, rankPriorities } from "../../domain/action-model/ran
 import { scoreReadiness } from "../../domain/action-model/scoreReadiness.js";
 import { appliesToForAction, compileContextGraph, refreshContextGraph } from "../../domain/context/compileContextGraph.js";
 import { detectSiteEvidence } from "../../domain/evidence/detectSiteEvidence.js";
+import { detectWordLift, type WordLiftMarker } from "../../domain/evidence/detectWordLift.js";
 import { inferArchetype } from "../../domain/classification/inferArchetype.js";
 import { createReportRequestSchema, recompileReportRequestSchema } from "../../shared/schemas/report.js";
 import type {
@@ -53,6 +54,7 @@ interface CompiledInputs {
   errors: ReportError[];
   evidenceTruncated: boolean;
   pages: SitePageSnapshot[];
+  wordlift?: WordLiftMarker;
 }
 
 export class AuditOrchestrator {
@@ -155,6 +157,7 @@ export class AuditOrchestrator {
         provisionalReason: undefined,
       },
       foundationAudit: parent.foundationAudit,
+      publishedWith: parent.publishedWith,
       contextGraph,
       capabilities,
       score: scoreReadiness(capabilities),
@@ -219,6 +222,7 @@ export class AuditOrchestrator {
       completedAt: this.now().toISOString(),
       classification: parent.classification,
       foundationAudit: parent.foundationAudit,
+      publishedWith: parent.publishedWith,
       contextGraph,
       capabilities,
       score: scoreReadiness(capabilities),
@@ -356,6 +360,7 @@ export class AuditOrchestrator {
       errors,
       evidenceTruncated: sanitized.truncated || Boolean(snapshot?.truncated),
       pages: snapshot?.pages ?? [],
+      wordlift: snapshot?.wordlift,
     };
   }
 
@@ -397,6 +402,7 @@ export class AuditOrchestrator {
     const rawCapabilities = this.capabilities(graph.actions, inputs.evidence, inputs.canonicalUrl);
     const contextGraph = compileContextGraph(inputs.pages, inputs.categories, rawCapabilities, inputs.canonicalUrl);
     const capabilities = this.capabilities(graph.actions, inputs.evidence, inputs.canonicalUrl, contextGraph);
+    const publishedWith = detectWordLift(contextGraph.entities, inputs.wordlift);
     const topScore = inference.rankedArchetypes[0]?.score ?? 0;
     const retryable = inputs.errors.some((error) => error.retryable);
 
@@ -419,6 +425,7 @@ export class AuditOrchestrator {
         collectedAt: this.now().toISOString(),
       },
       foundationAudit: inputs.foundation,
+      publishedWith,
       contextGraph,
       capabilities,
       score: scoreReadiness(capabilities),

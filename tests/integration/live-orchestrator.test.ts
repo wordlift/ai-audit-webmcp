@@ -190,6 +190,37 @@ describe("live orchestrator", () => {
     expect(report.score?.value).toBeGreaterThanOrEqual(0);
   });
 
+  it("detects that the site publishes with WordLift from its own entity ids", async () => {
+    const wordliftSnapshot: SiteSnapshot = {
+      ...snapshot,
+      pages: [{
+        ...snapshot.pages[0],
+        entities: [{
+          ...snapshot.pages[0].entities[0],
+          id: "https://data.wordlift.io/wl01855/samspitze-4",
+        }],
+      }],
+    };
+    const { orchestrator } = liveOrchestrator({
+      scrape: stubScraper(wordliftSnapshot),
+      audit: stubAudit(auditBundle),
+      classify: stubClassifier(travelCategories),
+    });
+
+    const report = await orchestrator.create({ requestId: randomUUID(), url: "alpina.travel" });
+
+    expect(report.publishedWith).toMatchObject({ name: "WordLift", evidence: expect.stringMatching(/data\.wordlift\.io/) });
+
+    // The plain snapshot names no platform, so nothing is claimed.
+    const { orchestrator: plain } = liveOrchestrator({
+      scrape: stubScraper(snapshot),
+      audit: stubAudit(auditBundle),
+      classify: stubClassifier(travelCategories),
+    });
+    const unmarked = await plain.create({ requestId: randomUUID(), url: "alpina.travel" });
+    expect(unmarked.publishedWith).toBeUndefined();
+  });
+
   it("reports a site that blocks collection as blocked, keeping the foundation audit it still got", async () => {
     const blocked = new UrlPolicyError("site_blocked", "The site refused automated access (HTTP 403); an agent cannot read it either.", 403);
     const { orchestrator } = liveOrchestrator({

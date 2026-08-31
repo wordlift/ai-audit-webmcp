@@ -19,6 +19,8 @@ export interface AuditToolResult {
   foundationDimensions: Array<{ id: string; label: string; score?: number; status?: string }>;
   pagesAnalyzed: number;
   entities: Array<{ id: string; name: string; types: string[] }>;
+  /** The publishing platform the site's own structured data names, or null. */
+  publishedWith: string | null;
   /** Which AI crawlers the robots policy admits — the front door of agent access. */
   botAccess: Array<{ name: string; status: string }>;
   priorityGaps: Array<{ actionId: string; label: string; state: string; reason: string }>;
@@ -106,6 +108,7 @@ export function summarizeReportForAgent(report: ReportRecord, reportUrl: string)
       name: entity.name,
       types: entity.types,
     })),
+    publishedWith: report.publishedWith?.name ?? null,
     botAccess: (report.foundationAudit?.botAccess ?? []).slice(0, 8).map((bot) => ({ name: bot.name, status: bot.status })),
     priorityGaps: (report.priorities ?? []).map((gap) => ({
       actionId: gap.actionId,
@@ -131,7 +134,9 @@ export function auditSummaryText(result: AuditToolResult): string {
     `Verified agent readiness: ${result.agentReadinessScore}/100${
       result.foundationAuditScore === null ? "" : ` · AI Audit foundation score: ${result.foundationAuditScore}/100`
     }.`,
-    `Context map: ${result.pagesAnalyzed} representative page${result.pagesAnalyzed === 1 ? "" : "s"} analyzed, ${result.entities.length} named domain entit${result.entities.length === 1 ? "y" : "ies"} extracted.`,
+    `Context map: ${result.pagesAnalyzed} representative page${result.pagesAnalyzed === 1 ? "" : "s"} analyzed, ${result.entities.length} named domain entit${result.entities.length === 1 ? "y" : "ies"} extracted.${
+      result.publishedWith ? ` Structured data is published with ${result.publishedWith}.` : ""
+    }`,
     `Stages ready/expected — discover ${stage(result.stages.discover)}, understand & decide ${stage(
       result.stages.understandDecide,
     )}, act ${stage(result.stages.act)}, manage ${stage(result.stages.manage)}.`,
