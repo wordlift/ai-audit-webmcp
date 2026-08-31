@@ -36,6 +36,8 @@ describe("telling a site's bouncer from its page", () => {
     expect(blockedResponse(403, "<html><title>Access Denied</title></html>")).toMatch(/refused automated access \(HTTP 403\)/);
     expect(blockedResponse(429, "")).toMatch(/rate-limited/);
     expect(blockedResponse(503, "<html><head><title>Just a moment...</title></head></html>")).toMatch(/bot challenge/);
+    // CloudFront's refusal page, as illy.com served it, even when the status is lost on the way.
+    expect(blockedResponse(200, "<html><head><title>ERROR: The request could not be satisfied</title></head></html>")).toMatch(/bot challenge/);
     expect(blockedResponse(200, '<html><body><script src="/cdn-cgi/challenge-platform/h/b/orchestrate"></script></body></html>')).toMatch(
       /bot challenge/,
     );
