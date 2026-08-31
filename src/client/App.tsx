@@ -3,6 +3,7 @@ import { HomeRoute } from "./routes/HomeRoute";
 import { ReportRoute } from "./routes/ReportRoute";
 import { PinnedAlpinaRoute } from "./routes/PinnedAlpinaRoute";
 import { AuditWebsiteTool } from "./webmcp/AuditWebsiteTool";
+import { GetAuditReportTool } from "./webmcp/GetAuditReportTool";
 
 export function App() {
   return (
@@ -14,6 +15,7 @@ export function App() {
         </Link>
         <div className="header-status">
           <AuditWebsiteTool />
+          <GetAuditReportTool />
           <span className="open-source-label">Open source · WebMCP</span>
         </div>
       </header>

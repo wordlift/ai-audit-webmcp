@@ -460,10 +460,17 @@ export function selectRepresentativePages(links: Element[], base: URL): PageCand
       if (url.pathname === base.pathname || /\.(?:png|jpe?g|gif|svg|pdf|zip|xml)$/i.test(url.pathname)) return null;
       url.hash = "";
       const haystack = `${url.pathname} ${text(link)}`.toLowerCase();
-      const role = pageRole(haystack);
+      // The path names the page's function; the link copy is marketing and only breaks ties —
+      // "Book your stay" must not turn the /booking page into a detail page.
+      const byPath = pageRole(url.pathname.toLowerCase());
+      const role = byPath === "other" ? pageRole(text(link).toLowerCase()) : byPath;
       const roleWeight = { detail: 40, offer: 36, policy: 30, contact: 28, other: 8, entry: 0 }[role];
       const depthBonus = Math.min(url.pathname.split("/").filter(Boolean).length, 4);
-      return { url, role, score: roleWeight + depthBonus, order } satisfies PageCandidate;
+      // A checkout configurator, cart, or sign-in page needs session state and renders as an app
+      // shell for a first-time visitor. The pages that explain the offer are the evidence surfaces;
+      // the checkout's existence is still recorded from its link without spending a fetch on it.
+      const shellPenalty = SESSION_SHELL.test(haystack) ? 30 : 0;
+      return { url, role, score: roleWeight + depthBonus - shellPenalty, order } satisfies PageCandidate;
     })
     .filter((candidate): candidate is PageCandidate => candidate !== null)
     .sort((left, right) => right.score - left.score || left.order - right.order);
@@ -483,10 +490,17 @@ export function selectRepresentativePages(links: Element[], base: URL): PageCand
   return selected;
 }
 
+/**
+ * Pages that need session state (checkout, cart, sign-in) render as app shells for a first-time
+ * visitor, and legal boilerplate (imprint, terms indexes) describes the publisher, not the offer.
+ * Both are demoted so the sampled pages are the ones that carry evidence.
+ */
+const SESSION_SHELL = /\b(checkout|cart|basket|payment|billing|log-?in|sign-?in|my-?account|imprint|impressum)\b/;
+
 function pageRole(value: string): SitePageSnapshot["role"] {
-  if (/\b(products?|property|properties|rooms?|stays?|accommodations?|articles?|story|stories|posts?|services?|solutions?|features?)\b/.test(value)) return "detail";
-  if (/\b(price|pricing|offer|availability|book|booking|reserve|shop|checkout|demo|trial|signup)\b/.test(value)) return "offer";
-  if (/\b(faq|policy|terms|shipping|return|privacy|help|guide)\b/.test(value)) return "policy";
+  if (/\b(products?|property|properties|rooms?|stays?|accommodations?|articles?|story|stories|posts?|services?|solutions?|features?|hosting|domains?|destinations?|attractions?|events?|experiences?|regions?|tours?)\b/.test(value)) return "detail";
+  if (/\b(price|pricing|plans?|compare|offer|availability|book|booking|reserve|shop|checkout|demo|trial|signup)\b/.test(value)) return "offer";
+  if (/\b(faq|policy|terms|shipping|return|privacy|help|guides?|docs|documentation|developers|knowledge-?base)\b/.test(value)) return "policy";
   if (/\b(contact|inquiry|enquiry|support)\b/.test(value)) return "contact";
   return "other";
 }

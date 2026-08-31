@@ -356,6 +356,46 @@ describe("evidence provenance from representative pages", () => {
     expect(offerClaims.some((claim) => claim.startsWith('"AggregateOffer"'))).toBe(true);
   });
 
+  it("consolidates a global widget into one claim that states its reach", () => {
+    const widgetPage = (path: string, title: string) => ({
+      ...page,
+      url: `https://shop.example${path}`,
+      title,
+      jsonLdTypes: ["Product"],
+      entities: [],
+      forms: [
+        {
+          name: "booking",
+          method: "get",
+          action: "/booking/search",
+          inputNames: ["checkin", "checkout"],
+          hasDateInput: true,
+          hasSearchInput: false,
+        },
+      ],
+    });
+    const evidence = detectSiteEvidence(
+      snapshotWith({ pages: [widgetPage("/", "Home"), widgetPage("/huts", "Huts"), widgetPage("/imprint", "Imprint")] }),
+      COLLECTED_AT,
+    ).evidence;
+
+    // One booking widget on three pages is one interface, not three findings.
+    const forms = evidence.filter((item) => item.actionId === "availability.check" && item.kind === "form");
+    expect(forms).toHaveLength(1);
+    expect(forms[0].claim).toMatch(/present on 3 of the sampled pages/);
+    expect(forms[0].sourceUrl).toBe("https://shop.example/");
+
+    // The same Product JSON-LD on every page is one declaration with its reach stated.
+    const jsonLd = evidence.filter((item) => item.kind === "structured-data" && item.actionId === "detail.retrieve");
+    expect(jsonLd).toHaveLength(1);
+    expect(jsonLd[0].claim).toMatch(/on 3 of the sampled pages/);
+
+    // A cart linked from all three pages is still one cart flow.
+    const cart = evidence.filter((item) => item.actionId === "checkout.create" && item.kind === "page");
+    expect(cart).toHaveLength(1);
+    expect(cart[0].claim).toMatch(/reachable from 3 of the sampled pages/);
+  });
+
   it("counts a published offer as human evidence too: the price is on the page", () => {
     const evidence = detectSiteEvidence(snapshotWith({ pages: [page] }), COLLECTED_AT).evidence;
     const human = evidence.find((item) => item.actionId === "offer.lookup" && item.audience === "human");

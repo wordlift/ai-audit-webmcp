@@ -86,8 +86,29 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
         entities: [],
       }];
 
-  // Every representative page retains its own provenance; aggregate claims never hide where a
-  // human form, JSON-LD entity or action path was actually found.
+  // A global widget — a booking bar, a search box in the header — appears on every sampled page.
+  // It is one interface, so it earns one claim that states its reach, not one claim per page.
+  // The first pass counts each distinct interface; the second emits it once, citing where it was
+  // first observed, so provenance is never hidden behind an aggregate.
+  const occurrences = new Map<string, number>();
+  const tally = (key: string) => occurrences.set(key, (occurrences.get(key) ?? 0) + 1);
+  for (const page of pages) {
+    for (const form of page.forms) {
+      if (form.hasSearchInput) tally(`form-search:${form.action}`);
+      if (form.hasDateInput) tally(`form-dates:${form.action}`);
+      if (form.inputNames.some((name) => SUBSCRIBE_INPUT.test(name)) && form.inputNames.length <= 3) tally(`form-subscribe:${form.action}`);
+      if (form.inputNames.some((name) => CONTACT_INPUT.test(name))) tally(`form-contact:${form.action}`);
+    }
+    for (const type of new Set(page.jsonLdTypes)) tally(`jsonld:${type}`);
+    const offerEntity = page.entities.find((entity) => entity.offers.length > 0);
+    if (offerEntity) tally(`offer:${offerEntity.name}`);
+  }
+  const emitted = new Set<string>();
+  const onPages = (key: string, singular: string): string => {
+    const count = occurrences.get(key) ?? 1;
+    return count > 1 ? `${count} of the sampled pages` : singular;
+  };
+
   for (const page of pages) {
     const pageKey = slug(page.url);
     if (page.title || page.headings.length > 0) {
@@ -104,32 +125,39 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
     }
 
     for (const form of page.forms) {
-      if (form.hasSearchInput) {
+      if (form.hasSearchInput && !emitted.has(`form-search:${form.action}`)) {
+        emitted.add(`form-search:${form.action}`);
         add({
           id: `form-search-${pageKey}-${form.action}`.slice(0, 160),
           actionId: "site.search",
           audience: "human",
           kind: "form",
           sourceUrl: page.url,
-          claim: "People can search through an on-page form",
+          claim: `People can search through an on-page form, present on ${onPages(`form-search:${form.action}`, "this page")}`,
           confidence: 1,
           verification: "observed",
         });
       }
-      if (form.hasDateInput) {
+      if (form.hasDateInput && !emitted.has(`form-dates:${form.action}`)) {
+        emitted.add(`form-dates:${form.action}`);
         add({
           id: `form-dates-${pageKey}-${form.action}`.slice(0, 160),
           actionId: "availability.check",
           audience: "human",
           kind: "form",
           sourceUrl: page.url,
-          claim: "People can check dates through a booking form",
+          claim: `People can check dates through a booking form, present on ${onPages(`form-dates:${form.action}`, "this page")}`,
           confidence: 1,
           verification: "observed",
         });
         signals.add("path:booking");
       }
-      if (form.inputNames.some((name) => SUBSCRIBE_INPUT.test(name)) && form.inputNames.length <= 3) {
+      if (
+        form.inputNames.some((name) => SUBSCRIBE_INPUT.test(name)) &&
+        form.inputNames.length <= 3 &&
+        !emitted.has(`form-subscribe:${form.action}`)
+      ) {
+        emitted.add(`form-subscribe:${form.action}`);
         add({
           id: `form-subscribe-${pageKey}-${form.action}`.slice(0, 160),
           actionId: "subscription.start",
@@ -141,7 +169,8 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
           verification: "observed",
         });
       }
-      if (form.inputNames.some((name) => CONTACT_INPUT.test(name))) {
+      if (form.inputNames.some((name) => CONTACT_INPUT.test(name)) && !emitted.has(`form-contact:${form.action}`)) {
+        emitted.add(`form-contact:${form.action}`);
         add({
           id: `form-contact-${pageKey}-${form.action}`.slice(0, 160),
           actionId: "inquiry.submit",
@@ -155,33 +184,19 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
       }
     }
 
-    for (const rule of PATH_RULES) {
-      // The citation is the page that offers the flow, not merely wherever a link to it was seen.
-      const target = flowTarget(rule.pattern, page);
-      if (!target) continue;
-      add({
-        id: `path-${pageKey}-${rule.actionId}`.slice(0, 160),
-        actionId: rule.actionId,
-        audience: "human",
-        kind: "page",
-        sourceUrl: target,
-        claim: rule.claim,
-        confidence: 0.85,
-        verification: "observed",
-      });
-      if (rule.signal) signals.add(rule.signal);
-    }
-
     for (const type of page.jsonLdTypes) {
       signals.add(`schema:${type}`);
+      if (emitted.has(`jsonld:${type}`)) continue;
+      emitted.add(`jsonld:${type}`);
+      const where = onPages(`jsonld:${type}`, page.title || page.url);
       for (const actionId of SCHEMA_ACTION_MAP[type] ?? []) {
         add({
-          id: `jsonld-${pageKey}-${type}-${actionId}`.slice(0, 160),
+          id: `jsonld-${type}-${actionId}`.slice(0, 160),
           actionId,
           audience: "agent",
           kind: "structured-data",
           sourceUrl: page.url,
-          claim: `"${type}" is published as JSON-LD on ${page.title || page.url}, so an agent can read it`,
+          claim: `"${type}" is published as JSON-LD on ${where}, so an agent can read it`,
           confidence: 0.9,
           verification: "declared",
         });
@@ -191,18 +206,43 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
     // An offer published in the page's structured data describes what the page shows people:
     // the price is on the page, so the human side of "check price or offer" is observed, not absent.
     const offerEntity = page.entities.find((entity) => entity.offers.length > 0);
-    if (offerEntity) {
+    if (offerEntity && !emitted.has(`offer:${offerEntity.name}`)) {
+      emitted.add(`offer:${offerEntity.name}`);
       add({
-        id: `page-offer-${pageKey}`.slice(0, 160),
+        id: `page-offer-${slug(offerEntity.name)}`.slice(0, 160),
         actionId: "offer.lookup",
         audience: "human",
         kind: "page",
         sourceUrl: page.url,
-        claim: `Prices and offers for ${offerEntity.name} are presented on this page for people`,
+        claim: `Prices and offers for ${offerEntity.name} are presented on ${onPages(`offer:${offerEntity.name}`, "this page")} for people`,
         confidence: 0.9,
         verification: "observed",
       });
     }
+  }
+
+  // One flow, one claim: a booking path linked from every sampled page is still one booking flow.
+  // The citation is the page that IS the flow when it was sampled, else the linked page itself.
+  const pathActionsEmitted = new Set<string>();
+  for (const rule of PATH_RULES) {
+    if (pathActionsEmitted.has(rule.actionId)) continue;
+    const targets = pages
+      .map((page) => flowTarget(rule.pattern, page))
+      .filter((target): target is string => target !== null);
+    if (targets.length === 0) continue;
+    pathActionsEmitted.add(rule.actionId);
+    const ownedPage = pages.find((page) => rule.pattern.test(page.url.toLowerCase()));
+    add({
+      id: `path-${rule.actionId}`.slice(0, 160),
+      actionId: rule.actionId,
+      audience: "human",
+      kind: "page",
+      sourceUrl: ownedPage?.url ?? targets[0],
+      claim: targets.length > 1 ? `${rule.claim}, reachable from ${targets.length} of the sampled pages` : rule.claim,
+      confidence: 0.85,
+      verification: "observed",
+    });
+    if (rule.signal) signals.add(rule.signal);
   }
 
   // WebMCP is registered in the page, not published at a path, so it is read from the page itself.
