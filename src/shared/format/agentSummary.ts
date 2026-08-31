@@ -1,4 +1,5 @@
 import type { CapabilityResult, ReportRecord } from "../types/index.js";
+import { explainReportError } from "./explainError.js";
 
 export interface StageCount {
   ready: number;
@@ -75,7 +76,7 @@ function countStage(capabilities: CapabilityResult[], stage: CapabilityResult["s
  */
 export function summarizeReportForAgent(report: ReportRecord, reportUrl: string): AuditToolResult {
   const capabilities = report.capabilities ?? [];
-  const notes = report.errors.map((error) => `${error.phase}: ${error.message}`);
+  const notes = report.errors.map(explainReportError);
   if (report.classification?.provisional) {
     notes.push(
       report.classification.provisionalReason ??

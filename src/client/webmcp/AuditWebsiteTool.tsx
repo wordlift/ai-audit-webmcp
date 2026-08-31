@@ -1,5 +1,6 @@
 import { useWebMCP } from "use-webmcp-tool";
 import { auditSummaryText, summarizeReportForAgent, type AuditToolResult } from "../../shared/format/agentSummary.js";
+import { explainReportError, visibleErrors } from "../../shared/format/explainError.js";
 import type { Archetype } from "../../shared/types/index.js";
 import { createReport, reportPageUrl } from "../api/client";
 import { ARCHETYPE_VALUES, AUDIT_WEBSITE_TOOL } from "./toolSchemas";
@@ -34,7 +35,7 @@ export function AuditWebsiteTool() {
 
       const report = await createReport(url, { archetype });
       if (report.status === "failed") {
-        const reason = report.errors[0]?.message ?? "No usable evidence could be collected from this site.";
+        const reason = visibleErrors(report.errors).map(explainReportError).join(" ") || "No usable evidence could be collected from this site.";
         throw new Error(`The audit could not be completed for ${url}: ${reason}`);
       }
 
