@@ -267,6 +267,8 @@ async function request(target: URL, timeoutMs: number, options: UrlPolicyOptions
         signal: controller.signal,
         headers: {
           accept: "text/html,application/xhtml+xml,application/json;q=0.9,text/plain;q=0.8,*/*;q=0.5",
+          // The audit reads a site's English edition where it negotiates language.
+          "accept-language": "en-US,en;q=0.9",
           "user-agent": options.userAgent ?? DEFAULTS.userAgent,
         },
       });

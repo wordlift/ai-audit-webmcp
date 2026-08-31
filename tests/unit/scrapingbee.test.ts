@@ -10,9 +10,13 @@ afterEach(() => {
 
 describe("rendered collection", () => {
   it("trims the credential, because secrets routinely carry a trailing newline", async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       expect(String(input)).toContain("api_key=bee-key-123");
       expect(String(input)).not.toContain("%0A");
+      // One edition of the site: the US, English one.
+      expect(String(input)).toContain("country_code=us");
+      expect(String(input)).toContain("forward_headers=true");
+      expect((init?.headers as Record<string, string>)["Spb-Accept-Language"]).toMatch(/^en-US/);
       return new Response("<html><body>rendered</body></html>", { status: 200 });
     });
     vi.stubGlobal("fetch", fetchMock);

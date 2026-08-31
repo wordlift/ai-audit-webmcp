@@ -9,7 +9,14 @@ export interface ScrapingBeeOptions extends UrlPolicyOptions {
   endpoint?: string;
   /** Retry a page the site refused once through ScrapingBee's premium proxy pool. On by default. */
   premiumRetry?: boolean;
+  /** Proxy country, so a site that redirects by region serves the same edition every time. */
+  countryCode?: string;
+  /** Forwarded as Accept-Language, so a site that negotiates language serves its English edition. */
+  acceptLanguage?: string;
 }
+
+const DEFAULT_COUNTRY = "us";
+const DEFAULT_LANGUAGE = "en-US,en;q=0.9";
 
 /**
  * Rendered collection for JavaScript-heavy sites, matching the collector the private AI Audit
@@ -32,12 +39,18 @@ export function createScrapingBeePageFetcher(options: ScrapingBeeOptions): PageF
     endpoint.searchParams.set("url", target.toString());
     endpoint.searchParams.set("render_js", options.renderJs === false ? "false" : "true");
     endpoint.searchParams.set("block_ads", "true");
+    // The audit reads one edition of a site: the one a US visitor asking for English gets.
+    endpoint.searchParams.set("country_code", options.countryCode ?? DEFAULT_COUNTRY);
+    endpoint.searchParams.set("forward_headers", "true");
     if (premium) endpoint.searchParams.set("premium_proxy", "true");
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 30_000);
     try {
-      const response = await fetch(endpoint, { signal: controller.signal });
+      const response = await fetch(endpoint, {
+        signal: controller.signal,
+        headers: { "Spb-Accept-Language": options.acceptLanguage ?? DEFAULT_LANGUAGE },
+      });
       // ScrapingBee's own failures — a rejected key (401), its concurrency limit (429), or any
       // JSON-bodied error — are renderer failures. Everything else is the target's own answer.
       const ownFailure =

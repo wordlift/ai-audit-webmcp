@@ -129,7 +129,14 @@ any errors — enough to see whether live behavior matches the fixtures.
 - **Foundation audit:** 30–60 seconds. Timeouts and non-200s map to typed provider errors and
   produce a partial report rather than a failure, as long as the page itself was collected.
 - **Classification:** a Google failure falls back to behavior-only inference and is recorded as a
-  non-retryable note. It does not make the report partial.
+  non-retryable note. It does not make the report partial. Large homepages get diffuse category
+  confidence from Google; an archetype that holds the clear majority of what was scored is accepted
+  even below the evidence floor, and the product branches of the taxonomy (cosmetics, furnishings,
+  sports gear, vehicle shopping, grocery delivery) count toward commerce. "Other" is reserved for
+  sites whose evidence is thin or points two ways.
+- **One edition per site:** collection asks for the US, English edition (`country_code=us` and a
+  forwarded `Accept-Language` on ScrapingBee; `Accept-Language` on the plain fetcher), so a site that
+  redirects by region or negotiates language is audited consistently.
 - **Sites that refuse automated access:** a 401/403/451, a 429, a bot-challenge page (Cloudflare,
   Akamai, Incapsula, PerimeterX, AWS WAF), or an empty "JavaScript is disabled" shell is recorded as
   `site_blocked` with a plain sentence, never audited as if the block page were the site. With
