@@ -42,6 +42,11 @@ describe("ActionJourney", () => {
     expect(screen.getByRole("heading", { name: "Act" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Manage" })).toBeVisible();
     const node = screen.getByRole("button", { name: /check availability/i });
+    expect(node).toHaveTextContent("Core action");
+    expect(node).toHaveTextContent("For peopleObserved1");
+    expect(node).toHaveTextContent("For agentsDeclared");
+    expect(node).toHaveTextContent("Verify this interface");
+    expect(node).toHaveTextContent("Check time-sensitive availability.");
     node.focus();
     fireEvent.click(node);
     expect(screen.getByRole("dialog")).toBeVisible();
