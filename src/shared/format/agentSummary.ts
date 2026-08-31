@@ -12,6 +12,10 @@ export interface AuditToolResult {
   classificationConfidence: string;
   agentReadinessScore: number;
   foundationAuditScore: number | null;
+  foundationSummary: string | null;
+  foundationFindings: string[];
+  foundationQuickWins: Array<{ title: string; impact?: string }>;
+  foundationDimensions: Array<{ id: string; label: string; score?: number; status?: string }>;
   pagesAnalyzed: number;
   entities: Array<{ id: string; name: string; types: string[] }>;
   priorityGaps: Array<{ actionId: string; label: string; state: string; reason: string }>;
@@ -84,6 +88,15 @@ export function summarizeReportForAgent(report: ReportRecord, reportUrl: string)
     classificationConfidence: report.classification?.confidence ?? "low",
     agentReadinessScore: report.score?.value ?? 0,
     foundationAuditScore: report.foundationAudit?.score ?? null,
+    foundationSummary: report.foundationAudit?.summary ?? null,
+    foundationFindings: (report.foundationAudit?.findings ?? []).slice(0, 5),
+    foundationQuickWins: (report.foundationAudit?.quickWins ?? []).slice(0, 5),
+    foundationDimensions: (report.foundationAudit?.sections ?? []).slice(0, 24).map((section) => ({
+      id: section.id,
+      label: section.label,
+      score: section.score,
+      status: section.status,
+    })),
     pagesAnalyzed: report.contextGraph?.pages.length ?? 1,
     entities: (report.contextGraph?.entities ?? []).slice(0, 8).map((entity) => ({
       id: entity.id,
@@ -127,6 +140,12 @@ export function auditSummaryText(result: AuditToolResult): string {
     }
   } else {
     lines.push("No expected action is currently missing agent support.");
+  }
+
+  if (result.foundationSummary) lines.push(`Foundation audit: ${result.foundationSummary}`);
+  if (result.foundationFindings.length > 0) {
+    lines.push("Top foundation findings:");
+    for (const finding of result.foundationFindings.slice(0, 3)) lines.push(`- ${finding}`);
   }
 
   if (result.partial) {

@@ -237,6 +237,8 @@ describe("WebMCP tool layer", () => {
     expect(text).toMatch(/travel\/hospitality/);
     expect(text).toMatch(/Verified agent readiness: 38\/100/);
     expect(text).toMatch(/AI Audit foundation score: 71\/100/);
+    expect(text).toMatch(/Foundation audit: Strong content foundations/);
+    expect(text).toMatch(/robots\.txt allows major agents/);
     expect(text).toMatch(/act 0\/1/);
     expect(text).toContain(`/reports/${REPORT_ID}`);
     expect(text).not.toMatch(/audit started/i);
@@ -244,6 +246,8 @@ describe("WebMCP tool layer", () => {
       reportId: REPORT_ID,
       archetype: "travel-hospitality",
       agentReadinessScore: 38,
+      foundationSummary: "Strong content foundations with limited agent-facing functions.",
+      foundationFindings: ["robots.txt allows major agents"],
       partial: false,
       pagesAnalyzed: 4,
       entities: [{ id: "https://alpina.travel/#stay", name: "AlpiNest", types: ["LodgingBusiness"] }],
@@ -290,7 +294,12 @@ describe("WebMCP tool layer", () => {
 
     // The Alpina report also enables the approved sidecar tool for its own host.
     await waitFor(() =>
-      expect(modelContext.toolNames()).toEqual(["audit-website", "check-alpina-availability", "explain-capability"]),
+      expect(modelContext.toolNames()).toEqual([
+        "audit-website",
+        "check-alpina-availability",
+        "explain-capability",
+        "explain-foundation-audit",
+      ]),
     );
 
     const result = await act(async () => modelContext.call("explain-capability", { actionId: "availability.check" }));
@@ -304,6 +313,16 @@ describe("WebMCP tool layer", () => {
       state: "human-only",
       appliesTo: [{ id: "https://alpina.travel/#stay", name: "AlpiNest" }],
       interfaces: [{ protocol: "human-form", status: "observed" }],
+    });
+
+    const foundation = await act(async () => modelContext.call("explain-foundation-audit", { reportId: REPORT_ID }));
+    expect(toolText(foundation)).toMatch(/foundation score of 71\/100/);
+    expect(toolText(foundation)).toMatch(/Main WordLift AI Audit: https:\/\/audit\.wordlift\.io/);
+    expect(foundation.structuredContent).toMatchObject({
+      reportId: REPORT_ID,
+      score: 71,
+      findings: ["robots.txt allows major agents"],
+      mainAuditUrl: "https://audit.wordlift.io",
     });
 
     const missing = await act(async () => modelContext.call("explain-capability", { actionId: "does.not.exist" }));

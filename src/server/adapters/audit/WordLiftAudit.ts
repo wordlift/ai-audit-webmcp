@@ -69,6 +69,8 @@ const auditResponseSchema = z
         quickWins: sectionSchema
           .extend({ wins: z.array(z.object({ title: z.string(), impact: z.string().optional() }).loose()).optional() })
           .optional(),
+        /** The documented API shape nests criteria here; newer deployments also return them flat. */
+        results: z.record(z.string(), z.unknown()).optional(),
       })
       .loose()
       .optional(),
@@ -76,6 +78,7 @@ const auditResponseSchema = z
   .loose();
 
 export type WordLiftAuditResponse = z.infer<typeof auditResponseSchema>;
+type AuditData = NonNullable<WordLiftAuditResponse["data"]>;
 
 export interface WordLiftAuditOptions {
   baseUrl: string;
@@ -111,13 +114,14 @@ export class WordLiftAuditProvider implements AuditProvider {
 
     const collectedAt = (this.options.now?.() ?? new Date()).toISOString();
     const site = data.url ?? url.toString();
+    const normalized = normalizeAuditData(data);
 
     return {
       url: site,
       status: "completed",
-      foundation: this.foundation(data),
-      signals: signalsFrom(data),
-      evidence: sanitizeEvidence(evidenceFrom(data, site, collectedAt)).evidence,
+      foundation: this.foundation(normalized, collectedAt, site),
+      signals: signalsFrom(normalized),
+      evidence: sanitizeEvidence(evidenceFrom(normalized, site, collectedAt)).evidence,
       errors: [],
     };
   }
@@ -164,7 +168,11 @@ export class WordLiftAuditProvider implements AuditProvider {
     }
   }
 
-  private foundation(data: NonNullable<WordLiftAuditResponse["data"]>): FoundationAuditSummary | undefined {
+  private foundation(
+    data: NonNullable<WordLiftAuditResponse["data"]>,
+    collectedAt: string,
+    sourceUrl: string,
+  ): FoundationAuditSummary | undefined {
     const score = data.overallScore ?? data.score;
     if (typeof score !== "number") return undefined;
     return {
@@ -172,20 +180,50 @@ export class WordLiftAuditProvider implements AuditProvider {
       summary: clip(data.summary ?? "The foundation audit completed without a written summary.", 2_000),
       findings: findingsFrom(data),
       sections: detailedSections(data),
-      quickWins: (data.quickWins?.wins ?? []).slice(0, 20).map((win) => ({
+      quickWins: (data.quickWins?.wins ?? []).slice(0, 30).map((win) => ({
         title: clip(win.title, 300),
         impact: win.impact ? clip(win.impact, 120) : undefined,
       })),
       provider: "wordlift-ai-audit",
+      collectedAt,
+      sourceUrl,
     };
   }
+}
+
+/** Accept both the documented `data.results` envelope and the newer flat response shape. */
+function normalizeAuditData(data: AuditData): AuditData {
+  const nested = isRecord(data.results) ? data.results : {};
+  const normalized = { ...nested, ...data } as AuditData;
+
+  normalized.summary ??= stringValue(nested.summary);
+  normalized.overallScore ??= numberValue(nested.score);
+  normalized.contentStructure ??= recordValue(nested.semanticHtml) as AuditData["contentStructure"];
+  normalized.automationReadiness ??= recordValue(nested.automation) as AuditData["automationReadiness"];
+  normalized.structuredData ??= recordValue(nested.structuredData) as AuditData["structuredData"];
+  normalized.imageAccessibility ??= recordValue(nested.imageAccessibility) as AuditData["imageAccessibility"];
+  normalized.jsRendering ??= recordValue(nested.jsRendering) as AuditData["jsRendering"];
+
+  if (!normalized.siteFiles) {
+    const robots = recordValue(nested.robotsTxt);
+    const llms = recordValue(nested.llmsTxt);
+    if (robots || llms) {
+      normalized.siteFiles = {
+        robotsTxt: stringValue(robots?.status),
+        llmsTxt: stringValue(llms?.status),
+        hasLlmsTxt: stringValue(llms?.status) === "found",
+        status: stringValue(robots?.status),
+      };
+    }
+  }
+  return normalized;
 }
 
 function clip(value: string, limit: number): string {
   return value.length > limit ? `${value.slice(0, limit - 1)}…` : value;
 }
 
-function findingsFrom(data: NonNullable<WordLiftAuditResponse["data"]>): string[] {
+function findingsFrom(data: AuditData): string[] {
   const findings: string[] = [];
   for (const win of data.quickWins?.wins ?? []) {
     findings.push(clip(`Quick win: ${win.title}${win.impact ? ` (${win.impact} impact)` : ""}`, 600));
@@ -197,81 +235,115 @@ function findingsFrom(data: NonNullable<WordLiftAuditResponse["data"]>): string[
     if (section?.status && section.status !== "Unknown") {
       findings.push(clip(`${label}: ${section.status}${section.score === undefined ? "" : ` (${section.score})`}`, 600));
     }
+    for (const detail of safeSectionDetails(section ?? {})) {
+      if (/recommendation|issue|error|missing|warning/i.test(detail.label)) {
+        findings.push(clip(`${label} — ${detail.label}: ${detail.value}`, 600));
+      }
+    }
   }
-  return findings.slice(0, 30);
+  return [...new Set(findings)].slice(0, 60);
 }
 
-function sections(data: NonNullable<WordLiftAuditResponse["data"]>): Array<[string, z.infer<typeof sectionSchema> | undefined]> {
-  return [
-    ["Site files", data.siteFiles],
-    ["SEO fundamentals", data.seoFundamentals],
-    ["Structured data", data.structuredData],
-    ["Content structure", data.contentStructure],
-    ["Image accessibility", data.imageAccessibility],
-    ["Automation readiness", data.automationReadiness],
-    ["JavaScript rendering", data.jsRendering],
-  ];
+function sections(data: AuditData): Array<[string, Record<string, unknown> | undefined]> {
+  return sectionEntries(data).map((entry) => [entry.label, entry.section]);
 }
 
-function detailedSections(data: NonNullable<WordLiftAuditResponse["data"]>): NonNullable<FoundationAuditSummary["sections"]> {
-  const entries: Array<[string, string, Record<string, unknown> | undefined]> = [
-    ["site-files", "Site files & agent discovery", data.siteFiles],
-    ["seo-fundamentals", "SEO fundamentals", data.seoFundamentals],
-    ["structured-data", "Structured data inventory", data.structuredData],
-    ["content-structure", "Content structure & token budget", data.contentStructure],
-    ["image-accessibility", "Image accessibility", data.imageAccessibility],
-    ["automation-readiness", "Automation readiness", data.automationReadiness],
-    ["javascript-rendering", "JavaScript rendering", data.jsRendering],
-  ];
-
-  return entries.flatMap(([id, label, section]) => {
+function detailedSections(data: AuditData): NonNullable<FoundationAuditSummary["sections"]> {
+  return sectionEntries(data).flatMap(({ id, label, section }) => {
     if (!section) return [];
     const score = typeof section.score === "number" ? section.score : undefined;
     const status = typeof section.status === "string" ? clip(section.status, 120) : undefined;
     const explanation = typeof section.explanation === "string" ? clip(section.explanation, 1_000) : undefined;
-    return [{ id, label, score, status, explanation, details: safeSectionDetails(id, section) }];
+    return [{ id, label, score, status, explanation, details: safeSectionDetails(section) }];
   });
 }
 
-/** Keeps useful audit detail while excluding raw page/file bodies and unbounded provider payloads. */
-function safeSectionDetails(sectionId: string, section: Record<string, unknown>) {
-  const allowBySection: Record<string, string[]> = {
-    "site-files": ["robotsTxt", "llmsTxt", "hasLlmsTxt", "hasSkillMd", "botStatus", "wellKnown"],
-    "seo-fundamentals": ["title", "description", "h1", "canonical", "metaRobots"],
-    "structured-data": ["hasJsonLd", "detectedSchemas", "missingSchemas", "errors"],
-    "content-structure": ["tokenBudget", "estimatedTokens", "semanticHtml", "headings", "wordCount", "readability"],
-    "image-accessibility": ["totalImages", "imagesWithAlt", "imagesWithoutAlt", "decorativeImages"],
-    "automation-readiness": ["issues", "forms", "interactiveElements"],
-    "javascript-rendering": ["frameworkDetected", "renderingType", "botAccessible", "requiresJavaScript"],
-  };
-  return (allowBySection[sectionId] ?? [])
-    .flatMap((key) => summarizeDetail(key, section[key]))
-    .slice(0, 30);
+const SECTION_DEFINITIONS: Array<{ key: string; id: string; label: string; aliases?: string[] }> = [
+  { key: "siteFiles", id: "site-files", label: "Site files & agent discovery", aliases: ["robotsTxt", "llmsTxt"] },
+  { key: "seoFundamentals", id: "seo-fundamentals", label: "SEO fundamentals" },
+  { key: "structuredData", id: "structured-data", label: "Structured data inventory" },
+  { key: "contentStructure", id: "content-structure", label: "Content structure & token budget", aliases: ["semanticHtml"] },
+  { key: "imageAccessibility", id: "image-accessibility", label: "Image accessibility" },
+  { key: "automationReadiness", id: "automation-readiness", label: "Automation readiness", aliases: ["automation"] },
+  { key: "jsRendering", id: "javascript-rendering", label: "JavaScript rendering" },
+];
+
+const RESERVED_AUDIT_KEYS = new Set([
+  "url", "domain", "timestamp", "status", "accountId", "accountUrl", "summary", "overallScore", "score", "success",
+  "quickWins", "results",
+]);
+
+function sectionEntries(data: AuditData) {
+  const record = data as Record<string, unknown>;
+  const consumed = new Set<string>();
+  const entries: Array<{ id: string; label: string; section: Record<string, unknown> }> = [];
+
+  for (const definition of SECTION_DEFINITIONS) {
+    consumed.add(definition.key);
+    for (const alias of definition.aliases ?? []) consumed.add(alias);
+    const section = recordValue(record[definition.key]);
+    if (section) entries.push({ id: definition.id, label: definition.label, section });
+  }
+
+  for (const [key, value] of Object.entries(record)) {
+    if (consumed.has(key) || RESERVED_AUDIT_KEYS.has(key)) continue;
+    const section = recordValue(value);
+    if (!section || safeSectionDetails(section).length === 0) continue;
+    entries.push({ id: slug(key), label: humanize(key), section });
+  }
+
+  return entries.slice(0, 24);
 }
 
-function summarizeDetail(key: string, value: unknown): Array<{ label: string; value: string }> {
-  if (value === undefined || value === null || value === "") return [];
-  const label = key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (character) => character.toUpperCase());
+/** Preserves every bounded, display-safe scalar while excluding raw bodies and secret-like fields. */
+function safeSectionDetails(section: Record<string, unknown>) {
+  return Object.entries(section)
+    .filter(([key]) => !["score", "status", "explanation"].includes(key))
+    .flatMap(([key, value]) => flattenDetail(value, [humanize(key)], 0))
+    .slice(0, 80);
+}
+
+const BLOCKED_DETAIL_KEYS = /^(rawHtml|html|pageHtml|pageSource|sourceHtml|body|content|markdown|screenshot|base64|apiKey|authorization|cookie|token)$/i;
+
+function flattenDetail(value: unknown, path: string[], depth: number): Array<{ label: string; value: string }> {
+  if (value === undefined || value === null || value === "" || depth > 4) return [];
   if (["string", "number", "boolean"].includes(typeof value)) {
-    return [{ label, value: clip(String(value), 600) }];
+    return [{ label: path.join(" · "), value: clip(String(value), 600) }];
   }
   if (Array.isArray(value)) {
-    const items = value.slice(0, 12).map((item) => summarizeObject(item)).filter(Boolean);
-    return items.length > 0 ? [{ label, value: clip(items.join(" · "), 600) }] : [];
+    return value.slice(0, 20).flatMap((entry, index) =>
+      flattenDetail(entry, value.length === 1 ? path : [...path, String(index + 1)], depth + 1),
+    );
   }
-  const summary = summarizeObject(value);
-  return summary ? [{ label, value: clip(summary, 600) }] : [];
+  if (!isRecord(value)) return [];
+  return Object.entries(value)
+    .filter(([key]) => !BLOCKED_DETAIL_KEYS.test(key))
+    .slice(0, 40)
+    .flatMap(([key, entry]) => flattenDetail(entry, [...path, humanize(key)], depth + 1));
 }
 
-function summarizeObject(value: unknown): string {
-  if (!value || typeof value !== "object") return String(value ?? "");
-  return Object.entries(value as Record<string, unknown>)
-    .slice(0, 12)
-    .flatMap(([key, entry]) => {
-      if (["string", "number", "boolean"].includes(typeof entry)) return [`${key}: ${String(entry)}`];
-      return [];
-    })
-    .join(", ");
+function humanize(value: string): string {
+  return value.replace(/[-_]/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (character) => character.toUpperCase());
+}
+
+function slug(value: string): string {
+  return value.replace(/([a-z])([A-Z])/g, "$1-$2").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase().slice(0, 80);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function recordValue(value: unknown): Record<string, unknown> | undefined {
+  return isRecord(value) ? value : undefined;
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function numberValue(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 /** Behavioral signals for deterministic archetype inference. */

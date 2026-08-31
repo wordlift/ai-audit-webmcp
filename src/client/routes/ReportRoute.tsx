@@ -12,6 +12,7 @@ import { FoundationAuditDetails } from "../components/FoundationAuditDetails";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { AlpinaAvailabilityTool } from "../webmcp/AlpinaAvailabilityTool";
 import { ExplainCapabilityTool } from "../webmcp/ExplainCapabilityTool";
+import { ExplainFoundationAuditTool } from "../webmcp/ExplainFoundationAuditTool";
 
 const SIDECAR_HOST = "alpina.travel";
 
@@ -55,6 +56,7 @@ export function ReportRoute() {
   return (
     <div className="report-page">
       <ExplainCapabilityTool report={report} />
+      <ExplainFoundationAuditTool report={report} />
       <AlpinaAvailabilityTool reportId={report.id} enabled={sidecarApplies(report)} />
       <nav className="report-toolbar" aria-label="Report actions">
         <Link to="/"><ArrowLeft size={17} /> New audit</Link>
