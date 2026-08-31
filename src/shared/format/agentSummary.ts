@@ -218,6 +218,11 @@ export function capabilitySummaryText(result: CapabilityToolResult): string {
     `${result.label} — ${result.state.replace("-", " ")} (${result.intent}, ${result.stage} stage).`,
     `Human support: ${result.humanSupport ? "yes" : "no"}. Agent support: ${result.agentSupport ? "yes" : "no"}.`,
   ];
+  if (!result.expected) {
+    lines.push(
+      "Observed on the site although the current site type does not expect this action; it stays outside the readiness score.",
+    );
+  }
   if (result.appliesTo.length > 0) {
     lines.push(`Applies to: ${result.appliesTo.map((entity) => `${entity.name} (${entity.types.join(", ")})`).join("; ")}.`);
   }

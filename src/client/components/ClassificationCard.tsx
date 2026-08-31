@@ -8,10 +8,20 @@ export function ClassificationCard({ classification, onOverride }: { classificat
   const [expanded, setExpanded] = useState(false);
   const [selected, setSelected] = useState<Archetype>(classification.primaryArchetype);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   async function apply() {
     if (selected === classification.primaryArchetype) return;
     setBusy(true);
-    await onOverride(selected);
+    setError(null);
+    try {
+      await onOverride(selected);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The map could not be recompiled. Please try again.");
+    } finally {
+      // The button must never stay stuck on "Recompiling…": success navigates away, and both
+      // outcomes hand the form back to the reader.
+      setBusy(false);
+    }
   }
   return (
     <section className="classification-card">
@@ -30,6 +40,7 @@ export function ClassificationCard({ classification, onOverride }: { classificat
             </select>
             <button type="submit" disabled={busy || selected === classification.primaryArchetype}>{busy ? "Recompiling…" : "Recompile map"}</button>
           </form>
+          {error && <p className="classification-error" role="alert">{error}</p>}
         </div>
       )}
     </section>

@@ -7,12 +7,14 @@ import {
   archetypeTemplateSchema,
   behaviorRuleSchema,
   categoryRuleSchema,
+  labelOverrideSchema,
   manifestSchema,
   type ActionDefinition,
   type ActionModelManifest,
   type ArchetypeTemplate,
   type BehaviorRule,
   type CategoryRule,
+  type LabelOverride,
 } from "./schemas.js";
 
 export interface ActionModel {
@@ -21,6 +23,7 @@ export interface ActionModel {
   templates: Map<z.infer<typeof archetypeSchema>, ArchetypeTemplate>;
   categoryRules: CategoryRule[];
   behaviorRules: BehaviorRule[];
+  labelOverrides: LabelOverride[];
 }
 const archetypes = archetypeSchema.options;
 
@@ -49,11 +52,19 @@ export function loadActionModel(version = "0.1.0", root = process.cwd()): Action
     templates.set(archetype, template);
   }
 
+  const labelOverrides = z
+    .array(labelOverrideSchema)
+    .parse(readJson(path.join(directory, "mappings/label-overrides.json")));
+  for (const override of labelOverrides) {
+    if (!actions.has(override.actionId)) throw new Error(`Label override references unknown action ${override.actionId}`);
+  }
+
   return {
     manifest,
     actions,
     templates,
     categoryRules: z.array(categoryRuleSchema).parse(readJson(path.join(directory, "mappings/google-categories.json"))),
     behaviorRules: z.array(behaviorRuleSchema).parse(readJson(path.join(directory, "mappings/behavior-rules.json"))),
+    labelOverrides,
   };
 }

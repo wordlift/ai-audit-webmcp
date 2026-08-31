@@ -95,9 +95,24 @@ describe("fixture report API", () => {
       .expect(200);
     expect(child.body.parentReportId).toBe(parent.body.id);
     expect(child.body.classification.primaryArchetype).toBe("publisher-content");
-    expect(child.body.capabilities.flatMap((item: { evidence: unknown[] }) => item.evidence).length).toBeGreaterThan(0);
     expect(child.body.contextGraph.bindings.some((item: { actionId: string }) => item.actionId === "source.verify")).toBe(true);
-    expect(child.body.contextGraph.bindings.some((item: { actionId: string }) => item.actionId === "availability.check")).toBe(false);
+
+    // Recompiling reframes expectations; it never discards what the audit observed. The booking
+    // evidence stays attached to an unexpected capability, outside the score and the priorities.
+    const parentEvidence = parent.body.capabilities.flatMap((item: { evidence: unknown[] }) => item.evidence);
+    const childEvidence = child.body.capabilities.flatMap((item: { evidence: unknown[] }) => item.evidence);
+    expect(childEvidence.length).toBe(parentEvidence.length);
+    expect(child.body.contextGraph.interfaces.length).toBe(parent.body.contextGraph.interfaces.length);
+    const availability = child.body.capabilities.find(
+      (item: { actionId: string }) => item.actionId === "availability.check",
+    );
+    expect(availability.expected).toBe(false);
+    expect(availability.evidence.length).toBeGreaterThan(0);
+    expect(availability.state).not.toBe("not-expected");
+    expect(child.body.contextGraph.bindings.some((item: { actionId: string }) => item.actionId === "availability.check")).toBe(true);
+    expect(child.body.score.counts.expected).toBe(
+      child.body.capabilities.filter((item: { expected: boolean }) => item.expected).length,
+    );
     const unchanged = await request(app).get(`/api/reports/${parent.body.id}`).expect(200);
     expect(unchanged.body.classification.primaryArchetype).toBe("travel-hospitality");
 
