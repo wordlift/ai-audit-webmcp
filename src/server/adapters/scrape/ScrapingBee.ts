@@ -1,5 +1,5 @@
 import { UrlPolicyError, assertPublicDestination, normalizeTargetUrl, safeFetch, type UrlPolicyOptions } from "../../security/urlPolicy.js";
-import { NativeFetchCollector, type PageFetcher } from "./NativeFetch.js";
+import { NativeFetchCollector, blockedResponse, type PageFetcher } from "./NativeFetch.js";
 
 const MAX_BYTES = 2_000_000;
 
@@ -7,6 +7,8 @@ export interface ScrapingBeeOptions extends UrlPolicyOptions {
   apiKey: string;
   renderJs?: boolean;
   endpoint?: string;
+  /** Retry a page the site refused once through ScrapingBee's premium proxy pool. On by default. */
+  premiumRetry?: boolean;
 }
 
 /**
@@ -18,27 +20,34 @@ export function createScrapingBeeCollector(options: ScrapingBeeOptions): NativeF
   return new NativeFetchCollector(options, createScrapingBeePageFetcher(options), "scrapingbee");
 }
 
-/** Exported for tests: the rendered page fetcher with its plain-fetch fallback. */
+/** Exported for tests: the rendered page fetcher with its premium retry and plain-fetch fallback. */
 export function createScrapingBeePageFetcher(options: ScrapingBeeOptions): PageFetcher {
   // Secrets routinely carry a trailing newline; sent verbatim it turns into a 401.
   const apiKey = options.apiKey.trim();
 
-  const rendered = async (target: URL) => {
+  /** One rendered request. The status and body are the target's unless ScrapingBee itself failed. */
+  const request = async (target: URL, premium: boolean): Promise<{ status: number; body: string }> => {
     const endpoint = new URL(options.endpoint ?? "https://app.scrapingbee.com/api/v1/");
     endpoint.searchParams.set("api_key", apiKey);
     endpoint.searchParams.set("url", target.toString());
     endpoint.searchParams.set("render_js", options.renderJs === false ? "false" : "true");
     endpoint.searchParams.set("block_ads", "true");
+    if (premium) endpoint.searchParams.set("premium_proxy", "true");
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 30_000);
     try {
       const response = await fetch(endpoint, { signal: controller.signal });
-      if (!response.ok) {
+      // ScrapingBee's own failures — a rejected key (401), its concurrency limit (429), or any
+      // JSON-bodied error — are renderer failures. Everything else is the target's own answer.
+      const ownFailure =
+        response.status === 401 ||
+        response.status === 429 ||
+        (!response.ok && (response.headers.get("content-type") ?? "").includes("application/json"));
+      if (ownFailure) {
         throw new UrlPolicyError("dns_failure", `Rendered collection failed with status ${response.status}.`, 502);
       }
-      const body = await response.text();
-      return { finalUrl: target.toString(), body: body.slice(0, MAX_BYTES), truncated: body.length > MAX_BYTES };
+      return { status: response.status, body: await response.text() };
     } catch (error) {
       if (error instanceof UrlPolicyError) throw error;
       if (controller.signal.aborted) {
@@ -48,6 +57,24 @@ export function createScrapingBeePageFetcher(options: ScrapingBeeOptions): PageF
     } finally {
       clearTimeout(timer);
     }
+  };
+
+  const rendered = async (target: URL) => {
+    let page = await request(target, false);
+    // Most bot walls judge the network, not the request. A refusal is retried once through the
+    // premium pool; whatever comes back then is the answer, wall or page.
+    if (options.premiumRetry !== false && blockedResponse(page.status, page.body)) {
+      page = await request(target, true);
+    }
+    if (page.status >= 500 && !blockedResponse(page.status, page.body)) {
+      throw new UrlPolicyError("dns_failure", `Rendered collection failed with status ${page.status}.`, 502);
+    }
+    return {
+      finalUrl: target.toString(),
+      body: page.body.slice(0, MAX_BYTES),
+      truncated: page.body.length > MAX_BYTES,
+      status: page.status,
+    };
   };
 
   return async (url) => {
@@ -60,9 +87,10 @@ export function createScrapingBeePageFetcher(options: ScrapingBeeOptions): PageF
       return await rendered(target);
     } catch {
       // A renderer outage or bad credential must not blank the whole audit; unrendered
-      // collection still reads server-rendered JSON-LD, tools, and discovery documents.
+      // collection still reads server-rendered JSON-LD, tools, and discovery documents. A site
+      // that refuses the plain request is then reported as blocked by the collector.
       const plain = await safeFetch(target, options);
-      return { finalUrl: plain.finalUrl, body: plain.body, truncated: plain.truncated };
+      return { finalUrl: plain.finalUrl, body: plain.body, truncated: plain.truncated, status: plain.status };
     }
   };
 }

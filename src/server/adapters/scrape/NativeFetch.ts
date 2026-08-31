@@ -48,7 +48,44 @@ const SOFT_NOT_FOUND_PROBE = "/.well-known/audit-soft-404-probe-do-not-implement
 const MCP_ENDPOINT_PATTERN = /(^|\/)mcp(\/|$|-)/;
 
 /** Fetches the main document. Swappable so a rendered-collection provider can supply the HTML. */
-export type PageFetcher = (url: URL) => Promise<{ finalUrl: string; body: string; truncated: boolean }>;
+export type PageFetcher = (url: URL) => Promise<{ finalUrl: string; body: string; truncated: boolean; status?: number }>;
+
+/** Statuses that are the site's bouncer, not its page. */
+const REFUSAL_STATUSES = new Set([401, 403, 451]);
+/** Challenge pages name themselves in the title, whatever status they ship with. */
+const CHALLENGE_TITLE =
+  /<title>[^<]*(just a moment|access denied|attention required|pardon our interruption|verify you are human|are you a human|bot verification|request unsuccessful|security check)/i;
+/** Fingerprints of the usual bot walls, for challenge pages with a bland title. */
+const CHALLENGE_TOKENS = /cf-chl-bypass|cf-browser-verification|\/cdn-cgi\/challenge-platform\/|_Incapsula_Resource|distil_r_captcha|px-captcha|awswaf-captcha/i;
+
+/**
+ * Tells a site's bouncer from its page. A 401/403/451 is a refusal, a 429 a rate limit, and a
+ * challenge page — whatever its status — asks for a proof of humanity an agent cannot give. Each
+ * is reported as what it is, never audited as if it were the site. Returns the reason, or null
+ * when the response is the page itself.
+ */
+const JS_NOTICE = /javascript is (disabled|required|not enabled|turned off)|enable javascript|turn on javascript|requires javascript/i;
+
+/**
+ * A page whose only readable content is a notice about JavaScript is a shell the site serves to
+ * anything it does not consider a browser — including, by construction, an agent.
+ */
+export function javascriptShell(page: Pick<SitePageSnapshot, "title" | "headings" | "text">): boolean {
+  const readable = [page.title, ...page.headings, page.text].join(" ").trim();
+  return readable.length < 400 && JS_NOTICE.test(readable);
+}
+
+export function blockedResponse(status: number | undefined, body: string): string | null {
+  if (status === 429) return "The site rate-limited automated collection (HTTP 429). Try again later.";
+  if (status !== undefined && REFUSAL_STATUSES.has(status)) {
+    return `The site refused automated access (HTTP ${status}); an agent cannot read it either.`;
+  }
+  const head = body.slice(0, 8_000);
+  if (CHALLENGE_TITLE.test(head) || CHALLENGE_TOKENS.test(head)) {
+    return "The site answered with a bot challenge instead of its page; an agent cannot read it either.";
+  }
+  return null;
+}
 
 /**
  * Collects a bounded public representation of a page and its agent-discovery documents using the
@@ -67,6 +104,13 @@ export class NativeFetchCollector implements ScrapeProvider {
 
   async collect(url: URL): Promise<SiteSnapshot> {
     const page = await this.fetchPublicPage(url);
+    // A refusal or a bot challenge is reported as such, never audited as if it were the site;
+    // neither is an outage page.
+    const refusal = blockedResponse(page.status, page.body);
+    if (refusal) throw new UrlPolicyError("site_blocked", refusal, 403);
+    if (page.status !== undefined && page.status >= 500) {
+      throw new UrlPolicyError("dns_failure", `The site answered HTTP ${page.status} instead of its page.`, 502);
+    }
     const { document } = parseHTML(page.body);
     const finalUrl = new URL(page.finalUrl);
 
@@ -79,10 +123,20 @@ export class NativeFetchCollector implements ScrapeProvider {
       this.collectPageTools(document, finalUrl),
     ]);
     const mainPage = extractPage(document, finalUrl, "entry", page.truncated, pageTools);
+    if (javascriptShell(mainPage)) {
+      throw new UrlPolicyError(
+        "site_blocked",
+        "The site answered with an empty JavaScript shell instead of its page; an agent without a full browser sees the same.",
+        403,
+      );
+    }
     const pageCandidates = selectRepresentativePages(links, finalUrl);
     const collectedPages = await Promise.allSettled(
       pageCandidates.map(async (candidate) => {
         const response = await this.fetchPublicPage(candidate.url);
+        // A secondary page behind a bouncer is skipped rather than read as an "Access Denied" page.
+        const refusal = blockedResponse(response.status, response.body);
+        if (refusal) throw new UrlPolicyError("site_blocked", refusal, 403);
         const parsed = parseHTML(response.body).document;
         // Across secondary pages we read declarative and inline tools but avoid re-fetching the
         // same site-wide script bundle up to three more times.
