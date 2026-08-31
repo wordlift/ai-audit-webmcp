@@ -49,6 +49,7 @@ export function createApp(options: AppOptions = {}): Express {
       service: "ai-audit-webmcp",
       revision: process.env.K_REVISION ?? "local",
       release: process.env.BUILD_SHA ?? "development",
+      mode: options.orchestrator?.mode ?? "demo",
     });
   });
 
