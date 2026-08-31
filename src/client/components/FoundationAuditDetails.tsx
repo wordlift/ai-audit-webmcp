@@ -1,4 +1,5 @@
 import { Bot, ChevronDown, ExternalLink, Gauge, Layers, ListChecks, Sparkles } from "lucide-react";
+import { stripMarkdown } from "../../shared/format/plainText.js";
 import type { FoundationAuditSummary } from "../../shared/types/index.js";
 
 const MAIN_AI_AUDIT_URL = "https://audit.wordlift.io";
@@ -51,7 +52,7 @@ export function FoundationAuditDetails({ audit }: { audit: FoundationAuditSummar
               <small>Foundation score</small>
             </div>
             <div className="foundation-meta">
-              <p className="foundation-summary">{audit.summary}</p>
+              <p className="foundation-summary">{stripMarkdown(audit.summary)}</p>
               {audit.sections.length > 0 && (
                 <ul className="foundation-tally" aria-label="Dimension status">
                   {tally.good > 0 && <li className="tone-good">{tally.good} good</li>}
@@ -88,7 +89,7 @@ export function FoundationAuditDetails({ audit }: { audit: FoundationAuditSummar
           {audit.quickWins.length > 0 && (
             <section className="quick-wins">
               <h3><Sparkles /> Quick wins</h3>
-              <ul>{audit.quickWins.map((win) => <li key={win.title}><strong>{win.title}</strong>{win.impact && <span>{win.impact} impact</span>}</li>)}</ul>
+              <ul>{audit.quickWins.map((win) => <li key={win.title}><strong>{stripMarkdown(win.title)}</strong>{win.impact && <span>{win.impact} impact</span>}</li>)}</ul>
             </section>
           )}
 
@@ -102,7 +103,7 @@ export function FoundationAuditDetails({ audit }: { audit: FoundationAuditSummar
                       <span className="dimension-dot" aria-hidden="true" />
                       <div className="dimension-main">
                         <strong>{section.label}</strong>
-                        {section.explanation && <p>{section.explanation}</p>}
+                        {section.explanation && <p>{stripMarkdown(section.explanation)}</p>}
                       </div>
                       {section.status && <span className="dimension-status">{section.status}</span>}
                       {section.score !== undefined && (
@@ -124,11 +125,11 @@ export function FoundationAuditDetails({ audit }: { audit: FoundationAuditSummar
           {findings.length > 0 && (
             <section className="foundation-findings">
               <h3><ListChecks /> Audit findings</h3>
-              <ul>{leadFindings.map((finding, index) => <li key={`${index}:${finding}`}>{finding}</li>)}</ul>
+              <ul>{leadFindings.map((finding, index) => <li key={`${index}:${finding}`}>{stripMarkdown(finding)}</li>)}</ul>
               {moreFindings.length > 0 && (
                 <details className="more-findings">
                   <summary>Show {moreFindings.length} more finding{moreFindings.length === 1 ? "" : "s"} <ChevronDown /></summary>
-                  <ul>{moreFindings.map((finding, index) => <li key={`${index}:${finding}`}>{finding}</li>)}</ul>
+                  <ul>{moreFindings.map((finding, index) => <li key={`${index}:${finding}`}>{stripMarkdown(finding)}</li>)}</ul>
                 </details>
               )}
             </section>

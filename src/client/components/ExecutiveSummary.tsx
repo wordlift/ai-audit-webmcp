@@ -1,4 +1,5 @@
 import { Bot, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
+import { summaryLead } from "../../shared/format/plainText.js";
 import type { ReportRecord } from "../../shared/types/index.js";
 
 export function ExecutiveSummary({ report }: { report: ReportRecord }) {
@@ -8,7 +9,8 @@ export function ExecutiveSummary({ report }: { report: ReportRecord }) {
       <div className="summary-copy">
         <p className="section-kicker"><Bot size={18} /> AI agent perspective</p>
         <h1 id="summary-heading">We understand this as a <span>{archetype}</span> site.</h1>
-        <p>{report.foundationAudit?.summary ?? "This report maps the functions an agent needs against the evidence available today."}</p>
+        {/* The hero carries the lead only; the full summary lives in the foundation panel below. */}
+        <p>{report.foundationAudit ? summaryLead(report.foundationAudit.summary) : "This report maps the functions an agent needs against the evidence available today."}</p>
         {report.contextGraph && <p className="summary-context-count">Built from {report.contextGraph.pages.length} representative pages, {report.contextGraph.entities.length} named entities and {report.contextGraph.interfaces.length} observed interfaces.</p>}
         {report.publishedWith && (
           <aside className="published-with" aria-label="Publishing platform">
