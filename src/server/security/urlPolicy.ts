@@ -9,9 +9,10 @@ export type UrlPolicyCode =
   | "dns_failure"
   | "too_many_redirects"
   | "response_too_large"
-  | "collection_timeout";
+  | "collection_timeout"
+  | "site_blocked";
 
-/** A destination the server refuses to fetch, or a bounded-collection failure. */
+/** A destination the server refuses to fetch, a bounded-collection failure, or a site that refused us. */
 export class UrlPolicyError extends Error {
   constructor(
     readonly code: UrlPolicyCode,

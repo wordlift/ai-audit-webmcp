@@ -1,6 +1,6 @@
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
-import { readableText } from "../../src/server/adapters/scrape/NativeFetch.js";
+import { NativeFetchCollector, blockedResponse, javascriptShell, readableText } from "../../src/server/adapters/scrape/NativeFetch.js";
 
 describe("readable text for classification", () => {
   it("excludes script, style, and JSON-LD text on a page without a main landmark", () => {
@@ -28,5 +28,60 @@ describe("readable text for classification", () => {
     readableText(document as unknown as Document);
 
     expect([...document.querySelectorAll("script")]).toHaveLength(1);
+  });
+});
+
+describe("telling a site's bouncer from its page", () => {
+  it("reads a refusal, a rate limit, and a challenge page as what they are", () => {
+    expect(blockedResponse(403, "<html><title>Access Denied</title></html>")).toMatch(/refused automated access \(HTTP 403\)/);
+    expect(blockedResponse(429, "")).toMatch(/rate-limited/);
+    expect(blockedResponse(503, "<html><head><title>Just a moment...</title></head></html>")).toMatch(/bot challenge/);
+    expect(blockedResponse(200, '<html><body><script src="/cdn-cgi/challenge-platform/h/b/orchestrate"></script></body></html>')).toMatch(
+      /bot challenge/,
+    );
+  });
+
+  it("leaves an ordinary page alone, even one that talks about access", () => {
+    expect(blockedResponse(200, "<html><title>Lungau Holidays</title><p>Access denied? Never at our reception.</p></html>")).toBeNull();
+    expect(blockedResponse(404, "<html><title>Not found</title></html>")).toBeNull();
+  });
+
+  it("reports a blocked site instead of auditing the block page", async () => {
+    const collector = new NativeFetchCollector({}, async (url) => ({
+      finalUrl: url.toString(),
+      body: "<html><head><title>Access Denied</title></head><body>Reference #18.2f3e</body></html>",
+      truncated: false,
+      status: 403,
+    }));
+
+    await expect(collector.collect(new URL("https://blocked.example/"))).rejects.toMatchObject({
+      code: "site_blocked",
+      message: expect.stringMatching(/HTTP 403/),
+    });
+  });
+
+  it("recognizes an empty JavaScript shell, but not a real page that merely mentions JavaScript", () => {
+    expect(javascriptShell({ title: "", headings: ["JavaScript is disabled"], text: "JavaScript is disabled in your browser." })).toBe(true);
+    expect(
+      javascriptShell({
+        title: "Lungau Holidays",
+        headings: ["Samspitze 4", "Book your stay"],
+        text: `Alpine apartments in Lungau for families. ${"Our booking widget requires JavaScript, but every rate is listed below. ".repeat(8)}`,
+      }),
+    ).toBe(false);
+  });
+
+  it("reports a JavaScript shell as a block instead of auditing the notice", async () => {
+    const collector = new NativeFetchCollector({}, async (url) => ({
+      finalUrl: url.toString(),
+      body: "<html><head><title></title></head><body><h1>JavaScript is disabled</h1><p>Enable JavaScript to continue.</p></body></html>",
+      truncated: false,
+      status: 200,
+    }));
+
+    await expect(collector.collect(new URL("https://shell.example/"))).rejects.toMatchObject({
+      code: "site_blocked",
+      message: expect.stringMatching(/JavaScript shell/),
+    });
   });
 });
