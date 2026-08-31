@@ -60,6 +60,24 @@ describe("archetype inference", () => {
       [],
     );
     expect(ikea.primaryArchetype).toBe("commerce-retail");
+
+    // illy.com as the collector met it: coffee and kitchen appliances, recipe pages, no cart.
+    const illy = inferArchetype(
+      model,
+      [
+        { name: "/Food & Drink/Beverages/Coffee & Tea", confidence: 0.85 },
+        { name: "/Home & Garden/Kitchen & Dining/Small Kitchen Appliances", confidence: 0.35 },
+      ],
+      [],
+    );
+    expect(illy.primaryArchetype).toBe("commerce-retail");
+  });
+
+  it("lets publisher evidence outweigh a beverage topic on a magazine about coffee", () => {
+    const result = inferArchetype(model, [{ name: "/Food & Drink/Beverages/Coffee & Tea", confidence: 0.9 }], [
+      "schema:Article",
+    ]);
+    expect(result.primaryArchetype).toBe("publisher-content");
   });
 
   it("still holds back when the little evidence there is points two ways", () => {
