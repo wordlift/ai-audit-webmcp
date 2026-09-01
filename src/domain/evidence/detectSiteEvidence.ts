@@ -66,9 +66,15 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
   const seen = new Set<string>();
   const site = snapshot.canonicalUrl || snapshot.requestedUrl;
 
+  const claimSeen = new Set<string>();
   const add = (item: Omit<CapabilityEvidence, "collectedAt">) => {
     const key = `${item.actionId}:${item.id}`;
     if (seen.has(key)) return;
+    // Two widgets with different endpoints but the same story are one finding for the reader:
+    // an identical claim for the same action, audience, and kind is a semantic duplicate.
+    const semantic = `${item.actionId}:${item.audience}:${item.kind}:${item.claim.replace(/, present on \d+ of the sampled pages$/, "")}`;
+    if (claimSeen.has(semantic)) return;
+    claimSeen.add(semantic);
     seen.add(key);
     evidence.push({ ...item, collectedAt });
   };

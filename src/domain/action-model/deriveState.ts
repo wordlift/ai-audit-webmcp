@@ -49,6 +49,19 @@ export function deriveCapability(
     humanSupport,
     agentSupport: invokedAgent,
     appliesTo: [],
-    evidence: [...evidence].sort((left, right) => left.id.localeCompare(right.id)),
+    // The decisive proof leads: everywhere evidence is truncated for display or for a tool
+    // result, an invocation the audit completed must never be the item that gets cut.
+    evidence: [...evidence].sort(
+      (left, right) =>
+        VERIFICATION_RANK[left.verification] - VERIFICATION_RANK[right.verification] ||
+        left.id.localeCompare(right.id),
+    ),
   };
 }
+
+const VERIFICATION_RANK: Record<CapabilityEvidence["verification"], number> = {
+  invoked: 0,
+  observed: 1,
+  declared: 2,
+  failed: 3,
+};

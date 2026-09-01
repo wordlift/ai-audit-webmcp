@@ -400,6 +400,22 @@ describe("evidence provenance from representative pages", () => {
     expect(cart[0].claim).toMatch(/reachable from 3 of the sampled pages/);
   });
 
+  it("keeps one claim when two widgets with different endpoints tell the same story", () => {
+    const withTwoWidgets = {
+      ...page,
+      jsonLdTypes: [],
+      entities: [],
+      forms: [
+        { name: "header", method: "get", action: "/search-a", inputNames: ["checkin"], hasDateInput: true, hasSearchInput: false },
+        { name: "footer", method: "get", action: "/search-b", inputNames: ["checkin"], hasDateInput: true, hasSearchInput: false },
+      ],
+    };
+    const availability = detectSiteEvidence(snapshotWith({ pages: [withTwoWidgets] }), COLLECTED_AT).evidence.filter(
+      (item) => item.actionId === "availability.check" && item.kind === "form",
+    );
+    expect(availability).toHaveLength(1);
+  });
+
   it("counts a published offer as human evidence too: the price is on the page", () => {
     const evidence = detectSiteEvidence(snapshotWith({ pages: [page] }), COLLECTED_AT).evidence;
     const human = evidence.find((item) => item.actionId === "offer.lookup" && item.audience === "human");
