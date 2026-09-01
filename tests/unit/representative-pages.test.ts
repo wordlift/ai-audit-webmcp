@@ -40,6 +40,39 @@ describe("representative page selection", () => {
     expect(paths).toContain("/en/booking");
   });
 
+  it("prefers inventory over editorial when the site plainly sells things", () => {
+    const { document } = parseHTML(`<nav>
+      <a href="/">Home</a>
+      <a href="/articles/how-to-finance-a-bus">How to finance a bus</a>
+      <a href="/articles/electric-coaches-explained">Electric coaches explained</a>
+      <a href="/used-buses-for-sale/">Used buses for sale</a>
+      <a href="/new-buses-for-sale/">New buses for sale</a>
+      <a href="/contact">Contact us</a>
+    </nav>`);
+    const selected = selectRepresentativePages([...document.querySelectorAll("a[href]")], new URL("https://buses.example/"));
+
+    expect(selected[0].url.pathname).toBe("/used-buses-for-sale/");
+    expect(selected.filter((item) => item.url.pathname.startsWith("/articles/")).length).toBeLessThanOrEqual(1);
+  });
+
+  it("keeps a shop's catalog ahead of its customer-service and order pages", () => {
+    const { document } = parseHTML(`<nav>
+      <a href="/">Home</a>
+      <a href="/collections/necklaces">Necklaces</a>
+      <a href="/customer-service">Customer service</a>
+      <a href="/orders/track">Track your order</a>
+      <a href="/cart">Cart</a>
+      <a href="/help">Help</a>
+    </nav>`);
+    const selected = selectRepresentativePages([...document.querySelectorAll("a[href]")], new URL("https://jewels.example/"));
+
+    const paths = selected.map((item) => item.url.pathname);
+    expect(paths[0]).toBe("/collections/necklaces");
+    expect(paths).not.toContain("/customer-service");
+    expect(paths).not.toContain("/orders/track");
+    expect(paths).not.toContain("/cart");
+  });
+
   it("chooses complementary detail, offer and policy pages instead of the first links", () => {
     const { document } = parseHTML(`<nav>
       <a href="/">Home</a>
