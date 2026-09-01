@@ -63,8 +63,9 @@ The application is itself a browser-native WebMCP surface using the imperative `
 - `get-audit-report` turns that report id into progress while the audit runs and into the finished summary once a terminal report exists.
 - `explain-capability` returns the entity bindings, human and agent interfaces, evidence, recommendation, and contract for one action.
 - `explain-foundation-audit` returns the WordLift foundation audit of the open report: score, dimensions, findings, and quick wins.
+- `refine-service-map` closes the loop: ChatGPT interviews the human about how the business actually works — its role, its primary entities, its vocabulary, who owns each action — and submits those structured decisions. The result is a new immutable **human-refined service map** with provenance and rationale on every changed node. A human decision can never mark an action agent-ready; readiness always requires invocation evidence.
 
-These four generic tools are the product: the audit itself is the WebMCP surface. A fifth, deliberately narrow tool (`check-alpina-availability`) remains in the codebase as a contained technical proof that a verified read-only endpoint can earn `sidecar-enabled` — grounded in the report's own entity, booking nothing. Enabling sites that way is future WordLift work, not part of this submission's story.
+These five generic tools are the product: the audit itself is the WebMCP surface, and the refinement makes it a human-guided compiler — website evidence in, machine draft out, human insight through ChatGPT, governed agent contracts at the end. A fifth, deliberately narrow tool (`check-alpina-availability`) remains in the codebase as a contained technical proof that a verified read-only endpoint can earn `sidecar-enabled` — grounded in the report's own entity, booking nothing. Enabling sites that way is future WordLift work, not part of this submission's story.
 
 ## Honest readiness
 

@@ -14,7 +14,7 @@ for (const fixture of FIXTURES) {
   test(`${fixture.url} compiles a complete entity-aware service map`, async ({ page }) => {
     await page.goto("/");
     await page.getByLabel("Website URL").fill(fixture.url);
-    await page.getByRole("button", { name: /build the service map/i }).click();
+    await page.getByRole("button", { name: /audit and refine my site/i }).click();
 
     await expect(page).toHaveURL(/\/reports\//);
     await expect(page.getByRole("heading", { name: fixture.archetype }).first()).toBeVisible();
