@@ -45,7 +45,16 @@ export function RefineServiceMapTool({ reportId, report }: { reportId: string; r
       const current = await resolveOpenReport(reportId, report, args?.reportId);
       if (!current.capabilities) throw new Error("This report carries no service map to refine.");
       const { reportId: _scope, ...assertionInput } = (args ?? {}) as Record<string, unknown>;
-      const assertions = humanAssertionSchema.parse(assertionInput);
+      const parsed = humanAssertionSchema.safeParse(assertionInput);
+      if (!parsed.success) {
+        // The agent gets a sentence it can act on, never a raw validation dump.
+        const reasons = parsed.error.issues
+          .slice(0, 5)
+          .map((issue) => `${issue.path.join(".") || "input"}: ${issue.message}`)
+          .join("; ");
+        throw new Error(`The refinement was not applied — fix the input and call again. ${reasons}`);
+      }
+      const assertions = parsed.data;
 
       const child = await refineReport(current.id, assertions);
       const refinement = child.refinement;

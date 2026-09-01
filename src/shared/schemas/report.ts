@@ -336,11 +336,13 @@ export const foundationAuditSummarySchema = z
 export const humanAssertionSchema = z
   .object({
     businessRole: z.string().min(2).max(120).optional(),
-    primaryEntityIds: z.array(z.string().min(1).max(500)).max(12).optional(),
-    demotedEntityIds: z.array(z.string().min(1).max(500)).max(12).optional(),
+    // Generous bounds: a context graph carries up to 80 entities and a map up to 80 actions, and
+    // a reviewer demoting most of a noisy graph is a legitimate judgment, not an attack.
+    primaryEntityIds: z.array(z.string().min(1).max(500)).max(80).optional(),
+    demotedEntityIds: z.array(z.string().min(1).max(500)).max(80).optional(),
     terminology: z
       .array(z.object({ term: z.string().min(1).max(120), meaning: z.string().min(1).max(300) }).strict())
-      .max(20)
+      .max(40)
       .optional(),
     actionDecisions: z
       .array(
@@ -353,7 +355,7 @@ export const humanAssertionSchema = z
           })
           .strict(),
       )
-      .max(30)
+      .max(80)
       .optional(),
   })
   .strict();
