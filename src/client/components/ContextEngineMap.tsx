@@ -14,12 +14,14 @@ const GENERIC_ENTITY_TYPES = new Set(["WebSite", "WebPage", "Organization"]);
  * then arrives with a lit path instead of waiting for the reader to discover the interaction.
  */
 export function heroEntityId(context: ContextGraph): string | null {
-  const candidates = context.entities.slice(0, MAX_ENTITIES);
+  // A reviewer's promotion is the strongest signal; a demotion disqualifies outright.
+  const candidates = context.entities.filter((entity) => entity.humanPriority !== "demoted").slice(0, MAX_ENTITIES);
   if (candidates.length === 0) return null;
   const degree = (id: string) => context.bindings.filter((binding) => binding.entityId === id).length;
   const ranked = [...candidates].sort((left, right) => {
+    const promoted = Number(right.humanPriority === "primary") - Number(left.humanPriority === "primary");
     const generic = Number(left.types.some((t) => GENERIC_ENTITY_TYPES.has(t))) - Number(right.types.some((t) => GENERIC_ENTITY_TYPES.has(t)));
-    return generic || degree(right.id) - degree(left.id);
+    return promoted || generic || degree(right.id) - degree(left.id);
   });
   return degree(ranked[0].id) > 0 ? ranked[0].id : null;
 }
@@ -53,7 +55,10 @@ export function ContextEngineMap({
   const [hovered, setHovered] = useState<Focus | null>(null);
   const [lexicalExpanded, setLexicalExpanded] = useState(false);
 
-  const entities = context.entities.slice(0, MAX_ENTITIES);
+  // A reviewer's demotions leave the working map entirely: demoted entities render folded away,
+  // carry no wiring, and answer for no action. The map embodies the judgment, not just logs it.
+  const demotedEntities = context.entities.filter((entity) => entity.humanPriority === "demoted");
+  const entities = context.entities.filter((entity) => entity.humanPriority !== "demoted").slice(0, MAX_ENTITIES);
   const boundActionIds = new Set(context.bindings.map((binding) => binding.actionId));
   const actions = capabilities.filter((capability) => boundActionIds.has(capability.actionId)).slice(0, MAX_ACTIONS);
 
@@ -115,7 +120,8 @@ export function ContextEngineMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pairsKey, selectedEntityId, lexicalExpanded, context, capabilities]);
 
-  // Vocabulary: deduplicated; when an entity is focused, only the language that belongs to it.
+  // Vocabulary: deduplicated; when an entity is focused, only the language that belongs to it —
+  // except human-provided terms, which are the business's own vocabulary and always stand.
   const seenLexical = new Set<string>();
   const dedupedLexical = context.lexicalEntries.filter((entry) => {
     const key = `${entry.kind}:${entry.label.toLowerCase()}`;
@@ -123,7 +129,9 @@ export function ContextEngineMap({
     seenLexical.add(key);
     return true;
   });
-  const ownLexical = selected ? dedupedLexical.filter((entry) => entry.entityIds.includes(selected.id)) : dedupedLexical;
+  const ownLexical = selected
+    ? dedupedLexical.filter((entry) => entry.provenance === "human-provided" || entry.entityIds.includes(selected.id))
+    : dedupedLexical;
   const lexical = ownLexical.length > 0 ? ownLexical : dedupedLexical.filter((entry) => entry.kind === "category");
   const visibleLexical = lexicalExpanded ? lexical.slice(0, 24) : lexical.slice(0, LEXICAL_PREVIEW);
   const hiddenLexical = lexical.length - visibleLexical.length;
@@ -206,20 +214,38 @@ export function ContextEngineMap({
                 onMouseEnter={() => setHovered({ kind: "entity", id: entity.id })}
                 onMouseLeave={() => setHovered(null)}
               >
-                <span>{entity.types[0]}</span>
+                <span>{entity.types[0]}{entity.humanPriority === "primary" && <em className="entity-primary-chip">Primary</em>}</span>
                 <strong>{entity.name}</strong>
                 <small>{entity.offers.length > 0 ? `${entity.offers.length} offer${entity.offers.length === 1 ? "" : "s"}` : `${entity.sourceUrls.length} source page${entity.sourceUrls.length === 1 ? "" : "s"}`}</small>
               </button>
             ))}
             {entities.length === 0 && <p className="empty-layer">No named domain entity was extracted.</p>}
+            {demotedEntities.length > 0 && (
+              <details className="demoted-fold">
+                <summary>{demotedEntities.length} entit{demotedEntities.length === 1 ? "y" : "ies"} demoted by the reviewer</summary>
+                <div className="entity-list">
+                  {demotedEntities.map((entity) => (
+                    <span key={entity.id} className="entity-card entity-card-demoted">
+                      <span>{entity.types[0]}</span>
+                      <strong>{entity.name}</strong>
+                      <small>demoted · answers for no action</small>
+                    </span>
+                  ))}
+                </div>
+              </details>
+            )}
           </div>
         </Layer>
 
         <Layer icon={<Tags />} eyebrow="Lexical graph" title="Meaning & vocabulary">
           <div className="lexical-list">
             {visibleLexical.map((entry) => (
-              <span key={entry.id} className={`lexical-chip lexical-${entry.kind}`}>
-                <small>{entry.kind.replace("-", " ")}</small>{entry.label}
+              <span
+                key={entry.id}
+                className={`lexical-chip lexical-${entry.kind} ${entry.provenance === "human-provided" ? "lexical-human" : ""}`}
+                title={entry.meaning}
+              >
+                <small>{entry.provenance === "human-provided" ? "human" : entry.kind.replace("-", " ")}</small>{entry.label}
               </span>
             ))}
             {hiddenLexical > 0 && (

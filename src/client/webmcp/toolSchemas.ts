@@ -132,7 +132,26 @@ export const REFINE_SERVICE_MAP_TOOL = {
           required: ["term", "meaning"],
           additionalProperties: false,
         },
-        description: "Business vocabulary the machine could not know (at most 40 entries).",
+        description: "Business vocabulary the machine could not know (at most 40 entries). Each entry replaces any machine term of the same name in the lexical graph.",
+      },
+      terminologyDecisions: {
+        type: "array",
+        maxItems: 40,
+        items: {
+          type: "object",
+          properties: {
+            term: { type: "string", description: "A term currently in the report's lexical graph." },
+            decision: {
+              type: "string",
+              enum: ["confirm", "replace", "reject"],
+              description: "confirm keeps the machine's term as reviewed; replace redefines it (meaning required); reject removes it from the lexical graph.",
+            },
+            meaning: { type: "string", description: "The business's own definition; required when decision is replace." },
+          },
+          required: ["term", "decision"],
+          additionalProperties: false,
+        },
+        description: "Judgments about the machine's own vocabulary (at most 40 entries).",
       },
       actionDecisions: {
         type: "array",

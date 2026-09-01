@@ -5,17 +5,45 @@ import type { ReportRecord } from "../../shared/types/index.js";
 const plural = (count: number, singular: string, pluralForm = `${singular}s`) =>
   `${count} ${count === 1 ? singular : pluralForm}`;
 
+const article = (noun: string) => (/^[aeiou]/i.test(noun) ? "an" : "a");
+
+/**
+ * The hero never contradicts the score beside it: when verified readiness is zero, upstream
+ * prose about "exceptional AI readiness" gives way to the truthful sentence — declared
+ * infrastructure, nothing invocation-verified yet.
+ */
+function heroLead(report: ReportRecord): string {
+  if (report.score?.value === 0) {
+    const declaredAgent = report.contextGraph?.interfaces.filter((item) => item.audience === "agent").length ?? 0;
+    if (declaredAgent > 0) {
+      return `${declaredAgent >= 5 ? "Strong declared agent infrastructure" : "Declared agent infrastructure is present"} — ${plural(declaredAgent, "agent interface")} declared or observed — but no interface has yet been invocation-verified.`;
+    }
+    return "No agent interface has been verified yet; the map below shows what people can do and what agents still need.";
+  }
+  return report.foundationAudit
+    ? summaryLead(report.foundationAudit.summary)
+    : "This report maps the functions an agent needs against the evidence available today.";
+}
+
 export function ExecutiveSummary({ report }: { report: ReportRecord }) {
   // "other" is a model bucket, not English: the reader sees "a general site", never "a other site".
   const primary = report.classification?.primaryArchetype;
   const archetype = !primary || primary === "other" ? "general" : primary.replaceAll("-", " / ");
+  // The human's words lead once a reviewer has named the role; the machine archetype stays visible.
+  const businessRole = report.classification?.businessRole?.replaceAll("-", " ");
+  const headline = businessRole ?? archetype;
   return (
     <section className="executive-summary" aria-labelledby="summary-heading">
       <div className="summary-copy">
         <p className="section-kicker"><Bot size={18} /> AI agent perspective</p>
-        <h1 id="summary-heading">We understand this as a <span>{archetype}</span> site.</h1>
+        <h1 id="summary-heading">We understand this as {article(headline)} <span>{headline}</span> site.</h1>
+        {businessRole && (
+          <p className="machine-archetype">
+            <span className="provenance-badge">Human-provided</span> role · machine archetype: {archetype}
+          </p>
+        )}
         {/* The hero carries the lead only; the full summary lives in the foundation panel below. */}
-        <p>{report.foundationAudit ? summaryLead(report.foundationAudit.summary) : "This report maps the functions an agent needs against the evidence available today."}</p>
+        <p>{heroLead(report)}</p>
         {report.contextGraph && <p className="summary-context-count">Built from {plural(report.contextGraph.pages.length, "representative page")}, {plural(report.contextGraph.entities.length, "named entity", "named entities")} and {plural(report.contextGraph.interfaces.length, "interface")} observed or declared.</p>}
         {report.publishedWith && (
           <aside className="published-with" aria-label="Publishing platform">

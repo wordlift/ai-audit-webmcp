@@ -134,12 +134,22 @@ describe("fixture report API", () => {
       (item: { types: string[] }) => !item.types.includes("WebSite"),
     );
 
+    const demoteTarget = availability.appliesTo.find((item: { id: string }) => item.id !== heroEntity.id);
+    const machineTerm = parent.body.contextGraph.lexicalEntries.find(
+      (item: { kind: string }) => item.kind === "category",
+    );
+
     const child = await request(app)
       .post(`/api/reports/${parent.body.id}/refine`)
       .send({
         businessRole: "destination-organization",
         primaryEntityIds: [heroEntity.id, "urn:not-in-this-report"],
+        demotedEntityIds: [demoteTarget.id],
         terminology: [{ term: "availability", meaning: "partner lodging inventory" }],
+        terminologyDecisions: [
+          { term: machineTerm.label, decision: "reject" },
+          { term: "no-such-term-xyz", decision: "reject" },
+        ],
         actionDecisions: [
           {
             actionId: "availability.check",
@@ -163,7 +173,26 @@ describe("fixture report API", () => {
     // Human judgments form an overlay; unknown targets come back as conflicts, not silent drops.
     expect(child.body.refinement.conflicts.join(" ")).toMatch(/urn:not-in-this-report/);
     expect(child.body.refinement.conflicts.join(" ")).toMatch(/does\.not\.exist/);
-    expect(child.body.contextGraph.entities[0].id).toBe(heroEntity.id);
+    expect(child.body.refinement.conflicts.join(" ")).toMatch(/no-such-term-xyz/);
+
+    // The decisions live in the map itself, not only in the change log: entities carry the
+    // human priority, a demoted entity answers for no action, and human vocabulary leads the
+    // lexicon while the rejected machine term is gone.
+    const entities = child.body.contextGraph.entities;
+    expect(entities[0].id).toBe(heroEntity.id);
+    expect(entities[0].humanPriority).toBe("primary");
+    expect(entities.find((item: { id: string }) => item.id === demoteTarget.id).humanPriority).toBe("demoted");
+    const refinedAvailability = child.body.capabilities.find(
+      (item: { actionId: string }) => item.actionId === "availability.check",
+    );
+    expect(refinedAvailability.appliesTo.map((item: { id: string }) => item.id)).not.toContain(demoteTarget.id);
+    const lexicon = child.body.contextGraph.lexicalEntries;
+    expect(lexicon[0]).toMatchObject({
+      label: "availability",
+      meaning: "partner lodging inventory",
+      provenance: "human-provided",
+    });
+    expect(lexicon.some((item: { label: string }) => item.label === machineTerm.label)).toBe(false);
 
     const refined = child.body.capabilities.find(
       (item: { actionId: string }) => item.actionId === "availability.check",

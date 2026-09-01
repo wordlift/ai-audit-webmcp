@@ -34,6 +34,68 @@ describe("the score cards", () => {
     expect(screen.getByLabelText("0 out of 100")).toBeInTheDocument();
   });
 
+  it("never lets upstream prose contradict a zero readiness score", () => {
+    render(
+      <ExecutiveSummary
+        report={{
+          ...base,
+          status: "completed",
+          score: { value: 0, verifiedWeight: 0, expectedWeight: 24, counts: { expected: 10, ready: 0, unverified: 6, humanOnly: 3, missing: 1 } },
+          foundationAudit: {
+            score: 92,
+            summary: "This site shows exceptional AI readiness for transactional agents.",
+            findings: [], sections: [], quickWins: [], provider: "wordlift",
+          },
+          contextGraph: {
+            pages: [{ url: "https://shop.example/", title: "Shop", role: "entry", headings: [], entityIds: [] }],
+            entities: [],
+            lexicalEntries: [],
+            interfaces: Array.from({ length: 6 }, (_, index) => ({
+              id: `interface:i${index}`,
+              actionId: "site.search",
+              entityIds: [],
+              name: `declared-${index}`,
+              protocol: "structured-data" as const,
+              audience: "agent" as const,
+              status: "declared" as const,
+              sourceUrl: "https://shop.example/",
+              evidenceId: `i${index}`,
+            })),
+            bindings: [],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/no interface has yet been invocation-verified/i)).toBeVisible();
+    expect(screen.queryByText(/exceptional AI readiness/i)).toBeNull();
+  });
+
+  it("leads with the human-provided role and keeps the machine archetype visible", () => {
+    render(
+      <ExecutiveSummary
+        report={{
+          ...base,
+          status: "completed",
+          classification: {
+            primaryArchetype: "commerce-retail",
+            categories: [],
+            rankedArchetypes: [{ archetype: "commerce-retail", score: 4 }],
+            confidence: "high",
+            margin: 2,
+            provisional: false,
+            businessRole: "direct-to-consumer-footwear-merchant",
+            model: "google-v2",
+            collectedAt: "2026-09-01T05:00:00.000Z",
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: /direct to consumer footwear merchant/i })).toBeVisible();
+    expect(screen.getByText(/machine archetype: commerce \/ retail/i)).toBeVisible();
+  });
+
   it("shows both numbers when both audits produced one", () => {
     render(
       <ExecutiveSummary

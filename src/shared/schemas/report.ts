@@ -65,6 +65,8 @@ export const domainEntitySchema = z
     sameAs: z.array(z.string().url().max(2_048)).max(12),
     offers: z.array(entityOfferSchema).max(12),
     confidence: z.number().min(0).max(1),
+    /** A reviewer's judgment about this entity's place in the map; absent on the machine draft. */
+    humanPriority: z.enum(["primary", "demoted"]).optional(),
   })
   .strict();
 
@@ -77,6 +79,10 @@ export const lexicalEntrySchema = z
     entityIds: z.array(z.string().min(1).max(500)).max(40),
     sourceUrls: z.array(z.string().url().max(2_048)).max(12),
     confidence: z.number().min(0).max(1),
+    /** What this term means for the business, in the reviewer's words. */
+    meaning: z.string().min(1).max(300).optional(),
+    /** Present when a human defined or confirmed this term; machine vocabulary carries none. */
+    provenance: z.literal("human-provided").optional(),
   })
   .strict();
 
@@ -342,6 +348,24 @@ export const humanAssertionSchema = z
     demotedEntityIds: z.array(z.string().min(1).max(500)).max(80).optional(),
     terminology: z
       .array(z.object({ term: z.string().min(1).max(120), meaning: z.string().min(1).max(300) }).strict())
+      .max(40)
+      .optional(),
+    /** Judgments about the machine's own vocabulary: keep it, redefine it, or throw it out. */
+    terminologyDecisions: z
+      .array(
+        z
+          .object({
+            term: z.string().min(1).max(240),
+            decision: z.enum(["confirm", "replace", "reject"]),
+            meaning: z.string().min(1).max(300).optional(),
+          })
+          .strict()
+          .superRefine((entry, context) => {
+            if (entry.decision === "replace" && !entry.meaning) {
+              context.addIssue({ code: "custom", path: ["meaning"], message: "replace requires the new meaning" });
+            }
+          }),
+      )
       .max(40)
       .optional(),
     actionDecisions: z
