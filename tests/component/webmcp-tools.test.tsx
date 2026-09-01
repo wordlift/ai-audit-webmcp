@@ -597,6 +597,27 @@ describe("WebMCP tool layer", () => {
     });
   });
 
+  it("answers an over-limit refinement with a sentence the agent can act on", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(completedReport)));
+
+    render(
+      <MemoryRouter initialEntries={[`/reports/${REPORT_ID}`]}>
+        <App />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(modelContext.get("refine-service-map")).toBeDefined());
+
+    const result = await act(async () =>
+      modelContext.call("refine-service-map", {
+        demotedEntityIds: Array.from({ length: 81 }, (_, index) => `urn:entity:${index}`),
+      }),
+    );
+
+    expect(result.isError).toBe(true);
+    expect(toolText(result)).toMatch(/fix the input and call again/i);
+    expect(toolText(result)).toMatch(/demotedEntityIds/);
+  });
+
   it("keeps the normal web interface working when WebMCP is unavailable", () => {
     modelContext.uninstall();
     render(<MemoryRouter><App /></MemoryRouter>);

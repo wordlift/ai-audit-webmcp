@@ -111,15 +111,18 @@ export const REFINE_SERVICE_MAP_TOOL = {
       primaryEntityIds: {
         type: "array",
         items: { type: "string" },
-        description: "Entity ids from this report to promote as the business's primary objects.",
+        maxItems: 80,
+        description: "Entity ids from this report to promote as the business's primary objects (at most 80).",
       },
       demotedEntityIds: {
         type: "array",
         items: { type: "string" },
-        description: "Entity ids from this report to demote as peripheral.",
+        maxItems: 80,
+        description: "Entity ids from this report to demote as peripheral (at most 80).",
       },
       terminology: {
         type: "array",
+        maxItems: 40,
         items: {
           type: "object",
           properties: {
@@ -129,10 +132,11 @@ export const REFINE_SERVICE_MAP_TOOL = {
           required: ["term", "meaning"],
           additionalProperties: false,
         },
-        description: "Business vocabulary the machine could not know.",
+        description: "Business vocabulary the machine could not know (at most 40 entries).",
       },
       actionDecisions: {
         type: "array",
+        maxItems: 80,
         items: {
           type: "object",
           properties: {

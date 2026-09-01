@@ -79,3 +79,14 @@ describe("report schemas", () => {
     expect(() => parseStoredReport(report(), 100)).toThrow(/storage ceiling/);
   });
 });
+
+describe("human assertions", () => {
+  it("accepts a reviewer demoting most of a noisy graph — the live failure was 14 demotions", async () => {
+    const { humanAssertionSchema } = await import("../../src/shared/schemas/report.js");
+    const ids = (count: number) => Array.from({ length: count }, (_, index) => `urn:entity:${index}`);
+
+    expect(humanAssertionSchema.parse({ demotedEntityIds: ids(14) }).demotedEntityIds).toHaveLength(14);
+    expect(humanAssertionSchema.parse({ primaryEntityIds: ids(80), actionDecisions: [] }).primaryEntityIds).toHaveLength(80);
+    expect(humanAssertionSchema.safeParse({ demotedEntityIds: ids(81) }).success).toBe(false);
+  });
+});
