@@ -63,22 +63,24 @@ export function withObservedActions(
 }
 
 /**
- * The model's labels are generic on purpose; the site's own categories make them concrete —
- * "Check availability" reads as "Check domain availability" on a hosting registrar. Only the
- * wording specializes: identity, governance, and schemas stay the model's.
+ * The model's labels are generic on purpose; the site's own context makes them concrete —
+ * "Check availability" reads as "Check domain availability" when the site sells hosting. The
+ * terms are what the audit read from the site itself: its content categories and the names of
+ * the entities it publishes. Only the wording specializes: identity, governance, and schemas
+ * stay the model's.
  */
 export function specializeActionLabels(
   actions: CompiledAction[],
-  categoryNames: string[],
+  contextTerms: string[],
   overrides: LabelOverride[],
 ): CompiledAction[] {
-  if (overrides.length === 0 || categoryNames.length === 0) return actions;
-  const lowered = categoryNames.map((name) => name.toLowerCase());
+  if (overrides.length === 0 || contextTerms.length === 0) return actions;
+  const lowered = contextTerms.map((term) => term.toLowerCase());
   return actions.map((action) => {
     const rule = overrides.find(
       (candidate) =>
         candidate.actionId === action.id &&
-        lowered.some((name) => name.includes(candidate.categoryIncludes.toLowerCase())),
+        lowered.some((term) => term.includes(candidate.contextIncludes.toLowerCase())),
     );
     if (!rule) return action;
     return { ...action, label: rule.label, description: rule.description ?? action.description };

@@ -43,4 +43,15 @@ describe("category-driven label specialization", () => {
     const actions = compileActionGraph(model, "commerce-retail").actions;
     expect(specializeActionLabels(actions, ["/Shopping/Apparel"], model.labelOverrides)).toEqual(actions);
   });
+
+  it("specializes from the site's own entities when the categories stay vague", () => {
+    // Google files Bluehost under generic web services, but the site's Product is the tell.
+    const actions = compileActionGraph(model, "commerce-retail").actions;
+    const specialized = specializeActionLabels(
+      actions,
+      ["/Internet & Telecom/Web Services/Other", "WordPress hosting"],
+      model.labelOverrides,
+    );
+    expect(specialized.find((action) => action.id === "availability.check")?.label).toBe("Check domain availability");
+  });
 });
