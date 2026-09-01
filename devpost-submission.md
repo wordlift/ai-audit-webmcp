@@ -59,12 +59,12 @@ This is ontology-backed internally, but the user never needs to learn an ontolog
 
 The application is itself a browser-native WebMCP surface using the imperative `navigator.modelContext` API (it also serves the Community Group draft's `document.modelContext`, so the tools register wherever the browser looks):
 
-- `audit-website` accepts any safe public URL, opens the report page at once, waits for the completed audit, and returns the archetype, scores, page and entity summary, AI-crawler access, priorities, and shareable report URL.
+- `audit-website` accepts any safe public URL and opens the report page at once. A fast audit returns the archetype, scores, page and entity summary, AI-crawler access, priorities, and shareable report URL in one call; a longer one returns the report id immediately so the agent's call never times out.
+- `get-audit-report` turns that report id into progress while the audit runs and into the finished summary once a terminal report exists.
 - `explain-capability` returns the entity bindings, human and agent interfaces, evidence, recommendation, and contract for one action.
 - `explain-foundation-audit` returns the WordLift foundation audit of the open report: score, dimensions, findings, and quick wins.
-- `check-alpina-availability` is one controlled read-only sidecar showing how an approved existing endpoint can become a verified WebMCP capability. Its answer is grounded in the report's own entity — the apartment the site itself published — with source and collection time, and it claims no entity when the site published none.
 
-The first three tools are generic. The fourth is deliberately narrow: it proves the adapter pattern without pretending a universal reverse proxy is safe.
+These four generic tools are the product: the audit itself is the WebMCP surface. A fifth, deliberately narrow tool (`check-alpina-availability`) remains in the codebase as a contained technical proof that a verified read-only endpoint can earn `sidecar-enabled` — grounded in the report's own entity, booking nothing. Enabling sites that way is future WordLift work, not part of this submission's story.
 
 ## Honest readiness
 
@@ -76,9 +76,7 @@ The WordLift foundation score and agent-readiness score remain separate because 
 
 The stable Alpina fixture demonstrates the complete journey with four captured pages, domain entities, offers, lexical context, expected travel actions, interface evidence, and contracts. It currently records a **94/100 WordLift foundation score** and **22/100 verified action readiness, with 2 of 10 expected capabilities ready**.
 
-The report does not claim Alpina lacks an availability surface. It distinguishes the existing human/API functionality from browser-native WebMCP verification. The approved read-only sidecar proves the additional exposure and records successful invocation in an immutable child report.
-
-No room is booked, held, or paid for.
+The report does not claim Alpina lacks an availability surface. It distinguishes the existing human/API functionality from browser-native WebMCP verification: declarations stay `unverified`, and only an interface the audit actually called counts as proven. The contained read-only adapter documents how such a call is recorded — in an immutable child report, booking nothing — as a technical proof rather than a product claim.
 
 ## How we built it
 
@@ -121,7 +119,7 @@ The agentic web needs more than machine-readable pages. It needs an explicit con
 - richer multi-page entity reconciliation and relationship extraction;
 - blended archetypes for complex sites;
 - community-contributed entity/action rules and evidence detectors;
-- more approved sidecar adapters;
+- governed enablement of verified endpoints — turning the adapter pattern proven here into a WordLift product;
 - publication of the action layer into WordLift knowledge graphs and agentic storefronts.
 
 ## Built with

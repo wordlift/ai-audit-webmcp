@@ -6,7 +6,8 @@ const FIXTURES = [
   { url: "https://alpina.travel", archetype: /travel \/ hospitality/i, entity: "AlpiNest Feriendorf Lungau", action: /check availability/i, pages: 4 },
   { url: "https://insurance.example", archetype: /finance \/ insurance/i, entity: "Travel Cover", action: /request a quote/i, pages: 3 },
   { url: "https://saas.example", archetype: /saas/i, entity: "Context Cloud", action: /start a trial/i, pages: 3 },
-  { url: "https://organization.example", archetype: /other/i, entity: "Example Foundation", action: /submit an inquiry/i, pages: 3 },
+  // The "other" bucket reads as "a general site" — never "a other site".
+  { url: "https://organization.example", archetype: /general/i, entity: "Example Foundation", action: /submit an inquiry/i, pages: 3 },
 ] as const;
 
 for (const fixture of FIXTURES) {

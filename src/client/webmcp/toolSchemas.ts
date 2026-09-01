@@ -59,7 +59,7 @@ export const EXPLAIN_CAPABILITY_TOOL = {
       reportId: { type: "string", description: "Identifier of the report currently open in the page." },
       actionId: {
         type: "string",
-        description: "Action identifier from the capability map, for example travel.check-availability.",
+        description: "Action identifier from the capability map, for example availability.check.",
       },
     },
     required: ["actionId"],
