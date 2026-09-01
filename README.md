@@ -14,7 +14,6 @@ WordLift AI Audit takes any public URL, classifies the site, reads up to four re
 2. **The Context Engine** — a domain graph (organizations, products, services, places, articles, people, and offers, each with page provenance), a lexical graph (categories, names, aliases, topics), and the action layer (expected actions, entity–action bindings, interfaces, evidence, contracts). Selecting an entity filters the actions bound to it.
 3. **Capability map** — the expected journey for the archetype (discover → understand & decide → act → manage), each action with its human and agent evidence, a recommendation, and a JSON-LD contract.
 4. **Full WordLift audit** — the foundation audit behind progressive disclosure: score and summary, AI-crawler access, quick wins, the audited dimensions (those needing attention first, raw details folded away), remaining findings, and the way back to [audit.wordlift.io](https://audit.wordlift.io).
-5. **Approved sidecar** (alpina.travel only) — a read-only availability adapter that turns one human-only action into a verified agent function and records the proof in an immutable child revision.
 
 The report page exists from the first second: it polls the running record and shows each provider's result as it lands — entities from the collector, the foundation score from the audit — before the final report replaces them.
 
@@ -27,7 +26,7 @@ The report page exists from the first second: it polls the running record and sh
 | A schema.org `SearchAction` template | Executed once, read-only, with a query taken from the page; confirmed only when the results acknowledge it — a blind 200 stays `declared`, a non-200 is `failed` |
 | Discovery documents (`llms.txt`, `skill.md`, `.well-known/*`) | Fetched and validated; a soft 404 is a finding, not a presence |
 | Forms, links, structured data | `observed` human evidence and `declared` agent evidence |
-| The alpina.travel availability API | Called through the approved sidecar; only a real answer earns `sidecar-enabled` |
+| The alpina.travel availability API | Called through a contained read-only adapter — a technical proof that a verified endpoint can earn `sidecar-enabled`; enabling sites this way is future WordLift work, not part of the audit |
 
 **Declaration earns zero readiness points.** Only `invoked` evidence raises the verified agent-readiness score. A site that refuses automated access — a 403, a rate limit, a bot challenge — is reported as blocked rather than audited from its block page; that refusal is exactly what an agent would meet. The compiler supports six operating archetypes — commerce/retail, publisher/content, travel/hospitality, finance/insurance, SaaS, and a conservative fallback — and archetype rules select the expected journey while page and API evidence determine the actual state.
 
@@ -35,10 +34,11 @@ The report page exists from the first second: it polls the running record and sh
 
 The application is itself a WebMCP surface. It registers tools through the WebMCP imperative API via `use-webmcp-tool` — on `navigator.modelContext` where the browser exposes it (Chrome's preview) and on `document.modelContext` per the Community Group draft; `src/client/webmcp/modelContextAlias.ts` points whichever is missing at the other, so the tools register wherever the browser looks:
 
-- `audit-website` — audits any safe public URL and returns the archetype, both scores, pages and entities, crawler access, priorities, and the report URL. The report page opens immediately and fills in while the audit runs.
+- `audit-website` — audits any safe public URL. A fast audit answers in one call with the archetype, both scores, pages and entities, crawler access, priorities, and the report URL; a longer one answers immediately with the report id and points at `get-audit-report`, so the call never times out.
+- `get-audit-report` — turns a report id into progress while the audit runs and into the finished summary once a terminal report exists.
 - `explain-capability` — one action: the entities it applies to, its interfaces, evidence, governance, recommendation, and contract.
 - `explain-foundation-audit` — the WordLift foundation audit of the open report: score, dimensions, findings, quick wins.
-- `check-alpina-availability` — the approved read-only sidecar. When the report's context graph contains the property, the answer says which entity it is grounded in and where that entity was read.
+- `check-alpina-availability` — a contained read-only adapter for one allowlisted endpoint, kept as a technical proof of how a verified interface earns `sidecar-enabled` in an immutable child revision. Turning that pattern into a product is future WordLift work, outside this audit.
 
 Tool names and descriptions are identifiers agents key on; changing them is a breaking change.
 

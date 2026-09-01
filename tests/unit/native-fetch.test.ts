@@ -44,6 +44,55 @@ describe("readable text for classification", () => {
   });
 });
 
+describe("the catalog second hop", () => {
+  const filler = `<p>${"Fine jewellery for every day, made to be worn. ".repeat(30)}</p>`;
+  const site: Record<string, string> = {
+    "https://shop.example/": `<html><head><title>Ring Shop</title></head><body><main><h1>Rings and things</h1>${filler}</main>
+      <nav><a href="/collections/rings">Rings</a><a href="/help">Help</a><a href="/cart">Cart</a></nav></body></html>`,
+    "https://shop.example/collections/rings": `<html><head><title>Rings</title></head><body><main><h1>All rings</h1>${filler}</main>
+      <a href="/collections/rings/gold-ring-123">Gold ring</a><a href="/collections/rings">All</a></body></html>`,
+    "https://shop.example/collections/rings/gold-ring-123": `<html><head><title>Gold ring</title></head><body><main><h1>Gold ring</h1>${filler}</main>
+      <script type="application/ld+json">{"@type":"Product","name":"Gold Ring","offers":{"@type":"Offer","price":"99","priceCurrency":"EUR"}}</script></body></html>`,
+    "https://shop.example/help": `<html><head><title>Help</title></head><body><main><h1>Help</h1>${filler}</main></body></html>`,
+  };
+  const fetcher = async (url: URL) => ({
+    finalUrl: url.toString(),
+    body: site[url.toString()] ?? "<html><head><title>Not found</title></head><body>Not found</body></html>",
+    truncated: false,
+    status: site[url.toString()] ? 200 : 404,
+  });
+
+  it("follows one link from a listing to an item page when the sample has no Product yet", async () => {
+    const collector = new NativeFetchCollector({}, fetcher);
+    const snapshot = await collector.collect(new URL("https://shop.example/"));
+
+    const item = snapshot.pages.find((page) => page.url.endsWith("/gold-ring-123"));
+    expect(item?.role).toBe("detail");
+    expect(item?.entities[0]?.offers[0]?.price).toBe("99");
+    // The item page joins the pages a report displays (the first four).
+    expect(snapshot.pages.indexOf(item!)).toBeLessThan(4);
+  });
+
+  it("does not spend the hop when a sampled page already carries the Product", async () => {
+    const withProduct: Record<string, string> = {
+      ...site,
+      "https://shop.example/collections/rings": site["https://shop.example/collections/rings"].replace(
+        "</body>",
+        `<script type="application/ld+json">{"@type":"Product","name":"Silver Ring"}</script></body>`,
+      ),
+    };
+    const collector = new NativeFetchCollector({}, async (url: URL) => ({
+      finalUrl: url.toString(),
+      body: withProduct[url.toString()] ?? "<html><head><title>Not found</title></head><body>Not found</body></html>",
+      truncated: false,
+      status: withProduct[url.toString()] ? 200 : 404,
+    }));
+    const snapshot = await collector.collect(new URL("https://shop.example/"));
+
+    expect(snapshot.pages.some((page) => page.url.endsWith("/gold-ring-123"))).toBe(false);
+  });
+});
+
 describe("telling a site's bouncer from its page", () => {
   it("reads a refusal, a rate limit, and a challenge page as what they are", () => {
     expect(blockedResponse(403, "<html><title>Access Denied</title></html>")).toMatch(/refused automated access \(HTTP 403\)/);

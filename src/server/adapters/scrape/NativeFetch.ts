@@ -133,22 +133,7 @@ export class NativeFetchCollector implements ScrapeProvider {
     }
     const pageCandidates = selectRepresentativePages(links, finalUrl);
     const collectedPages = await Promise.allSettled(
-      pageCandidates.map(async (candidate) => {
-        const response = await this.fetchPublicPage(candidate.url);
-        // A secondary page behind a bouncer is skipped rather than read as an "Access Denied" page.
-        const refusal = blockedResponse(response.status, response.body);
-        if (refusal) throw new UrlPolicyError("site_blocked", refusal, 403);
-        const parsed = parseHTML(response.body).document;
-        // Across secondary pages we read declarative and inline tools but avoid re-fetching the
-        // same site-wide script bundle up to three more times.
-        const tools = [
-          ...collectDeclarativeTools(parsed, response.finalUrl),
-          ...[...parsed.querySelectorAll("script:not([src])")]
-            .slice(0, 25)
-            .flatMap((script) => extractImperativeTools(script.textContent ?? "", response.finalUrl)),
-        ];
-        return extractPage(parsed, new URL(response.finalUrl), candidate.role, response.truncated, dedupePageTools(tools));
-      }),
+      pageCandidates.map((candidate) => this.fetchSecondaryPage(candidate.url, candidate.role)),
     );
     const pages = [
       mainPage,
@@ -156,6 +141,12 @@ export class NativeFetchCollector implements ScrapeProvider {
         .map((result) => (result.status === "fulfilled" ? result.value : null))
         .filter((item): item is SitePageSnapshot => item !== null),
     ].slice(0, MAX_PAGES);
+
+    // Second hop: a listing page proves a catalog exists, but only an item page carries the
+    // Product and Offer data the map is for. When no sampled page yielded one, the audit follows
+    // one item-looking link from a listing it already fetched, and the item joins the shown pages.
+    const hop = await this.followCatalogHop(pages);
+    if (hop) pages.splice(Math.min(pages.length, MAX_PAGES - 1), 0, hop);
     // The server card names its own transports, so it has to be read before anything is probed.
     // A search term taken from the page, so a tool call never needs invented vocabulary.
     const seedQuery = text(document.querySelector("h1")) || text(document.querySelector("title")) || finalUrl.hostname;
@@ -201,6 +192,62 @@ export class NativeFetchCollector implements ScrapeProvider {
       softNotFound,
       truncated: pages.some((entry) => entry.truncated) || collectedPages.some((result) => result.status === "rejected"),
     };
+  }
+
+  private async fetchSecondaryPage(url: URL, role: SitePageSnapshot["role"]): Promise<SitePageSnapshot> {
+    const response = await this.fetchPublicPage(url);
+    // A secondary page behind a bouncer is skipped rather than read as an "Access Denied" page.
+    const refusal = blockedResponse(response.status, response.body);
+    if (refusal) throw new UrlPolicyError("site_blocked", refusal, 403);
+    const parsed = parseHTML(response.body).document;
+    // Across secondary pages we read declarative and inline tools but avoid re-fetching the
+    // same site-wide script bundle again and again.
+    const tools = [
+      ...collectDeclarativeTools(parsed, response.finalUrl),
+      ...[...parsed.querySelectorAll("script:not([src])")]
+        .slice(0, 25)
+        .flatMap((script) => extractImperativeTools(script.textContent ?? "", response.finalUrl)),
+    ];
+    return extractPage(parsed, new URL(response.finalUrl), role, response.truncated, dedupePageTools(tools));
+  }
+
+  /**
+   * Follows one link from a fetched listing page to an item page when the sample carries no
+   * Product or Offer yet. The candidate must be a child of the listing — same leading path
+   * segment, at least one segment deeper — or carry item vocabulary of its own.
+   */
+  private async followCatalogHop(pages: SitePageSnapshot[]): Promise<SitePageSnapshot | null> {
+    const hasCommercialData = pages.some(
+      (page) =>
+        page.jsonLdTypes.some((type) => ["Product", "AggregateOffer", "Offer"].includes(type)) ||
+        page.entities.some((entity) => entity.offers.length > 0),
+    );
+    if (hasCommercialData) return null;
+
+    const fetched = new Set(pages.map((page) => new URL(page.url).pathname.toLowerCase()));
+    const listings = pages.filter((page) => page.role === "offer" || page.role === "detail");
+    for (const listing of listings) {
+      const base = new URL(listing.url);
+      const listingSegments = base.pathname.split("/").filter(Boolean);
+      const candidate = listing.linkPaths.find((path) => {
+        const pathname = path.split("?")[0];
+        if (fetched.has(pathname)) return false;
+        const segments = pathname.split("/").filter(Boolean);
+        const childOfListing =
+          listingSegments.length > 0 &&
+          segments[0] === listingSegments[0].toLowerCase() &&
+          segments.length > listingSegments.length;
+        return childOfListing || pageRole(pathname) === "detail";
+      });
+      if (!candidate) continue;
+      try {
+        const hop = await this.fetchSecondaryPage(new URL(candidate, base), "detail");
+        return fetched.has(new URL(hop.url).pathname.toLowerCase()) ? null : hop;
+      } catch {
+        return null;
+      }
+    }
+    return null;
   }
 
   /** One bounded call confirms a server-side install: the dataset portal names itself in a header. */
@@ -452,6 +499,13 @@ export interface PageCandidate {
  * and one policy/contact page tell us much more than the first three navigation links.
  */
 export function selectRepresentativePages(links: Element[], base: URL): PageCandidate[] {
+  // A cart, a checkout, or several catalog sections in the navigation say the site sells things.
+  // On such a site the catalog is the business and editorial content is marketing around it.
+  const paths = links.map((link) => resolve(link.getAttribute("href"), base) ?? "").map((href) => href.toLowerCase());
+  const sellsThings =
+    paths.some((path) => COMMERCE_SIGNAL.test(path)) ||
+    paths.filter((path) => CATALOG_PATH.test(path)).length >= 2;
+
   const candidates = links
     .map((link, order) => {
       const href = resolve(link.getAttribute("href"), base);
@@ -459,18 +513,26 @@ export function selectRepresentativePages(links: Element[], base: URL): PageCand
       const url = new URL(href);
       if (url.pathname === base.pathname || /\.(?:png|jpe?g|gif|svg|pdf|zip|xml)$/i.test(url.pathname)) return null;
       url.hash = "";
+      const pathname = url.pathname.toLowerCase();
       const haystack = `${url.pathname} ${text(link)}`.toLowerCase();
       // The path names the page's function; the link copy is marketing and only breaks ties —
       // "Book your stay" must not turn the /booking page into a detail page.
-      const byPath = pageRole(url.pathname.toLowerCase());
+      const byPath = pageRole(pathname);
       const role = byPath === "other" ? pageRole(text(link).toLowerCase()) : byPath;
       const roleWeight = { detail: 40, offer: 36, policy: 30, contact: 28, other: 8, entry: 0 }[role];
       const depthBonus = Math.min(url.pathname.split("/").filter(Boolean).length, 4);
-      // A checkout configurator, cart, or sign-in page needs session state and renders as an app
-      // shell for a first-time visitor. The pages that explain the offer are the evidence surfaces;
-      // the checkout's existence is still recorded from its link without spending a fetch on it.
-      const shellPenalty = SESSION_SHELL.test(haystack) ? 30 : 0;
-      return { url, role, score: roleWeight + depthBonus - shellPenalty, order } satisfies PageCandidate;
+      // A checkout configurator, cart, sign-in page, imprint, or customer-service hub is never
+      // worth a fetch: it renders as an app shell or describes the publisher, not the offer. Its
+      // existence is still recorded from its link without spending a render on it.
+      if (SESSION_SHELL.test(haystack)) return null;
+      const catalogBonus = CATALOG_PATH.test(pathname) ? 8 : 0;
+      const editorialPenalty = sellsThings && EDITORIAL_PATH.test(pathname) ? 12 : 0;
+      return {
+        url,
+        role,
+        score: roleWeight + depthBonus + catalogBonus - editorialPenalty,
+        order,
+      } satisfies PageCandidate;
     })
     .filter((candidate): candidate is PageCandidate => candidate !== null)
     .sort((left, right) => right.score - left.score || left.order - right.order);
@@ -492,14 +554,25 @@ export function selectRepresentativePages(links: Element[], base: URL): PageCand
 
 /**
  * Pages that need session state (checkout, cart, sign-in) render as app shells for a first-time
- * visitor, and legal boilerplate (imprint, terms indexes) describes the publisher, not the offer.
- * Both are demoted so the sampled pages are the ones that carry evidence.
+ * visitor; legal boilerplate (imprint, terms indexes) describes the publisher, not the offer; and
+ * a customer-service hub describes the aftermath of a sale, not the sale. All are demoted so the
+ * sampled pages are the ones that carry evidence.
  */
-const SESSION_SHELL = /\b(checkout|cart|basket|payment|billing|log-?in|sign-?in|my-?account|imprint|impressum)\b/;
+const SESSION_SHELL =
+  /\b(checkout|cart|carrello|warenkorb|panier|basket|payment|billing|log-?in|sign-?in|my-?account|imprint|impressum|customer-(?:service|care)|assistenza|kundenservice|order-status|track(?:ing)?)\b/;
+
+/** Signals that a site sells things: a cart in any of the shop languages we meet, or a checkout. */
+const COMMERCE_SIGNAL = /\b(cart|carrello|warenkorb|panier|basket|checkout|add-to-cart)\b/;
+
+/** A catalog surface: the section listings that lead to item pages. */
+const CATALOG_PATH = /\/(collections?|categor(?:y|ies)|catalog(?:ue)?|shop|store|inventory|listings?|products)(\/|$|\?)|-for-sale\b/;
+
+/** Editorial surfaces, demoted only when the site plainly sells things. */
+const EDITORIAL_PATH = /\/(blog|news|stories|magazine|journal|press|articles?|learn|resources|insights)(\/|$)/;
 
 function pageRole(value: string): SitePageSnapshot["role"] {
   if (/\b(products?|property|properties|rooms?|stays?|accommodations?|articles?|story|stories|posts?|services?|solutions?|features?|hosting|domains?|destinations?|attractions?|events?|experiences?|regions?|tours?)\b/.test(value)) return "detail";
-  if (/\b(price|pricing|plans?|compare|offer|availability|book|booking|reserve|shop|checkout|demo|trial|signup)\b/.test(value)) return "offer";
+  if (/\b(price|pricing|plans?|compare|offer|availability|book|booking|reserve|shop|store|collections?|catalog(?:ue)?|inventory|listings?|sales?|deals?|checkout|demo|trial|signup)\b/.test(value)) return "offer";
   if (/\b(faq|policy|terms|shipping|return|privacy|help|guides?|docs|documentation|developers|knowledge-?base)\b/.test(value)) return "policy";
   if (/\b(contact|inquiry|enquiry|support)\b/.test(value)) return "contact";
   return "other";

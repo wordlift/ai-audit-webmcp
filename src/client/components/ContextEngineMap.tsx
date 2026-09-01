@@ -150,7 +150,7 @@ export function ContextEngineMap({
           <h2 id="context-engine-title">From what the site means to what an agent can do</h2>
           <p>Domain entities, language, actions and interfaces are connected in one evidence-backed graph.</p>
         </div>
-        <p className="page-count"><strong>{context.pages.length}</strong> representative pages analyzed</p>
+        <p className="page-count"><strong>{context.pages.length}</strong> representative page{context.pages.length === 1 ? "" : "s"} analyzed</p>
       </div>
 
       <section className="context-provenance-block" aria-labelledby="context-provenance-title">

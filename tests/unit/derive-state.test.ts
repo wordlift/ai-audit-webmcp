@@ -36,4 +36,13 @@ describe("capability state truth table", () => {
   ] as const)("derives %s", (items, options, expected) => {
     expect(deriveCapability(action, [...items], options).state).toBe(expected);
   });
+
+  it("puts the decisive invocation first so no truncation can hide it", () => {
+    const capability = deriveCapability(action, [
+      evidence({ id: "a-declared", verification: "declared" }),
+      evidence({ id: "b-observed", audience: "human", kind: "form", verification: "observed" }),
+      evidence({ id: "z-invoked", verification: "invoked" }),
+    ]);
+    expect(capability.evidence.map((item) => item.verification)).toEqual(["invoked", "observed", "declared"]);
+  });
 });
