@@ -12,13 +12,15 @@ test("a human-run sidecar call turns an unverified action into a verified agent 
 
   await page.goto("/");
   await page.getByLabel("Website URL").fill("https://alpina.travel");
-  await page.getByRole("button", { name: /build the service map/i }).click();
+  await page.getByRole("button", { name: /audit and refine my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
 
   const availabilityNode = page.getByRole("button", { name: /check availability/i });
   await expect(availabilityNode).toContainText(/unverified/i);
   await page.screenshot({ path: testInfo.outputPath("sidecar-before.png"), fullPage: true });
 
+  // The adapter lives behind the Labs fold now — a reference, not the product story.
+  await page.getByText(/labs — approved-adapter reference/i).click();
   await page.getByRole("heading", { name: /turn one unverified capability/i }).scrollIntoViewIfNeeded();
   await page.getByRole("button", { name: /run agent function/i }).click();
 

@@ -12,9 +12,11 @@ import { ExecutiveSummary } from "../components/ExecutiveSummary";
 import { FoundationAuditDetails } from "../components/FoundationAuditDetails";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { ReportProgress } from "../components/ReportProgress";
+import { ServiceMapProvenance } from "../components/ServiceMapProvenance";
 import { AlpinaAvailabilityTool } from "../webmcp/AlpinaAvailabilityTool";
 import { ExplainCapabilityTool } from "../webmcp/ExplainCapabilityTool";
 import { ExplainFoundationAuditTool } from "../webmcp/ExplainFoundationAuditTool";
+import { RefineServiceMapTool } from "../webmcp/RefineServiceMapTool";
 
 const SIDECAR_HOST = "alpina.travel";
 
@@ -100,6 +102,7 @@ export function ReportRoute() {
     <div className="report-page">
       <ExplainCapabilityTool report={report} />
       <ExplainFoundationAuditTool report={report} />
+      <RefineServiceMapTool report={report} />
       <AlpinaAvailabilityTool reportId={report.id} enabled={sidecarApplies(report)} />
       <nav className="report-toolbar" aria-label="Report actions">
         <Link to="/"><ArrowLeft size={17} /> New audit</Link>
@@ -108,6 +111,7 @@ export function ReportRoute() {
       {report.status === "partial" && (
         <div className="partial-banner" role="status">Partial report: {visibleErrors(report.errors).map(explainReportError).join(" ")}</div>
       )}
+      <ServiceMapProvenance report={report} />
       <ExecutiveSummary report={report} />
       {/* Keyed by report so a recompile that lands on the child report hands back a fresh form. */}
       {report.classification && <ClassificationCard key={report.id} classification={report.classification} onOverride={override} />}
@@ -126,15 +130,19 @@ export function ReportRoute() {
         selectedEntityId={selectedEntityId}
       />
       {report.foundationAudit && <FoundationAuditDetails audit={report.foundationAudit} />}
+      {/* Labs: a contained technical proof, deliberately out of the product's primary story. */}
       {sidecarApplies(report) && (
-        <AlpinaSidecarPanel
-          reportId={report.id}
-          verified={
-            report.capabilities?.some(
-              (capability) => capability.actionId === "availability.check" && capability.state === "sidecar-enabled",
-            ) ?? false
-          }
-        />
+        <details className="labs-fold">
+          <summary>Labs — approved-adapter reference (alpina.travel)</summary>
+          <AlpinaSidecarPanel
+            reportId={report.id}
+            verified={
+              report.capabilities?.some(
+                (capability) => capability.actionId === "availability.check" && capability.state === "sidecar-enabled",
+              ) ?? false
+            }
+          />
+        </details>
       )}
     </div>
   );

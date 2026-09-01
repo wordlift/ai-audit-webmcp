@@ -1,5 +1,5 @@
 import { reportRecordSchema, runningReportResponseSchema } from "../../shared/schemas/report.js";
-import type { Archetype, ReportRecord } from "../../shared/types/index.js";
+import type { Archetype, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
 
 const POLL_INTERVAL_MS = 1_500;
 const POLL_TIMEOUT_MS = 180_000;
@@ -111,6 +111,16 @@ export async function recompileReport(reportId: string, archetype: Archetype): P
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ archetype }),
+  });
+  return reportRecordSchema.parse(body);
+}
+
+/** Applies a reviewer's structured judgment as an immutable child revision. */
+export async function refineReport(reportId: string, assertions: HumanAssertion): Promise<ReportRecord> {
+  const { body } = await requestJson(`/api/reports/${reportId}/refine`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(assertions),
   });
   return reportRecordSchema.parse(body);
 }

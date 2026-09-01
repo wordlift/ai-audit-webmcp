@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 async function openTravelReport(page: Page) {
   await page.goto("/");
   await page.getByLabel("Website URL").fill("https://alpina.travel");
-  await page.getByRole("button", { name: /build the service map/i }).click();
+  await page.getByRole("button", { name: /audit and refine my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
   await expect(page.getByRole("heading", { name: "What an agent should be able to do" })).toBeVisible();
 }

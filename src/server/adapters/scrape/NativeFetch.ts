@@ -146,7 +146,12 @@ export class NativeFetchCollector implements ScrapeProvider {
     // Product and Offer data the map is for. When no sampled page yielded one, the audit follows
     // one item-looking link from a listing it already fetched, and the item joins the shown pages.
     const hop = await this.followCatalogHop(pages);
-    if (hop) pages.splice(Math.min(pages.length, MAX_PAGES - 1), 0, hop);
+    if (hop) {
+      pages.splice(Math.min(pages.length, MAX_PAGES - 1), 0, hop);
+      // The report displays at most four pages, and every claim counts reach against the pages
+      // shown — so the sampled set is capped to the same four the reader sees.
+      pages.length = Math.min(pages.length, MAX_PAGES);
+    }
     // The server card names its own transports, so it has to be read before anything is probed.
     // A search term taken from the page, so a tool call never needs invented vocabulary.
     const seedQuery = text(document.querySelector("h1")) || text(document.querySelector("title")) || finalUrl.hostname;
@@ -559,7 +564,7 @@ export function selectRepresentativePages(links: Element[], base: URL): PageCand
  * sampled pages are the ones that carry evidence.
  */
 const SESSION_SHELL =
-  /\b(checkout|cart|carrello|warenkorb|panier|basket|payment|billing|log-?in|sign-?in|my-?account|imprint|impressum|customer-(?:service|care)|assistenza|kundenservice|order-status|track(?:ing)?)\b/;
+  /\b(checkout|cart|carrello|warenkorb|panier|basket|payment|billing|log-?in|sign-?in|my-?account|imprint|impressum|assistenza|kundenservice|order-status|track(?:ing)?)\b|customer-?(?:service|care|order)/;
 
 /** Signals that a site sells things: a cart in any of the shop languages we meet, or a checkout. */
 const COMMERCE_SIGNAL = /\b(cart|carrello|warenkorb|panier|basket|checkout|add-to-cart)\b/;

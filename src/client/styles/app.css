@@ -653,6 +653,48 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .classification-detail select { padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .classification-error { grid-column: 1 / -1; margin: 0; color: var(--wl-danger); font-size: 0.85rem; }
 
+/* ---------- Provenance: machine draft vs human-refined ---------- */
+.map-provenance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border: 1px solid var(--line-subtle);
+  border-left: 4px solid var(--muted);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.map-provenance-refined { border-left-color: var(--wl-moss); }
+.map-provenance-draft { border-left-color: var(--brand); }
+.map-provenance-head { display: grid; gap: 4px; max-width: 62ch; }
+.map-provenance-title { display: flex; gap: 8px; align-items: center; margin: 0; font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; }
+.map-provenance-title svg { width: 16px; height: 16px; }
+.map-provenance-copy { margin: 0; color: var(--muted); font-size: 0.85rem; line-height: 1.45; }
+.map-provenance-parent { display: inline-flex; gap: 6px; align-items: center; font-size: 0.78rem; }
+.review-cta { display: inline-flex; gap: 8px; align-items: center; padding: 11px 16px; border: none; border-radius: 10px; background: var(--brand); color: var(--wl-neutral-0); font-weight: 600; cursor: pointer; }
+.review-cta:hover { background: var(--brand-hover); }
+.map-changes { flex-basis: 100%; display: grid; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; font-size: 0.8rem; }
+.map-changes em { color: var(--muted); font-style: italic; }
+.map-conflicts { flex-basis: 100%; margin: 0; color: var(--wl-danger); font-size: 0.78rem; }
+.provenance-badge { display: inline-block; margin-right: 6px; padding: 2px 7px; border-radius: 6px; background: var(--wl-neutral-100); color: var(--muted); font-family: var(--font-mono); font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* ---------- Responsibility boundaries ---------- */
+.boundary-chip { padding: 3px 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.boundary-owned { background: color-mix(in srgb, var(--wl-leaf) 30%, white); color: var(--wl-neutral-900); }
+.boundary-partner-handoff { background: color-mix(in srgb, var(--wl-sand) 45%, white); color: var(--wl-neutral-900); }
+.boundary-informational-only { background: var(--wl-neutral-100); color: var(--muted); }
+.boundary-not-applicable { background: var(--wl-neutral-100); color: var(--muted); text-decoration: line-through; }
+.dialog-boundary h3 { margin: 14px 0 6px; font-size: 0.8rem; }
+.dialog-boundary p { display: flex; gap: 8px; align-items: center; margin: 0 0 4px; }
+.boundary-rationale { color: var(--muted); font-size: 0.82rem; font-style: italic; }
+
+/* ---------- Labs fold ---------- */
+.labs-fold { border: 1px dashed var(--line); border-radius: 16px; background: var(--surface); }
+.labs-fold > summary { padding: 14px 20px; color: var(--muted); font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; cursor: pointer; }
+.labs-fold[open] > summary { border-bottom: 1px dashed var(--line-subtle); }
+
 /* ---------- Context engine ---------- */
 .context-engine {
   display: grid;

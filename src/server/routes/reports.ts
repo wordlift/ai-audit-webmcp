@@ -38,6 +38,14 @@ export function createReportsRouter(orchestrator: AuditOrchestrator, auditLimite
     }
   });
 
+  router.post("/:reportId/refine", async (request, response) => {
+    try {
+      response.json(await orchestrator.refine(request.params.reportId, request.body));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
   router.post("/:reportId/reverify", ...auditLimiters, async (request, response) => {
     try {
       response.json(await orchestrator.reverify(param(request.params.reportId)));

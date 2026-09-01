@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type {
+  actionBoundarySchema,
   actionContractSchema,
   actionInterfaceSchema,
   archetypeSchema,
@@ -13,7 +14,9 @@ import type {
   domainEntitySchema,
   entityActionBindingSchema,
   foundationAuditSummarySchema,
+  humanAssertionSchema,
   lexicalEntrySchema,
+  refinementSchema,
   priorityGapSchema,
   readinessScoreSchema,
   reportErrorSchema,
@@ -38,3 +41,6 @@ export type PriorityGap = z.infer<typeof priorityGapSchema>;
 export type ReadinessScore = z.infer<typeof readinessScoreSchema>;
 export type ReportError = z.infer<typeof reportErrorSchema>;
 export type ReportRecord = z.infer<typeof reportRecordSchema>;
+export type ActionBoundary = z.infer<typeof actionBoundarySchema>;
+export type HumanAssertion = z.infer<typeof humanAssertionSchema>;
+export type Refinement = z.infer<typeof refinementSchema>;

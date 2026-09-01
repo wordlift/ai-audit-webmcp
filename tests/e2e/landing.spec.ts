@@ -1,16 +1,16 @@
 import { expect, test } from "@playwright/test";
 
-test("landing page communicates the agent capability workflow", async ({ page }) => {
+test("landing page communicates the human-guided compilation", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /agents need a service map/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /teach chatgpt how your business should work/i })).toBeVisible();
   await expect(page.getByLabel("Website URL")).toBeVisible();
-  await expect(page.getByText("Extract entities & meaning")).toBeVisible();
+  await expect(page.getByText("Refine with ChatGPT")).toBeVisible();
 });
 
 test("fixture report presents the action graph and expandable evidence", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Website URL").fill("https://shop.example");
-  await page.getByRole("button", { name: /build the service map/i }).click();
+  await page.getByRole("button", { name: /audit and refine my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
   await expect(page.getByRole("heading", { name: /commerce \/ retail/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: /from what the site means to what an agent can do/i })).toBeVisible();

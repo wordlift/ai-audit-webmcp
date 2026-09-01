@@ -1,8 +1,8 @@
 # WordLift AI Audit — WebMCP Context Engine
 
-**Pages describe a site. Agents need an evidence-backed service map.**
+**The machine reads the website. The human knows the business. ChatGPT compiles both into a governed service map.**
 
-WordLift AI Audit takes any public URL, classifies the site, reads up to four representative pages, extracts the business entities and language, compiles the actions an agent should be able to perform, and verifies — by calling them — which human and machine interfaces actually support those actions.
+WordLift AI Audit takes any public URL, classifies the site, reads the representative pages, extracts the business entities and language, compiles the actions an agent should be able to perform, and verifies — by calling them — which interfaces actually support those actions. The result is a **machine-generated draft**: a human then reviews it through ChatGPT — correcting the business role, promoting the entities that matter, teaching vocabulary, and deciding who owns each action — and `refine-service-map` compiles those decisions into an immutable **human-refined service map**. The draft keeps working on its own; refinement adds the knowledge only a human has.
 
 - Live application: [beta.audit.wordlift.io](https://beta.audit.wordlift.io)
 - Stable reference report: [beta.audit.wordlift.io/demo/alpina](https://beta.audit.wordlift.io/demo/alpina)
@@ -38,6 +38,7 @@ The application is itself a WebMCP surface. It registers tools through the WebMC
 - `get-audit-report` — turns a report id into progress while the audit runs and into the finished summary once a terminal report exists.
 - `explain-capability` — one action: the entities it applies to, its interfaces, evidence, governance, recommendation, and contract.
 - `explain-foundation-audit` — the WordLift foundation audit of the open report: score, dimensions, findings, quick wins.
+- `refine-service-map` — the write half of the human loop: submits a reviewer's structured decisions (business role, primary entities, terminology, confirm/reject/boundary per action) and returns a new immutable refined report. Human decisions can never mark an action agent-ready — readiness always requires invocation evidence.
 - `check-alpina-availability` — a contained read-only adapter for one allowlisted endpoint, kept as a technical proof of how a verified interface earns `sidecar-enabled` in an immutable child revision. Turning that pattern into a product is future WordLift work, outside this audit.
 
 Tool names and descriptions are identifiers agents key on; changing them is a breaking change.

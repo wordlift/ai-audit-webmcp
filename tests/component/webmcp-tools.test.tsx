@@ -418,6 +418,7 @@ describe("WebMCP tool layer", () => {
         "explain-capability",
         "explain-foundation-audit",
         "get-audit-report",
+        "refine-service-map",
       ]),
     );
 
@@ -450,6 +451,78 @@ describe("WebMCP tool layer", () => {
 
     view.unmount();
     await waitFor(() => expect(modelContext.toolNames()).toEqual([]));
+  });
+
+  it("compiles a reviewer's decisions into an immutable refined report through refine-service-map", async () => {
+    const CHILD_ID = "9b1c22de-3f44-4a55-8b66-77cc88dd99ee";
+    const refinedReport: ReportRecord = {
+      ...completedReport,
+      id: CHILD_ID,
+      parentReportId: REPORT_ID,
+      classification: { ...completedReport.classification!, businessRole: "destination-organization" },
+      capabilities: completedReport.capabilities!.map((capability) =>
+        capability.actionId === "availability.check"
+          ? {
+              ...capability,
+              boundary: "partner-handoff" as const,
+              boundarySource: "human-provided" as const,
+              boundaryRationale: "Partners own the inventory.",
+            }
+          : capability,
+      ),
+      refinement: {
+        assertions: {
+          businessRole: "destination-organization",
+          actionDecisions: [
+            { actionId: "availability.check", decision: "confirm", boundary: "partner-handoff", rationale: "Partners own the inventory." },
+          ],
+        },
+        decisions: 2,
+        conflicts: [],
+        provenance: "human-provided",
+        appliedAt: "2026-09-01T10:00:00.000Z",
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith("/api/health")) return jsonResponse({ status: "ok", mode: "demo" });
+        if (url === `/api/reports/${REPORT_ID}/refine` && init?.method === "POST") return jsonResponse(refinedReport);
+        if (url === `/api/reports/${REPORT_ID}`) return jsonResponse(completedReport);
+        throw new Error(`Unexpected request ${url}`);
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={[`/reports/${REPORT_ID}`]}>
+        <App />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(modelContext.get("refine-service-map")).toBeDefined());
+
+    const result = await act(async () =>
+      modelContext.call("refine-service-map", {
+        businessRole: "destination-organization",
+        actionDecisions: [
+          { actionId: "availability.check", decision: "confirm", boundary: "partner-handoff", rationale: "Partners own the inventory." },
+        ],
+      }),
+    );
+
+    expect(result.isError).toBeFalsy();
+    const text = toolText(result);
+    expect(text).toMatch(/Human-refined service map created/);
+    expect(text).toContain(`/reports/${CHILD_ID}`);
+    expect(text).toMatch(/Check availability \(availability\.check\) → partner handoff/);
+    expect(text).toMatch(/never mark an action agent-ready/);
+    expect(result.structuredContent).toMatchObject({
+      parentReportId: REPORT_ID,
+      reportId: CHILD_ID,
+      decisionsApplied: 2,
+      businessRole: "destination-organization",
+      boundaries: [{ actionId: "availability.check", boundary: "partner-handoff" }],
+    });
   });
 
   it("keeps the normal web interface working when WebMCP is unavailable", () => {
