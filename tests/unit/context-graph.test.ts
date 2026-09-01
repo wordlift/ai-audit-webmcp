@@ -167,6 +167,45 @@ describe("context graph", () => {
     expect(people[0].id).toBe("https://tourism.example/huts#author");
     expect(people[0].sourceUrls).toEqual(["https://tourism.example/huts", "https://tourism.example/lakes"]);
   });
+
+  it("merges the same named entity even when its type sets only overlap", () => {
+    const org = (id: string, types: string[], sourceUrl: string) => ({
+      ...entity(id, types[0], "WordLift", sourceUrl),
+      types,
+    });
+    const context = compileContextGraph(
+      [
+        page("https://wordlift.example/", "entry", [org("https://wordlift.example/#org", ["Organization"], "https://wordlift.example/")]),
+        page("https://wordlift.example/pricing", "offer", [
+          org("https://wordlift.example/pricing#org", ["Organization", "Brand"], "https://wordlift.example/pricing"),
+        ]),
+      ],
+      [],
+      [],
+      "https://wordlift.example/",
+    );
+
+    const orgs = context.entities.filter((item) => item.name === "WordLift");
+    expect(orgs).toHaveLength(1);
+    expect(orgs[0].types.sort()).toEqual(["Brand", "Organization"]);
+    expect(orgs[0].sourceUrls).toEqual(["https://wordlift.example/", "https://wordlift.example/pricing"]);
+  });
+
+  it("keeps a genuine namesake of a different kind separate", () => {
+    const context = compileContextGraph(
+      [
+        page("https://shop.example/brand", "detail", [entity("https://shop.example/#person", "Person", "Mercury", "https://shop.example/brand")]),
+        page("https://shop.example/products/mercury", "detail", [
+          entity("https://shop.example/#product", "Product", "Mercury", "https://shop.example/products/mercury"),
+        ]),
+      ],
+      [],
+      [],
+      "https://shop.example/",
+    );
+
+    expect(context.entities.filter((item) => item.name === "Mercury")).toHaveLength(2);
+  });
 });
 
 function page(url: string, role: SitePageSnapshot["role"], entities: SitePageSnapshot["entities"]): SitePageSnapshot {
