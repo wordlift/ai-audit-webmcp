@@ -22,6 +22,8 @@ import type {
   Archetype,
   CapabilityEvidence,
   ContentCategory,
+  HumanAssertion,
+  LexicalEntry,
   ReportError,
   ReportRecord,
 } from "../../shared/types/index.js";
@@ -208,11 +210,29 @@ export class AuditOrchestrator {
     const promoted = keepKnown(assertions.primaryEntityIds, "promote");
     const demoted = keepKnown(assertions.demotedEntityIds, "demote").filter((id) => !promoted.includes(id));
 
-    // Promoted entities lead, demoted trail, and everything else keeps its machine order.
+    // Promoted entities lead and are marked primary; demoted trail and are marked so the page
+    // can fold them away — the decision must be visible in the map, not only in the change log.
     const entityGroup = (id: string) => (promoted.includes(id) ? 0 : demoted.includes(id) ? 2 : 1);
-    const entities = [...parent.contextGraph.entities].sort(
-      (left, right) => entityGroup(left.id) - entityGroup(right.id) ||
-        (entityGroup(left.id) === 0 ? promoted.indexOf(left.id) - promoted.indexOf(right.id) : 0),
+    const entities = [...parent.contextGraph.entities]
+      .map((entity) =>
+        promoted.includes(entity.id)
+          ? { ...entity, humanPriority: "primary" as const }
+          : demoted.includes(entity.id)
+            ? { ...entity, humanPriority: "demoted" as const }
+            : entity,
+      )
+      .sort(
+        (left, right) => entityGroup(left.id) - entityGroup(right.id) ||
+          (entityGroup(left.id) === 0 ? promoted.indexOf(left.id) - promoted.indexOf(right.id) : 0),
+      );
+
+    // Human vocabulary replaces or overrides the machine's. `terminology` defines; a decision
+    // may also confirm or reject an existing term outright. Human entries lead the lexicon.
+    const lexicon = applyTerminology(
+      parent.contextGraph.lexicalEntries,
+      assertions.terminology ?? [],
+      assertions.terminologyDecisions ?? [],
+      conflicts,
     );
 
     const knownActionIds = new Set(parent.capabilities.map((capability) => capability.actionId));
@@ -252,12 +272,22 @@ export class AuditOrchestrator {
       promoted.length +
       demoted.length +
       (assertions.terminology?.length ?? 0) +
+      (assertions.terminologyDecisions?.length ?? 0) +
       decisions.size;
     if (appliedDecisions === 0) {
       throw new ReportRequestError("No assertion in the request applies to this report.", 400);
     }
 
-    const contextGraph = refreshContextGraph({ ...parent.contextGraph, entities }, capabilities);
+    const contextGraph = refreshContextGraph({ ...parent.contextGraph, entities, lexicalEntries: lexicon }, capabilities);
+
+    // Applicability follows the human's map: a demoted entity no longer answers for an action,
+    // and a promoted one answers first.
+    const demotedSet = new Set(demoted);
+    for (const capability of capabilities) {
+      capability.appliesTo = appliesToForAction(contextGraph, capability.actionId)
+        .filter((entity) => !demotedSet.has(entity.id))
+        .sort((left, right) => Number(promoted.includes(right.id)) - Number(promoted.includes(left.id)));
+    }
     const child: ReportRecord = {
       ...this.baseRecord(randomUUID(), parent.requestedUrl, this.now(), parent.id),
       status: parent.status === "partial" ? "partial" : "completed",
@@ -647,6 +677,66 @@ export class AuditOrchestrator {
 
 function failure(code: string, phase: ReportError["phase"], message: string, retryable = true): ReportError {
   return { code, phase, message, retryable };
+}
+
+/**
+ * The reviewer's vocabulary, applied to the lexical graph itself: a definition replaces the
+ * machine's term of the same name, a confirmation marks it human-provided, a rejection removes
+ * it, and human entries lead the lexicon. Decisions about terms the graph never had come back
+ * as conflicts.
+ */
+function applyTerminology(
+  entries: LexicalEntry[],
+  terminology: NonNullable<HumanAssertion["terminology"]>,
+  decisions: NonNullable<HumanAssertion["terminologyDecisions"]>,
+  conflicts: string[],
+): LexicalEntry[] {
+  let machine = [...entries];
+  const human: LexicalEntry[] = [];
+  const matches = (entry: LexicalEntry, term: string) =>
+    entry.label.trim().toLowerCase() === term.trim().toLowerCase();
+
+  const define = (term: string, meaning: string) => {
+    machine = machine.filter((entry) => !matches(entry, term));
+    human.push({
+      id: `human-term:${termSlug(term)}`.slice(0, 300),
+      label: term,
+      aliases: [],
+      kind: "topic",
+      entityIds: [],
+      sourceUrls: [],
+      confidence: 1,
+      meaning,
+      provenance: "human-provided",
+    });
+  };
+
+  for (const entry of terminology) define(entry.term, entry.meaning);
+  for (const decision of decisions) {
+    if (decision.decision === "replace") {
+      define(decision.term, decision.meaning as string);
+      continue;
+    }
+    const hit = machine.some((entry) => matches(entry, decision.term));
+    if (!hit && !human.some((entry) => matches(entry, decision.term))) {
+      conflicts.push(`No term "${decision.term}" in the lexical graph`);
+      continue;
+    }
+    machine = decision.decision === "reject"
+      ? machine.filter((entry) => !matches(entry, decision.term))
+      : machine.map((entry) =>
+          matches(entry, decision.term)
+            ? { ...entry, confidence: 1, provenance: "human-provided" as const, ...(decision.meaning ? { meaning: decision.meaning } : {}) }
+            : entry,
+        );
+  }
+
+  const uniqueHuman = [...new Map(human.map((entry) => [entry.label.toLowerCase(), entry])).values()];
+  return [...uniqueHuman, ...machine].slice(0, 100);
+}
+
+function termSlug(value: string): string {
+  return value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "term";
 }
 
 const DISPROVABLE_DISCOVERY: Record<string, { evidenceId: string; signals: string[] }> = {

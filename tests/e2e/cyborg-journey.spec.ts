@@ -40,12 +40,18 @@ test("a human refinement turns the machine draft into a refined service map", as
   const child = (await response.json()) as { id: string; parentReportId: string };
   expect(child.parentReportId).toBe(parentId);
 
-  // 4. The child is a new immutable report that names its human provenance and what changed.
+  // 4. The child is a new immutable report that EMBODIES the judgment: the human role leads the
+  // header, the change summary is compact with the full log folded away, and human vocabulary
+  // sits in the lexical graph itself.
   await page.goto(`/reports/${child.id}`);
   await expect(page.getByText("Human-refined service map")).toBeVisible();
-  await expect(page.getByText(/destination organization/i)).toBeVisible();
+  await expect(page.getByRole("heading", { name: /destination organization/i })).toBeVisible();
+  await expect(page.getByText(/machine archetype: travel \/ hospitality/i)).toBeVisible();
+  await expect(page.getByText(/1 term clarified/i)).toBeVisible();
+  await page.getByText("Full decision log").click();
   await expect(page.getByText(/"availability" means partner lodging inventory/i)).toBeVisible();
   await expect(page.getByRole("link", { name: /compare with the machine draft/i })).toBeVisible();
+  await expect(page.locator(".lexical-human").filter({ hasText: "availability" })).toBeVisible();
 
   // 5. The affected action carries its responsibility boundary and the human rationale.
   const availability = page.getByRole("button", { name: /check availability/i });

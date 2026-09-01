@@ -11,6 +11,7 @@ interface RefineArgs {
   primaryEntityIds?: unknown;
   demotedEntityIds?: unknown;
   terminology?: unknown;
+  terminologyDecisions?: unknown;
   actionDecisions?: unknown;
 }
 

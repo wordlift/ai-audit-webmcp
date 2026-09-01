@@ -690,6 +690,21 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .dialog-boundary p { display: flex; gap: 8px; align-items: center; margin: 0 0 4px; }
 .boundary-rationale { color: var(--muted); font-size: 0.82rem; font-style: italic; }
 
+/* ---------- Refinement embodied in the map ---------- */
+.map-stats { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
+.map-stat { padding: 5px 10px; border: 1px solid color-mix(in srgb, var(--wl-moss) 40%, white); border-radius: 999px; background: color-mix(in srgb, var(--wl-moss) 10%, white); color: var(--wl-neutral-900); font-family: var(--font-mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.map-diff { flex-basis: 100%; }
+.map-diff > summary { color: var(--muted); font-family: var(--font-mono); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; }
+.map-diff[open] > summary { margin-bottom: 8px; }
+.machine-archetype { display: flex; gap: 8px; align-items: center; margin: 2px 0 0; color: var(--muted); font-size: 0.75rem; }
+.entity-primary-chip { margin-left: 6px; padding: 1px 6px; border-radius: 5px; background: color-mix(in srgb, var(--wl-moss) 22%, white); color: var(--wl-neutral-900); font-family: var(--font-mono); font-size: 0.5rem; font-style: normal; text-transform: uppercase; letter-spacing: 0.08em; }
+.entity-card-demoted { opacity: 0.55; cursor: default; }
+.entity-card-demoted strong { text-decoration: line-through; text-decoration-thickness: 1px; }
+.demoted-fold { grid-column: 1 / -1; margin-top: 6px; }
+.demoted-fold > summary { color: var(--muted); font-family: var(--font-mono); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; }
+.demoted-fold[open] > summary { margin-bottom: 8px; }
+.lexical-chip.lexical-human { border: 1px solid color-mix(in srgb, var(--wl-moss) 45%, white); background: color-mix(in srgb, var(--wl-moss) 12%, white); font-weight: 600; }
+
 /* ---------- Site-tools self-test badge ---------- */
 .site-tools { position: relative; display: inline-flex; align-items: center; margin-left: auto; }
 .site-tools svg { width: 13px; height: 13px; }

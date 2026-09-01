@@ -170,23 +170,19 @@ export function inspectServiceMap(report: ReportRecord, reportUrl: string): Insp
           ? "primary"
           : "secondary",
     })),
-    terminology: [
-      ...((report.refinement?.assertions.terminology ?? []).map((entry) => ({
-        term: entry.term,
-        inferredMeaning: entry.meaning,
-        confidence: 1,
-        source: "human-provided",
-      }))),
-      ...((report.contextGraph?.lexicalEntries ?? [])
-        .filter((entry) => entry.kind !== "entity-name")
-        .slice(0, 10)
-        .map((entry) => ({
-          term: entry.label,
-          inferredMeaning: entry.kind === "category" ? "a content category the classifier read" : "a topic the site's own headings use",
-          confidence: entry.confidence,
-          source: "machine-inferred",
-        }))),
-    ],
+    // Human vocabulary lives in the lexical graph itself (with meaning and provenance); the
+    // machine's own terms follow it, so a reviewer sees exactly what stands and what they said.
+    terminology: (report.contextGraph?.lexicalEntries ?? [])
+      .filter((entry) => entry.kind !== "entity-name")
+      .slice(0, 20)
+      .map((entry) => ({
+        term: entry.label,
+        inferredMeaning:
+          entry.meaning ??
+          (entry.kind === "category" ? "a content category the classifier read" : "a topic the site's own headings use"),
+        confidence: entry.confidence,
+        source: entry.provenance ?? "machine-inferred",
+      })),
     actions: (report.capabilities ?? []).map((capability) => ({
       actionId: capability.actionId,
       label: capability.label,
@@ -199,7 +195,7 @@ export function inspectServiceMap(report: ReportRecord, reportUrl: string): Insp
       evidence: capability.evidence.slice(0, 3).map((item) => item.claim),
     })),
     nextStep:
-      "Interview the human about the operating role, the primary entities, the terminology, and the boundary of every expected action (owned, partner-handoff, informational-only, not-applicable); use explain-capability where evidence is unclear, then call refine-service-map with the decisions. Human decisions never change agent readiness.",
+      "Interview the human about the operating role, the primary entities, the terminology, and the boundary of every expected action (owned, partner-handoff, informational-only, not-applicable); use explain-capability where evidence is unclear, then call refine-service-map with the decisions — including terminologyDecisions to confirm, replace, or reject the machine's own vocabulary. Human decisions never change agent readiness.",
   };
 }
 

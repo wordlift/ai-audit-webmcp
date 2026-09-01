@@ -50,24 +50,49 @@ export function ServiceMapProvenance({ report }: { report: ReportRecord }) {
             </Link>
           )}
         </div>
-        <ul className="map-changes" aria-label="What changed">
-          {(assertions.primaryEntityIds ?? []).length > 0 && (
-            <li><span className="provenance-badge">Human-provided</span> Primary entities: {(assertions.primaryEntityIds ?? []).map(entityName).join(", ")}</li>
-          )}
-          {(assertions.demotedEntityIds ?? []).length > 0 && (
-            <li><span className="provenance-badge">Human-provided</span> Demoted: {(assertions.demotedEntityIds ?? []).map(entityName).join(", ")}</li>
-          )}
-          {(assertions.terminology ?? []).map((entry) => (
-            <li key={entry.term}><span className="provenance-badge">Human-provided</span> "{entry.term}" means {entry.meaning}</li>
-          ))}
-          {(assertions.actionDecisions ?? []).map((decision) => (
-            <li key={decision.actionId}>
-              <span className="provenance-badge">Human-provided</span> {label(decision.actionId)}: {decision.decision === "confirm" ? "confirmed" : "rejected"}
-              {decision.boundary ? ` · ${BOUNDARY_LABELS[decision.boundary]}` : ""}
-              {decision.rationale ? <em> — {decision.rationale}</em> : null}
-            </li>
-          ))}
-        </ul>
+        {(() => {
+          const primaryCount = (assertions.primaryEntityIds ?? []).length;
+          const demotedCount = (assertions.demotedEntityIds ?? []).length;
+          const termCount = (assertions.terminology ?? []).length + (assertions.terminologyDecisions ?? []).length;
+          const actionCount = (assertions.actionDecisions ?? []).length;
+          const stats = [
+            primaryCount > 0 && `${primaryCount} primary entit${primaryCount === 1 ? "y" : "ies"}`,
+            demotedCount > 0 && `${demotedCount} demoted`,
+            termCount > 0 && `${termCount} term${termCount === 1 ? "" : "s"} clarified`,
+            actionCount > 0 && `${actionCount} action boundar${actionCount === 1 ? "y" : "ies"} decided`,
+          ].filter((entry): entry is string => Boolean(entry));
+          return (
+            <div className="map-stats" aria-label="What changed">
+              {stats.map((entry) => <span key={entry} className="map-stat">{entry}</span>)}
+            </div>
+          );
+        })()}
+        <details className="map-diff">
+          <summary>Full decision log</summary>
+          <ul className="map-changes">
+            {(assertions.primaryEntityIds ?? []).length > 0 && (
+              <li><span className="provenance-badge">Human-provided</span> Primary entities: {(assertions.primaryEntityIds ?? []).map(entityName).join(", ")}</li>
+            )}
+            {(assertions.demotedEntityIds ?? []).length > 0 && (
+              <li><span className="provenance-badge">Human-provided</span> Demoted: {(assertions.demotedEntityIds ?? []).map(entityName).join(", ")}</li>
+            )}
+            {(assertions.terminology ?? []).map((entry) => (
+              <li key={entry.term}><span className="provenance-badge">Human-provided</span> "{entry.term}" means {entry.meaning}</li>
+            ))}
+            {(assertions.terminologyDecisions ?? []).map((decision) => (
+              <li key={decision.term}>
+                <span className="provenance-badge">Human-provided</span> "{decision.term}" {decision.decision === "reject" ? "rejected as machine vocabulary" : decision.decision === "confirm" ? "confirmed" : `now means ${decision.meaning}`}
+              </li>
+            ))}
+            {(assertions.actionDecisions ?? []).map((decision) => (
+              <li key={decision.actionId}>
+                <span className="provenance-badge">Human-provided</span> {label(decision.actionId)}: {decision.decision === "confirm" ? "confirmed" : "rejected"}
+                {decision.boundary ? ` · ${BOUNDARY_LABELS[decision.boundary]}` : ""}
+                {decision.rationale ? <em> — {decision.rationale}</em> : null}
+              </li>
+            ))}
+          </ul>
+        </details>
         {refinement.conflicts.length > 0 && (
           <p className="map-conflicts">Not applied: {refinement.conflicts.join(" · ")}</p>
         )}
