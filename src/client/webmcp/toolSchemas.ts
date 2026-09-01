@@ -82,6 +82,65 @@ export const EXPLAIN_FOUNDATION_AUDIT_TOOL = {
   annotations: { readOnlyHint: true, untrustedContentHint: true },
 } as const;
 
+export const REFINE_SERVICE_MAP_TOOL = {
+  name: "refine-service-map",
+  description:
+    "Submit a human reviewer's structured decisions about the open report's machine-generated service map — the business's operating role, its primary entities, its vocabulary, and confirm/reject/boundary decisions per action — and receive a new immutable refined report: its URL, what changed, and any assertions that could not be applied. Human decisions can never mark an action agent-ready; readiness always requires successful invocation evidence.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      reportId: { type: "string", description: "Identifier of the report currently open in the page." },
+      businessRole: {
+        type: "string",
+        description: "The organization's operating role in the reviewer's words, e.g. destination-organization, merchant, marketplace.",
+      },
+      primaryEntityIds: {
+        type: "array",
+        items: { type: "string" },
+        description: "Entity ids from this report to promote as the business's primary objects.",
+      },
+      demotedEntityIds: {
+        type: "array",
+        items: { type: "string" },
+        description: "Entity ids from this report to demote as peripheral.",
+      },
+      terminology: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            term: { type: "string", description: "A word the site uses." },
+            meaning: { type: "string", description: "What it means for this business." },
+          },
+          required: ["term", "meaning"],
+          additionalProperties: false,
+        },
+        description: "Business vocabulary the machine could not know.",
+      },
+      actionDecisions: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            actionId: { type: "string", description: "An action id from this report's capability map." },
+            decision: { type: "string", enum: ["confirm", "reject"] },
+            boundary: {
+              type: "string",
+              enum: ["owned", "partner-handoff", "informational-only", "not-applicable"],
+              description: "Who is responsible: the site itself, a partner it hands off to, information only, or nobody.",
+            },
+            rationale: { type: "string", description: "Why, in one or two sentences." },
+          },
+          required: ["actionId", "decision"],
+          additionalProperties: false,
+        },
+      },
+    },
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: false, untrustedContentHint: true },
+} as const;
+
 export const CHECK_ALPINA_AVAILABILITY_TOOL = {
   name: "check-alpina-availability",
   description:

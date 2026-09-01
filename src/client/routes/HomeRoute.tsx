@@ -4,10 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { ApiError, getReport, startReport } from "../api/client";
 
 const journey = [
-  { label: "Analyze 4 useful pages", icon: ScanSearch },
-  { label: "Extract entities & meaning", icon: Tags },
-  { label: "Map actions & interfaces", icon: Braces },
-  { label: "Verify agent readiness", icon: Bot },
+  { label: "Read the pages that matter", icon: ScanSearch },
+  { label: "Draft entities, language & actions", icon: Tags },
+  { label: "Refine with ChatGPT", icon: Bot },
+  { label: "Compile governed contracts", icon: Braces },
 ];
 
 /** Real phase durations for a live audit, which takes about a minute end to end. */
@@ -147,10 +147,11 @@ export function HomeRoute() {
     <section className="home-page">
       <div className="hero" aria-labelledby="hero-title">
         <div className="eyebrow"><Sparkles size={16} /> Built for the agentic web</div>
-        <h1 id="hero-title">Your website has pages. Agents need a <span>service map.</span></h1>
+        <h1 id="hero-title">Teach ChatGPT how your business should work <span>for agents.</span></h1>
         <p className="hero-copy">
-          Enter a URL. WordLift's Context Engine connects the site's entities and language to the
-          actions agents need, then verifies which interfaces actually work.
+          AI Audit reads your website and drafts its entities, language, actions and boundaries.
+          You add the business knowledge only a human has. ChatGPT recompiles both into a governed
+          service map for agents.
         </p>
         <form className="audit-form" onSubmit={submit}>
           <label htmlFor="site-url">Website URL</label>
@@ -165,7 +166,7 @@ export function HomeRoute() {
               required
             />
             <button type="submit" disabled={Boolean(phase)}>
-              {phase ? "Building the map" : "Build the service map"} <ArrowRight size={18} />
+              {phase ? "Drafting the map" : "Audit and refine my site"} <ArrowRight size={18} />
             </button>
           </div>
           <p>No account required. Public websites only.</p>

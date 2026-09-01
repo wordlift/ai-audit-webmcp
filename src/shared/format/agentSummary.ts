@@ -59,6 +59,9 @@ export interface CapabilityToolResult {
   } | null;
   recommendedDelivery: string | null;
   contractUrl: string | null;
+  /** Responsibility a human reviewer assigned; null on the machine draft. */
+  boundary: string | null;
+  boundaryRationale: string | null;
 }
 
 /** What an agent gets back while an audit is still running: an address, not an answer. */
@@ -256,6 +259,8 @@ export function describeCapabilityForAgent(
     governance: capability.contract?.governance ?? null,
     recommendedDelivery: capability.contract?.recommendedDelivery ?? null,
     contractUrl: capability.contract ? contractUrl : null,
+    boundary: capability.boundary ?? null,
+    boundaryRationale: capability.boundaryRationale ?? null,
   };
 }
 
@@ -282,6 +287,11 @@ export function capabilitySummaryText(result: CapabilityToolResult): string {
     }
   } else {
     lines.push("No supporting evidence was collected for this action.");
+  }
+  if (result.boundary) {
+    lines.push(
+      `Responsibility (human-provided): ${result.boundary.replace("-", " ")}${result.boundaryRationale ? ` — ${result.boundaryRationale}` : ""}.`,
+    );
   }
   if (result.recommendation) {
     lines.push(`Recommendation: ${result.recommendation}`);
