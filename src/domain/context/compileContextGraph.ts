@@ -138,15 +138,23 @@ function compileBindings(
 
 function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string): DomainEntity[] {
   const byId = new Map<string, DomainEntity>();
-  // The same real-world thing often carries a different @id on each page that embeds it. Its
-  // name and types are its identity: the first @id seen becomes canonical, and later sightings
-  // merge into it instead of appearing as duplicate entities.
-  const idByIdentity = new Map<string, string>();
+  // The same real-world thing often carries a different @id on each page that embeds it — and
+  // often a different type set too: Organization here, Organization+Brand there. A sighting
+  // merges into an earlier entity when the names match and at least one type is shared; only a
+  // genuine namesake of a different kind stays separate.
+  const idsByName = new Map<string, string[]>();
   for (const page of pages) {
     for (const extracted of page.entities) {
-      const identity = `${[...extracted.types].sort().join("+")}|${extracted.name.trim().toLowerCase()}`;
-      const id = byId.has(extracted.id) ? extracted.id : (idByIdentity.get(identity) ?? extracted.id);
-      if (!idByIdentity.has(identity)) idByIdentity.set(identity, id);
+      const name = extracted.name.trim().toLowerCase();
+      let id = extracted.id;
+      if (!byId.has(id)) {
+        const match = (idsByName.get(name) ?? []).find((candidateId) =>
+          byId.get(candidateId)?.types.some((type) => extracted.types.includes(type)),
+        );
+        if (match) id = match;
+      }
+      const known = idsByName.get(name) ?? [];
+      if (!known.includes(id)) idsByName.set(name, [...known, id]);
       const existing = byId.get(id);
       const next: DomainEntity = {
         id,
