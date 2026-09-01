@@ -31,13 +31,27 @@ const ENTITY_ACTIONS: Record<string, string[]> = {
   Place: ["detail.retrieve", "site.search"],
 };
 
+/**
+ * The entities that ARE the business lead the graph for each site type; a byline Person or a
+ * partner Organization mentioned in an article must never displace them.
+ */
+const BUSINESS_TYPES: Record<string, string[]> = {
+  "commerce-retail": ["Product", "ProductGroup", "Offer", "AggregateOffer", "Vehicle", "Service"],
+  saas: ["SoftwareApplication", "WebApplication", "Service", "Product"],
+  "finance-insurance": ["FinancialService", "InsuranceAgency", "Service", "Product"],
+  "travel-hospitality": ["LodgingBusiness", "Hotel", "Resort", "Apartment", "Accommodation", "TouristAttraction", "Event", "Product"],
+  "publisher-content": ["Article", "NewsArticle", "BlogPosting"],
+  other: [],
+};
+
 export function compileContextGraph(
   pages: SitePageSnapshot[],
   categories: ContentCategory[],
   capabilities: CapabilityResult[],
   canonicalUrl: string,
+  archetype?: keyof typeof BUSINESS_TYPES,
 ): ContextGraph {
-  const entities = mergeEntities(pages, canonicalUrl);
+  const entities = mergeEntities(pages, canonicalUrl, new Set(BUSINESS_TYPES[archetype ?? "other"] ?? []));
   const actionIdsByEntity = actionMapForEntities(entities, capabilities);
   const interfaces = capabilities.flatMap((capability) =>
     capability.evidence.map((evidence) => interfaceFrom(evidence, capability, entities, actionIdsByEntity)),
@@ -136,7 +150,7 @@ function compileBindings(
   ).slice(0, 240);
 }
 
-function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string): DomainEntity[] {
+function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, businessTypes: Set<string> = new Set()): DomainEntity[] {
   const byId = new Map<string, DomainEntity>();
   // The same real-world thing often carries a different @id on each page that embeds it — and
   // often a different type set too: Organization here, Organization+Brand there. A sighting
@@ -185,7 +199,9 @@ function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string): DomainE
       confidence: pages.length > 0 ? 0.8 : 0.6,
     });
   }
-  return [...byId.values()].sort((left, right) => entityRank(left) - entityRank(right) || left.name.localeCompare(right.name)).slice(0, 80);
+  return [...byId.values()]
+    .sort((left, right) => entityRank(left, businessTypes) - entityRank(right, businessTypes) || left.name.localeCompare(right.name))
+    .slice(0, 80);
 }
 
 function compileLexicalEntries(
@@ -278,11 +294,12 @@ function evidenceApplies(evidence: CapabilityEvidence, entity: DomainEntity): bo
   return entity.sourceUrls.includes(evidence.sourceUrl);
 }
 
-function entityRank(entity: DomainEntity): number {
-  if (entity.types.includes("WebSite")) return -1;
-  if (entity.types.includes("Organization")) return 0;
-  if (entity.offers.length > 0) return 1;
-  return 2;
+function entityRank(entity: DomainEntity, businessTypes: Set<string>): number {
+  if (entity.offers.length > 0 || entity.types.some((type) => businessTypes.has(type))) return 0;
+  if (entity.types.includes("WebSite")) return 1;
+  if (entity.types.includes("Organization")) return 2;
+  if (entity.types.includes("Person")) return 4;
+  return 3;
 }
 
 function emptyPage(url: string): SitePageSnapshot {

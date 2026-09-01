@@ -359,6 +359,20 @@ export class AuditOrchestrator {
       errors.push(failure("classifier_unavailable", "understanding", classification.failureReason, false));
     }
 
+    // A map built from one or two pages is a sketch, not a survey: the report says so and stays
+    // retryable instead of presenting a thin sample as the completed picture.
+    if (snapshot && snapshot.pages.length < 3) {
+      errors.push(
+        failure(
+          "thin_sample",
+          "understanding",
+          snapshot.pages.length === 1
+            ? "Only the entry page could be read, so the map is built from a single page."
+            : "Only 2 representative pages could be read, so the map may be incomplete.",
+        ),
+      );
+    }
+
     // What the collector actually read outranks what the foundation audit reported as present.
     const disproved = disprovedDiscovery(snapshot);
     const auditEvidence = (audit?.evidence ?? []).filter((item) => !disproved.evidenceIds.has(item.id));
@@ -417,7 +431,13 @@ export class AuditOrchestrator {
     const graph = compileActionGraph(this.model, inference.primaryArchetype, provenance);
     const categoryNames = inputs.categories.map((category) => category.name);
     const rawCapabilities = this.capabilities(graph.actions, inputs.evidence, inputs.canonicalUrl, undefined, categoryNames);
-    const contextGraph = compileContextGraph(inputs.pages, inputs.categories, rawCapabilities, inputs.canonicalUrl);
+    const contextGraph = compileContextGraph(
+      inputs.pages,
+      inputs.categories,
+      rawCapabilities,
+      inputs.canonicalUrl,
+      inference.primaryArchetype,
+    );
     const capabilities = this.capabilities(graph.actions, inputs.evidence, inputs.canonicalUrl, contextGraph, categoryNames);
     const publishedWith = detectWordLift(contextGraph.entities, inputs.wordlift, inputs.canonicalUrl);
     const topScore = inference.rankedArchetypes[0]?.score ?? 0;

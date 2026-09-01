@@ -42,6 +42,36 @@ const snapshot: SiteSnapshot = {
       pageTools: [],
       truncated: false,
     },
+    {
+      url: "https://alpina.travel/booking",
+      title: "Check availability",
+      description: "",
+      role: "offer",
+      text: "choose dates and guests",
+      headings: ["Choose dates"],
+      linkPaths: ["/booking"],
+      linkLabels: ["book now"],
+      forms: [],
+      jsonLdTypes: [],
+      entities: [],
+      pageTools: [],
+      truncated: false,
+    },
+    {
+      url: "https://alpina.travel/faq",
+      title: "Guest information",
+      description: "",
+      role: "policy",
+      text: "arrival, keys, and pets",
+      headings: ["Guest information"],
+      linkPaths: ["/faq"],
+      linkLabels: ["faq"],
+      forms: [],
+      jsonLdTypes: [],
+      entities: [],
+      pageTools: [],
+      truncated: false,
+    },
   ],
   text: Array.from({ length: 60 }, (_, index) => `alpine lungau apartment holiday word${index}`).join(" "),
   headings: ["Samspitze 4", "Book your stay"],
@@ -282,6 +312,20 @@ describe("live orchestrator", () => {
     expect(report.status).toBe("partial");
     expect(report.foundationAudit).toBeUndefined();
     expect(report.errors[0]).toMatchObject({ code: "audit_timeout", provider: "wordlift-ai-audit", retryable: true });
+    expect(report.capabilities?.length).toBeGreaterThan(0);
+  });
+
+  it("marks a report built from fewer than three pages partial instead of complete", async () => {
+    const { orchestrator } = liveOrchestrator({
+      scrape: stubScraper({ ...snapshot, pages: snapshot.pages.slice(0, 1) }),
+      audit: stubAudit(auditBundle),
+      classify: stubClassifier(travelCategories),
+    });
+
+    const report = await orchestrator.create({ requestId: randomUUID(), url: "alpina.travel" });
+
+    expect(report.status).toBe("partial");
+    expect(report.errors.some((error) => error.code === "thin_sample" && error.retryable)).toBe(true);
     expect(report.capabilities?.length).toBeGreaterThan(0);
   });
 
