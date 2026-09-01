@@ -2,6 +2,7 @@ import { useWebMCP } from "use-webmcp-tool";
 import { humanAssertionSchema } from "../../shared/schemas/report.js";
 import type { ReportRecord } from "../../shared/types/index.js";
 import { refineReport, reportPageUrl } from "../api/client";
+import { resolveOpenReport } from "./reportToolScope";
 import { REFINE_SERVICE_MAP_TOOL } from "./toolSchemas";
 
 interface RefineArgs {
@@ -33,26 +34,20 @@ export interface RefineToolResult {
  * The machine draft is never changed in place, and no decision here can mark an action
  * agent-ready — readiness still requires invocation evidence.
  */
-export function RefineServiceMapTool({ report }: { report: ReportRecord | null }) {
-  const enabled = Boolean(report && report.capabilities && report.capabilities.length > 0);
-
+export function RefineServiceMapTool({ reportId, report }: { reportId: string; report: ReportRecord | null }) {
   useWebMCP<RefineArgs, RefineToolResult>({
     name: REFINE_SERVICE_MAP_TOOL.name,
     description: REFINE_SERVICE_MAP_TOOL.description,
     inputSchema: REFINE_SERVICE_MAP_TOOL.inputSchema,
     annotations: REFINE_SERVICE_MAP_TOOL.annotations,
-    enabled,
+    enabled: Boolean(reportId),
     execute: async (args) => {
-      if (!report || !report.capabilities) {
-        throw new Error("No service map is open in this page. Run audit-website first.");
-      }
-      if (typeof args?.reportId === "string" && args.reportId.length > 0 && args.reportId !== report.id) {
-        throw new Error(`This page holds report ${report.id}. Open ${args.reportId} to refine it.`);
-      }
+      const current = await resolveOpenReport(reportId, report, args?.reportId);
+      if (!current.capabilities) throw new Error("This report carries no service map to refine.");
       const { reportId: _scope, ...assertionInput } = (args ?? {}) as Record<string, unknown>;
       const assertions = humanAssertionSchema.parse(assertionInput);
 
-      const child = await refineReport(report.id, assertions);
+      const child = await refineReport(current.id, assertions);
       const refinement = child.refinement;
       const boundaries = (child.capabilities ?? [])
         .filter((capability) => capability.boundarySource === "human-provided" && capability.boundary)
@@ -63,7 +58,7 @@ export function RefineServiceMapTool({ report }: { report: ReportRecord | null }
         }));
       const decided = new Map((assertions.actionDecisions ?? []).map((decision) => [decision.actionId, decision.decision]));
       return {
-        parentReportId: report.id,
+        parentReportId: current.id,
         reportId: child.id,
         reportUrl: reportPageUrl(child.id),
         decisionsApplied: refinement?.decisions ?? 0,

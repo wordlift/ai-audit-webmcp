@@ -690,6 +690,13 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .dialog-boundary p { display: flex; gap: 8px; align-items: center; margin: 0 0 4px; }
 .boundary-rationale { color: var(--muted); font-size: 0.82rem; font-style: italic; }
 
+/* ---------- Site-tools self-test badge ---------- */
+.site-tools { position: relative; display: inline-flex; align-items: center; margin-left: auto; }
+.site-tools svg { width: 13px; height: 13px; }
+.site-tools-toggle { display: inline-flex; gap: 6px; align-items: center; padding: 6px 10px; border: 1px solid var(--line-subtle); border-radius: 8px; background: var(--surface); color: var(--muted); font-family: var(--font-mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; }
+.site-tools-list { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; display: grid; gap: 4px; margin: 0; padding: 10px 14px; border: 1px solid var(--line-subtle); border-radius: 10px; background: var(--surface); box-shadow: 0 8px 24px rgba(25, 25, 25, 0.12); list-style: none; font-family: var(--font-mono); font-size: 0.68rem; white-space: nowrap; }
+.site-tools-missing { gap: 6px; max-width: 46ch; color: var(--muted); font-size: 0.7rem; line-height: 1.35; }
+
 /* ---------- Labs fold ---------- */
 .labs-fold { border: 1px dashed var(--line); border-radius: 16px; background: var(--surface); }
 .labs-fold > summary { padding: 14px 20px; color: var(--muted); font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; cursor: pointer; }

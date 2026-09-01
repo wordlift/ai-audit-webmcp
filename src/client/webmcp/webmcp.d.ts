@@ -26,6 +26,8 @@ export interface WebMCPToolDescriptor {
 
 export interface WebMCPModelContext {
   registerTool: (tool: WebMCPToolDescriptor, options?: { signal?: AbortSignal }) => void;
+  /** The specification exposes getTools() for in-page inspection; older implementations lack it. */
+  getTools?: () => Promise<Array<Pick<WebMCPToolDescriptor, "name">>>;
 }
 
 declare global {

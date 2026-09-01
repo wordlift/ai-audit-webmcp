@@ -418,6 +418,7 @@ describe("WebMCP tool layer", () => {
         "explain-capability",
         "explain-foundation-audit",
         "get-audit-report",
+        "inspect-service-map",
         "refine-service-map",
       ]),
     );
@@ -451,6 +452,77 @@ describe("WebMCP tool layer", () => {
 
     view.unmount();
     await waitFor(() => expect(modelContext.toolNames()).toEqual([]));
+  });
+
+  it("registers the report tools the moment the route mounts, before the report has loaded", async () => {
+    const runningReport: ReportRecord = {
+      id: REPORT_ID,
+      status: "running",
+      phase: "mapping",
+      mode: "live",
+      requestedUrl: "https://alpina.travel/",
+      createdAt: "2026-08-27T05:00:00.000Z",
+      expiresAt: "2026-09-26T05:00:00.000Z",
+      actionModelVersion: "0.1.0",
+      errors: [],
+      evidenceTruncated: false,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input).endsWith("/api/health")) return jsonResponse({ status: "ok", mode: "demo" });
+        return jsonResponse(runningReport);
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={[`/reports/${REPORT_ID}`]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    // The page still shows progress, but the agent interface is already discoverable.
+    await waitFor(() =>
+      expect(modelContext.toolNames()).toEqual(
+        expect.arrayContaining(["inspect-service-map", "explain-capability", "explain-foundation-audit", "refine-service-map"]),
+      ),
+    );
+    const result = await act(async () => modelContext.call("inspect-service-map", {}));
+    expect(result.isError).toBe(true);
+    expect(toolText(result)).toMatch(/still running \(phase: mapping\)/);
+  });
+
+  it("gives an agent the whole interview brief through inspect-service-map", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(completedReport)));
+
+    render(
+      <MemoryRouter initialEntries={[`/reports/${REPORT_ID}`]}>
+        <App />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(modelContext.get("inspect-service-map")).toBeDefined());
+
+    const result = await act(async () => modelContext.call("inspect-service-map", { reportId: REPORT_ID }));
+
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({
+      reportId: REPORT_ID,
+      refined: false,
+      operatingRole: { inferred: "travel-hospitality", source: "machine-inferred" },
+    });
+    const payload = result.structuredContent as {
+      entities: Array<{ name: string; machinePriority: string }>;
+      actions: Array<{ actionId: string; agentReady: boolean; boundary: string | null }>;
+      nextStep: string;
+    };
+    expect(payload.entities).toContainEqual(expect.objectContaining({ name: "AlpiNest", machinePriority: "primary" }));
+    expect(payload.actions).toContainEqual(
+      expect.objectContaining({ actionId: "availability.check", agentReady: false, boundary: null }),
+    );
+    expect(payload.nextStep).toMatch(/refine-service-map/);
+    const text = toolText(result);
+    expect(text).toMatch(/Machine-generated service map/);
+    expect(text).toMatch(/availability\.check/);
   });
 
   it("compiles a reviewer's decisions into an immutable refined report through refine-service-map", async () => {

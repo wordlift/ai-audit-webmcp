@@ -14,9 +14,11 @@ test("a human refinement turns the machine draft into a refined service map", as
   await page.getByRole("button", { name: /audit and refine my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
 
-  // 2. The draft says whose interpretation it is, and offers the review path.
+  // 2. The draft says whose interpretation it is, and offers the review path. Playwright has no
+  // WebMCP, so the self-test badge must say exactly which browser the reader needs.
   await expect(page.getByText("Machine-generated service map")).toBeVisible();
   await expect(page.getByRole("button", { name: /review with chatgpt/i })).toBeVisible();
+  await expect(page.getByText(/site tools require a webmcp-enabled browser/i)).toBeVisible();
 
   // 3. Refinement: the decisions ChatGPT would submit through refine-service-map.
   const parentId = page.url().split("/reports/")[1];

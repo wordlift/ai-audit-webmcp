@@ -38,7 +38,10 @@ The application is itself a WebMCP surface. It registers tools through the WebMC
 - `get-audit-report` — turns a report id into progress while the audit runs and into the finished summary once a terminal report exists.
 - `explain-capability` — one action: the entities it applies to, its interfaces, evidence, governance, recommendation, and contract.
 - `explain-foundation-audit` — the WordLift foundation audit of the open report: score, dimensions, findings, quick wins.
-- `refine-service-map` — the write half of the human loop: submits a reviewer's structured decisions (business role, primary entities, terminology, confirm/reject/boundary per action) and returns a new immutable refined report. Human decisions can never mark an action agent-ready — readiness always requires invocation evidence.
+- `inspect-service-map` — the read half of the human loop, and the first call in the protocol: one payload with the inferred operating role, every entity with its id and machine priority, the terminology, and every action with its evidence, readiness, and boundary — everything an agent needs to interview the business owner.
+- `refine-service-map` — the write half: called after the interview, it submits the reviewer's structured decisions (business role, primary entities, terminology, confirm/reject/boundary per action) and returns a new immutable refined report. Human decisions can never mark an action agent-ready — readiness always requires invocation evidence.
+
+The report tools register the moment `/reports/:id` loads — before the report itself has rendered — on the top-level document, against `document.modelContext` (with `navigator.modelContext` aliased for Chrome's preview). The intended agent protocol is explicit in the descriptions: **inspect → interview → explain where unclear → refine**. A self-test badge on every report names the registered site tools, and tells readers without WebMCP to open the report in the ChatGPT desktop app's built-in browser.
 - `check-alpina-availability` — a contained read-only adapter for one allowlisted endpoint, kept as a technical proof of how a verified interface earns `sidecar-enabled` in an immutable child revision. Turning that pattern into a product is future WordLift work, outside this audit.
 
 Tool names and descriptions are identifiers agents key on; changing them is a breaking change.

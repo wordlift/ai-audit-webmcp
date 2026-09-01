@@ -20,9 +20,9 @@ export function ServiceMapProvenance({ report }: { report: ReportRecord }) {
 
   async function copyReviewPrompt() {
     const prompt = [
-      `I ran a WordLift AI Audit on my website. The machine-generated service map is at ${reportPageUrl(report.id)} — open it in a WebMCP-enabled browser to use its tools.`,
-      "Interview me about how the business actually works: its operating role, its primary entities, what its vocabulary means, and — for each expected action — whether we own it, hand it off to a partner, offer it as information only, or don't do it at all.",
-      "Then call the refine-service-map tool with my decisions to compile a human-refined service map. Human decisions never mark an action agent-ready; readiness stays evidence-based.",
+      `Review the machine-generated service map on this page: ${reportPageUrl(report.id)}`,
+      "First use inspect-service-map. Then interview me about the operating role, the primary entities, the terminology, and the boundary of every expected action (owned, partner handoff, informational only, or not applicable). Use explain-capability whenever evidence is unclear.",
+      "Once we have resolved the decisions, call refine-service-map. Do not alter evidence-based agent readiness.",
     ].join("\n\n");
     await navigator.clipboard.writeText(prompt);
     setCopied(true);
@@ -80,8 +80,9 @@ export function ServiceMapProvenance({ report }: { report: ReportRecord }) {
       <div className="map-provenance-head">
         <p className="map-provenance-title"><Bot aria-hidden="true" /> Machine-generated service map</p>
         <p className="map-provenance-copy">
-          Review this interpretation with ChatGPT using your knowledge of the business. The machine read the
-          website; only you know its role, its vocabulary, and who owns each action.
+          Open this report in ChatGPT's built-in browser: ChatGPT will inspect the machine draft, interview you
+          about the business — its role, its vocabulary, who owns each action — and compile a human-refined
+          service map.
         </p>
       </div>
       <button type="button" className="review-cta" onClick={() => void copyReviewPrompt()}>

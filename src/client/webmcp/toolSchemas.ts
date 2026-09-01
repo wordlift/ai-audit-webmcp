@@ -49,10 +49,24 @@ export const GET_AUDIT_REPORT_TOOL = {
   annotations: { readOnlyHint: true, untrustedContentHint: true },
 } as const;
 
+export const INSPECT_SERVICE_MAP_TOOL = {
+  name: "inspect-service-map",
+  description:
+    "Read the machine-generated service map for the open audit report. Call this FIRST when a user wants to review, correct, or human-refine the map — before interviewing the business owner and before refine-service-map. Returns the inferred operating role, every entity with its id and machine priority, the business terminology, and every action with its actionId, evidence, current readiness, and boundary.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      reportId: { type: "string", description: "Optional identifier of the report currently open in the page." },
+    },
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: true, untrustedContentHint: true },
+} as const;
+
 export const EXPLAIN_CAPABILITY_TOOL = {
   name: "explain-capability",
   description:
-    "Explain one action from an AI Audit capability map: what the site is expected to support, whether humans and agents can do it today, the supporting evidence, the recommended fix, and the machine-readable action contract.",
+    "Explain one action from an AI Audit capability map. Use this when the reviewer needs more evidence before deciding an action's boundary: it returns what the site is expected to support, whether humans and agents can do it today, the supporting evidence, the recommended fix, and the machine-readable action contract.",
   inputSchema: {
     type: "object",
     properties: {
@@ -85,7 +99,7 @@ export const EXPLAIN_FOUNDATION_AUDIT_TOOL = {
 export const REFINE_SERVICE_MAP_TOOL = {
   name: "refine-service-map",
   description:
-    "Submit a human reviewer's structured decisions about the open report's machine-generated service map — the business's operating role, its primary entities, its vocabulary, and confirm/reject/boundary decisions per action — and receive a new immutable refined report: its URL, what changed, and any assertions that could not be applied. Human decisions can never mark an action agent-ready; readiness always requires successful invocation evidence.",
+    "Call ONLY after inspect-service-map and after collecting the reviewer's decisions. Submits the human's structured judgment about the open report's service map — the business's operating role, its primary entities, its vocabulary, and confirm/reject/boundary decisions per action — and creates a new immutable refined child report: its URL, what changed, and any assertions that could not be applied. Human decisions can never mark an action agent-ready; readiness always requires successful invocation evidence.",
   inputSchema: {
     type: "object",
     properties: {

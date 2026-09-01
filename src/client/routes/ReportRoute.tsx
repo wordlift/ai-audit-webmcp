@@ -13,9 +13,11 @@ import { FoundationAuditDetails } from "../components/FoundationAuditDetails";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { ReportProgress } from "../components/ReportProgress";
 import { ServiceMapProvenance } from "../components/ServiceMapProvenance";
+import { SiteToolsBadge } from "../components/SiteToolsBadge";
 import { AlpinaAvailabilityTool } from "../webmcp/AlpinaAvailabilityTool";
 import { ExplainCapabilityTool } from "../webmcp/ExplainCapabilityTool";
 import { ExplainFoundationAuditTool } from "../webmcp/ExplainFoundationAuditTool";
+import { InspectServiceMapTool } from "../webmcp/InspectServiceMapTool";
 import { RefineServiceMapTool } from "../webmcp/RefineServiceMapTool";
 
 const SIDECAR_HOST = "alpina.travel";
@@ -86,26 +88,39 @@ export function ReportRoute() {
     window.setTimeout(() => setCopied(false), 1500);
   }
 
-  if (error) return <ReportErrorState title="Report unavailable" message={error} />;
-  if (!report) return <div className="report-loading" role="status">Loading the capability map…</div>;
-  if (report.status === "running") return <ReportProgress report={report} />;
+  // The tools register the moment the route mounts — before the report has loaded, exactly when
+  // an agent driving the page starts looking for them. Their handlers fetch the report on demand.
+  const tools = (
+    <>
+      <InspectServiceMapTool reportId={reportId} report={report} />
+      <ExplainCapabilityTool reportId={reportId} report={report} />
+      <ExplainFoundationAuditTool reportId={reportId} report={report} />
+      <RefineServiceMapTool reportId={reportId} report={report} />
+    </>
+  );
+
+  if (error) return <>{tools}<ReportErrorState title="Report unavailable" message={error} /></>;
+  if (!report) return <>{tools}<div className="report-loading" role="status">Loading the capability map…</div></>;
+  if (report.status === "running") return <>{tools}<ReportProgress report={report} /></>;
   if (report.status === "failed") {
     return (
-      <ReportErrorState
-        title={failureTitle(report.errors)}
-        message={visibleErrors(report.errors).map(explainReportError).join(" ") || "No usable evidence was collected."}
-      />
+      <>
+        {tools}
+        <ReportErrorState
+          title={failureTitle(report.errors)}
+          message={visibleErrors(report.errors).map(explainReportError).join(" ") || "No usable evidence was collected."}
+        />
+      </>
     );
   }
 
   return (
     <div className="report-page">
-      <ExplainCapabilityTool report={report} />
-      <ExplainFoundationAuditTool report={report} />
-      <RefineServiceMapTool report={report} />
+      {tools}
       <AlpinaAvailabilityTool reportId={report.id} enabled={sidecarApplies(report)} />
       <nav className="report-toolbar" aria-label="Report actions">
         <Link to="/"><ArrowLeft size={17} /> New audit</Link>
+        <SiteToolsBadge />
         <button type="button" onClick={share}><Share2 size={17} /> {copied ? "Copied" : "Share report"}</button>
       </nav>
       {report.status === "partial" && (
