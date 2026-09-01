@@ -13,7 +13,11 @@ import { appliesToForAction, compileContextGraph, refreshContextGraph } from "..
 import { detectSiteEvidence } from "../../domain/evidence/detectSiteEvidence.js";
 import { detectWordLift, type WordLiftMarker } from "../../domain/evidence/detectWordLift.js";
 import { inferArchetype } from "../../domain/classification/inferArchetype.js";
-import { createReportRequestSchema, recompileReportRequestSchema } from "../../shared/schemas/report.js";
+import {
+  createReportRequestSchema,
+  recompileReportRequestSchema,
+  refineReportRequestSchema,
+} from "../../shared/schemas/report.js";
 import type {
   Archetype,
   CapabilityEvidence,
@@ -172,6 +176,109 @@ export class AuditOrchestrator {
       publishedWith: parent.publishedWith,
       contextGraph,
       capabilities,
+      score: scoreReadiness(capabilities),
+      priorities: rankPriorities(capabilities),
+      errors: parent.errors,
+      evidenceTruncated: parent.evidenceTruncated,
+    };
+    return this.store.createRevision(parent.id, child);
+  }
+
+  /**
+   * Applies a reviewer's structured judgment as an immutable child revision: the machine draft
+   * is never silently changed, every assertion is bounded and typed, and nothing a human writes
+   * can mark an action agent-ready — readiness still requires invocation evidence. Assertions
+   * that reference nothing in the report are returned as conflicts instead of being applied.
+   */
+  async refine(parentId: string, input: unknown): Promise<ReportRecord> {
+    const assertions = refineReportRequestSchema.parse(input);
+    const parent = await this.required(parentId);
+    if (!parent.capabilities || !parent.classification || !parent.contextGraph) {
+      throw new ReportRequestError("That report has no service map to refine.", 409);
+    }
+
+    const conflicts: string[] = [];
+    const knownEntityIds = new Set(parent.contextGraph.entities.map((entity) => entity.id));
+    const keepKnown = (ids: string[] | undefined, verb: string) =>
+      (ids ?? []).filter((id) => {
+        if (knownEntityIds.has(id)) return true;
+        conflicts.push(`Cannot ${verb} unknown entity ${id}`);
+        return false;
+      });
+    const promoted = keepKnown(assertions.primaryEntityIds, "promote");
+    const demoted = keepKnown(assertions.demotedEntityIds, "demote").filter((id) => !promoted.includes(id));
+
+    // Promoted entities lead, demoted trail, and everything else keeps its machine order.
+    const entityGroup = (id: string) => (promoted.includes(id) ? 0 : demoted.includes(id) ? 2 : 1);
+    const entities = [...parent.contextGraph.entities].sort(
+      (left, right) => entityGroup(left.id) - entityGroup(right.id) ||
+        (entityGroup(left.id) === 0 ? promoted.indexOf(left.id) - promoted.indexOf(right.id) : 0),
+    );
+
+    const knownActionIds = new Set(parent.capabilities.map((capability) => capability.actionId));
+    const decisions = new Map(
+      (assertions.actionDecisions ?? [])
+        .filter((decision) => {
+          if (knownActionIds.has(decision.actionId)) return true;
+          conflicts.push(`No action ${decision.actionId} in this report`);
+          return false;
+        })
+        .map((decision) => [decision.actionId, decision]),
+    );
+
+    const capabilities = parent.capabilities.map((capability) => {
+      const decision = decisions.get(capability.actionId);
+      if (!decision) return capability;
+      const next = { ...capability };
+      if (decision.decision === "reject") {
+        next.expected = false;
+        if (next.state === "missing") next.state = "not-expected";
+      } else {
+        next.expected = true;
+        // Confirmed but unevidenced is a gap the human owns; it still earns zero readiness.
+        if (next.state === "not-expected") next.state = "missing";
+      }
+      if (decision.boundary) {
+        next.boundary = decision.boundary;
+        next.boundarySource = "human-provided";
+        if (decision.rationale) next.boundaryRationale = decision.rationale;
+      }
+      next.expectationSource = [...new Set([...next.expectationSource, "human:decision"])].slice(0, 20);
+      return next;
+    });
+
+    const appliedDecisions =
+      (assertions.businessRole ? 1 : 0) +
+      promoted.length +
+      demoted.length +
+      (assertions.terminology?.length ?? 0) +
+      decisions.size;
+    if (appliedDecisions === 0) {
+      throw new ReportRequestError("No assertion in the request applies to this report.", 400);
+    }
+
+    const contextGraph = refreshContextGraph({ ...parent.contextGraph, entities }, capabilities);
+    const child: ReportRecord = {
+      ...this.baseRecord(randomUUID(), parent.requestedUrl, this.now(), parent.id),
+      status: parent.status === "partial" ? "partial" : "completed",
+      phase: "complete",
+      canonicalUrl: parent.canonicalUrl,
+      completedAt: this.now().toISOString(),
+      classification: {
+        ...parent.classification,
+        ...(assertions.businessRole ? { businessRole: assertions.businessRole } : {}),
+      },
+      foundationAudit: parent.foundationAudit,
+      publishedWith: parent.publishedWith,
+      contextGraph,
+      capabilities,
+      refinement: {
+        assertions,
+        decisions: appliedDecisions,
+        conflicts: conflicts.slice(0, 30),
+        provenance: "human-provided",
+        appliedAt: this.now().toISOString(),
+      },
       score: scoreReadiness(capabilities),
       priorities: rankPriorities(capabilities),
       errors: parent.errors,

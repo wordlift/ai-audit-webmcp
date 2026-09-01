@@ -134,6 +134,8 @@ export const classificationResultSchema = z
     provisional: z.boolean(),
     provisionalReason: z.string().max(500).optional(),
     override: archetypeSchema.optional(),
+    /** The operating role a human named for the business, e.g. "destination-organization". */
+    businessRole: z.string().min(2).max(120).optional(),
     model: z.string().min(1).max(120),
     collectedAt: z.string().datetime(),
   })
@@ -167,6 +169,9 @@ const jsonPrimitiveSchema = z.union([z.string(), z.number(), z.boolean(), z.null
 export const jsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
   z.union([jsonPrimitiveSchema, z.array(jsonValueSchema), z.record(z.string(), jsonValueSchema)]),
 );
+
+/** Who is responsible for an action: the site itself, a partner, nobody transactionally, or nobody at all. */
+export const actionBoundarySchema = z.enum(["owned", "partner-handoff", "informational-only", "not-applicable"]);
 
 export const governanceSchema = z
   .object({
@@ -229,6 +234,10 @@ export const capabilityResultSchema = z
     evidence: z.array(capabilityEvidenceSchema).max(MAX_EVIDENCE_ITEMS),
     recommendation: z.string().max(1_500).optional(),
     contract: actionContractSchema.optional(),
+    /** Responsibility for the action, set by a human decision — never inferred as fact. */
+    boundary: actionBoundarySchema.optional(),
+    boundaryRationale: z.string().min(1).max(500).optional(),
+    boundarySource: z.literal("human-provided").optional(),
   })
   .strict();
 
@@ -318,6 +327,48 @@ export const foundationAuditSummarySchema = z
   })
   .strict();
 
+/**
+ * One reviewer's structured judgment about the machine draft. Bounded and typed: free text is
+ * capped, decisions are enums, and nothing here can mark an action agent-ready — readiness still
+ * requires invocation evidence. Provenance is "human-provided"; the product has no accounts, so
+ * no assertion claims to come from a verified site owner.
+ */
+export const humanAssertionSchema = z
+  .object({
+    businessRole: z.string().min(2).max(120).optional(),
+    primaryEntityIds: z.array(z.string().min(1).max(500)).max(12).optional(),
+    demotedEntityIds: z.array(z.string().min(1).max(500)).max(12).optional(),
+    terminology: z
+      .array(z.object({ term: z.string().min(1).max(120), meaning: z.string().min(1).max(300) }).strict())
+      .max(20)
+      .optional(),
+    actionDecisions: z
+      .array(
+        z
+          .object({
+            actionId: z.string().min(1).max(160),
+            decision: z.enum(["confirm", "reject"]),
+            boundary: actionBoundarySchema.optional(),
+            rationale: z.string().min(1).max(500).optional(),
+          })
+          .strict(),
+      )
+      .max(30)
+      .optional(),
+  })
+  .strict();
+
+/** The overlay a refined report carries: what the human decided, when, and what could not apply. */
+export const refinementSchema = z
+  .object({
+    assertions: humanAssertionSchema,
+    decisions: z.number().int().nonnegative(),
+    conflicts: z.array(z.string().min(1).max(300)).max(30),
+    provenance: z.literal("human-provided"),
+    appliedAt: z.string().datetime(),
+  })
+  .strict();
+
 export const reportErrorSchema = z
   .object({
     code: z.string().min(1).max(100),
@@ -354,6 +405,8 @@ export const reportRecordSchema = z
       .optional(),
     contextGraph: contextGraphSchema.optional(),
     capabilities: z.array(capabilityResultSchema).max(80).optional(),
+    /** Present only on a human-refined revision; the machine draft never carries one. */
+    refinement: refinementSchema.optional(),
     score: readinessScoreSchema.optional(),
     priorities: z.array(priorityGapSchema).max(3).optional(),
     errors: z.array(reportErrorSchema).max(30),
@@ -385,6 +438,7 @@ export const createReportRequestSchema = z
   .strict();
 
 export const recompileReportRequestSchema = z.object({ archetype: archetypeSchema }).strict();
+export const refineReportRequestSchema = humanAssertionSchema;
 
 export const runningReportResponseSchema = z
   .object({

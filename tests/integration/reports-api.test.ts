@@ -121,6 +121,69 @@ describe("fixture report API", () => {
     expect(reverification.body.classification.primaryArchetype).toBe("travel-hospitality");
   });
 
+  it("applies a reviewer's decisions as an immutable refined child report", async () => {
+    const { app } = testApp();
+    const parent = await request(app)
+      .post("/api/reports")
+      .send({ requestId: randomUUID(), url: "alpina.travel", fixtureId: "travel-hospitality" })
+      .expect(200);
+    const availability = parent.body.capabilities.find(
+      (item: { actionId: string }) => item.actionId === "availability.check",
+    );
+    const heroEntity = parent.body.contextGraph.entities.find(
+      (item: { types: string[] }) => !item.types.includes("WebSite"),
+    );
+
+    const child = await request(app)
+      .post(`/api/reports/${parent.body.id}/refine`)
+      .send({
+        businessRole: "destination-organization",
+        primaryEntityIds: [heroEntity.id, "urn:not-in-this-report"],
+        terminology: [{ term: "availability", meaning: "partner lodging inventory" }],
+        actionDecisions: [
+          {
+            actionId: "availability.check",
+            decision: "confirm",
+            boundary: "partner-handoff",
+            rationale: "Discovery is core; inventory belongs to accommodation partners.",
+          },
+          { actionId: "items.compare", decision: "reject", boundary: "not-applicable" },
+          { actionId: "does.not.exist", decision: "confirm" },
+        ],
+      })
+      .expect(200);
+
+    // The refined map is a linked child; the machine draft is untouched at its own URL.
+    expect(child.body.parentReportId).toBe(parent.body.id);
+    expect(child.body.refinement.provenance).toBe("human-provided");
+    expect(child.body.classification.businessRole).toBe("destination-organization");
+    const unchanged = await request(app).get(`/api/reports/${parent.body.id}`).expect(200);
+    expect(unchanged.body.refinement).toBeUndefined();
+
+    // Human judgments form an overlay; unknown targets come back as conflicts, not silent drops.
+    expect(child.body.refinement.conflicts.join(" ")).toMatch(/urn:not-in-this-report/);
+    expect(child.body.refinement.conflicts.join(" ")).toMatch(/does\.not\.exist/);
+    expect(child.body.contextGraph.entities[0].id).toBe(heroEntity.id);
+
+    const refined = child.body.capabilities.find(
+      (item: { actionId: string }) => item.actionId === "availability.check",
+    );
+    expect(refined.boundary).toBe("partner-handoff");
+    expect(refined.boundarySource).toBe("human-provided");
+    // The human can shape expectations and boundaries — never readiness.
+    expect(refined.state).toBe(availability.state);
+    expect(refined.agentSupport).toBe(availability.agentSupport);
+    const rejected = child.body.capabilities.find(
+      (item: { actionId: string }) => item.actionId === "items.compare",
+    );
+    expect(rejected.expected).toBe(false);
+
+    const emptyRefine = await request(app)
+      .post(`/api/reports/${parent.body.id}/refine`)
+      .send({ actionDecisions: [{ actionId: "nope.nope", decision: "confirm" }] });
+    expect(emptyRefine.status).toBe(400);
+  });
+
   it("downloads a valid contract as JSON-LD", async () => {
     const { app } = testApp();
     const report = await request(app)
