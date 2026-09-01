@@ -110,6 +110,124 @@ export function auditRunningText(result: AuditRunningResult): string {
     .join("\n");
 }
 
+/** Everything ChatGPT needs to interview the business owner about one machine-generated map. */
+export interface InspectServiceMapResult {
+  reportId: string;
+  reportUrl: string;
+  refined: boolean;
+  operatingRole: {
+    inferred: string;
+    confidence: number;
+    source: "human-provided" | "machine-inferred";
+  };
+  entities: Array<{
+    id: string;
+    name: string;
+    type: string;
+    machinePriority: "primary" | "secondary" | "context";
+  }>;
+  terminology: Array<{ term: string; inferredMeaning: string; confidence: number; source: string }>;
+  actions: Array<{
+    actionId: string;
+    label: string;
+    stage: string;
+    expected: boolean;
+    state: string;
+    agentReady: boolean;
+    boundary: string | null;
+    boundarySource: string | null;
+    evidence: string[];
+  }>;
+  nextStep: string;
+}
+
+const CONFIDENCE_VALUE: Record<string, number> = { high: 0.9, medium: 0.6, low: 0.3 };
+const PRIMARY_HINT_TYPES = new Set([
+  "Product", "ProductGroup", "Offer", "AggregateOffer", "Service", "SoftwareApplication", "WebApplication",
+  "FinancialService", "InsuranceAgency", "LodgingBusiness", "Hotel", "Resort", "Apartment", "Accommodation",
+  "TouristAttraction", "Event", "Vehicle", "Article", "NewsArticle",
+]);
+
+export function inspectServiceMap(report: ReportRecord, reportUrl: string): InspectServiceMapResult {
+  const classification = report.classification;
+  const humanRole = classification?.businessRole;
+  return {
+    reportId: report.id,
+    reportUrl,
+    refined: Boolean(report.refinement),
+    operatingRole: {
+      inferred: humanRole ?? classification?.primaryArchetype ?? "other",
+      confidence: humanRole ? 1 : (CONFIDENCE_VALUE[classification?.confidence ?? "low"] ?? 0.3),
+      source: humanRole ? "human-provided" : "machine-inferred",
+    },
+    entities: (report.contextGraph?.entities ?? []).slice(0, 20).map((entity) => ({
+      id: entity.id,
+      name: entity.name,
+      type: entity.types[0] ?? "Thing",
+      machinePriority: entity.types.includes("WebSite") || entity.types.includes("Person")
+        ? "context"
+        : entity.offers.length > 0 || entity.types.some((type) => PRIMARY_HINT_TYPES.has(type))
+          ? "primary"
+          : "secondary",
+    })),
+    terminology: [
+      ...((report.refinement?.assertions.terminology ?? []).map((entry) => ({
+        term: entry.term,
+        inferredMeaning: entry.meaning,
+        confidence: 1,
+        source: "human-provided",
+      }))),
+      ...((report.contextGraph?.lexicalEntries ?? [])
+        .filter((entry) => entry.kind !== "entity-name")
+        .slice(0, 10)
+        .map((entry) => ({
+          term: entry.label,
+          inferredMeaning: entry.kind === "category" ? "a content category the classifier read" : "a topic the site's own headings use",
+          confidence: entry.confidence,
+          source: "machine-inferred",
+        }))),
+    ],
+    actions: (report.capabilities ?? []).map((capability) => ({
+      actionId: capability.actionId,
+      label: capability.label,
+      stage: capability.stage,
+      expected: capability.expected,
+      state: capability.state,
+      agentReady: READY_STATES.has(capability.state),
+      boundary: capability.boundary ?? null,
+      boundarySource: capability.boundarySource ?? null,
+      evidence: capability.evidence.slice(0, 3).map((item) => item.claim),
+    })),
+    nextStep:
+      "Interview the human about the operating role, the primary entities, the terminology, and the boundary of every expected action (owned, partner-handoff, informational-only, not-applicable); use explain-capability where evidence is unclear, then call refine-service-map with the decisions. Human decisions never change agent readiness.",
+  };
+}
+
+export function inspectSummaryText(result: InspectServiceMapResult): string {
+  const lines = [
+    `${result.refined ? "Human-refined" : "Machine-generated"} service map for report ${result.reportId}.`,
+    `Operating role: ${result.operatingRole.inferred} (${result.operatingRole.source}, confidence ${result.operatingRole.confidence}).`,
+    "Entities:",
+    ...result.entities.map((entity) => `- [${entity.machinePriority}] ${entity.name} (${entity.type}) id=${entity.id}`),
+  ];
+  if (result.terminology.length > 0) {
+    lines.push("Terminology:");
+    for (const entry of result.terminology.slice(0, 10)) {
+      lines.push(`- "${entry.term}": ${entry.inferredMeaning} (${entry.source})`);
+    }
+  }
+  lines.push("Actions:");
+  for (const action of result.actions) {
+    lines.push(
+      `- ${action.actionId} "${action.label}" [${action.stage}] expected=${action.expected} state=${action.state}` +
+        `${action.agentReady ? " agent-ready" : ""}${action.boundary ? ` boundary=${action.boundary} (${action.boundarySource})` : " boundary=undecided"}`,
+    );
+  }
+  lines.push(`Next: ${result.nextStep}`);
+  lines.push(`Report: ${result.reportUrl}`);
+  return lines.join("\n");
+}
+
 const READY_STATES = new Set(["agent-ready", "sidecar-enabled"]);
 const MAX_AGENT_EVIDENCE = 6;
 
