@@ -61,8 +61,8 @@ describe("archetype inference", () => {
     );
     expect(ikea.primaryArchetype).toBe("commerce-retail");
 
-    // illy.com as the collector met it: coffee and kitchen appliances, recipe pages, no cart.
-    const illy = inferArchetype(
+    // A coffee brand as the collector met it: espresso machines, recipe pages, no cart.
+    const coffeeBrand = inferArchetype(
       model,
       [
         { name: "/Food & Drink/Beverages/Coffee & Tea", confidence: 0.85 },
@@ -70,7 +70,7 @@ describe("archetype inference", () => {
       ],
       [],
     );
-    expect(illy.primaryArchetype).toBe("commerce-retail");
+    expect(coffeeBrand.primaryArchetype).toBe("commerce-retail");
   });
 
   it("lets publisher evidence outweigh a beverage topic on a magazine about coffee", () => {

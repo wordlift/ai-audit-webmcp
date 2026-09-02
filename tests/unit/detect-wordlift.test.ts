@@ -35,23 +35,23 @@ describe("detecting that a site publishes with WordLift", () => {
   it("reads the server-side pattern: the dataset on the site's own data. subdomain", () => {
     const result = detectWordLift(
       [entity({
-        id: "https://data.freedomdebtrelief.com/freedomdebtrelief-com/organization/freedom-debt-relief",
-        name: "Freedom Debt Relief",
-        sourceUrls: ["https://www.freedomdebtrelief.com/"],
+        id: "https://data.brand.example/brand-example/organization/brand-example",
+        name: "Brand Example",
+        sourceUrls: ["https://www.brand.example/"],
       })],
       undefined,
-      "https://www.freedomdebtrelief.com/",
+      "https://www.brand.example/",
     );
 
     expect(result?.name).toBe("WordLift");
-    expect(result?.evidence).toMatch(/data\.freedomdebtrelief\.com.*server-side/);
+    expect(result?.evidence).toMatch(/data\.brand\.example.*server-side/);
   });
 
   it("does not claim another site's data. subdomain as this site's dataset", () => {
     const result = detectWordLift(
       [entity({ id: "https://data.othersite.example/x/organization/y" })],
       undefined,
-      "https://www.freedomdebtrelief.com/",
+      "https://www.brand.example/",
     );
     expect(result).toBeUndefined();
   });

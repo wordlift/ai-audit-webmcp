@@ -82,7 +82,7 @@ The report does not claim Alpina lacks an availability surface. It distinguishes
 
 ## How we built it
 
-One deployable TypeScript application combines React 19 and Vite with Express on Cloud Run. Firestore stores immutable anonymous report revisions. The public action model and context schemas are versioned data; the existing private WordLift AI Audit is an optional provider behind a server-side adapter.
+One deployable TypeScript application combines React 19 and Vite with Express on Cloud Run. Firestore stores immutable anonymous report revisions. The public action model and context schemas are versioned data; the existing [WordLift AI Audit](https://wordlift.io/ai-audit/) is an optional provider behind a server-side adapter.
 
 Key implementation choices:
 

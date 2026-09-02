@@ -45,7 +45,7 @@ describe("category-driven label specialization", () => {
   });
 
   it("specializes from the site's own entities when the categories stay vague", () => {
-    // Google files Bluehost under generic web services, but the site's Product is the tell.
+    // Google files a hosting registrar under generic web services, but its own Product is the tell.
     const actions = compileActionGraph(model, "commerce-retail").actions;
     const specialized = specializeActionLabels(
       actions,
