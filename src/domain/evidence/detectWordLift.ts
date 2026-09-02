@@ -18,7 +18,7 @@ export interface WordLiftMarker {
  * Detects that the audited site publishes its structured data with WordLift — from the site's own
  * output, never guessed. Three installations exist in the wild and each leaves its own mark:
  * entity ids on the shared data.wordlift.io dataset; a server-side install publishing the dataset
- * on the client's own `data.` subdomain (data.freedomdebtrelief.com/…); or the browser SDK and
+ * on the client's own `data.` subdomain (data.brand.example/…); or the browser SDK and
  * WordPress plugin, which the collector fingerprints on the page. Returns undefined when the site
  * shows none of them.
  */
@@ -56,7 +56,7 @@ export function detectWordLift(
 
 /**
  * The entity, if any, whose id lives on the site's own `data.` subdomain — the shape a WordLift
- * server-side install publishes (data.freedomdebtrelief.com/…). The collector uses this to pick
+ * server-side install publishes (data.brand.example/…). The collector uses this to pick
  * the one id worth confirming against the dataset portal.
  */
 export function wordLiftDatasetEntity<T extends { id: string; sameAs: string[] }>(

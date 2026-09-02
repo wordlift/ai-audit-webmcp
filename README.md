@@ -6,6 +6,7 @@ WordLift AI Audit takes any public URL, classifies the site, reads the represent
 
 - Live application: [beta.audit.wordlift.io](https://beta.audit.wordlift.io)
 - Stable reference report: [beta.audit.wordlift.io/demo/alpina](https://beta.audit.wordlift.io/demo/alpina)
+- The existing WordLift AI Audit this application extends: [wordlift.io/ai-audit](https://wordlift.io/ai-audit/)
 - WordLift: [wordlift.io](https://wordlift.io)
 
 ## What a report contains
@@ -40,9 +41,9 @@ The application is itself a WebMCP surface. It registers tools through the WebMC
 - `explain-foundation-audit` — the WordLift foundation audit of the open report: score, dimensions, findings, quick wins.
 - `inspect-service-map` — the read half of the human loop, and the first call in the protocol: one payload with the inferred operating role, every entity with its id and machine priority, the terminology, and every action with its evidence, readiness, and boundary — everything an agent needs to interview the business owner.
 - `refine-service-map` — the write half: called after the interview, it submits the reviewer's structured decisions (business role, primary entities, terminology, confirm/reject/boundary per action) and returns a new immutable refined report. Human decisions can never mark an action agent-ready — readiness always requires invocation evidence.
+- `check-alpina-availability` — a contained read-only adapter for one allowlisted endpoint, kept as a technical proof of how a verified interface earns `sidecar-enabled` in an immutable child revision. Turning that pattern into a product is future WordLift work, outside this audit.
 
 The report tools register the moment `/reports/:id` loads — before the report itself has rendered — on the top-level document, against `document.modelContext` (with `navigator.modelContext` aliased for Chrome's preview). The intended agent protocol is explicit in the descriptions: **inspect → interview → explain where unclear → refine**. A self-test badge on every report names the registered site tools, and tells readers without WebMCP to open the report in the ChatGPT desktop app's built-in browser.
-- `check-alpina-availability` — a contained read-only adapter for one allowlisted endpoint, kept as a technical proof of how a verified interface earns `sidecar-enabled` in an immutable child revision. Turning that pattern into a product is future WordLift work, outside this audit.
 
 Tool names and descriptions are identifiers agents key on; changing them is a breaking change.
 
@@ -104,6 +105,6 @@ The versioned action model lives in `action-model/v0.1.0/`. Contributors can add
 
 ## Hackathon boundary
 
-This public application, its schemas, context compiler, action model, evidence rules, UI, WebMCP tools, fixtures, security controls, and tests are new WebMCP Challenge work. The existing private WordLift AI Audit is an optional provider behind a public adapter boundary. alpina.travel is the one client site shown with permission; every other example is a fixture or an unrelated public site.
+This public application, its schemas, context compiler, action model, evidence rules, UI, WebMCP tools, fixtures, security controls, and tests are new WebMCP Challenge work. The existing [WordLift AI Audit](https://wordlift.io/ai-audit/) is an optional provider behind a public adapter boundary. alpina.travel is the one client site shown with permission; every other example is a fixture or an unrelated public site.
 
 Licensed under [Apache-2.0](LICENSE).
