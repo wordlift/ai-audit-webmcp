@@ -1,8 +1,10 @@
 # WordLift AI Audit — WebMCP Context Engine
 
-**The machine reads the website. The human knows the business. ChatGPT compiles both into a governed service map.**
+**The machine reads the website. The human knows the business. ChatGPT compiles both into governed Terms of Action.**
 
-WordLift AI Audit takes any public URL, classifies the site, reads the representative pages, extracts the business entities and language, compiles the actions an agent should be able to perform, and verifies — by calling them — which interfaces actually support those actions. The result is a **machine-generated draft**: a human then reviews it through ChatGPT — correcting the business role, promoting the entities that matter, teaching vocabulary, and deciding who owns each action — and `refine-service-map` compiles those decisions into an immutable **human-refined service map**. The draft keeps working on its own; refinement adds the knowledge only a human has.
+WordLift AI Audit takes any public URL, classifies the site, reads the representative pages, extracts the business entities and language, compiles the actions an agent should be able to perform, and verifies — by calling them — which interfaces actually support those actions. The result is a **machine-generated draft**: a human then reviews it through ChatGPT — correcting the business role, promoting the entities that matter, teaching vocabulary, and deciding who owns each action — and `refine-service-map` compiles those decisions into immutable **human-refined Terms of Action**. The draft keeps working on its own; refinement adds the knowledge only a human has.
+
+**Terms of Action are the business declaration:** what the business owns, what it only describes, what it hands off to partners, and what is not applicable. The **Action Graph** remains the machine-readable artifact that encodes those terms for agents.
 
 - Live application: [beta.audit.wordlift.io](https://beta.audit.wordlift.io)
 - Stable reference report: [beta.audit.wordlift.io/demo/alpina](https://beta.audit.wordlift.io/demo/alpina)
@@ -13,7 +15,7 @@ WordLift AI Audit takes any public URL, classifies the site, reads the represent
 
 1. **Executive summary** — the archetype and its confidence, the WordLift foundation score and the verified agent-readiness score side by side (never blended into one number), and the three highest-impact gaps.
 2. **The Context Engine** — a domain graph (organizations, products, services, places, articles, people, and offers, each with page provenance), a lexical graph (categories, names, aliases, topics), and the action layer (expected actions, entity–action bindings, interfaces, evidence, contracts). Selecting an entity filters the actions bound to it.
-3. **Capability map** — the expected journey for the archetype (discover → understand & decide → act → manage), each action with its human and agent evidence, a recommendation, and a JSON-LD contract.
+3. **Terms of Action / capability map** — the expected journey for the archetype (discover → understand & decide → act → manage), each action with its human and agent evidence, recommendation, JSON-LD contract, and — after review — its business boundary: owned, partner handoff, informational only, or not applicable.
 4. **Full WordLift audit** — the foundation audit behind progressive disclosure: score and summary, AI-crawler access, quick wins, the audited dimensions (those needing attention first, raw details folded away), remaining findings, and the way back to [audit.wordlift.io](https://audit.wordlift.io).
 
 The report page exists from the first second: it polls the running record and shows each provider's result as it lands — entities from the collector, the foundation score from the audit — before the final report replaces them.
@@ -39,13 +41,13 @@ The application is itself a WebMCP surface. It registers tools through the WebMC
 - `get-audit-report` — turns a report id into progress while the audit runs and into the finished summary once a terminal report exists.
 - `explain-capability` — one action: the entities it applies to, its interfaces, evidence, governance, recommendation, and contract.
 - `explain-foundation-audit` — the WordLift foundation audit of the open report: score, dimensions, findings, quick wins.
-- `inspect-service-map` — the read half of the human loop, and the first call in the protocol: one payload with the inferred operating role, every entity with its id and machine priority, the terminology, and every action with its evidence, readiness, and boundary — everything an agent needs to interview the business owner.
-- `refine-service-map` — the write half: called after the interview, it submits the reviewer's structured decisions (business role, primary entities, terminology, confirm/reject/boundary per action) and returns a new immutable refined report. Human decisions can never mark an action agent-ready — readiness always requires invocation evidence.
+- `inspect-service-map` — the read half of the human loop: despite the legacy implementation identifier, it reads the machine-generated **Terms of Action** — inferred operating role, every entity with its id and machine priority, terminology, and every action with its evidence, readiness, and boundary — everything an agent needs to interview the business owner.
+- `refine-service-map` — the write half: after the interview, it submits the reviewer's structured decisions (business role, primary entities, terminology, confirm/reject/boundary per action) and returns a new immutable report containing the **human-refined Terms of Action**. Human decisions can never mark an action agent-ready — readiness always requires invocation evidence.
 - `check-alpina-availability` — a contained read-only adapter for one allowlisted endpoint, kept as a technical proof of how a verified interface earns `sidecar-enabled` in an immutable child revision. Turning that pattern into a product is future WordLift work, outside this audit.
 
 The report tools register the moment `/reports/:id` loads — before the report itself has rendered — on the top-level document, against `document.modelContext` (with `navigator.modelContext` aliased for Chrome's preview). The intended agent protocol is explicit in the descriptions: **inspect → interview → explain where unclear → refine**. A self-test badge on every report names the registered site tools, and tells readers without WebMCP to open the report in the ChatGPT desktop app's built-in browser.
 
-Tool names and descriptions are identifiers agents key on; changing them is a breaking change.
+Tool identifiers are implementation contracts; the product concept they inspect and refine is **Terms of Action**.
 
 ## Run locally
 
@@ -101,7 +103,7 @@ Raw HTML, secrets, cookies, private identifiers, and unbounded provider response
 
 ## Extend the model
 
-The versioned action model lives in `action-model/v0.1.0/`. Contributors can add or revise Google-category and behavior mappings, archetype journeys, action definitions and governance, evidence detectors, entity-to-action expectations, and approved adapters. The user-facing result remains a capability map and an implementation plan; the ontology is the internal discipline that keeps the graph consistent and ready for publication as the action layer of a WordLift knowledge graph.
+The versioned action model lives in `action-model/v0.1.0/`. Contributors can add or revise Google-category and behavior mappings, archetype journeys, action definitions and governance, evidence detectors, entity-to-action expectations, and approved adapters. The user-facing result is a set of **Terms of Action**, a capability map, and an implementation plan; the ontology is the internal discipline that keeps the graph consistent and ready for publication as the **Action Graph** of a WordLift knowledge graph.
 
 ## Hackathon boundary
 
