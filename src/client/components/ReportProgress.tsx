@@ -19,7 +19,7 @@ export function ReportProgress({ report }: { report: ReportRecord }) {
 
   return (
     <div className="report-page report-progress" aria-busy="true">
-      <p className="eyebrow"><Bot size={16} /> Agent service map</p>
+      <p className="eyebrow"><Bot size={16} /> Terms of Action</p>
       <h1>Reading <span>{host}</span>…</h1>
 
       <ol className="progress-phases">

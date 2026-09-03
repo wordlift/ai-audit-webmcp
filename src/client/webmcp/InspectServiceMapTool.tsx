@@ -28,7 +28,7 @@ export function InspectServiceMapTool({ reportId, report }: { reportId: string; 
     execute: async (args) => {
       const current = await resolveOpenReport(reportId, report, args?.reportId);
       if (!current.capabilities || !current.contextGraph) {
-        throw new Error("This report carries no service map to inspect.");
+        throw new Error("This report carries no Terms of Action to inspect.");
       }
       return inspectServiceMap(current, reportPageUrl(current.id));
     },
