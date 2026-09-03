@@ -29,12 +29,6 @@ export interface RefineToolResult {
   note: string;
 }
 
-/**
- * Report-scoped tool: the write half of the human-refinement loop. It turns a reviewer's
- * structured decisions into an immutable child revision and answers with the new report's URL.
- * The machine draft is never changed in place, and no decision here can mark an action
- * agent-ready — readiness still requires invocation evidence.
- */
 export function RefineServiceMapTool({ reportId, report }: { reportId: string; report: ReportRecord | null }) {
   useWebMCP<RefineArgs, RefineToolResult>({
     name: REFINE_SERVICE_MAP_TOOL.name,
@@ -44,11 +38,10 @@ export function RefineServiceMapTool({ reportId, report }: { reportId: string; r
     enabled: Boolean(reportId),
     execute: async (args) => {
       const current = await resolveOpenReport(reportId, report, args?.reportId);
-      if (!current.capabilities) throw new Error("This report carries no service map to refine.");
+      if (!current.capabilities) throw new Error("This report carries no Terms of Action to refine.");
       const { reportId: _scope, ...assertionInput } = (args ?? {}) as Record<string, unknown>;
       const parsed = humanAssertionSchema.safeParse(assertionInput);
       if (!parsed.success) {
-        // The agent gets a sentence it can act on, never a raw validation dump.
         const reasons = parsed.error.issues
           .slice(0, 5)
           .map((issue) => `${issue.path.join(".") || "input"}: ${issue.message}`)
@@ -78,7 +71,7 @@ export function RefineServiceMapTool({ reportId, report }: { reportId: string; r
         rejected: [...decided].filter(([, decision]) => decision === "reject").map(([actionId]) => actionId),
         confirmed: [...decided].filter(([, decision]) => decision === "confirm").map(([actionId]) => actionId),
         agentReadinessScore: child.score?.value ?? 0,
-        note: "The refined map is a new immutable report; the machine draft is unchanged at its own URL. Readiness scores still count only invocation-verified interfaces.",
+        note: "The refined Terms of Action are a new immutable report; the machine draft is unchanged at its own URL. Readiness scores still count only invocation-verified interfaces.",
       };
     },
     formatOutput: (result) => ({
@@ -92,7 +85,7 @@ export function RefineServiceMapTool({ reportId, report }: { reportId: string; r
 
 function refineSummaryText(result: RefineToolResult): string {
   const lines = [
-    `Human-refined service map created: ${result.reportUrl}`,
+    `Human-refined Terms of Action created: ${result.reportUrl}`,
     `${result.decisionsApplied} decision${result.decisionsApplied === 1 ? "" : "s"} applied to the machine draft (report ${result.parentReportId}).`,
   ];
   if (result.businessRole) lines.push(`Business role: ${result.businessRole}.`);
