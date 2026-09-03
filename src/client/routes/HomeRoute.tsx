@@ -7,7 +7,7 @@ const journey = [
   { label: "Read the pages that matter", icon: ScanSearch },
   { label: "Draft entities, language & actions", icon: Tags },
   { label: "Refine with ChatGPT", icon: Bot },
-  { label: "Compile governed contracts", icon: Braces },
+  { label: "Compile Terms of Action", icon: Braces },
 ];
 
 /** Real phase durations for a live audit, which takes about a minute end to end. */
@@ -150,8 +150,8 @@ export function HomeRoute() {
         <h1 id="hero-title">Teach ChatGPT how your business should work <span>for agents.</span></h1>
         <p className="hero-copy">
           AI Audit reads your website and drafts its entities, language, actions and boundaries.
-          You add the business knowledge only a human has. ChatGPT recompiles both into a governed
-          service map for agents.
+          You add the business knowledge only a human has. ChatGPT recompiles both into the business's
+          Terms of Action: what it owns, what it only describes, and what it hands off.
         </p>
         <form className="audit-form" onSubmit={submit}>
           <label htmlFor="site-url">Website URL</label>
@@ -166,7 +166,7 @@ export function HomeRoute() {
               required
             />
             <button type="submit" disabled={Boolean(phase)}>
-              {phase ? "Drafting the map" : "Audit and refine my site"} <ArrowRight size={18} />
+              {phase ? "Drafting the Terms" : "Audit and refine my site"} <ArrowRight size={18} />
             </button>
           </div>
           <p>No account required. Public websites only.</p>
