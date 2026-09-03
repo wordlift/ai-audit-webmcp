@@ -7,10 +7,10 @@ engineering conventions in [CONTRIBUTING.md](CONTRIBUTING.md); running and deplo
 
 ## What this is
 
-WordLift AI Audit for the WebMCP Challenge: a URL goes in, an evidence-backed service map comes
+WordLift AI Audit for the WebMCP Challenge: a URL goes in, evidence-backed Terms of Action come
 out — classification, a context graph of entities and language, the actions an agent should be able
-to perform, and verification of which interfaces actually support them. Declarations never earn
-readiness; only invoked evidence does.
+to perform, the business boundaries around those actions, and verification of which interfaces actually
+support them. Declarations never earn readiness; only invoked evidence does.
 
 ## One line of development
 
@@ -22,11 +22,11 @@ readiness; only invoked evidence does.
 
 ## Frozen
 
-- **WebMCP tool names and descriptions** in `src/client/webmcp/toolSchemas.ts` — agents key on them.
+- **WebMCP tool identifiers** in `src/client/webmcp/toolSchemas.ts` — agents key on them. Their descriptions may evolve with product terminology.
 - **The report schema** in `src/shared/schemas/report.ts` is strict; new fields are optional, and a
   report stored yesterday must still parse today.
-- **Vocabulary the UI uses**: Context Engine, capability map, Full WordLift audit, foundation score,
-  agent readiness. Public copy (README, Devpost, video) follows what the deployed page says.
+- **Vocabulary the UI uses**: Terms of Action, Context Engine, capability map, Full WordLift audit,
+  foundation score, agent readiness. Public copy (README, Devpost, video) follows what the deployed page says.
 - **Registration on both `navigator.modelContext` and `document.modelContext`** — the alias in
   `src/client/webmcp/modelContextAlias.ts` covers whichever the browser exposes; public copy names
   `navigator.modelContext`, which is what Chrome ships.
