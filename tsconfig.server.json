@@ -8,5 +8,5 @@
     "noEmit": false,
     "types": ["node"]
   },
-  "include": ["src/server", "src/shared", "src/domain"]
+  "include": ["src/server", "src/shared", "src/domain", "src/client/webmcp/toolSchemas.ts"]
 }
