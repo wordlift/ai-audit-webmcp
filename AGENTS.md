@@ -53,7 +53,9 @@ support them. Declarations never earn readiness; only invoked evidence does.
 | How pages become entities and bindings | `src/domain/context/compileContextGraph.ts` |
 | What the collector probes (MCP, SearchAction, discovery) | `src/server/adapters/scrape/` |
 | What demo mode shows | `fixtures/<archetype>/audit.json` |
-| What production is running | `GET https://beta.audit.wordlift.io/api/health` → `release`, `mode` |
+| What production is running | `GET https://beta.audit.wordlift.io/api/health` → `release`, `mode`, `surfaces` |
+| What the tools promise, on every transport | `src/shared/tools/definitions.ts` |
+| How a tool call is answered | `src/server/services/AuditToolService.ts` |
 
 ## Commit messages
 

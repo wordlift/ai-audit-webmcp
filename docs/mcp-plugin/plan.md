@@ -164,6 +164,10 @@ canonical names only.
   Acceptance: The production endpoint is reachable from ChatGPT and either survives a real audit or
   hands back a report id that polls to completion.
   Verify: MCP Inspector against production, then audits of three unrelated public domains. Commit as `chore: deploy the public MCP endpoint`.
+  Ready, not run. The deploy script carries the new variable and the TTL prerequisites; the build
+  was exercised locally end to end — health, the well-known token, tools/list, an audit, inspect,
+  a refusal without the claim and a refinement with it. Deploying to beta.audit.wordlift.io is
+  Andrea's call, and `OPENAI_APPS_CHALLENGE` needs its token first.
 
 - [x] **11. Prepare directory submission**
   Spec ref: [submission requirements](https://developers.openai.com/plugins/deploy/submission), [review guidance](https://developers.openai.com/plugins/deploy/app-review).

@@ -81,6 +81,12 @@ export function createApp(options: AppOptions = {}): Express {
       revision: process.env.K_REVISION ?? "local",
       release: process.env.BUILD_SHA ?? "development",
       mode: options.orchestrator?.mode ?? "demo",
+      // What a monitor needs to know is which surfaces this revision actually answers on.
+      surfaces: {
+        mcp: options.orchestrator ? "/mcp" : null,
+        deepScans: Boolean(options.leads),
+        claimedRefinement: Boolean(options.claims),
+      },
     });
   });
 
