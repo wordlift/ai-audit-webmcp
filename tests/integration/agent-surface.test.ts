@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import request from "supertest";
 import { loadActionModel } from "../../src/domain/action-model/loadModel.js";
@@ -13,7 +15,30 @@ import {
 } from "../../src/client/webmcp/toolSchemas.js";
 
 const fixedNow = new Date("2026-08-27T05:00:00.000Z");
-const staticDirectory = path.resolve(process.cwd(), "dist");
+const SHELL_TITLE = "WordLift AI Audit — Agent Capability Map";
+
+/**
+ * Mirrors the built shell rather than reading dist/, so the suite does not depend on a build
+ * having run. The multi-line description meta is reproduced because the prerender has to strip it.
+ */
+const SHELL = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="description"
+      content="WordLift AI Audit maps what humans can do on a website to the functions AI agents need."
+    />
+    <title>${SHELL_TITLE}</title>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+`;
+
+const staticDirectory = mkdtempSync(path.join(os.tmpdir(), "ai-audit-shell-"));
+writeFileSync(path.join(staticDirectory, "index.html"), SHELL);
 
 function testApp() {
   const store = new MemoryReportStore(900_000, () => fixedNow);
@@ -114,6 +139,6 @@ describe("report prerender", () => {
   it("falls back to the untouched shell for a report that does not exist", async () => {
     const response = await request(testApp()).get("/reports/missing-report").expect(200);
     expect(response.text).not.toContain("<noscript>");
-    expect(response.text).toContain("WordLift AI Audit — Agent Capability Map");
+    expect(response.text).toContain(SHELL_TITLE);
   });
 });
