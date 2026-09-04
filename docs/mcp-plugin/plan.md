@@ -17,6 +17,8 @@ workflow.
   another surface over HTTP.
 - Package one public plugin under `plugins/ai-audit/`.
 - Ship a skill that guides the full audit → inspect → interview → confirm → refine workflow.
+- Keep the whole thing free. The basic scan — four representative pages — asks for nothing. Going
+  deeper asks for an email address, and the finished report is sent to it.
 - Leave `check-alpina-availability` out of the public plugin's first version. It is the sidecar demo,
   not part of the general AI Audit product.
 
@@ -33,6 +35,11 @@ workflow.
 
 Over MCP there is no open page, so every report-scoped tool requires an explicit `reportId`. In the
 browser the same tools may keep it optional: the visible report supplies the scope.
+
+`audit-website` gains a `depth` input. `basic` is the default and needs nothing; `deep` needs an
+`email`, which is what the deeper crawl is exchanged for and where the report is sent. An agent must
+ask the person for that address rather than inferring one, and the address is never written into the
+report record — a report is public and carries no private identifier.
 
 The deprecated `inspect-service-map` and `refine-service-map` aliases stay registered in the browser,
 where callers wrote the old names down. MCP is a new surface with no legacy callers and publishes the
@@ -79,17 +86,32 @@ canonical names only.
   incorporate audited-site content.
   Verify: Snapshot-test every MCP tool definition and its annotations. Commit as `fix: describe the audit tools' real effects`.
 
-- [ ] **5. Add ownership and abuse controls**
+- [ ] **5. Gate depth behind an email, and send the report to it**
+  Spec ref: `MAX_PAGES` in `src/server/adapters/scrape/NativeFetch.ts`, `src/server/adapters/scrape/ScrapingBee.ts`, AGENTS.md > Never.
+  What to build: Make scan depth an explicit input rather than a constant. `basic` stays what runs
+  today — four representative pages, free, anonymous, unchanged for every existing caller. `deep` reads
+  more of the site and requires an email address, which buys the depth and receives the finished report.
+  Store the address beside the report, keyed by report id, never inside the report record: a report is a
+  public document and carries no private identifier. Deliver the report as a link, and confirm the
+  address before the report is sent to it.
+  Acceptance: An anonymous caller still gets the four-page audit with no prompt; a deep scan without a
+  confirmed address does not run; no report document, share link, contract, or log line contains the
+  address; unsubscribing or deleting the address leaves the public report intact.
+  Verify: Tests for depth selection, the email boundary in the stored report, delivery, and refusal
+  without an address. Commit as `feat: trade an email for a deeper scan`.
+
+- [ ] **6. Add ownership and abuse controls**
   Spec ref: SECURITY.md, `src/server/security/`, `src/server/routes/reports.ts`.
   What to build: Keep the existing URL policy and SSRF controls in the path of every MCP audit, and add
-  an MCP-specific rate-limit pool. Reading a report stays public; publishing a human-refined child
-  report requires an authenticated caller or a claimed report.
+  an MCP-specific rate-limit pool. Reading a report stays public and free. Publishing a human-refined
+  child report requires the report's claimant — the confirmed address from item 5, or a WordLift
+  account holding the report — so a refinement is attributable to whoever made it.
   Acceptance: A visitor cannot refine someone else's report; a private, reserved, or metadata host is
-  refused before any provider is called.
+  refused before any provider is called; nothing on the reading path asks for an identity.
   Verify: Authorization, rate-limit, redirect, private-IP, metadata-host, and report-ownership tests.
   Commit as `feat: bound who can refine a report`.
 
-- [ ] **6. Build the focused AI Audit skill**
+- [ ] **7. Build the focused AI Audit skill**
   Spec ref: [OpenAI skill guidance](https://developers.openai.com/plugins/build/skills).
   What to build: `plugins/ai-audit/skills/review-ai-audit/SKILL.md`, which starts an audit and polls
   when it must, inspects the Terms of Action before proposing any edit, interviews the user about
@@ -100,7 +122,7 @@ canonical names only.
   Verify: Skill evaluations over complete, partial, still-running, unauthorized, and ambiguous reports.
   Commit as `feat: teach the skill to interview before it refines`.
 
-- [ ] **7. Package the plugin**
+- [ ] **8. Package the plugin**
   Spec ref: [OpenAI plugin packaging](https://developers.openai.com/plugins/build/plugins).
   What to build:
 
@@ -119,7 +141,7 @@ canonical names only.
   Acceptance: Installing the plugin exposes both the MCP connection and the skill.
   Verify: A fresh developer-mode installation in a clean ChatGPT workspace. Commit as `feat: package the public AI Audit plugin`.
 
-- [ ] **8. Add MCP contract and workflow tests**
+- [ ] **9. Add MCP contract and workflow tests**
   Spec ref: the deterministic audit/report test strategy already in `tests/`.
   What to build: Tests for tool discovery, schema validation, structured-output parity with WebMCP,
   polling, typed failures, the confirmation boundary, authentication, and immutable refinement.
@@ -127,7 +149,7 @@ canonical names only.
   HTML, cookies, secrets, or internal identifiers.
   Verify: Add `npm run test:mcp`, include it in `npm run verify`, keep `npm run test:e2e`. Commit as `test: prove the MCP surface tells the same truth`.
 
-- [ ] **9. Deploy and validate production MCP**
+- [ ] **10. Deploy and validate production MCP**
   Spec ref: docs/OPERATIONS.md, `scripts/deploy-cloud-run.sh`.
   What to build: Deploy `/mcp` with a request timeout and concurrency that suit a 30–60 second audit,
   structured logging, rate limits, and health monitoring; verify the domain. The deploy script replaces
@@ -136,7 +158,7 @@ canonical names only.
   hands back a report id that polls to completion.
   Verify: MCP Inspector against production, then audits of three unrelated public domains. Commit as `chore: deploy the public MCP endpoint`.
 
-- [ ] **10. Prepare directory submission**
+- [ ] **11. Prepare directory submission**
   Spec ref: [submission requirements](https://developers.openai.com/plugins/deploy/submission), [review guidance](https://developers.openai.com/plugins/deploy/app-review).
   What to build: Verified WordLift identity, privacy policy, terms, support contact, starter prompts,
   tool descriptions, five positive test cases, and three negative ones.
@@ -150,15 +172,20 @@ canonical names only.
 1. MCP Inspector invokes the first local tool (after item 3).
 2. ChatGPT completes audit → poll → explain through the development connection (after item 4).
 3. The skill completes inspect → interview → confirm → refine without moving a single piece of
-   readiness evidence (after item 6).
-4. Production security and submission tests pass (after item 9).
+   readiness evidence (after item 7).
+4. Production security and submission tests pass (after item 10).
 
-## Open decision: authentication
+## Decided: free to all, an email only for depth
 
-Audits and report reading stay public. `refine-terms-of-action` requires an authenticated caller or a
-claimed report, because a refined child report is a published human judgment about someone's business.
-That gives a directory reviewer a credible safety boundary without turning the audit funnel into a
-sign-up wall.
+The product is free and stays free. Anyone can audit a URL, read a report, and share its link without
+an account, and the four-page basic scan asks for nothing at all. The single exchange is depth: a
+deeper crawl costs an email address, and the report is sent back to it, which is also how the
+conversation continues after the scan.
 
-Effort follows this decision: roughly four to six focused days if WordLift authentication can be
-reused, seven to ten if report ownership or OAuth has to be introduced.
+That address is the claim. Refining Terms of Action is a published human judgment about someone's
+business, so it belongs to the confirmed claimant rather than to whoever holds the link. Reading never
+asks for an identity.
+
+Effort follows this: roughly four to six focused days if WordLift authentication and its mail path can
+be reused for confirmation and delivery, seven to ten if report ownership, confirmed addresses, and
+delivery have to be built here.
