@@ -418,8 +418,8 @@ describe("WebMCP tool layer", () => {
         "explain-capability",
         "explain-foundation-audit",
         "get-audit-report",
-        "inspect-service-map",
-        "refine-service-map",
+        "inspect-terms-of-action",
+        "refine-terms-of-action",
       ]),
     );
 
@@ -484,15 +484,15 @@ describe("WebMCP tool layer", () => {
     // The page still shows progress, but the agent interface is already discoverable.
     await waitFor(() =>
       expect(modelContext.toolNames()).toEqual(
-        expect.arrayContaining(["inspect-service-map", "explain-capability", "explain-foundation-audit", "refine-service-map"]),
+        expect.arrayContaining(["inspect-terms-of-action", "explain-capability", "explain-foundation-audit", "refine-terms-of-action"]),
       ),
     );
-    const result = await act(async () => modelContext.call("inspect-service-map", {}));
+    const result = await act(async () => modelContext.call("inspect-terms-of-action", {}));
     expect(result.isError).toBe(true);
     expect(toolText(result)).toMatch(/still running \(phase: mapping\)/);
   });
 
-  it("gives an agent the whole interview brief through inspect-service-map", async () => {
+  it("gives an agent the whole interview brief through inspect-terms-of-action", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(completedReport)));
 
     render(
@@ -500,9 +500,9 @@ describe("WebMCP tool layer", () => {
         <App />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(modelContext.get("inspect-service-map")).toBeDefined());
+    await waitFor(() => expect(modelContext.get("inspect-terms-of-action")).toBeDefined());
 
-    const result = await act(async () => modelContext.call("inspect-service-map", { reportId: REPORT_ID }));
+    const result = await act(async () => modelContext.call("inspect-terms-of-action", { reportId: REPORT_ID }));
 
     expect(result.isError).toBeFalsy();
     expect(result.structuredContent).toMatchObject({
@@ -519,13 +519,13 @@ describe("WebMCP tool layer", () => {
     expect(payload.actions).toContainEqual(
       expect.objectContaining({ actionId: "availability.check", agentReady: false, boundary: null }),
     );
-    expect(payload.nextStep).toMatch(/refine-service-map/);
+    expect(payload.nextStep).toMatch(/refine-terms-of-action/);
     const text = toolText(result);
-    expect(text).toMatch(/Machine-generated service map/);
+    expect(text).toMatch(/Machine-generated Terms of Action/);
     expect(text).toMatch(/availability\.check/);
   });
 
-  it("compiles a reviewer's decisions into an immutable refined report through refine-service-map", async () => {
+  it("compiles a reviewer's decisions into an immutable refined report through refine-terms-of-action", async () => {
     const CHILD_ID = "9b1c22de-3f44-4a55-8b66-77cc88dd99ee";
     const refinedReport: ReportRecord = {
       ...completedReport,
@@ -571,10 +571,10 @@ describe("WebMCP tool layer", () => {
         <App />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(modelContext.get("refine-service-map")).toBeDefined());
+    await waitFor(() => expect(modelContext.get("refine-terms-of-action")).toBeDefined());
 
     const result = await act(async () =>
-      modelContext.call("refine-service-map", {
+      modelContext.call("refine-terms-of-action", {
         businessRole: "destination-organization",
         actionDecisions: [
           { actionId: "availability.check", decision: "confirm", boundary: "partner-handoff", rationale: "Partners own the inventory." },
@@ -584,7 +584,7 @@ describe("WebMCP tool layer", () => {
 
     expect(result.isError).toBeFalsy();
     const text = toolText(result);
-    expect(text).toMatch(/Human-refined service map created/);
+    expect(text).toMatch(/Human-refined Terms of Action created/);
     expect(text).toContain(`/reports/${CHILD_ID}`);
     expect(text).toMatch(/Check availability \(availability\.check\) → partner handoff/);
     expect(text).toMatch(/never mark an action agent-ready/);
@@ -605,10 +605,10 @@ describe("WebMCP tool layer", () => {
         <App />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(modelContext.get("refine-service-map")).toBeDefined());
+    await waitFor(() => expect(modelContext.get("refine-terms-of-action")).toBeDefined());
 
     const result = await act(async () =>
-      modelContext.call("refine-service-map", {
+      modelContext.call("refine-terms-of-action", {
         demotedEntityIds: Array.from({ length: 81 }, (_, index) => `urn:entity:${index}`),
       }),
     );

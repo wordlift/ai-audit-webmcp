@@ -11,7 +11,7 @@ const FIXTURES = [
 ] as const;
 
 for (const fixture of FIXTURES) {
-  test(`${fixture.url} compiles a complete entity-aware service map`, async ({ page }) => {
+  test(`${fixture.url} compiles complete entity-aware Terms of Action`, async ({ page }) => {
     await page.goto("/");
     await page.getByLabel("Website URL").fill(fixture.url);
     await page.getByRole("button", { name: /audit and refine my site/i }).click();

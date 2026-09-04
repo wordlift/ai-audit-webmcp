@@ -14,5 +14,5 @@ export function PinnedAlpinaRoute() {
   }, [navigate]);
 
   if (error) return <ReportErrorState title="Pinned demo unavailable" message={error} />;
-  return <div className="report-loading" role="status">Opening the stable Alpina service map…</div>;
+  return <div className="report-loading" role="status">Opening the stable Alpina Terms of Action…</div>;
 }

@@ -3,9 +3,9 @@ import { randomUUID } from "node:crypto";
 
 /**
  * The complete human-guided compilation: audit → inspect the machine draft → submit a reviewer's
- * decisions (as the refine-service-map tool would) → open the immutable child → see what changed.
+ * decisions (as the refine-terms-of-action tool would) → open the immutable child → see what changed.
  */
-test("a human refinement turns the machine draft into a refined service map", async ({ page }) => {
+test("a human refinement turns the machine draft into refined Terms of Action", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
 
   // 1. Audit: the fixture travel site compiles a machine draft.
@@ -16,11 +16,11 @@ test("a human refinement turns the machine draft into a refined service map", as
 
   // 2. The draft says whose interpretation it is, and offers the review path. Playwright has no
   // WebMCP, so the self-test badge must say exactly which browser the reader needs.
-  await expect(page.getByText("Machine-generated service map")).toBeVisible();
+  await expect(page.getByText("Machine-generated Terms of Action")).toBeVisible();
   await expect(page.getByRole("button", { name: /review with chatgpt/i })).toBeVisible();
   await expect(page.getByText(/site tools require a webmcp-enabled browser/i)).toBeVisible();
 
-  // 3. Refinement: the decisions ChatGPT would submit through refine-service-map.
+  // 3. Refinement: the decisions ChatGPT would submit through refine-terms-of-action.
   const parentId = page.url().split("/reports/")[1];
   const response = await page.request.post(`/api/reports/${parentId}/refine`, {
     data: {
@@ -44,7 +44,7 @@ test("a human refinement turns the machine draft into a refined service map", as
   // header, the change summary is compact with the full log folded away, and human vocabulary
   // sits in the lexical graph itself.
   await page.goto(`/reports/${child.id}`);
-  await expect(page.getByText("Human-refined service map")).toBeVisible();
+  await expect(page.getByText("Human-refined Terms of Action")).toBeVisible();
   await expect(page.getByRole("heading", { name: /destination organization/i })).toBeVisible();
   await expect(page.getByText(/machine archetype: travel \/ hospitality/i)).toBeVisible();
   await expect(page.getByText(/1 term clarified/i)).toBeVisible();
@@ -63,7 +63,7 @@ test("a human refinement turns the machine draft into a refined service map", as
 
   // 6. The machine draft is unchanged at its own URL.
   await page.goto(`/reports/${parentId}`);
-  await expect(page.getByText("Machine-generated service map")).toBeVisible();
+  await expect(page.getByText("Machine-generated Terms of Action")).toBeVisible();
 
   // A refinement that references nothing in the report is refused, not silently accepted.
   const empty = await page.request.post(`/api/reports/${parentId}/refine`, {

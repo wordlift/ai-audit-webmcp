@@ -196,7 +196,7 @@ export class AuditOrchestrator {
     const assertions = refineReportRequestSchema.parse(input);
     const parent = await this.required(parentId);
     if (!parent.capabilities || !parent.classification || !parent.contextGraph) {
-      throw new ReportRequestError("That report has no service map to refine.", 409);
+      throw new ReportRequestError("That report has no Terms of Action to refine.", 409);
     }
 
     const conflicts: string[] = [];

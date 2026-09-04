@@ -195,13 +195,13 @@ export function inspectServiceMap(report: ReportRecord, reportUrl: string): Insp
       evidence: capability.evidence.slice(0, 3).map((item) => item.claim),
     })),
     nextStep:
-      "Interview the human about the operating role, the primary entities, the terminology, and the boundary of every expected action (owned, partner-handoff, informational-only, not-applicable); use explain-capability where evidence is unclear, then call refine-service-map with the decisions — including terminologyDecisions to confirm, replace, or reject the machine's own vocabulary. Human decisions never change agent readiness.",
+      "Interview the human about the operating role, the primary entities, the terminology, and the boundary of every expected action (owned, partner-handoff, informational-only, not-applicable); use explain-capability where evidence is unclear, then call refine-terms-of-action with the decisions — including terminologyDecisions to confirm, replace, or reject the machine's own vocabulary. Human decisions never change agent readiness.",
   };
 }
 
 export function inspectSummaryText(result: InspectServiceMapResult): string {
   const lines = [
-    `${result.refined ? "Human-refined" : "Machine-generated"} service map for report ${result.reportId}.`,
+    `${result.refined ? "Human-refined" : "Machine-generated"} Terms of Action for report ${result.reportId}.`,
     `Operating role: ${result.operatingRole.inferred} (${result.operatingRole.source}, confidence ${result.operatingRole.confidence}).`,
     "Entities:",
     ...result.entities.map((entity) => `- [${entity.machinePriority}] ${entity.name} (${entity.type}) id=${entity.id}`),
