@@ -210,7 +210,8 @@ describe("WebMCP tool layer", () => {
     await waitFor(() => expect(modelContext.toolNames()).toEqual(["audit-website", "get-audit-report"]));
     const tool = modelContext.get("audit-website");
     expect(tool?.description).toMatch(/verified action-readiness score/);
-    expect(tool?.annotations).toMatchObject({ readOnlyHint: true });
+    // An audit stores a shareable report, so it is announced as a write that destroys nothing.
+    expect(tool?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, openWorldHint: true });
     expect(JSON.stringify(tool?.inputSchema)).not.toMatch(/alpina/i);
     expect(await screen.findByTestId("webmcp-badge")).toBeVisible();
   });

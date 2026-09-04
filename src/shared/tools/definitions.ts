@@ -56,7 +56,15 @@ export const AUDIT_WEBSITE_TOOL = {
     required: ["url"],
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true, untrustedContentHint: true },
+  // An audit reads a stranger's website and stores a shareable report, so it is neither read-only
+  // nor repeatable: two calls produce two reports. It destroys nothing.
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: true,
+    untrustedContentHint: true,
+  },
 } as const satisfies ToolDefinition;
 
 export const GET_AUDIT_REPORT_TOOL = {
@@ -71,7 +79,7 @@ export const GET_AUDIT_REPORT_TOOL = {
     required: ["reportId"],
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true, untrustedContentHint: true },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false, untrustedContentHint: true },
 } as const satisfies ToolDefinition;
 
 export const INSPECT_SERVICE_MAP_TOOL = {
@@ -85,7 +93,7 @@ export const INSPECT_SERVICE_MAP_TOOL = {
     },
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true, untrustedContentHint: true },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false, untrustedContentHint: true },
 } as const satisfies ToolDefinition;
 
 export const EXPLAIN_CAPABILITY_TOOL = {
@@ -104,7 +112,7 @@ export const EXPLAIN_CAPABILITY_TOOL = {
     required: ["actionId"],
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true, untrustedContentHint: true },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false, untrustedContentHint: true },
 } as const satisfies ToolDefinition;
 
 export const EXPLAIN_FOUNDATION_AUDIT_TOOL = {
@@ -118,7 +126,7 @@ export const EXPLAIN_FOUNDATION_AUDIT_TOOL = {
     },
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true, untrustedContentHint: true },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false, untrustedContentHint: true },
 } as const satisfies ToolDefinition;
 
 export const REFINE_SERVICE_MAP_TOOL = {
@@ -200,7 +208,16 @@ export const REFINE_SERVICE_MAP_TOOL = {
     },
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: false, untrustedContentHint: true },
+  // A refinement publishes a human judgment as a new immutable report. The parent is never
+  // edited and nothing is deleted, so this writes without destroying; calling it twice creates
+  // two children, so it is not idempotent either.
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false,
+    untrustedContentHint: true,
+  },
 } as const satisfies ToolDefinition;
 
 export const CHECK_ALPINA_AVAILABILITY_TOOL = {
@@ -225,7 +242,7 @@ export const CHECK_ALPINA_AVAILABILITY_TOOL = {
     required: ["checkIn", "checkOut", "adults"],
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true, untrustedContentHint: true },
+  annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true, untrustedContentHint: true },
 } as const satisfies ToolDefinition;
 
 /**

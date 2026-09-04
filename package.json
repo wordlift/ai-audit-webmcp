@@ -18,7 +18,7 @@
     "test": "vitest",
     "test:e2e": "playwright test",
     "test:webmcp": "vitest run tests/component/webmcp-tools.test.tsx tests/component/alpina-webmcp-tool.test.tsx",
-    "test:mcp": "vitest run tests/unit/tool-contracts.test.ts tests/integration/audit-tool-service.test.ts tests/integration/mcp-server.test.ts",
+    "test:mcp": "vitest run tests/unit/tool-contracts.test.ts tests/unit/mcp-tool-definitions.test.ts tests/integration/audit-tool-service.test.ts tests/integration/mcp-server.test.ts",
     "smoke:live": "tsx scripts/smoke-live.ts",
     "verify": "npm run typecheck && npm test -- --run && npm run build"
   },

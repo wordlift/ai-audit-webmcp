@@ -76,7 +76,7 @@ canonical names only.
   Verify: MCP Inspector against a local server, plus automated initialize/list/call integration tests.
   Commit as `feat: answer the audit tools over MCP`.
 
-- [ ] **4. Correct tool safety metadata**
+- [x] **4. Correct tool safety metadata**
   Spec ref: OpenAI plugin review requirements; current annotations in `src/shared/tools/definitions.ts`.
   What to build: Declare accurate `readOnlyHint`, `destructiveHint`, and `openWorldHint`.
   `audit-website` and `refine-terms-of-action` create stored reports and are write operations;
