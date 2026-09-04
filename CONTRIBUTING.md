@@ -154,14 +154,15 @@ change updates the snapshot in the same commit, and an accidental one fails the 
 
 | Suite | Covers |
 |---|---|
-| `tests/unit` | Model compilation, context graph, state derivation, scoring, contracts, URL policy, sanitization, collectors and probes (native fetch, ScrapingBee fallback, MCP probe, SearchAction), sidecar schemas and entity grounding |
-| `tests/integration` | Report API, providers, stores (including running-record updates), error paths, rate limits, live orchestration and progress, the WordLift audit mapping, sidecar |
+| `tests/unit` | Model compilation, context graph, state derivation, scoring, contracts, URL policy, sanitization, collectors and probes (native fetch, ScrapingBee fallback, MCP probe, SearchAction), sidecar schemas and entity grounding, the published tool contract and the plugin package |
+| `tests/integration` | Report API, providers, stores (including running-record updates), error paths, rate limits, live orchestration and progress, the WordLift audit mapping, sidecar, the tool service and its parity with REST, the remote MCP endpoint driven by a real client, deep-scan access, report claims |
 | `tests/component` | Executive summary, context map, capability map, foundation panel, report progress, dialog focus, WebMCP tool lifecycle |
 | `tests/golden` | Compiled journeys for all six archetypes |
 | `tests/e2e` | Landing, every archetype fixture to a report, the alpina sidecar flow, visual proof at desktop and mobile widths |
 
-Run `npm run test:e2e` locally before shipping anything user-visible; it builds and serves the app
-itself. Component tests that render the home page stub `fetch` — the page probes `/api/health`
+`npm run test:mcp` runs the focused set for the tool contract and the remote endpoint; `npm run
+verify` runs everything, so it is not run twice there. Run `npm run test:e2e` locally before
+shipping anything user-visible; it builds and serves the app itself. Component tests that render the home page stub `fetch` — the page probes `/api/health`
 once to learn whether it is in demo or live mode.
 
 ## Pull requests
