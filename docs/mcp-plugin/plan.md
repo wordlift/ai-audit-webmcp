@@ -57,7 +57,7 @@ canonical names only.
   surfaces read it from the same constant.
   Verify: `npm run verify && npm run test:webmcp`. Commit as `refactor: give both surfaces one tool contract`.
 
-- [ ] **2. Create a transport-independent tool service**
+- [x] **2. Create a transport-independent tool service**
   Spec ref: `src/server/services/AuditOrchestrator.ts`, `src/server/routes/reports.ts`, `src/shared/format/agentSummary.ts`.
   What to build: An application service that implements audit, report retrieval, explanation,
   inspection, and refinement over the orchestrator and the report store. REST, WebMCP, and MCP become
