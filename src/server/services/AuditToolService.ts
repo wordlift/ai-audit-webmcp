@@ -36,6 +36,7 @@ import {
   type ClaimStore,
 } from "../adapters/claims/index.js";
 import type { AuditOrchestrator } from "./AuditOrchestrator.js";
+import type { DeepScanDelivery } from "./DeepScanDelivery.js";
 import { DeepScanGate, newReportId } from "./DeepScanGate.js";
 import { reportNotFound, reportStillRunning, ToolCallError } from "./toolErrors.js";
 
@@ -81,6 +82,7 @@ export class AuditToolService {
     private readonly orchestrator: AuditOrchestrator,
     private readonly options: AuditToolServiceOptions = {},
     private readonly deepScan: DeepScanGate = new DeepScanGate(null),
+    private readonly delivery?: DeepScanDelivery,
   ) {}
 
   /**
@@ -107,6 +109,14 @@ export class AuditToolService {
     const running = this.orchestrator
       .create({ requestId: reportId, url, archetypeOverride: archetype ?? null, depth: access.depth })
       .then((report) => ({ report }) as const, (error: unknown) => ({ error }) as const);
+
+    // A deep scan is settled when its audit lands, whether or not the caller is still waiting: the
+    // report was bought, and the buyer may have hung up long before it finished.
+    if (access.depth === "deep") {
+      void running.then((outcome) => {
+        if ("report" in outcome) this.delivery?.settle(reportId);
+      });
+    }
 
     const wait = this.options.wait ?? sleep;
     const outcome = await Promise.race([running, wait(this.options.graceMs ?? DEFAULT_GRACE_MS).then(() => null)]);

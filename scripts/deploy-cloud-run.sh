@@ -37,6 +37,14 @@ if [ -n "${OPENAI_APPS_CHALLENGE:-}" ]; then
   CHALLENGE_ENV="##OPENAI_APPS_CHALLENGE=${OPENAI_APPS_CHALLENGE}"
 fi
 
+# Deep-scan reports are delivered through the AI Audit's own HubSpot form. Export both before
+# deploying; without them a deep scan still records what it owes and sends nothing. Neither is a
+# secret — form submissions are unauthenticated — but the GUID stays out of the public repository.
+HUBSPOT_ENV=""
+if [ -n "${HUBSPOT_PORTAL_ID:-}" ] && [ -n "${HUBSPOT_FORM_GUID:-}" ]; then
+  HUBSPOT_ENV="##HUBSPOT_PORTAL_ID=${HUBSPOT_PORTAL_ID}##HUBSPOT_FORM_GUID=${HUBSPOT_FORM_GUID}"
+fi
+
 PROJECT_NUMBER="$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')"
 # Share links are baked into stored reports, so a custom domain must survive a redeploy.
 PUBLIC_URL="${PUBLIC_APP_URL:-https://${SERVICE}-${PROJECT_NUMBER}.${REGION}.run.app}"
@@ -54,7 +62,7 @@ gcloud run deploy "$SERVICE" \
   --cpu 1 \
   --max-instances 5 \
   --concurrency 20 \
-  --set-env-vars "^##^NODE_ENV=production##AUDIT_PROVIDER=wordlift##AI_AUDIT_BASE_URL=https://api.wordlift.io##SCRAPE_PROVIDER=${SCRAPE}##CLASSIFIER_PROVIDER=google-nlp##REPORT_STORE=firestore##GOOGLE_CLOUD_PROJECT=${PROJECT}##PUBLIC_APP_URL=${PUBLIC_URL}##REPORT_TTL_DAYS=30##BUILD_SHA=${RELEASE_SHA}${CHALLENGE_ENV}" \
+  --set-env-vars "^##^NODE_ENV=production##AUDIT_PROVIDER=wordlift##AI_AUDIT_BASE_URL=https://api.wordlift.io##SCRAPE_PROVIDER=${SCRAPE}##CLASSIFIER_PROVIDER=google-nlp##REPORT_STORE=firestore##GOOGLE_CLOUD_PROJECT=${PROJECT}##PUBLIC_APP_URL=${PUBLIC_URL}##REPORT_TTL_DAYS=30##BUILD_SHA=${RELEASE_SHA}${CHALLENGE_ENV}${HUBSPOT_ENV}" \
   --set-secrets "$SECRETS"
 
 echo

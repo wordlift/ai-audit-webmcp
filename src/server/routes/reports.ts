@@ -5,6 +5,7 @@ import { UnknownFixtureError } from "../adapters/fixtures/FixtureProvider.js";
 import { ReportRequestError } from "../errors.js";
 import { UrlPolicyError } from "../security/urlPolicy.js";
 import type { AuditOrchestrator } from "../services/AuditOrchestrator.js";
+import type { DeepScanDelivery } from "../services/DeepScanDelivery.js";
 import { DeepScanGate } from "../services/DeepScanGate.js";
 import { ToolCallError } from "../services/toolErrors.js";
 
@@ -20,6 +21,7 @@ export function createReportsRouter(
   auditLimiters: RequestHandler[] = [],
   deepScan: DeepScanGate = new DeepScanGate(null),
   writeLimiters: RequestHandler[] = [],
+  delivery?: DeepScanDelivery,
 ): Router {
   const router = Router();
 
@@ -34,6 +36,7 @@ export function createReportsRouter(
         source: "web",
       });
       const report = await orchestrator.create(audit);
+      if (audit.depth === "deep" && report.status !== "running") delivery?.settle(report.id);
       if (report.status === "running") {
         response.status(202).json({ reportId: report.id, phase: report.phase, retryUrl: `/api/reports/${report.id}` });
         return;

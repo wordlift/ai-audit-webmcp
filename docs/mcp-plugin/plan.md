@@ -99,9 +99,11 @@ canonical names only.
   address; unsubscribing or deleting the address leaves the public report intact.
   Verify: Tests for depth selection, the email boundary in the stored report, delivery, and refusal
   without an address. Commit as `feat: trade an email for a deeper scan`.
-  Done, except the sending itself: HubSpot owns delivery and confirmation, and its specification is
-  still to come. `LeadStore.pending()` is the queue it drains; `markConfirmed` and `markDelivered`
-  are where it writes back. See docs/OPERATIONS.md > Deep scans and report delivery.
+  Done, including delivery: the report is submitted to the same HubSpot form the WordLift AI Audit
+  already uses (Forms v3, same portal, same form, same field names), so one person is one contact
+  whichever audit they came through. Sending never blocks or fails an audit; a refusal leaves the
+  lead pending and the next completed deep scan retries it. See docs/OPERATIONS.md > Deep scans and
+  report delivery.
 
 - [x] **6. Add ownership and abuse controls**
   Spec ref: SECURITY.md, `src/server/security/`, `src/server/routes/reports.ts`.

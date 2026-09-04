@@ -31,6 +31,8 @@ inputs differ.
 | `MAX_REPORT_BYTES` | `900000` | Serialized report ceiling, below Firestore's document limit |
 | `ACTION_MODEL_VERSION` | `0.1.0` | Which `action-model/` version to load |
 | `OPENAI_APPS_CHALLENGE` | — | Domain-verification token served at `/.well-known/openai-apps-challenge`. Unset means the path 404s |
+| `HUBSPOT_PORTAL_ID` | — | HubSpot portal for deep-scan report delivery. Set together with the form GUID |
+| `HUBSPOT_FORM_GUID` | — | The AI Audit lead form a deep scan's report is delivered through |
 
 Live mode fails fast at startup if a required credential is missing.
 
@@ -70,16 +72,40 @@ report id, with the same TTL the report has:
 | Reports | `MemoryReportStore` | `reports` collection |
 | Deep-scan addresses | `MemoryLeadStore` | `deepScanLeads` collection |
 
-`LeadStore` is the seam the delivery system plugs into:
+`LeadStore` is the ledger of what is owed:
 
 - `pending(limit)` — the queue: addresses whose report has not been sent yet, oldest first.
 - `markConfirmed(reportId, at)` — the address opted in.
 - `markDelivered(reportId, at)` — the report has been sent, so it leaves the queue.
 
-**Sending is HubSpot's job**, and its specification is still to come. Nothing in this repository
-sends mail: it records what is owed, to whom, for which report, and waits to be told the message
-went out. Until that integration lands, a deep scan runs and stores its lead, and the report is
-readable at its own public URL exactly like a basic one.
+### Delivery
+
+Sending goes through the **same HubSpot form the WordLift AI Audit already submits to** — Forms v3,
+the same portal, the same form, the same field names — so one person is one contact whichever audit
+they arrived through. Configure it with:
+
+| Variable | Purpose |
+|---|---|
+| `HUBSPOT_PORTAL_ID` | The AI Audit's HubSpot portal |
+| `HUBSPOT_FORM_GUID` | The AI Audit's lead-capture form |
+
+Both are set together or not at all; startup refuses half a configuration, because a deployment with
+one of them would queue leads forever while looking like it was delivering. The values are the ones
+the AI Audit service uses; they are passed in through the deploy environment rather than committed,
+since a form GUID in a public repository is an open invitation to submit to it. Neither is a secret
+in the Secret Manager sense — no API key is involved: form submissions are unauthenticated.
+
+Four fields are submitted — `email`, `audited_url`, `audit_score`, `audit_summary` (the report link
+first, then the readable summary). The form's other fields belong to the audit's own sign-up modal,
+which collects a name, a company and a role; this surface asks for an address and nothing else, so
+it sends an address and nothing else.
+
+Delivery never blocks an audit and never fails one. A refused or unreachable submission leaves the
+lead pending, is retried immediately once, and is retried again by the next completed deep scan. With
+no form configured, deep scans still run and still record what they owe; nothing is sent.
+
+`GET /api/health` names the delivery system in `surfaces.reportDelivery`, or `null` when none is
+configured.
 
 ## One-time Google Cloud setup
 

@@ -7,7 +7,7 @@ import { FixtureProvider } from "./adapters/fixtures/FixtureProvider.js";
 import { NativeFetchCollector } from "./adapters/scrape/NativeFetch.js";
 import { createScrapingBeeCollector } from "./adapters/scrape/ScrapingBee.js";
 import { FirestoreClaimStore, MemoryClaimStore } from "./adapters/claims/index.js";
-import { FirestoreLeadStore, MemoryLeadStore } from "./adapters/leads/index.js";
+import { FirestoreLeadStore, HubSpotLeadDelivery, MemoryLeadStore } from "./adapters/leads/index.js";
 import { FirestoreReportStore, MemoryReportStore } from "./adapters/store/index.js";
 import { loadConfig } from "./config.js";
 import { AuditOrchestrator, type OrchestratorOptions } from "./services/AuditOrchestrator.js";
@@ -24,6 +24,12 @@ const leads = config.REPORT_STORE === "firestore"
 const claims = config.REPORT_STORE === "firestore"
   ? FirestoreClaimStore.fromProject(config.GOOGLE_CLOUD_PROJECT)
   : new MemoryClaimStore();
+
+// Without a form configured, a deep scan still runs and still records what it owes; nothing is
+// sent until the delivery form is set.
+const leadDelivery = config.HUBSPOT_PORTAL_ID && config.HUBSPOT_FORM_GUID
+  ? new HubSpotLeadDelivery({ portalId: config.HUBSPOT_PORTAL_ID, formGuid: config.HUBSPOT_FORM_GUID })
+  : undefined;
 
 const mode: OrchestratorOptions["mode"] = config.AUDIT_PROVIDER === "wordlift" ? "live" : "demo";
 const providers: OrchestratorOptions["providers"] = mode === "live"
@@ -52,6 +58,7 @@ const app = createApp({
   staticDirectory: path.resolve(process.cwd(), "dist"),
   orchestrator,
   leads,
+  leadDelivery,
   claims,
   reportTtlDays: config.REPORT_TTL_DAYS,
   appsChallenge: config.OPENAI_APPS_CHALLENGE,

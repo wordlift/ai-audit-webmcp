@@ -107,7 +107,8 @@ leaves the machine draft untouched at its own URL. Every result also carries
 - Reports contain normalized findings and short snippets. Never raw HTML, cookies, headers,
   credentials, or private account identifiers.
 - A deep scan's email address is stored apart from the report, keyed by report id, with the same
-  expiry, and is masked wherever it is read back.
+  expiry, and is masked wherever it is read back. It is used for one thing: submitting the finished
+  report to WordLift's existing AI Audit lead form, under the privacy policy linked above.
 - Reports expire after 30 days (Firestore TTL).
 - Errors returned to callers are typed and generic; provider internals stay on the server.
 

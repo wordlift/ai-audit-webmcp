@@ -74,8 +74,9 @@ reads four representative pages and asks for nothing at all.
 
 One exchange exists. A **deep scan** reads up to twelve pages and asks for an email address, and the
 finished report is sent there. The address is filed beside the report, never inside it — a report is
-a public document with a shareable link — and it is masked wherever it is read back. Sending is
-handled by WordLift's marketing platform; this service records what is owed and waits.
+a public document with a shareable link — and it is masked wherever it is read back. The report is
+sent through the same HubSpot form the WordLift AI Audit already uses, so one person is one contact
+whichever audit they arrived through.
 
 Refining a report is the one thing not open to everyone: a remote audit hands its caller a
 `claimToken`, and only a caller holding it can publish a refinement of that report. Reading stays

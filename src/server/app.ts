@@ -11,9 +11,10 @@ import {
   type RateLimitOptions,
 } from "./security/rateLimits.js";
 import type { ClaimStore } from "./adapters/claims/index.js";
-import type { LeadStore } from "./adapters/leads/index.js";
+import type { LeadDelivery, LeadStore } from "./adapters/leads/index.js";
 import type { AuditOrchestrator } from "./services/AuditOrchestrator.js";
 import { AuditToolService, type AuditToolServiceOptions } from "./services/AuditToolService.js";
+import { DeepScanDelivery } from "./services/DeepScanDelivery.js";
 import { DeepScanGate } from "./services/DeepScanGate.js";
 import { AlpinaAvailabilitySidecar } from "./sidecars/alpina/adapter.js";
 
@@ -36,6 +37,8 @@ export interface AppOptions {
   leads?: LeadStore;
   /** Where remote report claims are filed. Absent means remote refinement is unclaimed. */
   claims?: ClaimStore;
+  /** How a deep scan's report reaches the address that bought it. Absent means it queues only. */
+  leadDelivery?: LeadDelivery;
   reportTtlDays?: number;
 }
 
@@ -85,6 +88,7 @@ export function createApp(options: AppOptions = {}): Express {
       surfaces: {
         mcp: options.orchestrator ? "/mcp" : null,
         deepScans: Boolean(options.leads),
+        reportDelivery: options.leadDelivery?.name ?? null,
         claimedRefinement: Boolean(options.claims),
       },
     });
@@ -93,13 +97,22 @@ export function createApp(options: AppOptions = {}): Express {
   if (options.orchestrator) {
     const limiters: RequestHandler[] = createAuditRateLimiters(options.rateLimits);
     const deepScan = new DeepScanGate(options.leads ?? null, options.reportTtlDays);
+    const delivery = new DeepScanDelivery({
+      leads: options.leads,
+      delivery: options.leadDelivery,
+      publicReportUrl: (reportId) => (options.orchestrator as AuditOrchestrator).reportUrl(reportId),
+      loadReport: (reportId) => (options.orchestrator as AuditOrchestrator).get(reportId),
+    });
     app.get("/api/demo/alpina", async (_request, response) => response.json(await options.orchestrator?.pinnedAlpina()));
     // Every child report is a stored document someone else can be shown, so the writes that make
     // one draw on a pool of their own rather than on nothing at all.
     const writeLimiters: RequestHandler[] = createAuditRateLimiters(
       options.writeRateLimits ?? { ...options.rateLimits, perIp: 40, global: 800 },
     );
-    app.use("/api/reports", createReportsRouter(options.orchestrator, limiters, deepScan, writeLimiters));
+    app.use(
+      "/api/reports",
+      createReportsRouter(options.orchestrator, limiters, deepScan, writeLimiters, delivery),
+    );
     // The sidecar draws on its own pool: one agent conversation checks several date ranges, and
     // none of those calls should spend the audit budget.
     const sidecarLimiters: RequestHandler[] = createAuditRateLimiters(
@@ -119,6 +132,7 @@ export function createApp(options: AppOptions = {}): Express {
           options.orchestrator,
           { source: "mcp", claims: options.claims, claimTtlDays: options.reportTtlDays, ...options.toolService },
           deepScan,
+          delivery,
         ),
         [
           // Only the window and the enabled flag carry over: a tight per-IP audit budget must not
