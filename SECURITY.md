@@ -39,7 +39,7 @@ Audited content is data. It is never instruction.
 - Stored evidence is capped (100 items, 500-character snippets), control characters are stripped,
   and unknown fields are rejected by schema.
 - Site-authored text never reaches a WebMCP tool name, description, or input schema — those are
-  static constants in `src/client/webmcp/toolSchemas.ts`.
+  static constants in `src/shared/tools/definitions.ts`.
 - Reports never store cookies, headers, credentials, or private account identifiers.
 - A response CSP allows only same-origin code, so collected markup cannot execute in the app.
 

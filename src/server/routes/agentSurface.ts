@@ -10,7 +10,7 @@ import {
   INSPECT_SERVICE_MAP_TOOL_ALIAS,
   REFINE_SERVICE_MAP_TOOL,
   REFINE_SERVICE_MAP_TOOL_ALIAS,
-} from "../../client/webmcp/toolSchemas.js";
+} from "../../shared/tools/definitions.js";
 import {
   auditSummaryText,
   inspectServiceMap,

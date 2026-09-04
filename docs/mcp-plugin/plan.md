@@ -47,8 +47,8 @@ canonical names only.
 
 ## Checklist
 
-- [ ] **1. Extract shared tool contracts**
-  Spec ref: `src/client/webmcp/toolSchemas.ts`, `src/shared/format/agentSummary.ts`, AGENTS.md > Frozen.
+- [x] **1. Extract shared tool contracts**
+  Spec ref: `src/shared/tools/definitions.ts` (was `src/client/webmcp/toolSchemas.ts`), `src/shared/format/agentSummary.ts`, AGENTS.md > Frozen.
   What to build: Move the names, descriptions, input schemas, result types, and error types into
   `src/shared/tools/`, leaving compatibility exports where the WebMCP module publishes them today.
   Allow transport-specific differences — a mandatory MCP `reportId`, an optional browser one — without
@@ -77,7 +77,7 @@ canonical names only.
   Commit as `feat: answer the audit tools over MCP`.
 
 - [ ] **4. Correct tool safety metadata**
-  Spec ref: OpenAI plugin review requirements; current annotations in `toolSchemas.ts`.
+  Spec ref: OpenAI plugin review requirements; current annotations in `src/shared/tools/definitions.ts`.
   What to build: Declare accurate `readOnlyHint`, `destructiveHint`, and `openWorldHint`.
   `audit-website` and `refine-terms-of-action` create stored reports and are write operations;
   `audit-website` currently claims `readOnlyHint: true`, which was true of its answer and never of its

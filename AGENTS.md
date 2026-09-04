@@ -22,7 +22,9 @@ support them. Declarations never earn readiness; only invoked evidence does.
 
 ## Frozen
 
-- **WebMCP tool identifiers** in `src/client/webmcp/toolSchemas.ts` — agents key on them. Their descriptions may evolve with product terminology.
+- **Tool identifiers** in `src/shared/tools/definitions.ts` — agents key on them, and every transport
+  publishes them from there. Their descriptions may evolve with product terminology.
+  `src/client/webmcp/toolSchemas.ts` re-exports the same objects for callers that name the old path.
 - **The report schema** in `src/shared/schemas/report.ts` is strict; new fields are optional, and a
   report stored yesterday must still parse today.
 - **Vocabulary the UI uses**: Terms of Action, Context Engine, capability map, Full WordLift audit,
