@@ -6,6 +6,7 @@ import { GoogleNlpClassifier } from "./adapters/classify/GoogleNlp.js";
 import { FixtureProvider } from "./adapters/fixtures/FixtureProvider.js";
 import { NativeFetchCollector } from "./adapters/scrape/NativeFetch.js";
 import { createScrapingBeeCollector } from "./adapters/scrape/ScrapingBee.js";
+import { FirestoreClaimStore, MemoryClaimStore } from "./adapters/claims/index.js";
 import { FirestoreLeadStore, MemoryLeadStore } from "./adapters/leads/index.js";
 import { FirestoreReportStore, MemoryReportStore } from "./adapters/store/index.js";
 import { loadConfig } from "./config.js";
@@ -19,6 +20,10 @@ const store = config.REPORT_STORE === "firestore"
 const leads = config.REPORT_STORE === "firestore"
   ? FirestoreLeadStore.fromProject(config.GOOGLE_CLOUD_PROJECT)
   : new MemoryLeadStore();
+
+const claims = config.REPORT_STORE === "firestore"
+  ? FirestoreClaimStore.fromProject(config.GOOGLE_CLOUD_PROJECT)
+  : new MemoryClaimStore();
 
 const mode: OrchestratorOptions["mode"] = config.AUDIT_PROVIDER === "wordlift" ? "live" : "demo";
 const providers: OrchestratorOptions["providers"] = mode === "live"
@@ -47,6 +52,7 @@ const app = createApp({
   staticDirectory: path.resolve(process.cwd(), "dist"),
   orchestrator,
   leads,
+  claims,
   reportTtlDays: config.REPORT_TTL_DAYS,
   trustProxy: config.NODE_ENV === "production",
   rateLimits: config.NODE_ENV === "test" ? { enabled: false } : undefined,

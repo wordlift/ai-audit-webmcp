@@ -28,3 +28,26 @@ export function withRequiredReportId(tool: ToolDefinition): ToolDefinition {
     },
   };
 }
+
+const CLAIM_TOKEN = {
+  type: "string",
+  description:
+    "The claimToken audit-website returned with this report. Only the caller that ran the audit can publish a refinement of it.",
+} as const;
+
+/**
+ * A refinement is a human judgment published under someone's site name, so a remote caller has to
+ * prove the report is theirs to refine. In the page there is nothing to prove: the reviewer is
+ * looking at their own open report, and the tool has no such field.
+ */
+export function withClaimToken(tool: ToolDefinition): ToolDefinition {
+  const required = tool.inputSchema.required ?? [];
+  return {
+    ...tool,
+    inputSchema: {
+      ...tool.inputSchema,
+      properties: { ...(tool.inputSchema.properties ?? {}), claimToken: CLAIM_TOKEN },
+      required: required.includes("claimToken") ? [...required] : [...required, "claimToken"],
+    },
+  };
+}

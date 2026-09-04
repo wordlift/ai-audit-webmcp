@@ -29,6 +29,12 @@ import {
   reportScopedInputSchema,
 } from "../../shared/tools/inputs.js";
 import type { ReportRecord } from "../../shared/types/index.js";
+import {
+  claimMatches,
+  hashClaimToken,
+  newClaimToken,
+  type ClaimStore,
+} from "../adapters/claims/index.js";
 import type { AuditOrchestrator } from "./AuditOrchestrator.js";
 import { DeepScanGate, newReportId } from "./DeepScanGate.js";
 import { reportNotFound, reportStillRunning, ToolCallError } from "./toolErrors.js";
@@ -51,6 +57,14 @@ export interface AuditToolServiceOptions {
   wait?: (ms: number) => Promise<void>;
   /** Which surface the caller is standing on, recorded with a deep scan's address. */
   source?: "web" | "webmcp" | "mcp";
+  /**
+   * Where this surface's report claims live. With a store, the caller that ran an audit is handed
+   * a claim and is the only one who can refine that report; without one, refinement is open, which
+   * is what the in-page surface has always been.
+   */
+  claims?: ClaimStore;
+  /** How long a claim outlives its report's creation. Matches the report TTL. */
+  claimTtlDays?: number;
 }
 
 export interface ToolAnswer<T> {
@@ -88,6 +102,8 @@ export class AuditToolService {
       source: this.options.source ?? "mcp",
     });
 
+    const claimToken = await this.issueClaim(reportId);
+
     const running = this.orchestrator
       .create({ requestId: reportId, url, archetypeOverride: archetype ?? null, depth: access.depth })
       .then((report) => ({ report }) as const, (error: unknown) => ({ error }) as const);
@@ -98,12 +114,12 @@ export class AuditToolService {
     if (outcome === null) {
       const current = await this.orchestrator.get(reportId).catch(() => null);
       if (current && current.status === "failed") throw auditFailed(url, current);
-      if (current && current.status !== "running") return this.finished(current, access.note);
+      if (current && current.status !== "running") return this.finished(current, access.note, claimToken);
       return this.stillRunning(current ?? { id: reportId, phase: "understanding" }, access.note);
     }
     if ("error" in outcome) throw outcome.error;
     if (outcome.report.status === "failed") throw auditFailed(url, outcome.report);
-    return this.finished(outcome.report, access.note);
+    return this.finished(outcome.report, access.note, claimToken);
   }
 
   async getAuditReport(input: unknown): Promise<ToolAnswer<AuditToolResult | AuditRunningResult>> {
@@ -164,8 +180,9 @@ export class AuditToolService {
    * never edited, and no decision here can raise readiness — that still takes invocation evidence.
    */
   async refineTermsOfAction(input: unknown): Promise<ToolAnswer<RefineToolResult>> {
-    const { reportId, ...rest } = (input ?? {}) as Record<string, unknown>;
+    const { reportId, claimToken, ...rest } = (input ?? {}) as Record<string, unknown>;
     const parent = await this.readable({ reportId });
+    await this.assertClaimed(parent.id, claimToken);
     if (!parent.capabilities) {
       throw new ToolCallError("This report carries no Terms of Action to refine.", "no_terms_of_action", 409);
     }
@@ -188,6 +205,24 @@ export class AuditToolService {
     return { text: refineSummaryText(structured), structured };
   }
 
+  /**
+   * Refinement is where a report stops being a machine's reading and becomes a person's published
+   * judgment, so it belongs to whoever ran the audit. A report with no claim on file predates this
+   * boundary, or was made on a surface that does not issue claims; it stays refinable.
+   */
+  private async assertClaimed(reportId: string, token: unknown): Promise<void> {
+    const claims = this.options.claims;
+    if (!claims) return;
+    const claim = await claims.get(reportId);
+    if (!claim) return;
+    if (typeof token === "string" && token.length > 0 && claimMatches(claim, token)) return;
+    throw new ToolCallError(
+      "This report belongs to the caller that audited it. Pass the claimToken audit-website returned for it, or run audit-website yourself to make a report you can refine.",
+      "report_not_yours",
+      403,
+    );
+  }
+
   /** A report that exists and has something to say. Running and failed reports say so themselves. */
   private async readable(input: unknown): Promise<ReportRecord> {
     const { reportId } = parse(reportScopedInputSchema, input);
@@ -204,10 +239,31 @@ export class AuditToolService {
     return report;
   }
 
-  private finished(report: ReportRecord, note?: string | null): ToolAnswer<AuditToolResult> {
+  private finished(report: ReportRecord, note?: string | null, claimToken?: string | null): ToolAnswer<AuditToolResult> {
     const base = summarizeReportForAgent(report, this.orchestrator.reportUrl(report.id));
-    const structured = note ? { ...base, notes: [...base.notes, note] } : base;
-    return { text: [auditSummaryText(structured), note].filter(Boolean).join("\n"), structured };
+    const withNote = note ? { ...base, notes: [...base.notes, note] } : base;
+    const structured = claimToken ? { ...withNote, claimToken } : withNote;
+    const claimLine = claimToken
+      ? `Keep this claimToken to refine the report later; it is the only proof this audit was yours: ${claimToken}`
+      : null;
+    return { text: [auditSummaryText(structured), note, claimLine].filter(Boolean).join("\n"), structured };
+  }
+
+  /** A claim exists only where a store does, so the in-page surface keeps working as it always has. */
+  private async issueClaim(reportId: string): Promise<string | null> {
+    const claims = this.options.claims;
+    if (!claims) return null;
+    const token = newClaimToken();
+    const now = new Date();
+    const expiresAt = new Date(now);
+    expiresAt.setUTCDate(expiresAt.getUTCDate() + (this.options.claimTtlDays ?? 30));
+    await claims.put({
+      reportId,
+      tokenHash: hashClaimToken(token),
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+    });
+    return token;
   }
 
   private stillRunning(

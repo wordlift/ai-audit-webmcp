@@ -19,6 +19,7 @@ export function createReportsRouter(
   orchestrator: AuditOrchestrator,
   auditLimiters: RequestHandler[] = [],
   deepScan: DeepScanGate = new DeepScanGate(null),
+  writeLimiters: RequestHandler[] = [],
 ): Router {
   const router = Router();
 
@@ -52,17 +53,17 @@ export function createReportsRouter(
     response.json(report);
   });
 
-  router.post("/:reportId/recompile", async (request, response) => {
+  router.post("/:reportId/recompile", ...writeLimiters, async (request, response) => {
     try {
-      response.json(await orchestrator.recompile(request.params.reportId, request.body));
+      response.json(await orchestrator.recompile(param(request.params.reportId), request.body));
     } catch (error) {
       sendError(response, error);
     }
   });
 
-  router.post("/:reportId/refine", async (request, response) => {
+  router.post("/:reportId/refine", ...writeLimiters, async (request, response) => {
     try {
-      response.json(await orchestrator.refine(request.params.reportId, request.body));
+      response.json(await orchestrator.refine(param(request.params.reportId), request.body));
     } catch (error) {
       sendError(response, error);
     }

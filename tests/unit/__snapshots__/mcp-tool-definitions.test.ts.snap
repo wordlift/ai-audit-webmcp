@@ -202,6 +202,10 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
           "description": "The organization's operating role in the reviewer's words, e.g. destination-organization, merchant, marketplace.",
           "type": "string",
         },
+        "claimToken": {
+          "description": "The claimToken audit-website returned with this report. Only the caller that ran the audit can publish a refinement of it.",
+          "type": "string",
+        },
         "demotedEntityIds": {
           "description": "Entity ids from this report to demote as peripheral (at most 80).",
           "items": {
@@ -280,6 +284,7 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
       },
       "required": [
         "reportId",
+        "claimToken",
       ],
       "type": "object",
     },

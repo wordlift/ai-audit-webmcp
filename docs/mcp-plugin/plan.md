@@ -103,7 +103,7 @@ canonical names only.
   still to come. `LeadStore.pending()` is the queue it drains; `markConfirmed` and `markDelivered`
   are where it writes back. See docs/OPERATIONS.md > Deep scans and report delivery.
 
-- [ ] **6. Add ownership and abuse controls**
+- [x] **6. Add ownership and abuse controls**
   Spec ref: SECURITY.md, `src/server/security/`, `src/server/routes/reports.ts`.
   What to build: Keep the existing URL policy and SSRF controls in the path of every MCP audit, and add
   an MCP-specific rate-limit pool. Reading a report stays public and free. Publishing a human-refined

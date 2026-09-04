@@ -5,6 +5,7 @@ import {
   GET_AUDIT_REPORT_TOOL,
   INSPECT_SERVICE_MAP_TOOL,
   REFINE_SERVICE_MAP_TOOL,
+  withClaimToken,
   withRequiredReportId,
   type ToolDefinition,
 } from "../../shared/tools/index.js";
@@ -45,7 +46,7 @@ export const REMOTE_TOOLS: readonly RemoteTool[] = [
     call: (service, args) => service.explainFoundationAudit(args),
   },
   {
-    definition: withRequiredReportId(REFINE_SERVICE_MAP_TOOL),
+    definition: withClaimToken(withRequiredReportId(REFINE_SERVICE_MAP_TOOL)),
     call: (service, args) => service.refineTermsOfAction(args),
   },
 ];

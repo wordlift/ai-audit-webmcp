@@ -10,6 +10,7 @@ import {
   onlyForExpensiveToolCalls,
   type RateLimitOptions,
 } from "./security/rateLimits.js";
+import type { ClaimStore } from "./adapters/claims/index.js";
 import type { LeadStore } from "./adapters/leads/index.js";
 import type { AuditOrchestrator } from "./services/AuditOrchestrator.js";
 import { AuditToolService, type AuditToolServiceOptions } from "./services/AuditToolService.js";
@@ -26,9 +27,13 @@ export interface AppOptions {
   alpinaSidecar?: AlpinaAvailabilitySidecar;
   /** A conversation-sized pool for /mcp; the audit budget above still guards what an audit costs. */
   mcpRateLimits?: RateLimitOptions;
+  /** The pool for recompiling and refining: writes that create a child report without a crawl. */
+  writeRateLimits?: RateLimitOptions;
   toolService?: AuditToolServiceOptions;
   /** Where a deep scan's email address is filed. Absent means deep scans are unavailable here. */
   leads?: LeadStore;
+  /** Where remote report claims are filed. Absent means remote refinement is unclaimed. */
+  claims?: ClaimStore;
   reportTtlDays?: number;
 }
 
@@ -73,7 +78,12 @@ export function createApp(options: AppOptions = {}): Express {
     const limiters: RequestHandler[] = createAuditRateLimiters(options.rateLimits);
     const deepScan = new DeepScanGate(options.leads ?? null, options.reportTtlDays);
     app.get("/api/demo/alpina", async (_request, response) => response.json(await options.orchestrator?.pinnedAlpina()));
-    app.use("/api/reports", createReportsRouter(options.orchestrator, limiters, deepScan));
+    // Every child report is a stored document someone else can be shown, so the writes that make
+    // one draw on a pool of their own rather than on nothing at all.
+    const writeLimiters: RequestHandler[] = createAuditRateLimiters(
+      options.writeRateLimits ?? { ...options.rateLimits, perIp: 40, global: 800 },
+    );
+    app.use("/api/reports", createReportsRouter(options.orchestrator, limiters, deepScan, writeLimiters));
     // The sidecar draws on its own pool: one agent conversation checks several date ranges, and
     // none of those calls should spend the audit budget.
     const sidecarLimiters: RequestHandler[] = createAuditRateLimiters(
@@ -89,9 +99,17 @@ export function createApp(options: AppOptions = {}): Express {
     app.use(
       "/mcp",
       createMcpRouter(
-        new AuditToolService(options.orchestrator, { source: "mcp", ...options.toolService }, deepScan),
+        new AuditToolService(
+          options.orchestrator,
+          { source: "mcp", claims: options.claims, claimTtlDays: options.reportTtlDays, ...options.toolService },
+          deepScan,
+        ),
         [
-          ...createMcpRateLimiters(options.mcpRateLimits ?? options.rateLimits),
+          // Only the window and the enabled flag carry over: a tight per-IP audit budget must not
+          // become the budget for listing tools or reading a report.
+          ...createMcpRateLimiters(
+            options.mcpRateLimits ?? { windowMs: options.rateLimits?.windowMs, enabled: options.rateLimits?.enabled },
+          ),
           onlyForExpensiveToolCalls(limiters),
         ],
       ),
