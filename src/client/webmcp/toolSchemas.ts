@@ -202,3 +202,26 @@ export const CHECK_ALPINA_AVAILABILITY_TOOL = {
   },
   annotations: { readOnlyHint: true, untrustedContentHint: true },
 } as const;
+
+/**
+ * The Terms of Action tools were renamed from `*-service-map` on 2026-09-04. A tool name is an
+ * address an agent may have written down — in a saved session, a shared procedure, a link — so the
+ * former names stay registered and behave identically. They are marked deprecated everywhere they
+ * are published, and the canonical name is the one this page leads with.
+ */
+function previousNameOf<T extends { name: string; description: string; inputSchema: object; annotations: object }>(
+  tool: T,
+  previousName: string,
+) {
+  return {
+    name: previousName,
+    description: `Deprecated name for ${tool.name}, kept working for callers written before the rename. Behaves identically; prefer ${tool.name}. ${tool.description}`,
+    inputSchema: tool.inputSchema,
+    annotations: tool.annotations,
+    replacedBy: tool.name,
+    deprecated: true as const,
+  };
+}
+
+export const INSPECT_SERVICE_MAP_TOOL_ALIAS = previousNameOf(INSPECT_SERVICE_MAP_TOOL, "inspect-service-map");
+export const REFINE_SERVICE_MAP_TOOL_ALIAS = previousNameOf(REFINE_SERVICE_MAP_TOOL, "refine-service-map");

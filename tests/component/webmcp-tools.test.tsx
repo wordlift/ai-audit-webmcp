@@ -410,7 +410,8 @@ describe("WebMCP tool layer", () => {
       </MemoryRouter>,
     );
 
-    // The Alpina report also enables the approved sidecar tool for its own host.
+    // The Alpina report also enables the approved sidecar tool for its own host, and the two
+    // Terms of Action tools each answer to the name they carried before the rename.
     await waitFor(() =>
       expect(modelContext.toolNames()).toEqual([
         "audit-website",
@@ -418,7 +419,9 @@ describe("WebMCP tool layer", () => {
         "explain-capability",
         "explain-foundation-audit",
         "get-audit-report",
+        "inspect-service-map",
         "inspect-terms-of-action",
+        "refine-service-map",
         "refine-terms-of-action",
       ]),
     );
@@ -616,6 +619,44 @@ describe("WebMCP tool layer", () => {
     expect(result.isError).toBe(true);
     expect(toolText(result)).toMatch(/fix the input and call again/i);
     expect(toolText(result)).toMatch(/demotedEntityIds/);
+  });
+
+  // The rename on 2026-09-04 made every saved procedure that named the old tools fail to find
+  // them. The former names stay registered so those callers land on the same handler.
+  it("still answers to the tool names used before the Terms of Action rename", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(completedReport)));
+
+    render(
+      <MemoryRouter initialEntries={[`/reports/${REPORT_ID}`]}>
+        <App />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(modelContext.get("inspect-service-map")).toBeDefined());
+    expect(modelContext.get("refine-service-map")).toBeDefined();
+
+    const viaOldName = await act(async () => modelContext.call("inspect-service-map", { reportId: REPORT_ID }));
+    const viaNewName = await act(async () => modelContext.call("inspect-terms-of-action", { reportId: REPORT_ID }));
+
+    expect(viaOldName.isError).toBeFalsy();
+    expect(viaOldName.structuredContent).toEqual(viaNewName.structuredContent);
+  });
+
+  it("marks the former tool names deprecated and points at the current one", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(completedReport)));
+
+    render(
+      <MemoryRouter initialEntries={[`/reports/${REPORT_ID}`]}>
+        <App />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(modelContext.get("inspect-service-map")).toBeDefined());
+
+    expect(modelContext.get("inspect-service-map")?.description).toMatch(
+      /deprecated name for inspect-terms-of-action/i,
+    );
+    expect(modelContext.get("refine-service-map")?.description).toMatch(
+      /deprecated name for refine-terms-of-action/i,
+    );
   });
 
   it("keeps the normal web interface working when WebMCP is unavailable", () => {

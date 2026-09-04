@@ -85,6 +85,19 @@ describe("agent discovery documents", () => {
     expect(names).toContain("audit-website");
   });
 
+  it("publishes the former tool names as deprecated, pointing at the current ones", async () => {
+    const response = await request(testApp()).get("/.well-known/webmcp/tools.json").expect(200);
+    const tools = response.body.tools as Array<{ name: string; deprecated?: boolean; replacedBy?: string }>;
+
+    const inspectAlias = tools.find((tool) => tool.name === "inspect-service-map");
+    const refineAlias = tools.find((tool) => tool.name === "refine-service-map");
+    expect(inspectAlias).toMatchObject({ deprecated: true, replacedBy: INSPECT_SERVICE_MAP_TOOL.name });
+    expect(refineAlias).toMatchObject({ deprecated: true, replacedBy: REFINE_SERVICE_MAP_TOOL.name });
+
+    // The current names are the ones a reader is told to call.
+    expect(tools.find((tool) => tool.name === INSPECT_SERVICE_MAP_TOOL.name)?.deprecated).toBeUndefined();
+  });
+
   it("passes the collector's own soft-404 check", async () => {
     const app = testApp();
     for (const [kind, route] of [

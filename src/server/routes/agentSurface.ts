@@ -7,7 +7,9 @@ import {
   EXPLAIN_FOUNDATION_AUDIT_TOOL,
   GET_AUDIT_REPORT_TOOL,
   INSPECT_SERVICE_MAP_TOOL,
+  INSPECT_SERVICE_MAP_TOOL_ALIAS,
   REFINE_SERVICE_MAP_TOOL,
+  REFINE_SERVICE_MAP_TOOL_ALIAS,
 } from "../../client/webmcp/toolSchemas.js";
 import {
   auditSummaryText,
@@ -33,6 +35,8 @@ interface ToolDescriptor {
   readonly description: string;
   readonly inputSchema: unknown;
   readonly annotations?: unknown;
+  readonly deprecated?: boolean;
+  readonly replacedBy?: string;
 }
 
 const GLOBAL_TOOLS: readonly ToolDescriptor[] = [AUDIT_WEBSITE_TOOL, GET_AUDIT_REPORT_TOOL];
@@ -41,6 +45,15 @@ const REPORT_TOOLS: readonly ToolDescriptor[] = [
   EXPLAIN_CAPABILITY_TOOL,
   EXPLAIN_FOUNDATION_AUDIT_TOOL,
   REFINE_SERVICE_MAP_TOOL,
+];
+
+/**
+ * Names these tools answered to before the rename. They are published so the deprecation is
+ * legible to a reader that only has the old name, and never listed as the way to call the tool.
+ */
+const DEPRECATED_REPORT_TOOLS: readonly ToolDescriptor[] = [
+  INSPECT_SERVICE_MAP_TOOL_ALIAS,
+  REFINE_SERVICE_MAP_TOOL_ALIAS,
 ];
 
 /** The prerendered summary is bounded: a report with many actions must not inflate the shell. */
@@ -139,6 +152,7 @@ function toolsManifest(base: string) {
     inputSchema: tool.inputSchema,
     annotations: tool.annotations,
     scope,
+    ...(tool.deprecated ? { deprecated: true, replacedBy: tool.replacedBy } : {}),
   });
   return {
     name: "WordLift AI Audit",
@@ -150,6 +164,7 @@ function toolsManifest(base: string) {
     tools: [
       ...GLOBAL_TOOLS.map((tool) => describe(tool, "site")),
       ...REPORT_TOOLS.map((tool) => describe(tool, "/reports/:reportId")),
+      ...DEPRECATED_REPORT_TOOLS.map((tool) => describe(tool, "/reports/:reportId")),
     ],
   };
 }
