@@ -1,5 +1,6 @@
 import express, { type Express, type RequestHandler } from "express";
 import path from "node:path";
+import { createAgentSurfaceRouter } from "./routes/agentSurface.js";
 import { createAlpinaRouter } from "./routes/alpina.js";
 import { createReportsRouter } from "./routes/reports.js";
 import { createAuditRateLimiters, type RateLimitOptions } from "./security/rateLimits.js";
@@ -71,6 +72,10 @@ export function createApp(options: AppOptions = {}): Express {
   app.use("/api", (_request, response) => {
     response.status(404).json({ error: "not_found", message: "Unknown API endpoint" });
   });
+
+  // Discovery documents and the prerendered report shell answer before the SPA fallback, so a
+  // reader that does not run scripts gets the report rather than an empty shell.
+  app.use(createAgentSurfaceRouter({ orchestrator: options.orchestrator, staticDirectory: options.staticDirectory }));
 
   if (options.staticDirectory) {
     app.use(express.static(options.staticDirectory));
