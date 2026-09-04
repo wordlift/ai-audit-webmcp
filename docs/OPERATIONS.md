@@ -34,6 +34,28 @@ inputs differ.
 
 Live mode fails fast at startup if a required credential is missing.
 
+## Checking the MCP endpoint
+
+The endpoint is Streamable HTTP and stateless, so a single POST is enough to see it answer:
+
+```bash
+curl -s -X POST http://localhost:3000/mcp \
+  -H 'content-type: application/json' \
+  -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+For an interactive session — initialize, list, call, read the schemas — use the MCP Inspector
+against the same URL:
+
+```bash
+npx @modelcontextprotocol/inspector
+# Transport: Streamable HTTP · URL: http://localhost:3000/mcp (or https://beta.audit.wordlift.io/mcp)
+```
+
+`GET /mcp` answers 405 by design: there is no session to resume and no stream to open.
+`GET /api/health` reports which surfaces the running revision answers on.
+
 ## Deep scans and report delivery
 
 The basic scan reads four representative pages and asks for nothing. A deep scan reads up to
