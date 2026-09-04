@@ -34,6 +34,14 @@ describe("published MCP tool definitions", () => {
     for (const tool of published) expect(tool.annotations.untrustedContentHint).toBe(true);
   });
 
+  it("answers the three questions a directory review asks of every tool", () => {
+    for (const tool of published) {
+      for (const annotation of ["readOnlyHint", "destructiveHint", "openWorldHint"]) {
+        expect(typeof tool.annotations[annotation], `${tool.name} must state ${annotation}`).toBe("boolean");
+      }
+    }
+  });
+
   it("carries no audited-site content in its static metadata", () => {
     const text = JSON.stringify(published).toLowerCase();
     for (const leak of ["alpina", "http://", "<script", "cookie"]) expect(text).not.toContain(leak);

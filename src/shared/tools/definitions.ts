@@ -90,7 +90,13 @@ export const GET_AUDIT_REPORT_TOOL = {
     required: ["reportId"],
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false, untrustedContentHint: true },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+    untrustedContentHint: true,
+  },
 } as const satisfies ToolDefinition;
 
 export const INSPECT_SERVICE_MAP_TOOL = {
@@ -104,7 +110,13 @@ export const INSPECT_SERVICE_MAP_TOOL = {
     },
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false, untrustedContentHint: true },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+    untrustedContentHint: true,
+  },
 } as const satisfies ToolDefinition;
 
 export const EXPLAIN_CAPABILITY_TOOL = {
@@ -123,7 +135,13 @@ export const EXPLAIN_CAPABILITY_TOOL = {
     required: ["actionId"],
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false, untrustedContentHint: true },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+    untrustedContentHint: true,
+  },
 } as const satisfies ToolDefinition;
 
 export const EXPLAIN_FOUNDATION_AUDIT_TOOL = {
@@ -137,7 +155,13 @@ export const EXPLAIN_FOUNDATION_AUDIT_TOOL = {
     },
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false, untrustedContentHint: true },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+    untrustedContentHint: true,
+  },
 } as const satisfies ToolDefinition;
 
 export const REFINE_SERVICE_MAP_TOOL = {
@@ -253,7 +277,13 @@ export const CHECK_ALPINA_AVAILABILITY_TOOL = {
     required: ["checkIn", "checkOut", "adults"],
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true, untrustedContentHint: true },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: true,
+    untrustedContentHint: true,
+  },
 } as const satisfies ToolDefinition;
 
 /**

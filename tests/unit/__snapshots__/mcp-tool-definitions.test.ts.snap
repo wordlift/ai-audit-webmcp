@@ -52,6 +52,7 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
   },
   {
     "annotations": {
+      "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
@@ -75,6 +76,7 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
   },
   {
     "annotations": {
+      "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
@@ -98,6 +100,7 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
   },
   {
     "annotations": {
+      "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
@@ -126,6 +129,7 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
   },
   {
     "annotations": {
+      "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,

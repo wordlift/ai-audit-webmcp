@@ -16,6 +16,8 @@ const environmentSchema = z
     WORDLIFT_API_KEY: z.string().min(1).optional(),
     SCRAPINGBEE_API_KEY: z.string().min(1).optional(),
     GOOGLE_CLOUD_PROJECT: z.string().min(1).optional(),
+    /** Domain-verification token for the OpenAI app directory; absent means the check 404s. */
+    OPENAI_APPS_CHALLENGE: z.string().min(1).max(500).optional(),
   })
   .strict()
   .superRefine((environment, context) => {
@@ -51,6 +53,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     WORDLIFT_API_KEY: environment.WORDLIFT_API_KEY,
     SCRAPINGBEE_API_KEY: environment.SCRAPINGBEE_API_KEY,
     GOOGLE_CLOUD_PROJECT: environment.GOOGLE_CLOUD_PROJECT,
+    OPENAI_APPS_CHALLENGE: environment.OPENAI_APPS_CHALLENGE,
   };
 
   return environmentSchema.parse(knownEnvironment);

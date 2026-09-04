@@ -24,6 +24,8 @@ export interface AppOptions {
   /** A separate, looser pool for the sidecar; inherits window and enablement from `rateLimits`. */
   sidecarRateLimits?: RateLimitOptions;
   trustProxy?: boolean;
+  /** Domain-verification token the app directory looks for; absent means the path is not served. */
+  appsChallenge?: string;
   alpinaSidecar?: AlpinaAvailabilitySidecar;
   /** A conversation-sized pool for /mcp; the audit budget above still guards what an audit costs. */
   mcpRateLimits?: RateLimitOptions;
@@ -63,6 +65,14 @@ export function createApp(options: AppOptions = {}): Express {
     next();
   });
   app.use(express.json({ limit: "256kb" }));
+
+  // Proof to the app directory that this domain is ours to publish from. Static, public, and
+  // served before anything that could mistake it for a page.
+  if (options.appsChallenge) {
+    app.get("/.well-known/openai-apps-challenge", (_request, response) => {
+      response.type("text/plain").send(options.appsChallenge);
+    });
+  }
 
   app.get("/api/health", (_request, response) => {
     response.status(200).json({

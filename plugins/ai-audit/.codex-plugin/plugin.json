@@ -1,0 +1,34 @@
+{
+  "name": "wordlift-ai-audit",
+  "version": "0.1.0",
+  "description": "Audit a website from an AI agent's perspective and refine its Terms of Action with the business that owns it.",
+  "author": {
+    "name": "WordLift",
+    "email": "hello@wordlift.io",
+    "url": "https://wordlift.io"
+  },
+  "homepage": "https://beta.audit.wordlift.io",
+  "repository": "https://github.com/wordlift/ai-audit-webmcp",
+  "license": "Apache-2.0",
+  "keywords": ["seo", "agents", "audit", "structured data", "agentic web"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "WordLift AI Audit",
+    "shortDescription": "See what an AI agent can actually do on a website",
+    "longDescription": "WordLift AI Audit reads a public website the way an agent would and returns evidence-backed Terms of Action: what kind of business it is, the actions an agent should be able to perform, which of those humans and agents can perform today, and the evidence behind every claim. Readiness is earned by successful invocation, never by a declaration. The included skill walks the site's owner through correcting the machine's reading — inspect, interview, confirm — and records their judgment as a new immutable report.",
+    "developerName": "WordLift",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://wordlift.io",
+    "privacyPolicyURL": "https://wordlift.io/privacy-policy/",
+    "termsOfServiceURL": "https://wordlift.io/terms-of-service/",
+    "defaultPrompt": [
+      "Audit wordlift.io and tell me what an AI agent can actually do there.",
+      "Run an AI Audit on my site, then help me correct the Terms of Action it produced.",
+      "Why does the audit say my booking action is unverified?",
+      "Audit this site and explain its foundation findings in plain language."
+    ],
+    "brandColor": "#0A2E5C"
+  }
+}

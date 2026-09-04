@@ -114,7 +114,7 @@ canonical names only.
   Verify: Authorization, rate-limit, redirect, private-IP, metadata-host, and report-ownership tests.
   Commit as `feat: bound who can refine a report`.
 
-- [ ] **7. Build the focused AI Audit skill**
+- [x] **7. Build the focused AI Audit skill**
   Spec ref: [OpenAI skill guidance](https://developers.openai.com/plugins/build/skills).
   What to build: `plugins/ai-audit/skills/review-ai-audit/SKILL.md`, which starts an audit and polls
   when it must, inspects the Terms of Action before proposing any edit, interviews the user about
@@ -125,7 +125,7 @@ canonical names only.
   Verify: Skill evaluations over complete, partial, still-running, unauthorized, and ambiguous reports.
   Commit as `feat: teach the skill to interview before it refines`.
 
-- [ ] **8. Package the plugin**
+- [x] **8. Package the plugin**
   Spec ref: [OpenAI plugin packaging](https://developers.openai.com/plugins/build/plugins).
   What to build:
 
@@ -143,6 +143,9 @@ canonical names only.
   identifier in `.app.json`.
   Acceptance: Installing the plugin exposes both the MCP connection and the skill.
   Verify: A fresh developer-mode installation in a clean ChatGPT workspace. Commit as `feat: package the public AI Audit plugin`.
+  Built, except the app id, which only exists once the server is registered in Developer mode:
+  `.app.json.example` carries the shape and plugins/ai-audit/README.md the three steps. A committed
+  placeholder id would fail at install time looking like a server outage.
 
 - [ ] **9. Add MCP contract and workflow tests**
   Spec ref: the deterministic audit/report test strategy already in `tests/`.
