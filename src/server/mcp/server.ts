@@ -1,7 +1,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { AuditToolService } from "../services/AuditToolService.js";
-import { ToolCallError } from "../services/toolErrors.js";
+import { asToolError } from "../services/toolErrors.js";
 import { remoteTool, REMOTE_TOOLS } from "./tools.js";
 
 export const MCP_SERVER_NAME = "wordlift-ai-audit";
@@ -48,9 +48,11 @@ export function buildAuditMcpServer(service: AuditToolService): Server {
       const answer = await tool.call(service, request.params.arguments ?? {});
       return { content: [{ type: "text" as const, text: answer.text }], structuredContent: answer.structured };
     } catch (error) {
-      // A failure the caller can act on travels with its own sentence. Anything else is reported
-      // without its internals: a provider's message may quote the audited site.
-      if (error instanceof ToolCallError) return errorResult(error.message);
+      // A failure the caller can act on travels with its own sentence — a refused destination
+      // says which rule refused it. Anything else is reported without its internals: a provider's
+      // message may quote the audited site.
+      const typed = asToolError(error);
+      if (typed) return errorResult(typed.message);
       console.error("mcp_tool_error", request.params.name, error instanceof Error ? error.name : "unknown");
       return errorResult("The audit service could not complete that call. Try again in a moment.");
     }

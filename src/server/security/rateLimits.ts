@@ -81,11 +81,23 @@ const EXPENSIVE_TOOLS = new Set(["audit-website", "refine-terms-of-action"]);
  * or reading a stored report is not spending anyone's crawl, and must not be turned away because
  * an audit did.
  */
+interface JsonRpcCall {
+  method?: unknown;
+  params?: { name?: unknown };
+}
+
+/** True for a single call or for a batch containing one: a batch must not be a way in. */
+function callsSomethingExpensive(body: unknown): boolean {
+  const calls: JsonRpcCall[] = Array.isArray(body) ? (body as JsonRpcCall[]) : [body as JsonRpcCall];
+  return calls.some((call) => {
+    const name = call?.params?.name;
+    return call?.method === "tools/call" && typeof name === "string" && EXPENSIVE_TOOLS.has(name);
+  });
+}
+
 export function onlyForExpensiveToolCalls(limiters: RequestHandler[]): RequestHandler {
   return (request: Request, response: Response, next: NextFunction) => {
-    const body = request.body as { method?: unknown; params?: { name?: unknown } } | undefined;
-    const name = body?.params?.name;
-    const expensive = body?.method === "tools/call" && typeof name === "string" && EXPENSIVE_TOOLS.has(name);
+    const expensive = callsSomethingExpensive(request.body);
     if (!expensive || limiters.length === 0) {
       next();
       return;

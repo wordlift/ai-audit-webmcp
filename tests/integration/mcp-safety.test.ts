@@ -47,8 +47,11 @@ describe("what the remote endpoint refuses", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.result.isError).toBe(true);
-    // The refusal is the destination's, not a provider's: nothing was fetched to find out.
+    // The caller is told which rule refused, not that something unspecified went wrong — and
+    // nothing was fetched to find out, so no connection error can appear here.
+    expect(toolText(response.body)).not.toContain("could not complete that call");
     expect(toolText(response.body)).not.toContain("ECONNREFUSED");
+    expect(toolText(response.body).length).toBeGreaterThan(20);
   });
 
   it("spends the audit budget on audits and not on discovery", async () => {
@@ -68,6 +71,21 @@ describe("what the remote endpoint refuses", () => {
       .send({ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} })
       .expect(200);
     expect(listed.body.result.tools).toHaveLength(6);
+  });
+
+  it("counts an audit hidden inside a batch", async () => {
+    const app = buildApp({ perIp: 1 });
+
+    // A JSON-RPC batch is one HTTP request carrying several calls. Reading only the top-level
+    // method would let a batch spend an unlimited number of audits.
+    const batch = await request(app)
+      .post("/mcp")
+      .set(MCP_HEADERS)
+      .send([call("get-audit-report", { reportId: "11111111-2222-4333-8444-555555555555" }), call("audit-website", { url: "https://alpina.travel/" }, 2)]);
+    expect([200, 429]).toContain(batch.status);
+
+    const next = await request(app).post("/mcp").set(MCP_HEADERS).send(call("audit-website", { url: "https://shop.example/" }, 3));
+    expect(next.status).toBe(429);
   });
 
   it("keeps an audited site's text out of the tool list it publishes", async () => {
