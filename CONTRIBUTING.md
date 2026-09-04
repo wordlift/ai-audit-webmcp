@@ -125,14 +125,30 @@ A sidecar makes one human-only capability callable by an agent. The Alpina avail
 Tests to mirror: `tests/unit/alpina-schemas.test.ts`,
 `tests/integration/alpina-sidecar.test.ts`, `tests/component/alpina-webmcp-tool.test.tsx`.
 
-## Add a WebMCP tool
+## Add a tool
 
-Register through the `useWebMCP` hook, keep the schema static, and unregister on unmount by letting
-the hook abort its signal. Test against the bundled stub:
+A tool is defined once, in `src/shared/tools/definitions.ts`, and published by every surface that
+offers it. Keep the schema static: site-authored text must never reach a name, description, or
+input schema. State all three review annotations — `readOnlyHint`, `destructiveHint`,
+`openWorldHint` — truthfully about the tool's *effect*, not its answer, and keep
+`untrustedContentHint` on anything carrying website evidence.
 
-```ts
-import { installModelContextStub, toolText } from "../../src/client/webmcp/testing/modelContextStub";
-```
+Then wire the surfaces that should offer it:
+
+- **In the browser**, register through the `useWebMCP` hook and let it abort its signal on unmount.
+  Test against the bundled stub:
+
+  ```ts
+  import { installModelContextStub, toolText } from "../../src/client/webmcp/testing/modelContextStub";
+  ```
+
+- **Remotely**, add a method to `AuditToolService` and an entry to `REMOTE_TOOLS`
+  (`src/server/mcp/tools.ts`). The service is where the answer is composed, so both surfaces return
+  the same object; a transport-specific difference belongs in `src/shared/tools/transports.ts` as a
+  variant of the shared definition, never as a second definition.
+
+The published contract is snapshotted (`tests/unit/mcp-tool-definitions.test.ts`): a deliberate
+change updates the snapshot in the same commit, and an accidental one fails the build.
 
 ## Tests
 

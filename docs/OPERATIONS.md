@@ -30,6 +30,7 @@ inputs differ.
 | `REPORT_TTL_DAYS` | `30` | Report expiry, enforced by the Firestore TTL policy |
 | `MAX_REPORT_BYTES` | `900000` | Serialized report ceiling, below Firestore's document limit |
 | `ACTION_MODEL_VERSION` | `0.1.0` | Which `action-model/` version to load |
+| `OPENAI_APPS_CHALLENGE` | — | Domain-verification token served at `/.well-known/openai-apps-challenge`. Unset means the path 404s |
 
 Live mode fails fast at startup if a required credential is missing.
 

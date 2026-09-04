@@ -8,23 +8,33 @@ import { createApp } from "../../src/server/app.js";
 import { FixtureProvider } from "../../src/server/adapters/fixtures/FixtureProvider.js";
 import { MemoryReportStore } from "../../src/server/adapters/store/MemoryReportStore.js";
 import { AuditOrchestrator } from "../../src/server/services/AuditOrchestrator.js";
+import { summarizeReportForAgent } from "../../src/shared/format/agentSummary.js";
 
 const fixedNow = new Date("2026-08-27T05:00:00.000Z");
 const TRAVEL = "https://alpina.travel/";
 
-function buildApp() {
+function buildService() {
   const store = new MemoryReportStore(900_000, () => fixedNow);
   const orchestrator = new AuditOrchestrator(store, loadActionModel(), new FixtureProvider(), {
     publicAppUrl: "https://audit.example/",
     ttlDays: 30,
     now: () => fixedNow,
   });
-  return createApp({ orchestrator, rateLimits: { enabled: false } });
+  return { orchestrator, app: createApp({ orchestrator, rateLimits: { enabled: false } }) };
+}
+
+function buildApp() {
+  return buildService().app;
 }
 
 /** A real client over a real socket: the handshake is the part a hand-rolled request would fake. */
-async function connectedClient(): Promise<{ client: Client; close: () => Promise<void> }> {
-  const http: HttpServer = createServer(buildApp());
+async function connectedClient(): Promise<{
+  client: Client;
+  orchestrator: AuditOrchestrator;
+  close: () => Promise<void>;
+}> {
+  const { app, orchestrator } = buildService();
+  const http: HttpServer = createServer(app);
   await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
   const { port } = http.address() as AddressInfo;
 
@@ -34,6 +44,7 @@ async function connectedClient(): Promise<{ client: Client; close: () => Promise
 
   return {
     client,
+    orchestrator,
     close: async () => {
       await client.close();
       await new Promise<void>((resolve) => http.close(() => resolve()));
@@ -132,6 +143,39 @@ describe("remote MCP server", () => {
 
       const malformed = await client.callTool({ name: "audit-website", arguments: {} });
       expect(malformed.isError).toBe(true);
+    } finally {
+      await close();
+    }
+  });
+
+  it("puts the same object on the wire that an in-page tool would build", async () => {
+    const { client, orchestrator, close } = await connectedClient();
+    try {
+      const audited = await client.callTool({ name: "audit-website", arguments: { url: TRAVEL } });
+      const remote = structured<{ reportId: string }>(audited);
+
+      const stored = await orchestrator.get(remote.reportId);
+      const inPage = summarizeReportForAgent(stored!, orchestrator.reportUrl(remote.reportId));
+
+      // Byte-for-byte the browser's answer: one formatter, two transports.
+      expect(remote).toEqual(inPage);
+    } finally {
+      await close();
+    }
+  });
+
+  it("carries findings without carrying the page they came from", async () => {
+    const { client, close } = await connectedClient();
+    try {
+      const audited = await client.callTool({ name: "audit-website", arguments: { url: TRAVEL } });
+      const { reportId } = structured<{ reportId: string }>(audited);
+      const inspected = await client.callTool({ name: "inspect-terms-of-action", arguments: { reportId } });
+      const foundation = await client.callTool({ name: "explain-foundation-audit", arguments: { reportId } });
+
+      const wire = JSON.stringify([audited, inspected, foundation]).toLowerCase();
+      for (const leak of ["<html", "<script", "set-cookie", "authorization:", "api_key", "bearer "]) {
+        expect(wire, `an MCP result must never carry ${leak}`).not.toContain(leak);
+      }
     } finally {
       await close();
     }
