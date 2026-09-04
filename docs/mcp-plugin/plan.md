@@ -66,7 +66,7 @@ canonical names only.
   no adapter makes an internal HTTP call to another adapter.
   Verify: Add service-level tests, then `npm run verify`. Commit as `feat: serve every surface from one audit service`.
 
-- [ ] **3. Add the MCP server**
+- [x] **3. Add the MCP server**
   Spec ref: [OpenAI MCP server guidance](https://developers.openai.com/plugins/build/mcp-server).
   What to build: Add `@modelcontextprotocol/sdk`, construct an `McpServer`, register the AI Audit
   tools against the service from item 2, and mount Streamable HTTP at `/mcp` — before the static

@@ -2,9 +2,16 @@ import express, { type Express, type RequestHandler } from "express";
 import path from "node:path";
 import { createAgentSurfaceRouter } from "./routes/agentSurface.js";
 import { createAlpinaRouter } from "./routes/alpina.js";
+import { createMcpRouter } from "./routes/mcp.js";
 import { createReportsRouter } from "./routes/reports.js";
-import { createAuditRateLimiters, type RateLimitOptions } from "./security/rateLimits.js";
+import {
+  createAuditRateLimiters,
+  createMcpRateLimiters,
+  onlyForExpensiveToolCalls,
+  type RateLimitOptions,
+} from "./security/rateLimits.js";
 import type { AuditOrchestrator } from "./services/AuditOrchestrator.js";
+import { AuditToolService, type AuditToolServiceOptions } from "./services/AuditToolService.js";
 import { AlpinaAvailabilitySidecar } from "./sidecars/alpina/adapter.js";
 
 export interface AppOptions {
@@ -15,6 +22,9 @@ export interface AppOptions {
   sidecarRateLimits?: RateLimitOptions;
   trustProxy?: boolean;
   alpinaSidecar?: AlpinaAvailabilitySidecar;
+  /** A conversation-sized pool for /mcp; the audit budget above still guards what an audit costs. */
+  mcpRateLimits?: RateLimitOptions;
+  toolService?: AuditToolServiceOptions;
 }
 
 /**
@@ -66,6 +76,16 @@ export function createApp(options: AppOptions = {}): Express {
     app.use(
       "/api/sidecars/alpina",
       createAlpinaRouter(options.alpinaSidecar ?? new AlpinaAvailabilitySidecar(), options.orchestrator, sidecarLimiters),
+    );
+
+    // The remote transport answers before the static handler and the SPA fallback, which would
+    // otherwise hand a JSON-RPC caller the application shell.
+    app.use(
+      "/mcp",
+      createMcpRouter(new AuditToolService(options.orchestrator, options.toolService), [
+        ...createMcpRateLimiters(options.mcpRateLimits ?? options.rateLimits),
+        onlyForExpensiveToolCalls(limiters),
+      ]),
     );
   }
 
