@@ -8,7 +8,7 @@ Status: draft for review. Items marked **[CONFIRM]** require a final check befor
 
 ## Tagline
 
-Turn any website into an evidence-backed service map: what it knows, what it offers, and what AI agents can actually do.
+Turn any website into evidence-backed Terms of Action: what it knows, what it offers, and what AI agents can actually do.
 
 ## Inspiration
 
@@ -16,7 +16,7 @@ Websites were designed as pages for people. AI agents need something different: 
 
 Most “AI readiness” audits stop at crawlability, metadata, or the presence of a manifest. Those are useful foundations, but they do not answer the operational question: **which action can an agent perform, for which entity, through which interface, and what proves it works?**
 
-WordLift already delivers a context engine based on knowledge graphs. We extended that idea with an action layer so a site owner can move from content and entities to an implementable agent service map.
+WordLift already delivers a context engine based on knowledge graphs. We extended that idea with an action layer so a site owner can move from content and entities to implementable agent Terms of Action.
 
 ## What it does
 
@@ -63,8 +63,8 @@ The application is itself a browser-native WebMCP surface using the imperative `
 - `get-audit-report` turns that report id into progress while the audit runs and into the finished summary once a terminal report exists.
 - `explain-capability` returns the entity bindings, human and agent interfaces, evidence, recommendation, and contract for one action.
 - `explain-foundation-audit` returns the WordLift foundation audit of the open report: score, dimensions, findings, and quick wins.
-- `inspect-service-map` opens the loop: one call gives ChatGPT the whole interview brief — the inferred operating role, every entity with its id and machine priority, the terminology, and every action with its evidence, readiness, and boundary.
-- `refine-service-map` closes it: after interviewing the human about how the business actually works — its role, its primary entities, its vocabulary, who owns each action — ChatGPT submits those structured decisions. The result is a new immutable **human-refined service map** with provenance and rationale on every changed node. A human decision can never mark an action agent-ready; readiness always requires invocation evidence.
+- `inspect-terms-of-action` opens the loop: one call gives ChatGPT the whole interview brief — the inferred operating role, every entity with its id and machine priority, the terminology, and every action with its evidence, readiness, and boundary.
+- `refine-terms-of-action` closes it: after interviewing the human about how the business actually works — its role, its primary entities, its vocabulary, who owns each action — ChatGPT submits those structured decisions. The result is a new immutable **human-refined Terms of Action** with provenance and rationale on every changed node. A human decision can never mark an action agent-ready; readiness always requires invocation evidence.
 
 These six generic tools are the product: the audit itself is the WebMCP surface, and the refinement makes it a human-guided compiler — website evidence in, machine draft out, human insight through ChatGPT, governed agent contracts at the end. The tools register on the top-level report document against `document.modelContext` the moment the page loads, and their descriptions state the protocol — inspect → interview → refine — so an agent can infer the workflow from the tool catalogue alone. A fifth, deliberately narrow tool (`check-alpina-availability`) remains in the codebase as a contained technical proof that a verified read-only endpoint can earn `sidecar-enabled` — grounded in the report's own entity, booking nothing. Enabling sites that way is future WordLift work, not part of this submission's story.
 

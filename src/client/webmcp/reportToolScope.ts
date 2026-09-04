@@ -22,7 +22,7 @@ export async function resolveOpenReport(
     );
   }
   if (report.status === "failed") {
-    throw new Error("This audit failed, so there is no service map to work with.");
+    throw new Error("This audit failed, so there are no Terms of Action to work with.");
   }
   return report;
 }

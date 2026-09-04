@@ -50,9 +50,9 @@ export const GET_AUDIT_REPORT_TOOL = {
 } as const;
 
 export const INSPECT_SERVICE_MAP_TOOL = {
-  name: "inspect-service-map",
+  name: "inspect-terms-of-action",
   description:
-    "Read the machine-generated Terms of Action for the open audit report. Call this FIRST when a user wants to review, correct, or human-refine the Terms — before interviewing the business owner and before refine-service-map. Returns the inferred operating role, every entity with its id and machine priority, the business terminology, and every action with its actionId, evidence, current readiness, and boundary.",
+    "Read the machine-generated Terms of Action for the open audit report. Call this FIRST when a user wants to review, correct, or human-refine the Terms — before interviewing the business owner and before refine-terms-of-action. Returns the inferred operating role, every entity with its id and machine priority, the business terminology, and every action with its actionId, evidence, current readiness, and boundary.",
   inputSchema: {
     type: "object",
     properties: {
@@ -97,9 +97,9 @@ export const EXPLAIN_FOUNDATION_AUDIT_TOOL = {
 } as const;
 
 export const REFINE_SERVICE_MAP_TOOL = {
-  name: "refine-service-map",
+  name: "refine-terms-of-action",
   description:
-    "Call ONLY after inspect-service-map and after collecting the reviewer's decisions. Submits the human's structured judgment about the open report's Terms of Action — the business's operating role, its primary entities, its vocabulary, and confirm/reject/boundary decisions per action — and creates a new immutable refined child report: its URL, what changed, and any assertions that could not be applied. Human decisions can never mark an action agent-ready; readiness always requires successful invocation evidence.",
+    "Call ONLY after inspect-terms-of-action and after collecting the reviewer's decisions. Submits the human's structured judgment about the open report's Terms of Action — the business's operating role, its primary entities, its vocabulary, and confirm/reject/boundary decisions per action — and creates a new immutable refined child report: its URL, what changed, and any assertions that could not be applied. Human decisions can never mark an action agent-ready; readiness always requires successful invocation evidence.",
   inputSchema: {
     type: "object",
     properties: {

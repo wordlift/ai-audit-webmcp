@@ -17,8 +17,8 @@ export function ServiceMapProvenance({ report }: { report: ReportRecord }) {
   async function copyReviewPrompt() {
     const prompt = [
       `Review the machine-generated Terms of Action on this page: ${reportPageUrl(report.id)}`,
-      "First use inspect-service-map. Then interview me about the operating role, the primary entities, the terminology, and the boundary of every expected action (owned, partner handoff, informational only, or not applicable). Use explain-capability whenever evidence is unclear.",
-      "Once we have resolved the decisions, call refine-service-map. Do not alter evidence-based agent readiness.",
+      "First use inspect-terms-of-action. Then interview me about the operating role, the primary entities, the terminology, and the boundary of every expected action (owned, partner handoff, informational only, or not applicable). Use explain-capability whenever evidence is unclear.",
+      "Once we have resolved the decisions, call refine-terms-of-action. Do not alter evidence-based agent readiness.",
     ].join("\n\n");
     await navigator.clipboard.writeText(prompt);
     setCopied(true);
