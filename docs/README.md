@@ -11,6 +11,7 @@
 | [BRAND.md](BRAND.md) | Brand assets and usage |
 | [../SECURITY.md](../SECURITY.md) | Threat model, controls, reporting |
 | [submission/](submission/) | WebMCP Challenge handoff, demo script, release gate, screenshots |
+| [mcp-plugin/plan.md](mcp-plugin/plan.md) | The planned remote MCP endpoint at `/mcp` and the public AI Audit plugin, and the order they get built in |
 
 ## Historical record
 
