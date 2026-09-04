@@ -10,7 +10,7 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
       "readOnlyHint": false,
       "untrustedContentHint": true,
     },
-    "description": "Analyze a public website from an AI agent's perspective and return its site archetype, verified action-readiness score, priority capability gaps, action-stage summary, and shareable evidence report.",
+    "description": "Analyze a public website from an AI agent's perspective and return its site archetype, verified action-readiness score, priority capability gaps, action-stage summary, and shareable evidence report. The basic scan reads four representative pages and is free and anonymous; a deep scan reads more of the site and is sent to an email address the person gives you.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -24,6 +24,18 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
             "saas",
             "other",
           ],
+          "type": "string",
+        },
+        "depth": {
+          "description": "How much of the site to read. "basic" (the default) reads four representative pages and asks for nothing. "deep" reads more of the site and requires email; the report is sent there.",
+          "enum": [
+            "basic",
+            "deep",
+          ],
+          "type": "string",
+        },
+        "email": {
+          "description": "Where to send a deep scan's report. Required when depth is "deep". Ask the person for their address — never guess one, and never reuse an address from elsewhere in the conversation without asking.",
           "type": "string",
         },
         "url": {

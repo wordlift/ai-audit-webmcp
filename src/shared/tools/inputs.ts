@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { archetypeSchema } from "../schemas/report.js";
+import { archetypeSchema, scanDepthSchema } from "../schemas/report.js";
 
 /**
  * What each tool accepts, as a parser. The published JSON Schemas in `definitions.ts` tell an
@@ -16,6 +16,9 @@ export const auditWebsiteInputSchema = z
   .object({
     url: z.string().min(1).max(2_048),
     archetype: archetypeSchema.optional(),
+    depth: scanDepthSchema.optional(),
+    /** Validated by the gate, which is where the address is recorded and where it stays. */
+    email: z.string().max(254).optional(),
   })
   .strict();
 

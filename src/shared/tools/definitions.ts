@@ -39,7 +39,7 @@ export const ARCHETYPE_VALUES = [
 export const AUDIT_WEBSITE_TOOL = {
   name: "audit-website",
   description:
-    "Analyze a public website from an AI agent's perspective and return its site archetype, verified action-readiness score, priority capability gaps, action-stage summary, and shareable evidence report.",
+    "Analyze a public website from an AI agent's perspective and return its site archetype, verified action-readiness score, priority capability gaps, action-stage summary, and shareable evidence report. The basic scan reads four representative pages and is free and anonymous; a deep scan reads more of the site and is sent to an email address the person gives you.",
   inputSchema: {
     type: "object",
     properties: {
@@ -51,6 +51,17 @@ export const AUDIT_WEBSITE_TOOL = {
         type: "string",
         enum: ARCHETYPE_VALUES,
         description: "Optional operating archetype to use instead of the inferred one.",
+      },
+      depth: {
+        type: "string",
+        enum: ["basic", "deep"],
+        description:
+          "How much of the site to read. \"basic\" (the default) reads four representative pages and asks for nothing. \"deep\" reads more of the site and requires email; the report is sent there.",
+      },
+      email: {
+        type: "string",
+        description:
+          "Where to send a deep scan's report. Required when depth is \"deep\". Ask the person for their address — never guess one, and never reuse an address from elsewhere in the conversation without asking.",
       },
     },
     required: ["url"],

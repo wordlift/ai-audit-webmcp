@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { ZodType } from "zod";
 import {
   auditRunningText,
@@ -31,6 +30,7 @@ import {
 } from "../../shared/tools/inputs.js";
 import type { ReportRecord } from "../../shared/types/index.js";
 import type { AuditOrchestrator } from "./AuditOrchestrator.js";
+import { DeepScanGate, newReportId } from "./DeepScanGate.js";
 import { reportNotFound, reportStillRunning, ToolCallError } from "./toolErrors.js";
 
 /**
@@ -49,6 +49,8 @@ export interface AuditToolServiceOptions {
   graceMs?: number;
   /** Test seam: how the grace window is waited out. */
   wait?: (ms: number) => Promise<void>;
+  /** Which surface the caller is standing on, recorded with a deep scan's address. */
+  source?: "web" | "webmcp" | "mcp";
 }
 
 export interface ToolAnswer<T> {
@@ -64,6 +66,7 @@ export class AuditToolService {
   constructor(
     private readonly orchestrator: AuditOrchestrator,
     private readonly options: AuditToolServiceOptions = {},
+    private readonly deepScan: DeepScanGate = new DeepScanGate(null),
   ) {}
 
   /**
@@ -72,11 +75,21 @@ export class AuditToolService {
    * result — and the audit keeps running behind the answer, so `get-audit-report` completes it.
    */
   async auditWebsite(input: unknown): Promise<ToolAnswer<AuditToolResult | AuditRunningResult>> {
-    const { url, archetype } = parse(auditWebsiteInputSchema, input);
-    const reportId = randomUUID();
+    const { url, archetype, depth, email } = parse(auditWebsiteInputSchema, input);
+    const reportId = newReportId();
+
+    // The exchange is settled before any crawling happens: a deep scan that fails still knows
+    // whose address it owes a report to.
+    const access = await this.deepScan.authorize({
+      reportId,
+      reportUrl: this.orchestrator.reportUrl(reportId),
+      depth,
+      email,
+      source: this.options.source ?? "mcp",
+    });
 
     const running = this.orchestrator
-      .create({ requestId: reportId, url, archetypeOverride: archetype ?? null })
+      .create({ requestId: reportId, url, archetypeOverride: archetype ?? null, depth: access.depth })
       .then((report) => ({ report }) as const, (error: unknown) => ({ error }) as const);
 
     const wait = this.options.wait ?? sleep;
@@ -85,12 +98,12 @@ export class AuditToolService {
     if (outcome === null) {
       const current = await this.orchestrator.get(reportId).catch(() => null);
       if (current && current.status === "failed") throw auditFailed(url, current);
-      if (current && current.status !== "running") return this.finished(current);
-      return this.stillRunning(current ?? { id: reportId, phase: "understanding" });
+      if (current && current.status !== "running") return this.finished(current, access.note);
+      return this.stillRunning(current ?? { id: reportId, phase: "understanding" }, access.note);
     }
     if ("error" in outcome) throw outcome.error;
     if (outcome.report.status === "failed") throw auditFailed(url, outcome.report);
-    return this.finished(outcome.report);
+    return this.finished(outcome.report, access.note);
   }
 
   async getAuditReport(input: unknown): Promise<ToolAnswer<AuditToolResult | AuditRunningResult>> {
@@ -191,13 +204,18 @@ export class AuditToolService {
     return report;
   }
 
-  private finished(report: ReportRecord): ToolAnswer<AuditToolResult> {
-    const structured = summarizeReportForAgent(report, this.orchestrator.reportUrl(report.id));
-    return { text: auditSummaryText(structured), structured };
+  private finished(report: ReportRecord, note?: string | null): ToolAnswer<AuditToolResult> {
+    const base = summarizeReportForAgent(report, this.orchestrator.reportUrl(report.id));
+    const structured = note ? { ...base, notes: [...base.notes, note] } : base;
+    return { text: [auditSummaryText(structured), note].filter(Boolean).join("\n"), structured };
   }
 
-  private stillRunning(report: Pick<ReportRecord, "id" | "phase">): ToolAnswer<AuditRunningResult> {
-    const structured = summarizeRunningReport(report, this.orchestrator.reportUrl(report.id));
+  private stillRunning(
+    report: Pick<ReportRecord, "id" | "phase">,
+    note?: string | null,
+  ): ToolAnswer<AuditRunningResult> {
+    const base = summarizeRunningReport(report, this.orchestrator.reportUrl(report.id));
+    const structured = note ? { ...base, note: `${base.note} ${note}` } : base;
     return { text: auditRunningText(structured), structured };
   }
 

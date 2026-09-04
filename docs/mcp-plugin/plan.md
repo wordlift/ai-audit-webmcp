@@ -86,7 +86,7 @@ canonical names only.
   incorporate audited-site content.
   Verify: Snapshot-test every MCP tool definition and its annotations. Commit as `fix: describe the audit tools' real effects`.
 
-- [ ] **5. Gate depth behind an email, and send the report to it**
+- [x] **5. Gate depth behind an email, and send the report to it**
   Spec ref: `MAX_PAGES` in `src/server/adapters/scrape/NativeFetch.ts`, `src/server/adapters/scrape/ScrapingBee.ts`, AGENTS.md > Never.
   What to build: Make scan depth an explicit input rather than a constant. `basic` stays what runs
   today — four representative pages, free, anonymous, unchanged for every existing caller. `deep` reads
@@ -99,6 +99,9 @@ canonical names only.
   address; unsubscribing or deleting the address leaves the public report intact.
   Verify: Tests for depth selection, the email boundary in the stored report, delivery, and refusal
   without an address. Commit as `feat: trade an email for a deeper scan`.
+  Done, except the sending itself: HubSpot owns delivery and confirmation, and its specification is
+  still to come. `LeadStore.pending()` is the queue it drains; `markConfirmed` and `markDelivered`
+  are where it writes back. See docs/OPERATIONS.md > Deep scans and report delivery.
 
 - [ ] **6. Add ownership and abuse controls**
   Spec ref: SECURITY.md, `src/server/security/`, `src/server/routes/reports.ts`.

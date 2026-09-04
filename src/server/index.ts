@@ -6,6 +6,7 @@ import { GoogleNlpClassifier } from "./adapters/classify/GoogleNlp.js";
 import { FixtureProvider } from "./adapters/fixtures/FixtureProvider.js";
 import { NativeFetchCollector } from "./adapters/scrape/NativeFetch.js";
 import { createScrapingBeeCollector } from "./adapters/scrape/ScrapingBee.js";
+import { FirestoreLeadStore, MemoryLeadStore } from "./adapters/leads/index.js";
 import { FirestoreReportStore, MemoryReportStore } from "./adapters/store/index.js";
 import { loadConfig } from "./config.js";
 import { AuditOrchestrator, type OrchestratorOptions } from "./services/AuditOrchestrator.js";
@@ -14,6 +15,10 @@ const config = loadConfig();
 const store = config.REPORT_STORE === "firestore"
   ? FirestoreReportStore.fromProject(config.GOOGLE_CLOUD_PROJECT, config.MAX_REPORT_BYTES)
   : new MemoryReportStore(config.MAX_REPORT_BYTES);
+
+const leads = config.REPORT_STORE === "firestore"
+  ? FirestoreLeadStore.fromProject(config.GOOGLE_CLOUD_PROJECT)
+  : new MemoryLeadStore();
 
 const mode: OrchestratorOptions["mode"] = config.AUDIT_PROVIDER === "wordlift" ? "live" : "demo";
 const providers: OrchestratorOptions["providers"] = mode === "live"
@@ -41,6 +46,8 @@ const orchestrator = new AuditOrchestrator(store, loadActionModel(config.ACTION_
 const app = createApp({
   staticDirectory: path.resolve(process.cwd(), "dist"),
   orchestrator,
+  leads,
+  reportTtlDays: config.REPORT_TTL_DAYS,
   trustProxy: config.NODE_ENV === "production",
   rateLimits: config.NODE_ENV === "test" ? { enabled: false } : undefined,
 });

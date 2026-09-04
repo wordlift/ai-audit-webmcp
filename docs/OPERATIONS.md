@@ -33,6 +33,31 @@ inputs differ.
 
 Live mode fails fast at startup if a required credential is missing.
 
+## Deep scans and report delivery
+
+The basic scan reads four representative pages and asks for nothing. A deep scan reads up to
+twelve and asks for an email address, which is where the finished report is sent.
+
+The address never enters the report. Reports are public documents with shareable links, so a
+private identifier has no place in one; a deep scan's address is filed in its own store, keyed by
+report id, with the same TTL the report has:
+
+| Where | Memory mode | Firestore mode |
+|---|---|---|
+| Reports | `MemoryReportStore` | `reports` collection |
+| Deep-scan addresses | `MemoryLeadStore` | `deepScanLeads` collection |
+
+`LeadStore` is the seam the delivery system plugs into:
+
+- `pending(limit)` — the queue: addresses whose report has not been sent yet, oldest first.
+- `markConfirmed(reportId, at)` — the address opted in.
+- `markDelivered(reportId, at)` — the report has been sent, so it leaves the queue.
+
+**Sending is HubSpot's job**, and its specification is still to come. Nothing in this repository
+sends mail: it records what is owed, to whom, for which report, and waits to be told the message
+went out. Until that integration lands, a deep scan runs and stores its lead, and the report is
+readable at its own public URL exactly like a basic one.
+
 ## One-time Google Cloud setup
 
 ```bash

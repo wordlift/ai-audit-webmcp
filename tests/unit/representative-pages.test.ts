@@ -90,3 +90,39 @@ describe("representative page selection", () => {
     expect(selected.map((item) => item.url.pathname)).toEqual(["/properties/alpinest", "/booking", "/faq"]);
   });
 });
+
+describe("scan depth", () => {
+  const nav = `<nav>
+    <a href="/">Home</a>
+    <a href="/rooms">Rooms</a>
+    <a href="/rooms/suite">The suite</a>
+    <a href="/restaurant">Restaurant</a>
+    <a href="/spa">Spa</a>
+    <a href="/offers">Offers and packages</a>
+    <a href="/booking">Book your stay</a>
+    <a href="/contact">Contact us</a>
+    <a href="/guide/valley">Valley guide</a>
+    <a href="/guide/winter">Winter guide</a>
+    <a href="/events">Events</a>
+    <a href="/faq">Questions and answers</a>
+    <a href="/press">Press</a>
+  </nav>`;
+
+  it("reads three secondary pages for the free basic scan", () => {
+    const { document } = parseHTML(nav);
+    const links = [...document.querySelectorAll("a[href]")];
+
+    // Four pages in the report: the entry page the caller gave, plus three sampled.
+    expect(selectRepresentativePages(links, new URL("https://hotel.example/"))).toHaveLength(3);
+  });
+
+  it("reads further when a deep scan asks it to, and still samples rather than crawls", () => {
+    const { document } = parseHTML(nav);
+    const links = [...document.querySelectorAll("a[href]")];
+
+    const deep = selectRepresentativePages(links, new URL("https://hotel.example/"), 12);
+    expect(deep.length).toBeGreaterThan(3);
+    expect(deep.length).toBeLessThanOrEqual(11);
+    expect(new Set(deep.map((page) => page.url.pathname)).size).toBe(deep.length);
+  });
+});

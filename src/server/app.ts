@@ -10,8 +10,10 @@ import {
   onlyForExpensiveToolCalls,
   type RateLimitOptions,
 } from "./security/rateLimits.js";
+import type { LeadStore } from "./adapters/leads/index.js";
 import type { AuditOrchestrator } from "./services/AuditOrchestrator.js";
 import { AuditToolService, type AuditToolServiceOptions } from "./services/AuditToolService.js";
+import { DeepScanGate } from "./services/DeepScanGate.js";
 import { AlpinaAvailabilitySidecar } from "./sidecars/alpina/adapter.js";
 
 export interface AppOptions {
@@ -25,6 +27,9 @@ export interface AppOptions {
   /** A conversation-sized pool for /mcp; the audit budget above still guards what an audit costs. */
   mcpRateLimits?: RateLimitOptions;
   toolService?: AuditToolServiceOptions;
+  /** Where a deep scan's email address is filed. Absent means deep scans are unavailable here. */
+  leads?: LeadStore;
+  reportTtlDays?: number;
 }
 
 /**
@@ -66,8 +71,9 @@ export function createApp(options: AppOptions = {}): Express {
 
   if (options.orchestrator) {
     const limiters: RequestHandler[] = createAuditRateLimiters(options.rateLimits);
+    const deepScan = new DeepScanGate(options.leads ?? null, options.reportTtlDays);
     app.get("/api/demo/alpina", async (_request, response) => response.json(await options.orchestrator?.pinnedAlpina()));
-    app.use("/api/reports", createReportsRouter(options.orchestrator, limiters));
+    app.use("/api/reports", createReportsRouter(options.orchestrator, limiters, deepScan));
     // The sidecar draws on its own pool: one agent conversation checks several date ranges, and
     // none of those calls should spend the audit budget.
     const sidecarLimiters: RequestHandler[] = createAuditRateLimiters(
@@ -82,10 +88,13 @@ export function createApp(options: AppOptions = {}): Express {
     // otherwise hand a JSON-RPC caller the application shell.
     app.use(
       "/mcp",
-      createMcpRouter(new AuditToolService(options.orchestrator, options.toolService), [
-        ...createMcpRateLimiters(options.mcpRateLimits ?? options.rateLimits),
-        onlyForExpensiveToolCalls(limiters),
-      ]),
+      createMcpRouter(
+        new AuditToolService(options.orchestrator, { source: "mcp", ...options.toolService }, deepScan),
+        [
+          ...createMcpRateLimiters(options.mcpRateLimits ?? options.rateLimits),
+          onlyForExpensiveToolCalls(limiters),
+        ],
+      ),
     );
   }
 
