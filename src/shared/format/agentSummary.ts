@@ -80,6 +80,8 @@ export interface AuditRunningResult {
   pagesAnalyzed?: number;
   foundationAuditReady?: boolean;
   note: string;
+  /** Present only on a remote audit: see AuditToolResult.claimToken. */
+  claimToken?: string;
 }
 
 export function summarizeRunningReport(

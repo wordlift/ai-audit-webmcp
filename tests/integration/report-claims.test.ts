@@ -102,6 +102,26 @@ describe("who may publish a refinement", () => {
     ).resolves.toBeTruthy();
   });
 
+  it("hands over the claim even when the audit outlives the answer", async () => {
+    const { service, orchestrator, claims } = harness();
+    vi.spyOn(orchestrator, "create").mockImplementation(() => new Promise(() => {}));
+    vi.spyOn(orchestrator, "get").mockResolvedValue(null);
+    const slow = new AuditToolService(orchestrator, {
+      graceMs: 0,
+      source: "mcp",
+      claims,
+      wait: async () => {},
+    });
+
+    const answer = await slow.auditWebsite({ url: TRAVEL });
+    const running = answer.structured as { status: string; reportId: string; claimToken?: string };
+
+    // Waiting for a slow site must not cost the caller the right to refine what it is waiting for.
+    expect(running.status).toBe("running");
+    expect(running.claimToken).toMatch(/^[\w-]{20,}$/);
+    expect(await claims?.get(running.reportId)).not.toBeNull();
+  });
+
   it("says the report is unknown before it says the claim is wrong", async () => {
     const { service } = harness();
 

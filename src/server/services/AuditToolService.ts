@@ -115,7 +115,7 @@ export class AuditToolService {
       const current = await this.orchestrator.get(reportId).catch(() => null);
       if (current && current.status === "failed") throw auditFailed(url, current);
       if (current && current.status !== "running") return this.finished(current, access.note, claimToken);
-      return this.stillRunning(current ?? { id: reportId, phase: "understanding" }, access.note);
+      return this.stillRunning(current ?? { id: reportId, phase: "understanding" }, access.note, claimToken);
     }
     if ("error" in outcome) throw outcome.error;
     if (outcome.report.status === "failed") throw auditFailed(url, outcome.report);
@@ -266,13 +266,22 @@ export class AuditToolService {
     return token;
   }
 
+  /**
+   * An audit that outlives the grace window still hands over its claim. The caller that started it
+   * must be able to refine the report it is waiting for, without auditing the site twice.
+   */
   private stillRunning(
     report: Pick<ReportRecord, "id" | "phase">,
     note?: string | null,
+    claimToken?: string | null,
   ): ToolAnswer<AuditRunningResult> {
     const base = summarizeRunningReport(report, this.orchestrator.reportUrl(report.id));
-    const structured = note ? { ...base, note: `${base.note} ${note}` } : base;
-    return { text: auditRunningText(structured), structured };
+    const withNote = note ? { ...base, note: `${base.note} ${note}` } : base;
+    const structured = claimToken ? { ...withNote, claimToken } : withNote;
+    const claimLine = claimToken
+      ? `Keep this claimToken to refine the report once it completes; it is the only proof this audit was yours: ${claimToken}`
+      : null;
+    return { text: [auditRunningText(structured), claimLine].filter(Boolean).join("\n"), structured };
   }
 
   private contractUrl(reportId: string, actionId: string): string {
