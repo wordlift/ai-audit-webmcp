@@ -110,6 +110,26 @@ describe("the one thing the audit asks for", () => {
     expect((await leads?.pending())?.[0]).toMatchObject({ reportId: requestId, source: "web" });
   });
 
+  it("keeps the page's own form and an agent driving that page apart", async () => {
+    const { app, leads } = harness();
+
+    const form = randomUUID();
+    await request(app)
+      .post("/api/reports")
+      .send({ requestId: form, url: TRAVEL, depth: "deep", email: ADDRESS })
+      .expect(200);
+
+    const agent = randomUUID();
+    await request(app)
+      .post("/api/reports")
+      .send({ requestId: agent, url: TRAVEL, depth: "deep", email: "agent@example.com", surface: "webmcp" })
+      .expect(200);
+
+    // Both arrive over the same API; only the caller can say which surface it is.
+    expect((await leads?.get(form))?.source).toBe("web");
+    expect((await leads?.get(agent))?.source).toBe("webmcp");
+  });
+
   it("keeps what is still owed, and forgets it once it has been sent", async () => {
     const leads = new MemoryLeadStore(() => fixedNow);
     const { service } = harness({ leads });

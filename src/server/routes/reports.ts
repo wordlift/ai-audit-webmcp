@@ -14,7 +14,16 @@ import { ToolCallError } from "../services/toolErrors.js";
  * gate, which files it beside the report, and never travels on to the orchestrator that builds the
  * public document.
  */
-const createReportBodySchema = createReportRequestSchema.extend({ email: z.string().max(254).optional() });
+const createReportBodySchema = createReportRequestSchema.extend({
+  email: z.string().max(254).optional(),
+  /**
+   * Which surface asked. The page's own form and an agent driving that page both arrive here over
+   * the same API, so without this they would be one number. A browser could of course claim either;
+   * this is attribution, not authorization, and "mcp" is not offered because the MCP transport
+   * makes its own claim on its own endpoint.
+   */
+  surface: z.enum(["web", "webmcp"]).optional(),
+});
 
 export function createReportsRouter(
   orchestrator: AuditOrchestrator,
@@ -27,13 +36,13 @@ export function createReportsRouter(
 
   router.post("/", ...auditLimiters, async (request, response) => {
     try {
-      const { email, ...audit } = createReportBodySchema.parse(request.body);
+      const { email, surface, ...audit } = createReportBodySchema.parse(request.body);
       await deepScan.authorize({
         reportId: audit.requestId,
         reportUrl: orchestrator.reportUrl(audit.requestId),
         depth: audit.depth,
         email,
-        source: "web",
+        source: surface ?? "web",
       });
       const report = await orchestrator.create(audit);
       if (audit.depth === "deep" && report.status !== "running") delivery?.settle(report.id);

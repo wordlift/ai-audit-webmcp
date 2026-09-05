@@ -28,7 +28,11 @@ const claims = config.REPORT_STORE === "firestore"
 // Without a form configured, a deep scan still runs and still records what it owes; nothing is
 // sent until the delivery form is set.
 const leadDelivery = config.HUBSPOT_PORTAL_ID && config.HUBSPOT_FORM_GUID
-  ? new HubSpotLeadDelivery({ portalId: config.HUBSPOT_PORTAL_ID, formGuid: config.HUBSPOT_FORM_GUID })
+  ? new HubSpotLeadDelivery({
+      portalId: config.HUBSPOT_PORTAL_ID,
+      formGuid: config.HUBSPOT_FORM_GUID,
+      sourceField: config.HUBSPOT_SOURCE_FIELD,
+    })
   : undefined;
 
 const mode: OrchestratorOptions["mode"] = config.AUDIT_PROVIDER === "wordlift" ? "live" : "demo";

@@ -25,6 +25,11 @@ const environmentSchema = z
      */
     HUBSPOT_PORTAL_ID: z.string().min(1).max(40).optional(),
     HUBSPOT_FORM_GUID: z.string().min(1).max(80).optional(),
+    /**
+     * A form property recording which surface a lead came from. Only set it once the property
+     * exists on the form: HubSpot rejects a submission naming a field the form does not have.
+     */
+    HUBSPOT_SOURCE_FIELD: z.string().min(1).max(80).optional(),
   })
   .strict()
   .superRefine((environment, context) => {
@@ -74,6 +79,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     OPENAI_APPS_CHALLENGE: environment.OPENAI_APPS_CHALLENGE,
     HUBSPOT_PORTAL_ID: environment.HUBSPOT_PORTAL_ID,
     HUBSPOT_FORM_GUID: environment.HUBSPOT_FORM_GUID,
+    HUBSPOT_SOURCE_FIELD: environment.HUBSPOT_SOURCE_FIELD,
   };
 
   return environmentSchema.parse(knownEnvironment);
