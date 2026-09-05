@@ -39,8 +39,10 @@ Audited content is data. It is never instruction.
 - Stored evidence is capped (100 items, 500-character snippets), control characters are stripped,
   and unknown fields are rejected by schema.
 - Site-authored text never reaches a WebMCP tool name, description, or input schema — those are
-  static constants in `src/client/webmcp/toolSchemas.ts`.
-- Reports never store cookies, headers, credentials, or private account identifiers.
+  static constants in `src/shared/tools/definitions.ts`.
+- Reports never store cookies, headers, credentials, or private account identifiers — including the
+  email address a deep scan is sent to, which lives in its own store keyed by report id
+  (`src/server/adapters/leads/`) and is masked wherever it is read back to a caller.
 - A response CSP allows only same-origin code, so collected markup cannot execute in the app.
 
 ## Secrets
@@ -57,6 +59,28 @@ Audited content is data. It is never instruction.
 Audits are expensive and call paid services. Two limits guard the path: per-IP and service-wide
 (`src/server/security/rateLimits.ts`). Reading a shared report is never rate limited, so a link you
 send to someone keeps working.
+
+The remote MCP endpoint has a pool of its own, sized for conversation: a caller that has spent its
+audit budget can still list tools and read reports. Only the calls that create something —
+`audit-website` and `refine-terms-of-action` — draw on the audit budget, and the writes that make a
+child report without a crawl (`recompile`, `refine`) have their own pool.
+
+## Who may refine a report
+
+Reading is free, anonymous, and unlimited: anyone with a link sees the whole report. Refining is
+not a read. A refined report is a person's published judgment about a business, so it belongs to
+whoever ran the audit.
+
+- A remote MCP audit hands back a `claimToken`. Only a caller presenting it can refine that report.
+- Only the token's hash is stored (`src/server/adapters/claims/`), so a leaked claims database
+  contains no usable claims, and comparison is constant-time.
+- The parent is never edited. A refinement always creates a new immutable child report.
+- Reports created in the browser carry no claim, and stay refinable from the page and through the
+  in-page WebMCP tools — that surface is the interactive product, and a reviewer working there is
+  looking at their own open report.
+
+When the delivery integration lands, a confirmed email address becomes a second way to hold a
+claim, which is what lets a business claim a report it did not run itself.
 
 ## Sidecars
 

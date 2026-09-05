@@ -33,6 +33,11 @@ export interface AuditToolResult {
   reportUrl: string;
   partial: boolean;
   notes: string[];
+  /**
+   * Present only on a remote audit: the secret that lets this caller refine this report later.
+   * It is never stored in the report, never logged, and never returned by a read.
+   */
+  claimToken?: string;
 }
 
 export interface CapabilityToolResult {
@@ -75,6 +80,8 @@ export interface AuditRunningResult {
   pagesAnalyzed?: number;
   foundationAuditReady?: boolean;
   note: string;
+  /** Present only on a remote audit: see AuditToolResult.claimToken. */
+  claimToken?: string;
 }
 
 export function summarizeRunningReport(

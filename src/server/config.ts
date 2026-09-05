@@ -16,6 +16,15 @@ const environmentSchema = z
     WORDLIFT_API_KEY: z.string().min(1).optional(),
     SCRAPINGBEE_API_KEY: z.string().min(1).optional(),
     GOOGLE_CLOUD_PROJECT: z.string().min(1).optional(),
+    /** Domain-verification token for the OpenAI app directory; absent means the check 404s. */
+    OPENAI_APPS_CHALLENGE: z.string().min(1).max(500).optional(),
+    /**
+     * The HubSpot form a deep scan's report is delivered through — the same portal and form the
+     * WordLift AI Audit already submits to, so one person is one contact whichever audit they came
+     * through. Both absent means deep-scan reports queue and nothing is sent.
+     */
+    HUBSPOT_PORTAL_ID: z.string().min(1).max(40).optional(),
+    HUBSPOT_FORM_GUID: z.string().min(1).max(80).optional(),
   })
   .strict()
   .superRefine((environment, context) => {
@@ -26,6 +35,17 @@ const environmentSchema = z
       if (!environment.WORDLIFT_API_KEY) {
         context.addIssue({ code: "custom", path: ["WORDLIFT_API_KEY"], message: "Required in WordLift mode" });
       }
+    }
+
+    // Half a form is a silent misconfiguration: leads would queue forever with nothing draining
+    // them, and the deployment would look like it was delivering.
+    const hubspot = [environment.HUBSPOT_PORTAL_ID, environment.HUBSPOT_FORM_GUID];
+    if (hubspot.some(Boolean) && !hubspot.every(Boolean)) {
+      context.addIssue({
+        code: "custom",
+        path: ["HUBSPOT_FORM_GUID"],
+        message: "HUBSPOT_PORTAL_ID and HUBSPOT_FORM_GUID are set together or not at all",
+      });
     }
 
     if (environment.SCRAPE_PROVIDER === "scrapingbee" && !environment.SCRAPINGBEE_API_KEY) {
@@ -51,6 +71,9 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     WORDLIFT_API_KEY: environment.WORDLIFT_API_KEY,
     SCRAPINGBEE_API_KEY: environment.SCRAPINGBEE_API_KEY,
     GOOGLE_CLOUD_PROJECT: environment.GOOGLE_CLOUD_PROJECT,
+    OPENAI_APPS_CHALLENGE: environment.OPENAI_APPS_CHALLENGE,
+    HUBSPOT_PORTAL_ID: environment.HUBSPOT_PORTAL_ID,
+    HUBSPOT_FORM_GUID: environment.HUBSPOT_FORM_GUID,
   };
 
   return environmentSchema.parse(knownEnvironment);

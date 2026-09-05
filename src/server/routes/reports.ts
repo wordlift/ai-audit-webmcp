@@ -1,16 +1,42 @@
 import { Router, type RequestHandler, type Response } from "express";
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
+import { createReportRequestSchema } from "../../shared/schemas/report.js";
 import { UnknownFixtureError } from "../adapters/fixtures/FixtureProvider.js";
 import { ReportRequestError } from "../errors.js";
 import { UrlPolicyError } from "../security/urlPolicy.js";
 import type { AuditOrchestrator } from "../services/AuditOrchestrator.js";
+import type { DeepScanDelivery } from "../services/DeepScanDelivery.js";
+import { DeepScanGate } from "../services/DeepScanGate.js";
+import { ToolCallError } from "../services/toolErrors.js";
 
-export function createReportsRouter(orchestrator: AuditOrchestrator, auditLimiters: RequestHandler[] = []): Router {
+/**
+ * The address a deep scan is sent to arrives with the request and stops here: it is handed to the
+ * gate, which files it beside the report, and never travels on to the orchestrator that builds the
+ * public document.
+ */
+const createReportBodySchema = createReportRequestSchema.extend({ email: z.string().max(254).optional() });
+
+export function createReportsRouter(
+  orchestrator: AuditOrchestrator,
+  auditLimiters: RequestHandler[] = [],
+  deepScan: DeepScanGate = new DeepScanGate(null),
+  writeLimiters: RequestHandler[] = [],
+  delivery?: DeepScanDelivery,
+): Router {
   const router = Router();
 
   router.post("/", ...auditLimiters, async (request, response) => {
     try {
-      const report = await orchestrator.create(request.body);
+      const { email, ...audit } = createReportBodySchema.parse(request.body);
+      await deepScan.authorize({
+        reportId: audit.requestId,
+        reportUrl: orchestrator.reportUrl(audit.requestId),
+        depth: audit.depth,
+        email,
+        source: "web",
+      });
+      const report = await orchestrator.create(audit);
+      if (audit.depth === "deep" && report.status !== "running") delivery?.settle(report.id);
       if (report.status === "running") {
         response.status(202).json({ reportId: report.id, phase: report.phase, retryUrl: `/api/reports/${report.id}` });
         return;
@@ -30,17 +56,17 @@ export function createReportsRouter(orchestrator: AuditOrchestrator, auditLimite
     response.json(report);
   });
 
-  router.post("/:reportId/recompile", async (request, response) => {
+  router.post("/:reportId/recompile", ...writeLimiters, async (request, response) => {
     try {
-      response.json(await orchestrator.recompile(request.params.reportId, request.body));
+      response.json(await orchestrator.recompile(param(request.params.reportId), request.body));
     } catch (error) {
       sendError(response, error);
     }
   });
 
-  router.post("/:reportId/refine", async (request, response) => {
+  router.post("/:reportId/refine", ...writeLimiters, async (request, response) => {
     try {
-      response.json(await orchestrator.refine(request.params.reportId, request.body));
+      response.json(await orchestrator.refine(param(request.params.reportId), request.body));
     } catch (error) {
       sendError(response, error);
     }
@@ -79,6 +105,10 @@ function param(value: string | string[] | undefined): string {
  * as a generic error so provider internals and target content never leak into a response.
  */
 export function sendError(response: Response, error: unknown) {
+  if (error instanceof ToolCallError) {
+    response.status(error.status).json({ error: error.code, message: error.message });
+    return;
+  }
   if (error instanceof ReportRequestError) {
     response.status(error.status).json({ error: error.code, message: error.message });
     return;

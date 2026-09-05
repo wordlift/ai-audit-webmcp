@@ -18,6 +18,7 @@ import {
   recompileReportRequestSchema,
   refineReportRequestSchema,
 } from "../../shared/schemas/report.js";
+import { pagesForDepth } from "../../shared/format/deepScan.js";
 import type {
   Archetype,
   CapabilityEvidence,
@@ -26,6 +27,7 @@ import type {
   LexicalEntry,
   ReportError,
   ReportRecord,
+  ScanDepth,
 } from "../../shared/types/index.js";
 import type { AuditEvidenceBundle, AuditProvider } from "../adapters/audit/AuditProvider.js";
 import { auditErrorToReportError } from "../adapters/audit/WordLiftAudit.js";
@@ -89,7 +91,7 @@ export class AuditOrchestrator {
       throw new ReportRequestError("Fixture selection is only available in demo mode.", 400);
     }
 
-    const running = this.baseRecord(request.requestId, target.toString(), this.now());
+    const running = this.baseRecord(request.requestId, target.toString(), this.now(), undefined, request.depth);
     await this.store.put(running);
 
     // Progress is visible before the audit finishes: each patch replaces the running record, so
@@ -419,7 +421,7 @@ export class AuditOrchestrator {
     override?: Archetype,
     onProgress?: ProgressListener,
   ): Promise<ReportRecord> {
-    const inputs = await this.collectLiveInputs(target, onProgress);
+    const inputs = await this.collectLiveInputs(target, onProgress, base.scanDepth);
 
     if (inputs.evidence.length === 0 && !inputs.foundation) {
       return {
@@ -435,12 +437,18 @@ export class AuditOrchestrator {
     return this.compile(base, inputs, override);
   }
 
-  private async collectLiveInputs(target: URL, onProgress?: ProgressListener): Promise<CompiledInputs> {
+  private async collectLiveInputs(
+    target: URL,
+    onProgress?: ProgressListener,
+    scanDepth?: ScanDepth,
+  ): Promise<CompiledInputs> {
     const providers = this.options.providers ?? {};
     const collectedAt = this.now().toISOString();
     const errors: ReportError[] = [];
 
-    const scrapePromise = providers.scrape ? providers.scrape.collect(target) : Promise.resolve(null);
+    const scrapePromise = providers.scrape
+      ? providers.scrape.collect(target, { maxPages: pagesForDepth(scanDepth) })
+      : Promise.resolve(null);
     const auditPromise = providers.audit ? providers.audit.audit(target) : Promise.resolve(null);
 
     // Each provider's arrival is published as soon as it lands — the page shows the entities
@@ -646,7 +654,13 @@ export class AuditOrchestrator {
     });
   }
 
-  private baseRecord(id: string, requestedUrl: string, now: Date, parentReportId?: string): ReportRecord {
+  private baseRecord(
+    id: string,
+    requestedUrl: string,
+    now: Date,
+    parentReportId?: string,
+    scanDepth?: ScanDepth,
+  ): ReportRecord {
     const expiresAt = new Date(now);
     expiresAt.setUTCDate(expiresAt.getUTCDate() + this.options.ttlDays);
     return {
@@ -659,6 +673,7 @@ export class AuditOrchestrator {
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
       actionModelVersion: this.model.manifest.version,
+      scanDepth,
       errors: [],
       evidenceTruncated: false,
     };

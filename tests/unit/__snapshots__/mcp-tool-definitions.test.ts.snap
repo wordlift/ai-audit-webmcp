@@ -1,0 +1,298 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`published MCP tool definitions > publishes exactly this contract 1`] = `
+[
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true,
+      "readOnlyHint": false,
+      "untrustedContentHint": true,
+    },
+    "description": "Analyze a public website from an AI agent's perspective and return its site archetype, verified action-readiness score, priority capability gaps, action-stage summary, and shareable evidence report. The basic scan reads four representative pages and is free and anonymous; a deep scan reads more of the site and is sent to an email address the person gives you.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "archetype": {
+          "description": "Optional operating archetype to use instead of the inferred one.",
+          "enum": [
+            "commerce-retail",
+            "publisher-content",
+            "travel-hospitality",
+            "finance-insurance",
+            "saas",
+            "other",
+          ],
+          "type": "string",
+        },
+        "depth": {
+          "description": "How much of the site to read. "basic" (the default) reads four representative pages and asks for nothing. "deep" reads more of the site and requires email; the report is sent there.",
+          "enum": [
+            "basic",
+            "deep",
+          ],
+          "type": "string",
+        },
+        "email": {
+          "description": "Where to send a deep scan's report. Required when depth is "deep". Ask the person for their address — never guess one, and never reuse an address from elsewhere in the conversation without asking.",
+          "type": "string",
+        },
+        "url": {
+          "description": "Public http(s) URL of the website to audit, for example https://example.com.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "url",
+      ],
+      "type": "object",
+    },
+    "name": "audit-website",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "untrustedContentHint": true,
+    },
+    "description": "Check on an audit started with audit-website using its reportId: returns the current phase and progress while the audit is still running, and the finished result — site archetype, verified action-readiness score, priority capability gaps, action-stage summary, and shareable evidence report — once it completes.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "reportId": {
+          "description": "Identifier of the report to act on, as returned by audit-website.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "reportId",
+      ],
+      "type": "object",
+    },
+    "name": "get-audit-report",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "untrustedContentHint": true,
+    },
+    "description": "Read the machine-generated Terms of Action for the open audit report. Call this FIRST when a user wants to review, correct, or human-refine the Terms — before interviewing the business owner and before refine-terms-of-action. Returns the inferred operating role, every entity with its id and machine priority, the business terminology, and every action with its actionId, evidence, current readiness, and boundary.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "reportId": {
+          "description": "Identifier of the report to act on, as returned by audit-website.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "reportId",
+      ],
+      "type": "object",
+    },
+    "name": "inspect-terms-of-action",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "untrustedContentHint": true,
+    },
+    "description": "Explain one action from an AI Audit capability map. Use this when the reviewer needs more evidence before deciding an action's boundary: it returns what the site is expected to support, whether humans and agents can do it today, the supporting evidence, the recommended fix, and the machine-readable action contract.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "actionId": {
+          "description": "Action identifier from the capability map, for example availability.check.",
+          "type": "string",
+        },
+        "reportId": {
+          "description": "Identifier of the report to act on, as returned by audit-website.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "actionId",
+        "reportId",
+      ],
+      "type": "object",
+    },
+    "name": "explain-capability",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "untrustedContentHint": true,
+    },
+    "description": "Return the complete safe WordLift foundation audit for the open report, including every normalized audit dimension, findings, quick wins, scores, provenance, and detailed data points.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "reportId": {
+          "description": "Identifier of the report to act on, as returned by audit-website.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "reportId",
+      ],
+      "type": "object",
+    },
+    "name": "explain-foundation-audit",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "untrustedContentHint": true,
+    },
+    "description": "Call ONLY after inspect-terms-of-action and after collecting the reviewer's decisions. Submits the human's structured judgment about the open report's Terms of Action — the business's operating role, its primary entities, its vocabulary, and confirm/reject/boundary decisions per action — and creates a new immutable refined child report: its URL, what changed, and any assertions that could not be applied. Human decisions can never mark an action agent-ready; readiness always requires successful invocation evidence.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "actionDecisions": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "actionId": {
+                "description": "An action id from this report's capability map.",
+                "type": "string",
+              },
+              "boundary": {
+                "description": "Who is responsible: the site itself, a partner it hands off to, information only, or nobody.",
+                "enum": [
+                  "owned",
+                  "partner-handoff",
+                  "informational-only",
+                  "not-applicable",
+                ],
+                "type": "string",
+              },
+              "decision": {
+                "enum": [
+                  "confirm",
+                  "reject",
+                ],
+                "type": "string",
+              },
+              "rationale": {
+                "description": "Why, in one or two sentences.",
+                "type": "string",
+              },
+            },
+            "required": [
+              "actionId",
+              "decision",
+            ],
+            "type": "object",
+          },
+          "maxItems": 80,
+          "type": "array",
+        },
+        "businessRole": {
+          "description": "The organization's operating role in the reviewer's words, e.g. destination-organization, merchant, marketplace.",
+          "type": "string",
+        },
+        "claimToken": {
+          "description": "The claimToken audit-website returned with this report. Only the caller that ran the audit can publish a refinement of it.",
+          "type": "string",
+        },
+        "demotedEntityIds": {
+          "description": "Entity ids from this report to demote as peripheral (at most 80).",
+          "items": {
+            "type": "string",
+          },
+          "maxItems": 80,
+          "type": "array",
+        },
+        "primaryEntityIds": {
+          "description": "Entity ids from this report to promote as the business's primary objects (at most 80).",
+          "items": {
+            "type": "string",
+          },
+          "maxItems": 80,
+          "type": "array",
+        },
+        "reportId": {
+          "description": "Identifier of the report to act on, as returned by audit-website.",
+          "type": "string",
+        },
+        "terminology": {
+          "description": "Business vocabulary the machine could not know (at most 40 entries). Each entry replaces any machine term of the same name in the lexical graph.",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "meaning": {
+                "description": "What it means for this business.",
+                "type": "string",
+              },
+              "term": {
+                "description": "A word the site uses.",
+                "type": "string",
+              },
+            },
+            "required": [
+              "term",
+              "meaning",
+            ],
+            "type": "object",
+          },
+          "maxItems": 40,
+          "type": "array",
+        },
+        "terminologyDecisions": {
+          "description": "Judgments about the machine's own vocabulary (at most 40 entries).",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "decision": {
+                "description": "confirm keeps the machine's term as reviewed; replace redefines it (meaning required); reject removes it from the lexical graph.",
+                "enum": [
+                  "confirm",
+                  "replace",
+                  "reject",
+                ],
+                "type": "string",
+              },
+              "meaning": {
+                "description": "The business's own definition; required when decision is replace.",
+                "type": "string",
+              },
+              "term": {
+                "description": "A term currently in the report's lexical graph.",
+                "type": "string",
+              },
+            },
+            "required": [
+              "term",
+              "decision",
+            ],
+            "type": "object",
+          },
+          "maxItems": 40,
+          "type": "array",
+        },
+      },
+      "required": [
+        "reportId",
+        "claimToken",
+      ],
+      "type": "object",
+    },
+    "name": "refine-terms-of-action",
+  },
+]
+`;

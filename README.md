@@ -49,6 +49,39 @@ The report tools register the moment `/reports/:id` loads — before the report 
 
 Tool identifiers are implementation contracts; the product concept they inspect and refine is **Terms of Action**.
 
+## The same tools, without a browser
+
+The audit also answers as a remote MCP server, so an agent that never opens the page can use it:
+
+```text
+https://beta.audit.wordlift.io/mcp     Streamable HTTP, stateless, no authentication
+```
+
+It offers the six audit tools — the Alpina sidecar stays a browser demo. Both surfaces read one set
+of tool definitions (`src/shared/tools/definitions.ts`) and compose their answers with one
+application service (`src/server/services/AuditToolService.ts`), so a remote caller and an agent
+standing on the page cannot be told different things about the same report. The difference a remote
+caller forces is stated rather than forked: with no open page to infer scope from, every
+report-scoped tool must be handed its `reportId`.
+
+`plugins/ai-audit/` packages that endpoint with the skill that knows the order the workflow depends
+on — audit, inspect, interview, confirm, refine.
+
+## What it costs
+
+Nothing. Auditing a URL, reading a report, sharing its link: no account, no payment. The basic scan
+reads four representative pages and asks for nothing at all.
+
+One exchange exists. A **deep scan** reads up to twelve pages and asks for an email address, and the
+finished report is sent there. The address is filed beside the report, never inside it — a report is
+a public document with a shareable link — and it is masked wherever it is read back. The report is
+sent through the same HubSpot form the WordLift AI Audit already uses, so one person is one contact
+whichever audit they arrived through.
+
+Refining a report is the one thing not open to everyone: a remote audit hands its caller a
+`claimToken`, and only a caller holding it can publish a refinement of that report. Reading stays
+free to anyone with the link.
+
 ## Run locally
 
 ```bash
@@ -76,12 +109,13 @@ npm run test:e2e        # Playwright; builds and serves the app itself
 | --- | --- |
 | `action-model/v0.1.0/` | Versioned data: actions, archetype journeys, category and behavior mappings |
 | `src/domain/` | Pure compilation: classification, context graph, evidence detection, state derivation, scoring, contracts |
-| `src/server/` | Express API, providers (WordLift audit, native-fetch or ScrapingBee collection, Google NLP), stores (memory, Firestore), the alpina sidecar, security (URL policy, sanitization, rate limits) |
+| `src/server/` | Express API, the MCP endpoint, providers (WordLift audit, native-fetch or ScrapingBee collection, Google NLP), stores (reports, deep-scan leads, report claims), the alpina sidecar, security (URL policy, sanitization, rate limits) |
 | `src/client/` | React app, report UI, WebMCP tools |
-| `src/shared/` | Zod schemas (the report contract) and the agent-facing summaries |
+| `src/shared/` | Zod schemas (the report contract), the tool definitions every transport publishes, and the agent-facing summaries |
+| `plugins/ai-audit/` | The public plugin: the remote MCP connection and the review skill |
 | `fixtures/` | Sanitized, dated site snapshots, one per archetype |
 | `tests/` | Unit, integration, component, golden, and e2e suites |
-| `docs/` | [Operations](docs/OPERATIONS.md), [brand](docs/BRAND.md), [submission](docs/submission/); `docs/hackathon-build/` is the historical planning record |
+| `docs/` | [Operations](docs/OPERATIONS.md), [brand](docs/BRAND.md), [WebMCP Challenge submission](docs/submission/), [the MCP endpoint and plugin](docs/mcp-plugin/); `docs/hackathon-build/` is the historical planning record |
 
 Developer conventions are in [CONTRIBUTING.md](CONTRIBUTING.md); the working agreement for agent-assisted development is in [AGENTS.md](AGENTS.md).
 

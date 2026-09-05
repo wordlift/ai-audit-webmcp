@@ -18,12 +18,14 @@
     "test": "vitest",
     "test:e2e": "playwright test",
     "test:webmcp": "vitest run tests/component/webmcp-tools.test.tsx tests/component/alpina-webmcp-tool.test.tsx",
+    "test:mcp": "vitest run tests/unit/tool-contracts.test.ts tests/unit/mcp-tool-definitions.test.ts tests/unit/plugin-package.test.ts tests/integration/audit-tool-service.test.ts tests/integration/deep-scan.test.ts tests/integration/lead-delivery.test.ts tests/integration/report-claims.test.ts tests/integration/mcp-safety.test.ts tests/integration/mcp-server.test.ts",
     "smoke:live": "tsx scripts/smoke-live.ts",
     "verify": "npm run typecheck && npm test -- --run && npm run build"
   },
   "dependencies": {
     "@google-cloud/firestore": "^9.0.0",
     "@google-cloud/language": "^7.2.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@mozilla/readability": "^0.6.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "express": "^4.21.2",

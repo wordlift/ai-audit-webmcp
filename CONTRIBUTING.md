@@ -125,27 +125,44 @@ A sidecar makes one human-only capability callable by an agent. The Alpina avail
 Tests to mirror: `tests/unit/alpina-schemas.test.ts`,
 `tests/integration/alpina-sidecar.test.ts`, `tests/component/alpina-webmcp-tool.test.tsx`.
 
-## Add a WebMCP tool
+## Add a tool
 
-Register through the `useWebMCP` hook, keep the schema static, and unregister on unmount by letting
-the hook abort its signal. Test against the bundled stub:
+A tool is defined once, in `src/shared/tools/definitions.ts`, and published by every surface that
+offers it. Keep the schema static: site-authored text must never reach a name, description, or
+input schema. State all three review annotations — `readOnlyHint`, `destructiveHint`,
+`openWorldHint` — truthfully about the tool's *effect*, not its answer, and keep
+`untrustedContentHint` on anything carrying website evidence.
 
-```ts
-import { installModelContextStub, toolText } from "../../src/client/webmcp/testing/modelContextStub";
-```
+Then wire the surfaces that should offer it:
+
+- **In the browser**, register through the `useWebMCP` hook and let it abort its signal on unmount.
+  Test against the bundled stub:
+
+  ```ts
+  import { installModelContextStub, toolText } from "../../src/client/webmcp/testing/modelContextStub";
+  ```
+
+- **Remotely**, add a method to `AuditToolService` and an entry to `REMOTE_TOOLS`
+  (`src/server/mcp/tools.ts`). The service is where the answer is composed, so both surfaces return
+  the same object; a transport-specific difference belongs in `src/shared/tools/transports.ts` as a
+  variant of the shared definition, never as a second definition.
+
+The published contract is snapshotted (`tests/unit/mcp-tool-definitions.test.ts`): a deliberate
+change updates the snapshot in the same commit, and an accidental one fails the build.
 
 ## Tests
 
 | Suite | Covers |
 |---|---|
-| `tests/unit` | Model compilation, context graph, state derivation, scoring, contracts, URL policy, sanitization, collectors and probes (native fetch, ScrapingBee fallback, MCP probe, SearchAction), sidecar schemas and entity grounding |
-| `tests/integration` | Report API, providers, stores (including running-record updates), error paths, rate limits, live orchestration and progress, the WordLift audit mapping, sidecar |
+| `tests/unit` | Model compilation, context graph, state derivation, scoring, contracts, URL policy, sanitization, collectors and probes (native fetch, ScrapingBee fallback, MCP probe, SearchAction), sidecar schemas and entity grounding, the published tool contract and the plugin package |
+| `tests/integration` | Report API, providers, stores (including running-record updates), error paths, rate limits, live orchestration and progress, the WordLift audit mapping, sidecar, the tool service and its parity with REST, the remote MCP endpoint driven by a real client, deep-scan access, report claims |
 | `tests/component` | Executive summary, context map, capability map, foundation panel, report progress, dialog focus, WebMCP tool lifecycle |
 | `tests/golden` | Compiled journeys for all six archetypes |
 | `tests/e2e` | Landing, every archetype fixture to a report, the alpina sidecar flow, visual proof at desktop and mobile widths |
 
-Run `npm run test:e2e` locally before shipping anything user-visible; it builds and serves the app
-itself. Component tests that render the home page stub `fetch` — the page probes `/api/health`
+`npm run test:mcp` runs the focused set for the tool contract and the remote endpoint; `npm run
+verify` runs everything, so it is not run twice there. Run `npm run test:e2e` locally before
+shipping anything user-visible; it builds and serves the app itself. Component tests that render the home page stub `fetch` — the page probes `/api/health`
 once to learn whether it is in demo or live mode.
 
 ## Pull requests

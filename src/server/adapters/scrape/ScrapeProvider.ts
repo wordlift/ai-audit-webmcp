@@ -142,7 +142,7 @@ export interface SiteSnapshot {
   canonicalUrl: string;
   title: string;
   description: string;
-  /** Up to four representative pages, selected by role rather than link order. */
+  /** The representative pages, selected by role rather than link order. */
   pages: SitePageSnapshot[];
   /** Readable text for classification only; never stored in a report. */
   text: string;
@@ -169,7 +169,12 @@ export interface SiteSnapshot {
   truncated: boolean;
 }
 
+/** How much of a site to read. Basic is what every visitor gets; deep is what an email buys. */
+export interface CollectOptions {
+  maxPages?: number;
+}
+
 export interface ScrapeProvider {
   readonly name: string;
-  collect(url: URL): Promise<SiteSnapshot>;
+  collect(url: URL, options?: CollectOptions): Promise<SiteSnapshot>;
 }

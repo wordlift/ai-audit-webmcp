@@ -1,0 +1,9 @@
+{
+  "mcp_servers": {
+    "wordlift-ai-audit": {
+      "type": "http",
+      "url": "https://beta.audit.wordlift.io/mcp",
+      "description": "WordLift AI Audit: audit a public website, read its report, and refine its Terms of Action."
+    }
+  }
+}

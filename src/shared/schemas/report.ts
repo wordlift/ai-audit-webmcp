@@ -405,6 +405,13 @@ export const reportErrorSchema = z
   })
   .strict();
 
+/**
+ * How much of the site the audit read. `basic` is the free anonymous scan every visitor gets;
+ * `deep` is the wider read an email address buys. The address itself is never part of a report —
+ * a report is a public document with a shareable link.
+ */
+export const scanDepthSchema = z.enum(["basic", "deep"]);
+
 export const reportRecordSchema = z
   .object({
     id: z.string().uuid(),
@@ -418,6 +425,7 @@ export const reportRecordSchema = z
     completedAt: z.string().datetime().optional(),
     expiresAt: z.string().datetime(),
     actionModelVersion: z.string().min(1).max(40),
+    scanDepth: scanDepthSchema.optional(),
     classification: classificationResultSchema.optional(),
     foundationAudit: foundationAuditSummarySchema.optional(),
     /** The publishing platform the site's own structured data names — detected, never guessed. */
@@ -460,6 +468,7 @@ export const createReportRequestSchema = z
     url: z.string().min(1).max(2_048),
     archetypeOverride: archetypeSchema.nullable().optional(),
     fixtureId: z.string().min(1).max(120).nullable().optional(),
+    depth: scanDepthSchema.optional(),
   })
   .strict();
 

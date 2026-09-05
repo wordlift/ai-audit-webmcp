@@ -1,7 +1,9 @@
 import { parseHTML } from "linkedom";
+import { BASIC_SCAN_PAGES, DEEP_SCAN_PAGES } from "../../../shared/format/deepScan.js";
 import { safeFetch, UrlPolicyError, type UrlPolicyOptions } from "../../security/urlPolicy.js";
 import { probeMcpEndpoint } from "./mcpProbe.js";
 import type {
+  CollectOptions,
   DiscoveryDocument,
   ExtractedEntity,
   McpEndpointProbe,
@@ -18,7 +20,8 @@ import { collectDeclarativeTools, dedupePageTools, extractImperativeTools } from
 const MAX_LINKS = 150;
 const MAX_FORMS = 20;
 const MAX_TEXT = 20_000;
-const MAX_PAGES = 4;
+/** A site is sampled, never crawled: whatever depth a caller asks for, this is the ceiling. */
+const MAX_PAGES_CEILING = DEEP_SCAN_PAGES;
 const MAX_SCRIPTS = 6;
 const MAX_SCRIPT_BYTES = 400_000;
 const MAX_MCP_ENDPOINTS = 3;
@@ -103,7 +106,8 @@ export class NativeFetchCollector implements ScrapeProvider {
     this.name = name;
   }
 
-  async collect(url: URL): Promise<SiteSnapshot> {
+  async collect(url: URL, options?: CollectOptions): Promise<SiteSnapshot> {
+    const maxPages = Math.min(Math.max(options?.maxPages ?? BASIC_SCAN_PAGES, 1), MAX_PAGES_CEILING);
     const page = await this.fetchPublicPage(url);
     // A refusal or a bot challenge is reported as such, never audited as if it were the site;
     // neither is an outage page.
@@ -131,7 +135,7 @@ export class NativeFetchCollector implements ScrapeProvider {
         403,
       );
     }
-    const pageCandidates = selectRepresentativePages(links, finalUrl);
+    const pageCandidates = selectRepresentativePages(links, finalUrl, maxPages);
     const collectedPages = await Promise.allSettled(
       pageCandidates.map((candidate) => this.fetchSecondaryPage(candidate.url, candidate.role)),
     );
@@ -140,17 +144,17 @@ export class NativeFetchCollector implements ScrapeProvider {
       ...collectedPages
         .map((result) => (result.status === "fulfilled" ? result.value : null))
         .filter((item): item is SitePageSnapshot => item !== null),
-    ].slice(0, MAX_PAGES);
+    ].slice(0, maxPages);
 
     // Second hop: a listing page proves a catalog exists, but only an item page carries the
     // Product and Offer data the map is for. When no sampled page yielded one, the audit follows
     // one item-looking link from a listing it already fetched, and the item joins the shown pages.
     const hop = await this.followCatalogHop(pages);
     if (hop) {
-      pages.splice(Math.min(pages.length, MAX_PAGES - 1), 0, hop);
-      // The report displays at most four pages, and every claim counts reach against the pages
-      // shown — so the sampled set is capped to the same four the reader sees.
-      pages.length = Math.min(pages.length, MAX_PAGES);
+      pages.splice(Math.min(pages.length, maxPages - 1), 0, hop);
+      // Every claim counts reach against the pages the report shows, so the sampled set is capped
+      // to exactly the pages the reader will see.
+      pages.length = Math.min(pages.length, maxPages);
     }
     // The server card names its own transports, so it has to be read before anything is probed.
     // A search term taken from the page, so a tool call never needs invented vocabulary.
@@ -503,7 +507,7 @@ export interface PageCandidate {
  * Selects complementary evidence surfaces. One product/detail page, one commercial/action page,
  * and one policy/contact page tell us much more than the first three navigation links.
  */
-export function selectRepresentativePages(links: Element[], base: URL): PageCandidate[] {
+export function selectRepresentativePages(links: Element[], base: URL, maxPages = BASIC_SCAN_PAGES): PageCandidate[] {
   // A cart, a checkout, or several catalog sections in the navigation say the site sells things.
   // On such a site the catalog is the business and editorial content is marketing around it.
   const paths = links.map((link) => resolve(link.getAttribute("href"), base) ?? "").map((href) => href.toLowerCase());
@@ -552,7 +556,7 @@ export function selectRepresentativePages(links: Element[], base: URL): PageCand
     selected.push(candidate);
     seenUrls.add(key);
     seenRoles.add(candidate.role);
-    if (selected.length === MAX_PAGES - 1) break;
+    if (selected.length === maxPages - 1) break;
   }
   return selected;
 }

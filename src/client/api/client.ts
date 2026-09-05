@@ -1,5 +1,5 @@
 import { reportRecordSchema, runningReportResponseSchema } from "../../shared/schemas/report.js";
-import type { Archetype, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
+import type { Archetype, HumanAssertion, ReportRecord, ScanDepth } from "../../shared/types/index.js";
 
 const POLL_INTERVAL_MS = 1_500;
 const POLL_TIMEOUT_MS = 180_000;
@@ -29,6 +29,9 @@ async function requestJson(input: string, init?: RequestInit): Promise<{ status:
 export interface CreateReportOptions {
   archetype?: Archetype;
   fixtureId?: string;
+  /** "deep" reads more of the site and requires an address the report is sent to. */
+  depth?: ScanDepth;
+  email?: string;
   requestId?: string;
   signal?: AbortSignal;
   /** Overridable so tests do not wait on real timers. */
@@ -53,6 +56,8 @@ export async function createReport(url: string, options: CreateReportOptions = {
       url,
       archetypeOverride: options.archetype ?? null,
       fixtureId: options.fixtureId ?? null,
+      ...(options.depth ? { depth: options.depth } : {}),
+      ...(options.email ? { email: options.email } : {}),
     }),
     signal: options.signal,
   });
