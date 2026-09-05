@@ -32,6 +32,8 @@ export interface CreateReportOptions {
   /** "deep" reads more of the site and requires an address the report is sent to. */
   depth?: ScanDepth;
   email?: string;
+  /** Which surface asked, so the page's form and an agent driving the page stay distinguishable. */
+  surface?: "web" | "webmcp";
   requestId?: string;
   signal?: AbortSignal;
   /** Overridable so tests do not wait on real timers. */
@@ -41,14 +43,9 @@ export interface CreateReportOptions {
 
 const defaultWait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
-/**
- * Creates a report and resolves only once a terminal revision exists. A 202 means the same
- * requestId is still running, so the caller recovers the stored state by polling rather than
- * reporting "audit started" as a result.
- */
-export async function createReport(url: string, options: CreateReportOptions = {}): Promise<ReportRecord> {
-  const requestId = options.requestId ?? crypto.randomUUID();
-  const { status, body } = await requestJson("/api/reports", {
+/** The POST alone. A refusal — a rate limit, a rejected address, an unsafe URL — surfaces here. */
+async function postReport(url: string, requestId: string, options: CreateReportOptions) {
+  return requestJson("/api/reports", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -58,22 +55,43 @@ export async function createReport(url: string, options: CreateReportOptions = {
       fixtureId: options.fixtureId ?? null,
       ...(options.depth ? { depth: options.depth } : {}),
       ...(options.email ? { email: options.email } : {}),
+      ...(options.surface ? { surface: options.surface } : {}),
     }),
     signal: options.signal,
   });
+}
 
-  if (status === 202) {
-    const running = runningReportResponseSchema.parse(body);
+async function terminalFrom(
+  accepted: { status: number; body: unknown },
+  options: CreateReportOptions,
+): Promise<ReportRecord> {
+  if (accepted.status === 202) {
+    const running = runningReportResponseSchema.parse(accepted.body);
     return waitForTerminalReport(running.reportId, options);
   }
-
-  const report = reportRecordSchema.parse(body);
+  const report = reportRecordSchema.parse(accepted.body);
   return report.status === "running" ? waitForTerminalReport(report.id, options) : report;
+}
+
+/**
+ * Creates a report and resolves only once a terminal revision exists. A 202 means the same
+ * requestId is still running, so the caller recovers the stored state by polling rather than
+ * reporting "audit started" as a result.
+ */
+export async function createReport(url: string, options: CreateReportOptions = {}): Promise<ReportRecord> {
+  const requestId = options.requestId ?? crypto.randomUUID();
+  return terminalFrom(await postReport(url, requestId, options), options);
 }
 
 export interface StartedReport {
   /** The report id is the caller's requestId, so the page exists as soon as the record does. */
   reportId: string;
+  /**
+   * Resolves when the service has accepted the audit, and rejects with its refusal. A caller that
+   * only watches `ready` cannot tell "started" from "refused" until a minute later, which is how a
+   * rate limit or a rejected address ends up announced as success.
+   */
+  accepted: Promise<void>;
   ready: Promise<ReportRecord>;
 }
 
@@ -83,7 +101,15 @@ export interface StartedReport {
  */
 export function startReport(url: string, options: CreateReportOptions = {}): StartedReport {
   const requestId = options.requestId ?? crypto.randomUUID();
-  return { reportId: requestId, ready: createReport(url, { ...options, requestId }) };
+  const posted = postReport(url, requestId, options);
+  const accepted = posted.then(() => undefined);
+  const ready = posted.then((response) => terminalFrom(response, options));
+  // Two promises come off one request, and most callers want only one of them. Marking both as
+  // observed keeps the one nobody awaited from surfacing as an unhandled rejection; each still
+  // rejects for whoever does await it.
+  accepted.catch(() => undefined);
+  ready.catch(() => undefined);
+  return { reportId: requestId, accepted, ready };
 }
 
 export async function waitForTerminalReport(reportId: string, options: CreateReportOptions = {}): Promise<ReportRecord> {

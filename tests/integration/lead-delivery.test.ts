@@ -203,6 +203,50 @@ describe("the HubSpot form", () => {
     }
   });
 
+  it("names the surface a lead came from, in the context and in a field when the form has one", async () => {
+    const captured: Array<{ pageName: string; fields: Array<{ name: string; value: string }> }> = [];
+    const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      captured.push({ pageName: body.context.pageName, fields: body.fields });
+      return new Response("{}", { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const hubspot = new HubSpotLeadDelivery({
+      portalId: "p",
+      formGuid: "f",
+      sourceField: "audit_source",
+      fetchImpl,
+    });
+    for (const source of ["web", "webmcp", "mcp"] as const) {
+      await hubspot.deliver({ ...lead, source }, report);
+    }
+
+    expect(captured.map((entry) => entry.pageName)).toEqual([
+      "WordLift AI Audit — deep scan (web form)",
+      "WordLift AI Audit — deep scan (in-page agent)",
+      "WordLift AI Audit — deep scan (MCP server)",
+    ]);
+    expect(captured.map((entry) => entry.fields.at(-1)?.value)).toEqual([
+      "ai-audit-webmcp:web-form",
+      "ai-audit-webmcp:in-page-agent",
+      "ai-audit-webmcp:mcp-server",
+    ]);
+  });
+
+  it("omits the source field until the portal has one, because a missing field fails the whole submission", async () => {
+    let body: { fields: Array<{ name: string }> } = { fields: [] };
+    const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+      body = JSON.parse(String(init?.body));
+      return new Response("{}", { status: 200 });
+    }) as unknown as typeof fetch;
+
+    await new HubSpotLeadDelivery({ portalId: "p", formGuid: "f", fetchImpl }).deliver(lead, report);
+
+    expect(body.fields.map((field) => field.name)).toEqual(["email", "audited_url", "audit_score", "audit_summary"]);
+    // The surface is still recoverable from the submission context.
+    expect(JSON.stringify(body)).toContain("MCP server");
+  });
+
   it("reports a refusal by its type, never by quoting the submission back", async () => {
     const fetchImpl = (async () =>
       new Response(JSON.stringify({ errors: [{ errorType: "INVALID_EMAIL", message: `${ADDRESS} is invalid` }] }), {

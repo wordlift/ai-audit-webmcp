@@ -77,3 +77,25 @@ test("a human refinement turns the machine draft into refined Terms of Action", 
   });
   expect(missing.status()).toBe(404);
 });
+
+/**
+ * The one thing the audit asks a visitor for, on the surface most visitors use.
+ */
+test("the report offers the deeper read in exchange for an address", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Website URL").fill("https://alpina.travel");
+  await page.getByRole("button", { name: /audit and refine my site/i }).click();
+  await expect(page).toHaveURL(/\/reports\//);
+
+  const offer = page.getByRole("region", { name: /read 4 representative pages/i });
+  await expect(offer).toBeVisible();
+  await expect(offer.getByText(/up to 12 of them/i)).toBeVisible();
+
+  await offer.getByLabel(/email address/i).fill("reviewer@example.com");
+  await offer.getByRole("button", { name: /send me the deep scan/i }).click();
+
+  // The address is shown back masked, and never written into a page anyone with the link can open.
+  await expect(page.getByText("re******@example.com")).toBeVisible();
+  await expect(page.getByText("reviewer@example.com")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /follow it live/i })).toBeVisible();
+});

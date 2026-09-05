@@ -33,6 +33,7 @@ inputs differ.
 | `OPENAI_APPS_CHALLENGE` | — | Domain-verification token served at `/.well-known/openai-apps-challenge`. Unset means the path 404s |
 | `HUBSPOT_PORTAL_ID` | — | HubSpot portal for deep-scan report delivery. Set together with the form GUID |
 | `HUBSPOT_FORM_GUID` | — | The AI Audit lead form a deep scan's report is delivered through |
+| `HUBSPOT_SOURCE_FIELD` | — | A form property recording which surface a lead came from. Create it on the form before setting this |
 
 Live mode fails fast at startup if a required credential is missing.
 
@@ -99,6 +100,28 @@ Four fields are submitted — `email`, `audited_url`, `audit_score`, `audit_summ
 first, then the readable summary). The form's other fields belong to the audit's own sign-up modal,
 which collects a name, a company and a role; this surface asks for an address and nothing else, so
 it sends an address and nothing else.
+
+### Telling the three sources apart
+
+Four ways into the same HubSpot form, and each is identifiable without inference:
+
+| Where the lead came from | How you know | `source` in the lead store |
+|---|---|---|
+| The older AI Audit's sign-up modal | Carries `firstname`, `lastname`, `company`, `jobtitle`, `country`; its page context is a page on `audit.wordlift.io` | not recorded here — a different service |
+| This app's deep-scan form on a report | Context `WordLift AI Audit — deep scan (web form)` | `web` |
+| An agent driving the report page (WebMCP) | Context `WordLift AI Audit — deep scan (in-page agent)` | `webmcp` |
+| The remote MCP server | Context `WordLift AI Audit — deep scan (MCP server)` | `mcp` |
+
+The context name always travels. Set `HUBSPOT_SOURCE_FIELD` to a form property — `audit_source`, say
+— and the same distinction arrives as a field with a stable value (`ai-audit-webmcp:web-form`,
+`ai-audit-webmcp:in-page-agent`, `ai-audit-webmcp:mcp-server`), which is what makes it reportable.
+**Create the property on the form first**: HubSpot rejects an entire submission that names a field
+the form does not have, so an unset variable is the safe default.
+
+The browser surfaces both reach the same API, so the page's form and an agent driving that page are
+told apart by a `surface` field on the request. A caller could of course claim either; this is
+attribution, not authorization. `mcp` is not accepted there — the MCP transport makes its own claim
+on its own endpoint.
 
 Delivery never blocks an audit and never fails one. A refused or unreachable submission leaves the
 lead pending, is retried immediately once, and is retried again by the next completed deep scan. With
