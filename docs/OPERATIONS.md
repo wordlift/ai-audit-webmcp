@@ -148,15 +148,26 @@ environment, so the two settings that must survive every redeploy are passed eve
 ```bash
 git checkout main && git pull --ff-only
 SCRAPE_PROVIDER=scrapingbee PUBLIC_APP_URL=https://beta.audit.wordlift.io \
+  HUBSPOT_PORTAL_ID=... HUBSPOT_FORM_GUID=... OPENAI_APPS_CHALLENGE=... \
   scripts/deploy-cloud-run.sh "$PROJECT" us-west1
 ```
+
+Everything on that command line is dropped by the next deploy that forgets it:
 
 - `PUBLIC_APP_URL` is the custom domain. Share links are baked into stored reports, so a deploy
   that forgets it breaks every existing link. `scripts/finish-domain-switch.sh` is only for the
   first-time domain mapping.
 - `SCRAPE_PROVIDER=scrapingbee` mounts the shared secret and enables rendered collection; omitting
   it silently puts production back on native fetch.
+- `HUBSPOT_PORTAL_ID` and `HUBSPOT_FORM_GUID` are the AI Audit's own lead form. Without them deep
+  scans still run and still record what they owe, and nothing is sent.
+- `OPENAI_APPS_CHALLENGE` is the app directory's domain-verification token. The submission portal
+  issues it during submission, so the first deploy of a new endpoint has nothing to pass: deploy,
+  submit, then redeploy with the token the portal shows.
 - The script stamps `BUILD_SHA` from the checked-out commit and prints the expected release.
+
+`GET /api/health` reports which of these took effect under `surfaces`, so a redeploy that dropped
+one is visible without reading the service configuration.
 
 The service runs one container with the SPA and the API. The request timeout is 300 seconds because
 a live audit takes 30–60 seconds and is handled synchronously; a client that disconnects recovers
@@ -166,7 +177,8 @@ the stored report by ID, and a retried `POST` with the same `requestId` is idemp
 
 ```bash
 curl -s https://beta.audit.wordlift.io/api/health
-# {"status":"ok","service":"ai-audit-webmcp","revision":"ai-audit-webmcp-000NN-xxxx","release":"<short sha>","mode":"live"}
+# {"status":"ok",...,"release":"<short sha>","mode":"live",
+#  "surfaces":{"mcp":"/mcp","deepScans":true,"reportDelivery":"hubspot","claimedRefinement":true}}
 ```
 
 `release` must equal the short SHA the deploy script printed and `mode` must be `live`. Then run one
