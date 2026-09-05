@@ -69,13 +69,17 @@ export function createApp(options: AppOptions = {}): Express {
   });
   app.use(express.json({ limit: "256kb" }));
 
-  // Proof to the app directory that this domain is ours to publish from. Static, public, and
-  // served before anything that could mistake it for a page.
-  if (options.appsChallenge) {
-    app.get("/.well-known/openai-apps-challenge", (_request, response) => {
-      response.type("text/plain").send(options.appsChallenge);
-    });
-  }
+  // Proof to the app directory that this domain is ours to publish from: this path answers with
+  // the token and nothing else. It is registered whether or not a token is configured, because the
+  // SPA fallback answers everything it does not — and a verifier handed an HTML page reads that as
+  // a wrong token rather than as an unconfigured one.
+  app.get("/.well-known/openai-apps-challenge", (_request, response) => {
+    if (!options.appsChallenge) {
+      response.status(404).type("text/plain").send("No app directory verification token is configured.");
+      return;
+    }
+    response.type("text/plain").send(options.appsChallenge);
+  });
 
   app.get("/api/health", (_request, response) => {
     response.status(200).json({
