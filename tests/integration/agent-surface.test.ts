@@ -39,6 +39,10 @@ const SHELL = `<!doctype html>
 
 const staticDirectory = mkdtempSync(path.join(os.tmpdir(), "ai-audit-shell-"));
 writeFileSync(path.join(staticDirectory, "index.html"), SHELL);
+writeFileSync(
+  path.join(staticDirectory, "privacy.html"),
+  "<!doctype html><html><head><title>Privacy Policy</title></head><body><h1>Privacy Policy</h1></body></html>",
+);
 
 function testApp() {
   const store = new MemoryReportStore(900_000, () => fixedNow);
@@ -153,5 +157,22 @@ describe("report prerender", () => {
     const response = await request(testApp()).get("/reports/missing-report").expect(200);
     expect(response.text).not.toContain("<noscript>");
     expect(response.text).toContain(SHELL_TITLE);
+  });
+});
+
+describe("privacy policy", () => {
+  it("serves the policy as plain HTML ahead of the SPA fallback", async () => {
+    const response = await request(testApp()).get("/privacy").expect(200);
+    expect(response.headers["content-type"]).toMatch(/text\/html/);
+    expect(response.text).toContain("Privacy Policy");
+    expect(response.text).not.toContain(SHELL_TITLE);
+  });
+
+  it("is announced where agents look before they look at the page", async () => {
+    const app = testApp();
+    const llms = await request(app).get("/llms.txt").expect(200);
+    expect(llms.text).toContain("/privacy");
+    const manifest = await request(app).get("/.well-known/webmcp/tools.json").expect(200);
+    expect(manifest.body.privacyPolicy).toMatch(/\/privacy$/);
   });
 });

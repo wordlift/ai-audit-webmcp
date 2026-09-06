@@ -96,7 +96,7 @@ export function DeepScanOffer({ report }: { report: ReportRecord }) {
       {error && <p className="deep-scan-error" role="alert">{error}</p>}
       <small>
         Your address is used to send this report and is never written into it. The report itself stays
-        public at its own link.
+        public at its own link. <a href="/privacy">How your data is handled</a>.
       </small>
     </section>
   );

@@ -21,7 +21,7 @@
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
     "websiteURL": "https://wordlift.io",
-    "privacyPolicyURL": "https://wordlift.io/privacy-policy/",
+    "privacyPolicyURL": "https://beta.audit.wordlift.io/privacy",
     "termsOfServiceURL": "https://wordlift.io/terms-of-service/",
     "defaultPrompt": [
       "Audit wordlift.io and tell me what an AI agent can actually do there.",
