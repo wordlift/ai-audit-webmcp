@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy — WordLift AI Audit</title>
+    <meta
+      name="description"
+      content="What WordLift AI Audit collects, why, who sees it, and how long it is kept — on the website, the API, and the MCP server used through AI assistants."
+    />
+    <link rel="canonical" href="https://beta.audit.wordlift.io/privacy" />
+    <link rel="icon" type="image/svg+xml" href="/brand/icon-sky.svg" />
+    <style>
+      @font-face {
+        font-family: "Bricolage Grotesque";
+        font-style: normal;
+        font-weight: 600;
+        font-display: swap;
+        src: url("/fonts/bricolage-grotesque-latin-600.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Open Sauce Sans";
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        src: url("/fonts/open-sauce-sans-400.ttf") format("truetype");
+      }
+      @font-face {
+        font-family: "Open Sauce Sans";
+        font-style: normal;
+        font-weight: 600;
+        font-display: swap;
+        src: url("/fonts/open-sauce-sans-600.ttf") format("truetype");
+      }
+      :root {
+        --ink: #191919;
+        --muted: #4a4a4a;
+        --surface: #ffffff;
+        --page: #f6f6f7;
+        --line: rgba(25, 25, 25, 0.16);
+        --line-subtle: rgba(25, 25, 25, 0.08);
+        --brand: #3452db;
+        --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+        --font-body: "Open Sauce Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        color-scheme: light;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-width: 320px;
+        font: 16px/1.6 var(--font-body);
+        color: var(--ink);
+        background: var(--page);
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+      }
+      a { color: var(--brand); }
+      a:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+      header.site-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 24px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--line-subtle);
+      }
+      header.site-header a { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+      header.site-header .product-name { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; }
+      main { max-width: 760px; margin: 0 auto; padding: 40px 24px 64px; }
+      h1, h2 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+      h1 { font-size: 2rem; margin: 0 0 8px; }
+      h2 { font-size: 1.3rem; margin: 40px 0 12px; }
+      h3 { font-size: 1.05rem; margin: 24px 0 8px; }
+      p, li { color: var(--ink); }
+      .meta { color: var(--muted); margin: 0 0 24px; }
+      .summary {
+        background: var(--surface);
+        border: 1px solid var(--line-subtle);
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin: 24px 0 8px;
+      }
+      .summary ul { margin: 8px 0 0; padding-left: 20px; }
+      .summary li + li { margin-top: 6px; }
+      table { width: 100%; border-collapse: collapse; margin: 12px 0 16px; font-size: 0.95rem; }
+      th, td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line-subtle); }
+      th { font-weight: 600; color: var(--muted); font-size: 0.85rem; }
+      .table-scroll { overflow-x: auto; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+      footer.site-footer {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 24px;
+        border-top: 1px solid var(--line-subtle);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      footer.site-footer a + a { margin-left: 16px; }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <a href="/" aria-label="WordLift AI Audit home">
+        <img src="/brand/wordmark-sky.svg" alt="WordLift" width="116" height="24" />
+        <span class="product-name">AI Audit</span>
+      </a>
+    </header>
+
+    <main>
+      <h1>Privacy Policy</h1>
+      <p class="meta">WordLift AI Audit · Effective 6 September 2026 · Version 1.0</p>
+
+      <p>
+        This policy explains what WordLift AI Audit collects, why, who sees it, and how long it is kept.
+        It supplements the <a href="https://wordlift.io/privacy-policy/">WordLift privacy policy</a>, which
+        covers wordlift.io and WordLift's other products. Where the two differ for this service, this page
+        applies.
+      </p>
+
+      <section class="summary" aria-label="In short">
+        <strong>In short</strong>
+        <ul>
+          <li>The service needs no account. It sets no cookies and runs no analytics or third-party scripts.</li>
+          <li>A basic audit collects one thing from you: the address of the website to audit.</li>
+          <li>A deep scan also asks for an email address, so the finished report can be sent to you.</li>
+          <li>Reports are public documents: anyone with the link can read them. They are deleted automatically 30 days after they are created.</li>
+          <li>We never sell personal data, and we show no advertising.</li>
+        </ul>
+      </section>
+
+      <h2 id="controller">1. Who is responsible</h2>
+      <p>
+        WordLift S.r.l., Via Giulia 117, 00186 Rome, Italy (VAT IT-14111521002) is the data controller.
+        Privacy questions and requests: <a href="mailto:privacy@wordlift.io">privacy@wordlift.io</a>.
+      </p>
+
+      <h2 id="scope">2. What this policy covers</h2>
+      <p>WordLift AI Audit at beta.audit.wordlift.io, however you reach it:</p>
+      <ul>
+        <li>the website and its report pages;</li>
+        <li>the HTTP API under <code>/api</code>;</li>
+        <li>the WebMCP tools registered on the page, which an AI agent in your browser can call;</li>
+        <li>the remote MCP server at <code>/mcp</code>, used through ChatGPT, Claude and other assistants that support the Model Context Protocol;</li>
+        <li>the Alpina demo, which shows a live availability lookup on alpina.travel.</li>
+      </ul>
+      <p>Other WordLift services (wordlift.io, my.wordlift.io, audit.wordlift.io) have their own policies.</p>
+
+      <h2 id="collect">3. What we collect</h2>
+
+      <h3>3.1 What you give us</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Data</th><th>When</th><th>What happens to it</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>The address (URL) of the website to audit, and optionally its business archetype and the scan depth</td>
+              <td>Every audit</td>
+              <td>Becomes the subject of the report and is stored with it.</td>
+            </tr>
+            <tr>
+              <td>An email address</td>
+              <td>Deep scans only</td>
+              <td>Stored apart from the report, keyed by the report id, and never written into the report. Used to send you the report (section 5).</td>
+            </tr>
+            <tr>
+              <td>Your answers when refining a report: operating role, entities, terminology, action boundaries</td>
+              <td>When you refine a report</td>
+              <td>Become part of a new, public report. Do not include personal data you would not publish.</td>
+            </tr>
+            <tr>
+              <td>A claim token</td>
+              <td>Issued by the remote MCP server when it starts an audit</td>
+              <td>Proves that whoever refines a report is the caller who ran it. We store only a hash of it.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>3.2 Information about the website you audit</h3>
+      <p>
+        An audit reads public pages of the site you name: four representative pages for a basic scan, up to
+        twelve for a deep scan, together with the site's structured data and the discovery documents it
+        publishes (for example under <code>/.well-known/</code>). Where the site declares a search or agent
+        interface, the audit may invoke it to verify that it works. Pages are fetched the way a browser
+        would, without cookies or credentials, and the audit identifies itself with a fixed user agent.
+      </p>
+      <p>
+        What we keep is evidence, not pages: a normalized description of what the site offers, with at most
+        100 evidence items of at most 500 characters each. Raw HTML is discarded as soon as the evidence is
+        extracted and is never stored.
+      </p>
+      <p>
+        That evidence can incidentally include personal data the site itself publishes, such as the names or
+        contact details on a team or contact page. We treat it as the public information it is, keep it only
+        within the report, and delete it with the report. If you run a site and want a report about it removed,
+        see section 9.
+      </p>
+
+      <h3>3.3 Technical data</h3>
+      <ul>
+        <li>Your IP address, used to limit how many audits one address can start in a ten-minute window. Counters live in memory and are not written anywhere.</li>
+        <li>Server logs: the request path, status, timing, the client's IP address and user agent, and error names. Logs contain neither the email address a deep scan was sent to nor the content of audited pages. Logs are kept for 30 days.</li>
+      </ul>
+
+      <h3>3.4 When you use the service through an AI assistant</h3>
+      <p>
+        If you reach the audit through ChatGPT, Claude, or another MCP client, that provider handles your
+        conversation under its own privacy policy. We receive only the inputs of the tool being called: the
+        URL, the depth, the email address if you gave one, a report id, a claim token, or the refinement you
+        confirmed. Requests from hosted assistants arrive from the provider's servers, so the IP address we see
+        is the provider's, not yours. We record which surface a deep scan came from (web form, in-page agent,
+        or MCP server) so we can tell the sources apart; we do not identify you.
+      </p>
+
+      <h2 id="purposes">4. Why we use it, and on what legal basis</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Purpose</th><th>Legal basis (GDPR article 6)</th></tr></thead>
+          <tbody>
+            <tr><td>Running the audit you asked for and publishing the report at its link</td><td>Performance of a contract, or steps taken at your request (art. 6(1)(b))</td></tr>
+            <tr><td>Sending a deep-scan report to the address you gave, and following up about it</td><td>Your consent (art. 6(1)(a)), which you can withdraw at any time</td></tr>
+            <tr><td>Keeping the service available and abuse-free: rate limits, refusing unsafe destinations, logs</td><td>Our legitimate interest in security (art. 6(1)(f))</td></tr>
+            <tr><td>Understanding how the service is used, from reports and logs in aggregate</td><td>Our legitimate interest in improving the service (art. 6(1)(f))</td></tr>
+            <tr><td>Complying with the law</td><td>Legal obligation (art. 6(1)(c))</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        We do not use personal data to train machine-learning models, and we make no automated decisions
+        about you that have legal or similarly significant effects.
+      </p>
+
+      <h2 id="deep-scans">5. Deep scans and the report email</h2>
+      <p>
+        A deep scan is the one exchange in the service: a deeper read of the site for an email address, which
+        is where the finished report is sent.
+      </p>
+      <p>
+        When the report completes, we submit your address to WordLift's customer platform, HubSpot, together
+        with the audited URL, the readiness score and a link to the report. HubSpot sends you the report on
+        our behalf and records you as a contact of WordLift. WordLift may follow up about your audit results
+        and the WordLift services that address them. Every such email carries an unsubscribe link, and you can
+        ask us to delete the contact at any time (section 9).
+      </p>
+      <p>
+        The address is used for nothing else. It is never written into the report, never appears in a shared
+        link, and is shown masked wherever the service reads it back.
+      </p>
+
+      <h2 id="sharing">6. Who we share data with</h2>
+      <p>
+        We use these providers as processors. They act on our instructions and do not use the data for their
+        own purposes.
+      </p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Provider</th><th>What it does for us</th><th>What it receives</th><th>Where</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Google Cloud (Google Ireland Ltd, Google LLC)</td>
+              <td>Hosts the service (Cloud Run), stores reports, addresses and claim hashes (Firestore), keeps logs, holds secrets</td>
+              <td>All data described in section 3</td>
+              <td>United States: Cloud Run in Oregon, Firestore in the US multi-region</td>
+            </tr>
+            <tr>
+              <td>Google Cloud Natural Language API</td>
+              <td>Classifies the topic of an audited site</td>
+              <td>Text excerpts from the audited pages, never your details</td>
+              <td>Google Cloud</td>
+            </tr>
+            <tr>
+              <td>ScrapingBee SAS</td>
+              <td>Renders audited pages that need JavaScript to show their content</td>
+              <td>The URL of the page to render, never your details</td>
+              <td>France</td>
+            </tr>
+            <tr>
+              <td>WordLift AI Audit API (api.wordlift.io)</td>
+              <td>Runs the technical foundation audit</td>
+              <td>The URL of the audited site</td>
+              <td>WordLift, EU</td>
+            </tr>
+            <tr>
+              <td>HubSpot, Inc.</td>
+              <td>Sends deep-scan reports and manages WordLift's contacts</td>
+              <td>Your email address, the audited URL, the score, the report link, and which surface you used</td>
+              <td>HubSpot's EU data centre</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        <strong>Public disclosure.</strong> A report is a public document. We do not list reports anywhere,
+        but anyone who has the link can read and share it, and we do not prevent search engines from indexing
+        a report they discover.
+      </p>
+      <p>
+        We disclose personal data to authorities when the law requires it. We do not sell personal data and
+        we show no advertising.
+      </p>
+
+      <h2 id="transfers">7. International transfers</h2>
+      <p>
+        Reports, addresses and logs are stored by Google Cloud in the United States. Transfers from the EEA
+        to Google LLC and to HubSpot, Inc. rely on the EU-US Data Privacy Framework, under which both are
+        certified, and on the European Commission's standard contractual clauses in their data processing
+        terms. ScrapingBee processes data in the European Union.
+      </p>
+
+      <h2 id="retention">8. How long we keep it</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Data</th><th>Kept for</th></tr></thead>
+          <tbody>
+            <tr><td>A report and its evidence, including refined reports</td><td>30 days from creation, then deleted automatically</td></tr>
+            <tr><td>A deep-scan email address, in our store</td><td>The same 30 days as its report</td></tr>
+            <tr><td>A claim token hash</td><td>The same 30 days as its report</td></tr>
+            <tr><td>Raw page content</td><td>Not kept: discarded during the request that fetched it</td></tr>
+            <tr><td>Rate-limit counters</td><td>10 minutes, in memory only</td></tr>
+            <tr><td>Server logs</td><td>30 days</td></tr>
+            <tr><td>Your contact record in HubSpot</td><td>Until you unsubscribe or ask us to delete it</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="rights">9. Your rights</h2>
+      <p>
+        Under the GDPR you can ask us to access, correct, delete, or restrict the personal data we hold about
+        you, receive it in a portable format, object to processing based on our legitimate interests, and
+        withdraw consent at any time without affecting what was done before. Write to
+        <a href="mailto:privacy@wordlift.io">privacy@wordlift.io</a>. To act on a report, include its link. We
+        answer within one month.
+      </p>
+      <p>
+        If you own a website that was audited and want its report removed, tell us the report link and the
+        site; we will delete the report and everything stored with it. If you want the report corrected
+        instead, refining it through the service creates a new report that records your judgment alongside
+        the machine's draft.
+      </p>
+      <p>
+        You can also complain to a supervisory authority. In Italy that is the
+        <a href="https://www.garanteprivacy.it/">Garante per la protezione dei dati personali</a>; elsewhere
+        in the EEA, the authority of your country.
+      </p>
+
+      <h2 id="security">10. Security</h2>
+      <p>
+        The service is reachable over HTTPS only. Every address it fetches passes a policy that refuses
+        private, internal and reserved networks, so an audit cannot be turned into a probe of the
+        infrastructure it runs on. No cookies, credentials or caller headers are ever forwarded to an audited
+        site. Provider credentials stay on the server in a secrets manager and never reach the browser. Claim
+        tokens are stored only as hashes. The service is
+        <a href="https://github.com/wordlift/ai-audit-webmcp">open source</a>, so anyone can check these
+        statements against the code. Report vulnerabilities to
+        <a href="mailto:security@wordlift.io">security@wordlift.io</a>.
+      </p>
+
+      <h2 id="cookies">11. Cookies and tracking</h2>
+      <p>
+        The service sets no cookies and uses no analytics, advertising or social-media scripts. Fonts are
+        served from our own domain. Nothing is stored in your browser between visits.
+      </p>
+
+      <h2 id="children">12. Children</h2>
+      <p>The service is not directed at children under 16, and we do not knowingly collect their data.</p>
+
+      <h2 id="changes">13. Changes to this policy</h2>
+      <p>
+        We post every change here and update the date at the top. A change that reduces your rights or
+        expands what we collect is announced on this page before it takes effect.
+      </p>
+
+      <h2 id="contact">14. Contact</h2>
+      <p>
+        WordLift S.r.l., Via Giulia 117, 00186 Rome, Italy<br />
+        Privacy: <a href="mailto:privacy@wordlift.io">privacy@wordlift.io</a><br />
+        Security: <a href="mailto:security@wordlift.io">security@wordlift.io</a><br />
+        Support: <a href="https://wordlift.io/contact-us/">wordlift.io/contact-us</a>
+      </p>
+    </main>
+
+    <footer class="site-footer">
+      <a href="https://wordlift.io/privacy-policy/">WordLift privacy policy</a>
+      <a href="https://wordlift.io/terms-of-service/">Terms of service</a>
+      <a href="/">Back to AI Audit</a>
+    </footer>
+  </body>
+</html>

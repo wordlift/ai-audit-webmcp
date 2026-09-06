@@ -138,6 +138,7 @@ function llmsTxt(base: string): string {
     "",
     "- Report pages are addressed as `/reports/<reportId>` and expire 30 days after creation.",
     "- Starting an audit is a write and is rate limited; reading a report is not.",
+    `- [Privacy policy](${base}/privacy): what the service collects, who sees it, and how long it is kept.`,
     "",
   ].join("\n");
 }
@@ -163,6 +164,7 @@ function toolsManifest(base: string) {
     homepage: base,
     registration: "navigator.modelContext",
     documentation: `${base}/llms.txt`,
+    privacyPolicy: `${base}/privacy`,
     tools: [
       ...GLOBAL_TOOLS.map((tool) => describe(tool, "site")),
       ...REPORT_TOOLS.map((tool) => describe(tool, "/reports/:reportId")),
@@ -250,6 +252,29 @@ export function createAgentSurfaceRouter(options: AgentSurfaceOptions = {}): Rou
     }
     return shell;
   };
+
+  // The privacy policy is a legal document: it is served as plain HTML that reads without scripts,
+  // and declared ahead of the SPA fallback, which would otherwise answer with the empty shell.
+  let privacyPage: string | null = null;
+  const loadPrivacyPage = (): string | null => {
+    if (privacyPage !== null) return privacyPage;
+    if (!staticDirectory) return null;
+    try {
+      privacyPage = readFileSync(path.join(staticDirectory, "privacy.html"), "utf8");
+    } catch {
+      privacyPage = null;
+    }
+    return privacyPage;
+  };
+
+  router.get("/privacy", (_request, response, next) => {
+    const page = loadPrivacyPage();
+    if (!page) {
+      next();
+      return;
+    }
+    response.type("text/html; charset=utf-8").set("cache-control", "public, max-age=3600").send(page);
+  });
 
   router.get("/robots.txt", (request, response) => {
     response.type("text/plain; charset=utf-8").set("cache-control", "public, max-age=3600").send(robotsTxt(baseUrl(request)));

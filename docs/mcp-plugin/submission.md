@@ -13,7 +13,7 @@ behavior that is not live at the endpoint below.
 | Category | Productivity |
 | Website | https://wordlift.io |
 | Support | https://wordlift.io/contact-us/ |
-| Privacy policy | https://wordlift.io/privacy-policy/ |
+| Privacy policy | https://beta.audit.wordlift.io/privacy (the AI Audit policy; it supplements https://wordlift.io/privacy-policy/) |
 | Terms | https://wordlift.io/terms-of-service/ |
 | MCP server | `https://beta.audit.wordlift.io/mcp` (Streamable HTTP, stateless, no authentication) |
 | Domain verification | `https://beta.audit.wordlift.io/.well-known/openai-apps-challenge` — set `OPENAI_APPS_CHALLENGE` before deploying |

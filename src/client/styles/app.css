@@ -231,6 +231,7 @@ footer {
 
 footer p { margin: 0; }
 footer a { color: var(--brand); font-weight: 600; }
+footer .footer-legal { font-weight: 400; }
 
 /* ---------- Home ---------- */
 .home-page { min-height: 70vh; display: grid; align-content: center; }

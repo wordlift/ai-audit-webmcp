@@ -268,3 +268,22 @@ any errors — enough to see whether live behavior matches the fixtures.
 - **Suggested sites on the home page:** live mode lists sites verified to complete on production
   (`LIVE_SITES` in `src/client/routes/HomeRoute.tsx`). alpina.travel is the only WordLift client
   allowed there; add only unrelated public sites, after auditing them on production.
+
+## Privacy policy
+
+`public/privacy.html` is served at `/privacy`, ahead of the SPA fallback, and is the URL the plugin
+manifests and the directory submissions link to. It states facts about this deployment, so a change
+to any of these has to reach the page in the same release:
+
+| The page says | Where it is decided |
+| --- | --- |
+| Reports, deep-scan addresses and claim hashes live in the United States | Firestore location `nam5`; Cloud Run in `us-west1` |
+| Reports, addresses and claim hashes expire after 30 days | `REPORT_TTL_DAYS` and the Firestore TTL policies |
+| Server logs are kept for 30 days | Cloud Logging `_Default` bucket retention |
+| Deep-scan addresses go to HubSpot's EU data centre | `HUBSPOT_REGION=eu1` |
+| Pages are rendered by ScrapingBee and classified by Google Natural Language | `SCRAPE_PROVIDER`, `CLASSIFIER_PROVIDER` |
+| A basic scan reads four pages, a deep scan up to twelve | `MAX_PAGES` in the scrape adapters |
+| No cookies, no analytics, no third-party scripts | `index.html` and the same-origin CSP |
+
+A removal request (section 9 of the page) is a manual delete of the report document, its
+`deepScanLeads` entry and its claim, all keyed by the report id.
