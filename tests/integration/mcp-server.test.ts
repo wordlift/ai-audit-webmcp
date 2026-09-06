@@ -76,6 +76,9 @@ describe("remote MCP server", () => {
 
       const inspect = tools.find((tool) => tool.name === "inspect-terms-of-action");
       expect(inspect?.inputSchema.required).toContain("reportId");
+      // The label a person sees travels over the wire with the name a model calls.
+      for (const tool of tools) expect(tool.title, `${tool.name} has no title on the wire`).toMatch(/^[A-Z]/);
+      expect(inspect?.title).toBe("Read the Terms of Action");
       expect(client.getInstructions()).toContain("inspect-terms-of-action");
     } finally {
       await close();

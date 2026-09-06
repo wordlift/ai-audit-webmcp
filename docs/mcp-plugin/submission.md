@@ -31,14 +31,14 @@ No demo credentials are needed to review the server.
 
 ## Tools and their safety metadata
 
-| Tool | readOnlyHint | destructiveHint | openWorldHint | What it does |
-| --- | --- | --- | --- | --- |
-| `audit-website` | false | false | true | Reads a public website and stores a shareable report |
-| `get-audit-report` | true | false | false | Progress while running; findings once complete |
-| `inspect-terms-of-action` | true | false | false | The full Terms of Action for review |
-| `explain-capability` | true | false | false | Evidence, gap and contract for one action |
-| `explain-foundation-audit` | true | false | false | Technical foundation findings |
-| `refine-terms-of-action` | false | false | false | Records a human's confirmed judgment as a new child report |
+| Tool | Title | readOnlyHint | destructiveHint | openWorldHint | What it does |
+| --- | --- | --- | --- | --- | --- |
+| `audit-website` | Audit a website | false | false | true | Reads a public website and stores a shareable report |
+| `get-audit-report` | Check an audit's progress | true | false | false | Progress while running; findings once complete |
+| `inspect-terms-of-action` | Read the Terms of Action | true | false | false | The full Terms of Action for review |
+| `explain-capability` | Explain one action | true | false | false | Evidence, gap and contract for one action |
+| `explain-foundation-audit` | Explain the foundation audit | true | false | false | Technical foundation findings |
+| `refine-terms-of-action` | Refine the Terms of Action | false | false | false | Records a human's confirmed judgment as a new child report |
 
 Nothing deletes or overwrites anything: a refinement always creates a new immutable report and
 leaves the machine draft untouched at its own URL. Every result also carries

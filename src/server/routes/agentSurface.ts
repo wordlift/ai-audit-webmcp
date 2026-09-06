@@ -32,6 +32,7 @@ export interface AgentSurfaceOptions {
  */
 interface ToolDescriptor {
   readonly name: string;
+  readonly title: string;
   readonly description: string;
   readonly inputSchema: unknown;
   readonly annotations?: unknown;
@@ -148,6 +149,7 @@ function llmsTxt(base: string): string {
 function toolsManifest(base: string) {
   const describe = (tool: ToolDescriptor, scope: string) => ({
     name: tool.name,
+    title: tool.title,
     description: tool.description,
     inputSchema: tool.inputSchema,
     annotations: tool.annotations,

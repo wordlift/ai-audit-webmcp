@@ -29,14 +29,14 @@ that does not exist fails in a way that looks like a server outage.
 
 ## What the server offers
 
-| Tool | What it does | Write? |
-| --- | --- | --- |
-| `audit-website` | Audits a public URL; returns the report or a pollable id | Creates a report |
-| `get-audit-report` | Progress while running, findings once complete | Read |
-| `inspect-terms-of-action` | The full Terms of Action, for review | Read |
-| `explain-capability` | Evidence, gap and contract for one action | Read |
-| `explain-foundation-audit` | The technical foundation findings | Read |
-| `refine-terms-of-action` | Records a human's confirmed judgment as a child report | Creates a report |
+| Tool | Title | What it does | Write? |
+| --- | --- | --- | --- |
+| `audit-website` | Audit a website | Audits a public URL; returns the report or a pollable id | Creates a report |
+| `get-audit-report` | Check an audit's progress | Progress while running, findings once complete | Read |
+| `inspect-terms-of-action` | Read the Terms of Action | The full Terms of Action, for review | Read |
+| `explain-capability` | Explain one action | Evidence, gap and contract for one action | Read |
+| `explain-foundation-audit` | Explain the foundation audit | The technical foundation findings | Read |
+| `refine-terms-of-action` | Refine the Terms of Action | Records a human's confirmed judgment as a child report | Creates a report |
 
 Auditing and reading are free and anonymous. A deep scan asks for an email address and sends the
 report there. Refining a report requires the `claimToken` that `audit-website` returned for it.

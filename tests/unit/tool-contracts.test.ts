@@ -19,6 +19,7 @@ describe("tool contracts", () => {
     expect(REFINE_SERVICE_MAP_TOOL.name).toBe("refine-terms-of-action");
     expect(INSPECT_SERVICE_MAP_TOOL_ALIAS.name).toBe("inspect-service-map");
     expect(INSPECT_SERVICE_MAP_TOOL_ALIAS.replacedBy).toBe(INSPECT_SERVICE_MAP_TOOL.name);
+    expect(INSPECT_SERVICE_MAP_TOOL_ALIAS.title).toBe(INSPECT_SERVICE_MAP_TOOL.title);
   });
 
   it("serves the browser's import path the same objects, not copies", () => {
@@ -34,6 +35,7 @@ describe("tool contracts", () => {
     const browser: ToolDefinition = INSPECT_SERVICE_MAP_TOOL;
     expect(browser.inputSchema.required ?? []).not.toContain("reportId");
     expect(remote.name).toBe(INSPECT_SERVICE_MAP_TOOL.name);
+    expect(remote.title).toBe(INSPECT_SERVICE_MAP_TOOL.title);
     expect(remote.description).toBe(INSPECT_SERVICE_MAP_TOOL.description);
     expect(remote.annotations).toEqual(INSPECT_SERVICE_MAP_TOOL.annotations);
   });
