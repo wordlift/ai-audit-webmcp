@@ -369,3 +369,57 @@ describe("live orchestrator", () => {
     ).rejects.toMatchObject({ status: 400 });
   });
 });
+
+describe("scan depth", () => {
+  /** A collector that reports how many pages it was asked for and answers with that many. */
+  function countingScraper(): ScrapeProvider & { askedFor: number[] } {
+    const askedFor: number[] = [];
+    return {
+      name: "counting-scrape",
+      askedFor,
+      collect: async (_url, options) => {
+        const maxPages = options?.maxPages ?? 4;
+        askedFor.push(maxPages);
+        const [entry] = snapshot.pages;
+        return {
+          ...snapshot,
+          pages: Array.from({ length: maxPages }, (_, index) =>
+            index === 0
+              ? entry
+              : { ...entry, url: `https://alpina.travel/page-${index}`, title: `Page ${index}`, role: "detail" as const, entities: [] },
+          ),
+        };
+      },
+    };
+  }
+
+  function liveOrchestrator(scrape: ScrapeProvider) {
+    return new AuditOrchestrator(new MemoryReportStore(900_000, () => fixedNow), loadActionModel(), new FixtureProvider(), {
+      publicAppUrl: "https://audit.example/",
+      ttlDays: 30,
+      now: () => fixedNow,
+      mode: "live",
+      providers: { scrape, audit: stubAudit(auditBundle), classify: stubClassifier(travelCategories) },
+    });
+  }
+
+  it("asks the collector for four pages by default and keeps them", async () => {
+    const scrape = countingScraper();
+    const report = await liveOrchestrator(scrape).create({ requestId: randomUUID(), url: "alpina.travel" });
+
+    expect(scrape.askedFor).toEqual([4]);
+    expect(report.contextGraph?.pages).toHaveLength(4);
+    expect(report.scanDepth).toBeUndefined();
+  });
+
+  it("asks for twelve on a deep scan, and the report keeps every page it was given", async () => {
+    const scrape = countingScraper();
+    const report = await liveOrchestrator(scrape).create({ requestId: randomUUID(), url: "alpina.travel", depth: "deep" });
+
+    // What the address bought has to survive compilation and storage, or it was bought for nothing.
+    expect(scrape.askedFor).toEqual([12]);
+    expect(report.scanDepth).toBe("deep");
+    expect(report.contextGraph?.pages).toHaveLength(12);
+    expect(report.status).toBe("completed");
+  });
+});
