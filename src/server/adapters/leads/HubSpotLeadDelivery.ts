@@ -16,9 +16,17 @@ import type { DeepScanLead } from "./LeadStore.js";
  * this service names its own surface in the form context, and — where the portal has a property for
  * it — in a field, so the three ways in are distinguishable without inference.
  */
+export type HubSpotRegion = "na1" | "eu1";
+
 export interface HubSpotOptions {
   portalId: string;
   formGuid: string;
+  /**
+   * Which HubSpot data region hosts the portal. An EU portal has its own submission host, and
+   * although the default host currently routes EU submissions too, that is not what HubSpot
+   * documents — a portal's region is not something to leave to a redirect.
+   */
+  region?: HubSpotRegion;
   /**
    * A form property that records which surface a lead came from, when the portal has one. HubSpot
    * rejects a whole submission that names a field the form does not have, so this stays opt-in:
@@ -31,7 +39,10 @@ export interface HubSpotOptions {
   fetchImpl?: typeof fetch;
 }
 
-const DEFAULT_ENDPOINT = "https://api.hsforms.com/submissions/v3/integration/submit";
+const SUBMISSION_HOSTS: Record<HubSpotRegion, string> = {
+  na1: "https://api.hsforms.com/submissions/v3/integration/submit",
+  eu1: "https://api-eu1.hsforms.com/submissions/v3/integration/submit",
+};
 const DEFAULT_TIMEOUT_MS = 10_000;
 
 /** The form is plain text; markdown emphasis arrives as literal asterisks in an email. */
@@ -61,7 +72,8 @@ export class HubSpotLeadDelivery implements LeadDelivery {
   constructor(private readonly options: HubSpotOptions) {}
 
   async deliver(lead: DeepScanLead, report: DeliverableReport): Promise<void> {
-    const endpoint = `${this.options.endpoint ?? DEFAULT_ENDPOINT}/${this.options.portalId}/${this.options.formGuid}`;
+    const base = this.options.endpoint ?? SUBMISSION_HOSTS[this.options.region ?? "na1"];
+    const endpoint = `${base}/${this.options.portalId}/${this.options.formGuid}`;
     const fields = [
       { name: "email", value: lead.email },
       { name: "audited_url", value: report.canonicalUrl },

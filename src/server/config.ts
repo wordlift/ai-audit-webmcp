@@ -25,6 +25,8 @@ const environmentSchema = z
      */
     HUBSPOT_PORTAL_ID: z.string().min(1).max(40).optional(),
     HUBSPOT_FORM_GUID: z.string().min(1).max(80).optional(),
+    /** The portal's data region. An EU portal submits to its own host. */
+    HUBSPOT_REGION: z.enum(["na1", "eu1"]).default("na1"),
     /**
      * A form property recording which surface a lead came from. Only set it once the property
      * exists on the form: HubSpot rejects a submission naming a field the form does not have.
@@ -79,6 +81,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     OPENAI_APPS_CHALLENGE: environment.OPENAI_APPS_CHALLENGE,
     HUBSPOT_PORTAL_ID: environment.HUBSPOT_PORTAL_ID,
     HUBSPOT_FORM_GUID: environment.HUBSPOT_FORM_GUID,
+    HUBSPOT_REGION: environment.HUBSPOT_REGION,
     HUBSPOT_SOURCE_FIELD: environment.HUBSPOT_SOURCE_FIELD,
   };
 

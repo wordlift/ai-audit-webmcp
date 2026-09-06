@@ -42,7 +42,7 @@ fi
 # secret — form submissions are unauthenticated — but the GUID stays out of the public repository.
 HUBSPOT_ENV=""
 if [ -n "${HUBSPOT_PORTAL_ID:-}" ] && [ -n "${HUBSPOT_FORM_GUID:-}" ]; then
-  HUBSPOT_ENV="##HUBSPOT_PORTAL_ID=${HUBSPOT_PORTAL_ID}##HUBSPOT_FORM_GUID=${HUBSPOT_FORM_GUID}"
+  HUBSPOT_ENV="##HUBSPOT_PORTAL_ID=${HUBSPOT_PORTAL_ID}##HUBSPOT_FORM_GUID=${HUBSPOT_FORM_GUID}##HUBSPOT_REGION=${HUBSPOT_REGION:-na1}"
   # Only once the property exists on the form: HubSpot refuses a submission naming a field it has not got.
   if [ -n "${HUBSPOT_SOURCE_FIELD:-}" ]; then
     HUBSPOT_ENV="${HUBSPOT_ENV}##HUBSPOT_SOURCE_FIELD=${HUBSPOT_SOURCE_FIELD}"

@@ -31,6 +31,7 @@ const leadDelivery = config.HUBSPOT_PORTAL_ID && config.HUBSPOT_FORM_GUID
   ? new HubSpotLeadDelivery({
       portalId: config.HUBSPOT_PORTAL_ID,
       formGuid: config.HUBSPOT_FORM_GUID,
+      region: config.HUBSPOT_REGION,
       sourceField: config.HUBSPOT_SOURCE_FIELD,
     })
   : undefined;
