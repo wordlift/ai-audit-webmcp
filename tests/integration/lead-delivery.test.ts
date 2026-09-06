@@ -189,6 +189,20 @@ describe("the HubSpot form", () => {
     );
   });
 
+  it("submits to the host that holds the portal's data", async () => {
+    const hosts: string[] = [];
+    const fetchImpl = (async (url: string | URL | Request) => {
+      hosts.push(new URL(String(url)).host);
+      return new Response("{}", { status: 200 });
+    }) as unknown as typeof fetch;
+
+    await new HubSpotLeadDelivery({ portalId: "p", formGuid: "f", region: "eu1", fetchImpl }).deliver(lead, report);
+    await new HubSpotLeadDelivery({ portalId: "p", formGuid: "f", region: "na1", fetchImpl }).deliver(lead, report);
+    await new HubSpotLeadDelivery({ portalId: "p", formGuid: "f", fetchImpl }).deliver(lead, report);
+
+    expect(hosts).toEqual(["api-eu1.hsforms.com", "api.hsforms.com", "api.hsforms.com"]);
+  });
+
   it("sends the address and nothing it would have to invent", async () => {
     let body = "";
     const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {

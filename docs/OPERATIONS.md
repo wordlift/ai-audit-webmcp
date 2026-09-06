@@ -32,7 +32,8 @@ inputs differ.
 | `ACTION_MODEL_VERSION` | `0.1.0` | Which `action-model/` version to load |
 | `OPENAI_APPS_CHALLENGE` | — | Domain-verification token served at `/.well-known/openai-apps-challenge`. Unset means the path 404s |
 | `HUBSPOT_PORTAL_ID` | — | HubSpot portal for deep-scan report delivery. Set together with the form GUID |
-| `HUBSPOT_FORM_GUID` | — | The AI Audit lead form a deep scan's report is delivered through |
+| `HUBSPOT_FORM_GUID` | — | The form a deep scan's report is delivered through |
+| `HUBSPOT_REGION` | `na1` | `eu1` for an EU-hosted portal: it has its own submission host |
 | `HUBSPOT_SOURCE_FIELD` | — | A form property recording which surface a lead came from. Create it on the form before setting this |
 
 Live mode fails fast at startup if a required credential is missing.
@@ -81,14 +82,16 @@ report id, with the same TTL the report has:
 
 ### Delivery
 
-Sending goes through the **same HubSpot form the WordLift AI Audit already submits to** — Forms v3,
-the same portal, the same form, the same field names — so one person is one contact whichever audit
-they arrived through. Configure it with:
+Sending goes through a HubSpot form of its own — Forms v3, the same portal as the WordLift AI Audit
+and the same contact properties, so one person is still one contact, while the submissions stay
+separable from the older audit's sign-up modal. Its fields are `email` (the only required one),
+`audited_url`, `audit_score`, `audit_summary` and `audit_source`. Configure it with:
 
 | Variable | Purpose |
 |---|---|
-| `HUBSPOT_PORTAL_ID` | The AI Audit's HubSpot portal |
-| `HUBSPOT_FORM_GUID` | The AI Audit's lead-capture form |
+| `HUBSPOT_PORTAL_ID` | The HubSpot portal |
+| `HUBSPOT_FORM_GUID` | The form a deep scan's report is delivered through |
+| `HUBSPOT_REGION` | `eu1` for an EU-hosted portal, `na1` otherwise (default) |
 
 Both are set together or not at all; startup refuses half a configuration, because a deployment with
 one of them would queue leads forever while looking like it was delivering. The values are the ones
