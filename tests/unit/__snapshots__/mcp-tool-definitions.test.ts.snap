@@ -49,6 +49,7 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
       "type": "object",
     },
     "name": "audit-website",
+    "title": "Audit a website",
   },
   {
     "annotations": {
@@ -73,6 +74,7 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
       "type": "object",
     },
     "name": "get-audit-report",
+    "title": "Check an audit's progress",
   },
   {
     "annotations": {
@@ -97,6 +99,7 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
       "type": "object",
     },
     "name": "inspect-terms-of-action",
+    "title": "Read the Terms of Action",
   },
   {
     "annotations": {
@@ -126,6 +129,7 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
       "type": "object",
     },
     "name": "explain-capability",
+    "title": "Explain one action",
   },
   {
     "annotations": {
@@ -150,6 +154,7 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
       "type": "object",
     },
     "name": "explain-foundation-audit",
+    "title": "Explain the foundation audit",
   },
   {
     "annotations": {
@@ -293,6 +298,7 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
       "type": "object",
     },
     "name": "refine-terms-of-action",
+    "title": "Refine the Terms of Action",
   },
 ]
 `;

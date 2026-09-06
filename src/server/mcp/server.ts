@@ -30,6 +30,7 @@ export function buildAuditMcpServer(service: AuditToolService): Server {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: REMOTE_TOOLS.map((tool) => ({
       name: tool.definition.name,
+      title: tool.definition.title,
       description: tool.definition.description,
       inputSchema: tool.definition.inputSchema,
       annotations: tool.definition.annotations,

@@ -19,6 +19,12 @@ export interface ToolInputSchema {
 /** What every surface needs to publish a tool, whatever it does with it afterwards. */
 export interface ToolDefinition {
   readonly name: string;
+  /**
+   * What a person sees. `name` is the address a model calls and is frozen; `title` is the label a
+   * client shows beside a call — "Running Audit a website…" — and the directory refuses a tool
+   * without one.
+   */
+  readonly title: string;
   readonly description: string;
   readonly inputSchema: ToolInputSchema;
   readonly annotations: Readonly<Record<string, boolean>>;
@@ -38,6 +44,7 @@ export const ARCHETYPE_VALUES = [
 
 export const AUDIT_WEBSITE_TOOL = {
   name: "audit-website",
+  title: "Audit a website",
   description:
     "Analyze a public website from an AI agent's perspective and return its site archetype, verified action-readiness score, priority capability gaps, action-stage summary, and shareable evidence report. The basic scan reads four representative pages and is free and anonymous; a deep scan reads more of the site and is sent to an email address the person gives you.",
   inputSchema: {
@@ -80,6 +87,7 @@ export const AUDIT_WEBSITE_TOOL = {
 
 export const GET_AUDIT_REPORT_TOOL = {
   name: "get-audit-report",
+  title: "Check an audit's progress",
   description:
     "Check on an audit started with audit-website using its reportId: returns the current phase and progress while the audit is still running, and the finished result — site archetype, verified action-readiness score, priority capability gaps, action-stage summary, and shareable evidence report — once it completes.",
   inputSchema: {
@@ -101,6 +109,7 @@ export const GET_AUDIT_REPORT_TOOL = {
 
 export const INSPECT_SERVICE_MAP_TOOL = {
   name: "inspect-terms-of-action",
+  title: "Read the Terms of Action",
   description:
     "Read the machine-generated Terms of Action for the open audit report. Call this FIRST when a user wants to review, correct, or human-refine the Terms — before interviewing the business owner and before refine-terms-of-action. Returns the inferred operating role, every entity with its id and machine priority, the business terminology, and every action with its actionId, evidence, current readiness, and boundary.",
   inputSchema: {
@@ -121,6 +130,7 @@ export const INSPECT_SERVICE_MAP_TOOL = {
 
 export const EXPLAIN_CAPABILITY_TOOL = {
   name: "explain-capability",
+  title: "Explain one action",
   description:
     "Explain one action from an AI Audit capability map. Use this when the reviewer needs more evidence before deciding an action's boundary: it returns what the site is expected to support, whether humans and agents can do it today, the supporting evidence, the recommended fix, and the machine-readable action contract.",
   inputSchema: {
@@ -146,6 +156,7 @@ export const EXPLAIN_CAPABILITY_TOOL = {
 
 export const EXPLAIN_FOUNDATION_AUDIT_TOOL = {
   name: "explain-foundation-audit",
+  title: "Explain the foundation audit",
   description:
     "Return the complete safe WordLift foundation audit for the open report, including every normalized audit dimension, findings, quick wins, scores, provenance, and detailed data points.",
   inputSchema: {
@@ -166,6 +177,7 @@ export const EXPLAIN_FOUNDATION_AUDIT_TOOL = {
 
 export const REFINE_SERVICE_MAP_TOOL = {
   name: "refine-terms-of-action",
+  title: "Refine the Terms of Action",
   description:
     "Call ONLY after inspect-terms-of-action and after collecting the reviewer's decisions. Submits the human's structured judgment about the open report's Terms of Action — the business's operating role, its primary entities, its vocabulary, and confirm/reject/boundary decisions per action — and creates a new immutable refined child report: its URL, what changed, and any assertions that could not be applied. Human decisions can never mark an action agent-ready; readiness always requires successful invocation evidence.",
   inputSchema: {
@@ -257,6 +269,7 @@ export const REFINE_SERVICE_MAP_TOOL = {
 
 export const CHECK_ALPINA_AVAILABILITY_TOOL = {
   name: "check-alpina-availability",
+  title: "Check availability on alpina.travel",
   description:
     "Check read-only room availability on alpina.travel for a date range and guest count. This looks up availability only: it creates no booking, holds no inventory, sends no guest details, and takes no payment.",
   inputSchema: {
@@ -295,6 +308,7 @@ export const CHECK_ALPINA_AVAILABILITY_TOOL = {
 function previousNameOf(tool: ToolDefinition, previousName: string): ToolDefinition {
   return {
     name: previousName,
+    title: tool.title,
     description: `Deprecated name for ${tool.name}, kept working for callers written before the rename. Behaves identically; prefer ${tool.name}. ${tool.description}`,
     inputSchema: tool.inputSchema,
     annotations: tool.annotations,

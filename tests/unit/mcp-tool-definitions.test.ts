@@ -34,6 +34,15 @@ describe("published MCP tool definitions", () => {
     for (const tool of published) expect(tool.annotations.untrustedContentHint).toBe(true);
   });
 
+  it("gives every tool the label a person sees, distinct from the name a model calls", () => {
+    const titles = published.map((tool) => tool.title);
+    for (const [index, title] of titles.entries()) {
+      expect(title, `${published[index].name} needs a title`).toMatch(/^[A-Z].{3,60}$/);
+      expect(title).not.toBe(published[index].name);
+    }
+    expect(new Set(titles).size).toBe(titles.length);
+  });
+
   it("answers the three questions a directory review asks of every tool", () => {
     for (const tool of published) {
       for (const annotation of ["readOnlyHint", "destructiveHint", "openWorldHint"]) {
