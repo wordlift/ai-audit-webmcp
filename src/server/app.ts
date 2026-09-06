@@ -13,6 +13,7 @@ import {
 import type { ClaimStore } from "./adapters/claims/index.js";
 import type { LeadDelivery, LeadStore } from "./adapters/leads/index.js";
 import type { AuditOrchestrator } from "./services/AuditOrchestrator.js";
+import type { PlatformEgress } from "./security/platformEgress.js";
 import { AuditToolService, type AuditToolServiceOptions } from "./services/AuditToolService.js";
 import { DeepScanDelivery } from "./services/DeepScanDelivery.js";
 import { DeepScanGate } from "./services/DeepScanGate.js";
@@ -32,6 +33,11 @@ export interface AppOptions {
   mcpRateLimits?: RateLimitOptions;
   /** The pool for recompiling and refining: writes that create a child report without a crawl. */
   writeRateLimits?: RateLimitOptions;
+  /**
+   * Which hosted assistant an address belongs to. Its users share a pool per platform instead of
+   * one address's budget; absent, every address is limited as itself.
+   */
+  platformEgress?: PlatformEgress;
   toolService?: AuditToolServiceOptions;
   /** Where a deep scan's email address is filed. Absent means deep scans are unavailable here. */
   leads?: LeadStore;
@@ -95,11 +101,13 @@ export function createApp(options: AppOptions = {}): Express {
         reportDelivery: options.leadDelivery?.name ?? null,
         claimedRefinement: Boolean(options.claims),
       },
+      // How many egress ranges each hosted platform holds: a refresh that stopped is visible here.
+      platformEgress: options.platformEgress?.summary() ?? null,
     });
   });
 
   if (options.orchestrator) {
-    const limiters: RequestHandler[] = createAuditRateLimiters(options.rateLimits);
+    const limiters: RequestHandler[] = createAuditRateLimiters(options.rateLimits, options.platformEgress);
     const deepScan = new DeepScanGate(options.leads ?? null, options.reportTtlDays);
     const delivery = new DeepScanDelivery({
       leads: options.leads,
@@ -143,6 +151,7 @@ export function createApp(options: AppOptions = {}): Express {
           // become the budget for listing tools or reading a report.
           ...createMcpRateLimiters(
             options.mcpRateLimits ?? { windowMs: options.rateLimits?.windowMs, enabled: options.rateLimits?.enabled },
+            options.platformEgress,
           ),
           onlyForExpensiveToolCalls(limiters),
         ],
