@@ -7,6 +7,7 @@ import type {
   ContextGraph,
   DomainEntity,
 } from "../../shared/types/index.js";
+import { DEEP_SCAN_PAGES } from "../../shared/format/deepScan.js";
 
 const ENTITY_ACTIONS: Record<string, string[]> = {
   Organization: ["site.browse", "site.search", "source.verify", "inquiry.submit", "policy.explain"],
@@ -60,7 +61,7 @@ export function compileContextGraph(
 
   const auditedPages = pages.length > 0 ? pages : [emptyPage(canonicalUrl)];
   return {
-    pages: auditedPages.slice(0, 4).map((page) => ({
+    pages: auditedPages.slice(0, DEEP_SCAN_PAGES).map((page) => ({
       url: page.url,
       title: page.title,
       role: page.role,
