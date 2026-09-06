@@ -8,6 +8,7 @@ import { ActionJourney } from "../components/ActionJourney";
 import { AlpinaSidecarPanel } from "../components/AlpinaSidecarPanel";
 import { ClassificationCard } from "../components/ClassificationCard";
 import { ContextEngineMap, heroEntityId } from "../components/ContextEngineMap";
+import { DeepScanOffer } from "../components/DeepScanOffer";
 import { ExecutiveSummary } from "../components/ExecutiveSummary";
 import { FoundationAuditDetails } from "../components/FoundationAuditDetails";
 import { ReportErrorState } from "../components/ReportErrorState";
@@ -145,6 +146,8 @@ export function ReportRoute() {
         selectedEntityId={selectedEntityId}
       />
       {report.foundationAudit && <FoundationAuditDetails audit={report.foundationAudit} />}
+      {/* Offered after the reader has seen what the free scan found, never before it. */}
+      <DeepScanOffer report={report} />
       {/* Labs: a contained technical proof, deliberately out of the product's primary story. */}
       {sidecarApplies(report) && (
         <details className="labs-fold">

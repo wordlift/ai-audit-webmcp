@@ -10,10 +10,21 @@ import type { DeepScanLead } from "./LeadStore.js";
  * The form's other fields — name, company, role, country — are collected by the audit's own sign-up
  * modal. This surface asks for an address and nothing else, so it sends an address and nothing else:
  * inventing a name to fill a field is the thing the skill is explicitly told never to do.
+ *
+ * Which is also how a submission from here is told apart from one from the older audit: that one
+ * always carries a name and a company and quotes a page on audit.wordlift.io. Every submission from
+ * this service names its own surface in the form context, and — where the portal has a property for
+ * it — in a field, so the three ways in are distinguishable without inference.
  */
 export interface HubSpotOptions {
   portalId: string;
   formGuid: string;
+  /**
+   * A form property that records which surface a lead came from, when the portal has one. HubSpot
+   * rejects a whole submission that names a field the form does not have, so this stays opt-in:
+   * without it the surface is still named in the submission context.
+   */
+  sourceField?: string;
   /** Overridable for tests; production is HubSpot's public submission host. */
   endpoint?: string;
   timeoutMs?: number;
@@ -28,6 +39,22 @@ function plainText(value: string): string {
   return value.replace(/[*_`]/g, "");
 }
 
+/**
+ * How each way in names itself. Stable strings: they end up in HubSpot reports, and a value that
+ * changes shape between releases splits one source into two lines of a funnel.
+ */
+const SOURCE_VALUES: Record<DeepScanLead["source"], string> = {
+  web: "ai-audit-webmcp:web-form",
+  webmcp: "ai-audit-webmcp:in-page-agent",
+  mcp: "ai-audit-webmcp:mcp-server",
+};
+
+const SOURCE_NAMES: Record<DeepScanLead["source"], string> = {
+  web: "WordLift AI Audit — deep scan (web form)",
+  webmcp: "WordLift AI Audit — deep scan (in-page agent)",
+  mcp: "WordLift AI Audit — deep scan (MCP server)",
+};
+
 export class HubSpotLeadDelivery implements LeadDelivery {
   readonly name = "hubspot";
 
@@ -40,6 +67,7 @@ export class HubSpotLeadDelivery implements LeadDelivery {
       { name: "audited_url", value: report.canonicalUrl },
       { name: "audit_score", value: String(report.agentReadinessScore) },
       { name: "audit_summary", value: plainText(`${report.reportUrl}\n\n${report.summary}`) },
+      ...(this.options.sourceField ? [{ name: this.options.sourceField, value: SOURCE_VALUES[lead.source] }] : []),
     ];
 
     const controller = new AbortController();
@@ -51,7 +79,7 @@ export class HubSpotLeadDelivery implements LeadDelivery {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           fields,
-          context: { pageUri: report.reportUrl, pageName: "WordLift AI Audit — deep scan" },
+          context: { pageUri: report.reportUrl, pageName: SOURCE_NAMES[lead.source] },
         }),
         signal: controller.signal,
       });

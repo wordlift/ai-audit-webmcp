@@ -43,6 +43,10 @@ fi
 HUBSPOT_ENV=""
 if [ -n "${HUBSPOT_PORTAL_ID:-}" ] && [ -n "${HUBSPOT_FORM_GUID:-}" ]; then
   HUBSPOT_ENV="##HUBSPOT_PORTAL_ID=${HUBSPOT_PORTAL_ID}##HUBSPOT_FORM_GUID=${HUBSPOT_FORM_GUID}"
+  # Only once the property exists on the form: HubSpot refuses a submission naming a field it has not got.
+  if [ -n "${HUBSPOT_SOURCE_FIELD:-}" ]; then
+    HUBSPOT_ENV="${HUBSPOT_ENV}##HUBSPOT_SOURCE_FIELD=${HUBSPOT_SOURCE_FIELD}"
+  fi
 fi
 
 PROJECT_NUMBER="$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')"

@@ -80,7 +80,7 @@ export function AuditWebsiteTool({
         );
       }
 
-      const started = startReport(url, { archetype, depth, email, waitMs: pollWaitMs });
+      const started = startReport(url, { archetype, depth, email, surface: "webmcp", waitMs: pollWaitMs });
       // The background wait keeps running after an early answer; its outcome must surface as a
       // value here or be swallowed there, never as an unhandled rejection.
       const settled = started.ready.then(
