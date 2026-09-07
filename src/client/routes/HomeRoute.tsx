@@ -1,6 +1,6 @@
 import { ArrowRight, Sparkles } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ApiError, getReport, startReport } from "../api/client";
 
 /** Real phase durations for a live audit, which takes about a minute end to end. */
@@ -162,6 +162,7 @@ export function HomeRoute() {
             </button>
           </div>
           <p>No account required. Public websites only.</p>
+          <p className="pitch-link"><Link to="/pitch">Pitching to a client? Compare a site with two competitors →</Link></p>
           {mode && (
             <div className="try-sites" aria-label="Suggested sites">
               <span className="try-sites-label">

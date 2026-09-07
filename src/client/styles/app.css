@@ -822,6 +822,35 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .fix-publish { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 10px; background: var(--brand); color: var(--wl-neutral-0); font-weight: 600; text-decoration: none; }
 .fix-publish:hover { background: var(--brand-hover); }
 
+/* ---------- The pitch: three sites, one screen ---------- */
+.pitch-link { margin: 8px 0 0 !important; }
+.pitch-form { display: grid; gap: 12px; }
+.pitch-form label { font-weight: 600; display: grid; gap: 6px; }
+.pitch-form label input { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; font: inherit; }
+.pitch-page { display: grid; gap: 22px; }
+.pitch-head { display: grid; gap: 8px; max-width: 70ch; }
+.pitch-head h1 { margin: 0; font-size: clamp(1.6rem, 3.4vw, 2.3rem); overflow-wrap: anywhere; }
+.pitch-head h1 span { color: var(--muted); font-weight: 500; }
+.pitch-head > p { margin: 0; color: var(--muted); }
+.pitch-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.pitch-card { display: grid; gap: 6px; padding: 18px; background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 14px; }
+.pitch-card-prospect { border-color: var(--brand); }
+.pitch-card-role { margin: 0; font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pitch-card h2 { margin: 0; font-size: 1.15rem; overflow-wrap: anywhere; }
+.pitch-score { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.pitch-score b { font-family: var(--font-display); font-size: 2rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; margin-right: 4px; }
+.table-scroll { overflow-x: auto; }
+.pitch-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 14px; overflow: hidden; }
+.pitch-table th, .pitch-table td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line-subtle); }
+.pitch-table thead th { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.pitch-table tbody th { font-weight: 600; }
+.pitch-none { color: var(--faint); font-size: 0.85rem; }
+.pitch-gaps { display: grid; gap: 14px; padding: clamp(22px, 4vw, 36px); background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 18px; }
+.pitch-gaps h2 { margin: 0; font-size: 1.35rem; }
+.pitch-gaps ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; counter-reset: gap; }
+.pitch-gaps li { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--line-subtle); border-radius: 10px; background: var(--wl-neutral-100); }
+.pitch-gaps li small { grid-column: 1 / -1; color: var(--muted); font-size: 0.88rem; }
+
 /* ---------- Full audit: the model, one click below ---------- */
 .full-audit { border: 1px solid var(--line-subtle); border-radius: 16px; background: var(--surface); }
 .full-audit > summary {
