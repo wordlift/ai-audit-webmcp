@@ -200,6 +200,7 @@
       <ul>
         <li>Your IP address, used to limit how many audits one address can start in a ten-minute window. Counters live in memory and are not written anywhere.</li>
         <li>Server logs: the request path, status, timing, the client's IP address and user agent, and error names. Logs contain neither the email address a deep scan was sent to nor the content of audited pages. Logs are kept for 30 days.</li>
+        <li>Reader counts: how many times a report was read each day, by kind of reader (a named crawler, an AI agent acting from a hosted assistant, or a person), and how many times an agent activated a capability on the audited site. The kind is decided from the address and the user agent and only the count is kept; no address, user agent or identity is stored, and the counts expire with the report.</li>
       </ul>
 
       <h3>3.4 When you use the service through an AI assistant</h3>

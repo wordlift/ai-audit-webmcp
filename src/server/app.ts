@@ -15,6 +15,7 @@ import type { LeadDelivery, LeadStore } from "./adapters/leads/index.js";
 import type { AuditOrchestrator } from "./services/AuditOrchestrator.js";
 import type { MarkupProvider } from "./adapters/markup/MarkupProvider.js";
 import type { PlatformEgress } from "./security/platformEgress.js";
+import type { VisitLedger } from "./services/VisitLedger.js";
 import { AuditToolService, type AuditToolServiceOptions } from "./services/AuditToolService.js";
 import { DeepScanDelivery } from "./services/DeepScanDelivery.js";
 import { DeepScanGate } from "./services/DeepScanGate.js";
@@ -41,6 +42,8 @@ export interface AppOptions {
   platformEgress?: PlatformEgress;
   /** The markup provider, for the health endpoint's running cost estimate only. */
   markup?: MarkupProvider;
+  /** Counts who reads a report and who activates a capability, by class and by day. Absent means nothing is counted. */
+  visits?: VisitLedger;
   toolService?: AuditToolServiceOptions;
   /** Where a deep scan's email address is filed. Absent means deep scans are unavailable here. */
   leads?: LeadStore;
@@ -77,6 +80,8 @@ export function createApp(options: AppOptions = {}): Express {
     next();
   });
   app.use(express.json({ limit: "256kb" }));
+  // Who is reading, counted before anything answers: a class and a day, never an address.
+  if (options.visits) app.use(options.visits.middleware());
 
   // Proof to the app directory that this domain is ours to publish from: this path answers with
   // the token and nothing else. It is registered whether or not a token is configured, because the
@@ -128,7 +133,7 @@ export function createApp(options: AppOptions = {}): Express {
     );
     app.use(
       "/api/reports",
-      createReportsRouter(options.orchestrator, limiters, deepScan, writeLimiters, delivery),
+      createReportsRouter(options.orchestrator, limiters, deepScan, writeLimiters, delivery, options.visits),
     );
     // The sidecar draws on its own pool: one agent conversation checks several date ranges, and
     // none of those calls should spend the audit budget.
@@ -137,7 +142,7 @@ export function createApp(options: AppOptions = {}): Express {
     );
     app.use(
       "/api/sidecars/alpina",
-      createAlpinaRouter(options.alpinaSidecar ?? new AlpinaAvailabilitySidecar(), options.orchestrator, sidecarLimiters),
+      createAlpinaRouter(options.alpinaSidecar ?? new AlpinaAvailabilitySidecar(), options.orchestrator, sidecarLimiters, options.visits),
     );
 
     // The remote transport answers before the static handler and the SPA fallback, which would

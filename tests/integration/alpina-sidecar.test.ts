@@ -5,6 +5,9 @@ import request from "supertest";
 import { loadActionModel } from "../../src/domain/action-model/loadModel.js";
 import { FixtureProvider } from "../../src/server/adapters/fixtures/FixtureProvider.js";
 import { MemoryReportStore } from "../../src/server/adapters/store/MemoryReportStore.js";
+import { MemoryVisitStore } from "../../src/server/adapters/visits/MemoryVisitStore.js";
+import { VisitorClassifier } from "../../src/server/security/visitorClass.js";
+import { VisitLedger } from "../../src/server/services/VisitLedger.js";
 import { createApp } from "../../src/server/app.js";
 import { AuditOrchestrator } from "../../src/server/services/AuditOrchestrator.js";
 import { AlpinaAvailabilitySidecar } from "../../src/server/sidecars/alpina/adapter.js";
@@ -25,12 +28,14 @@ function testApp(fetchImpl: typeof fetch) {
     ttlDays: 30,
     now: () => fixedNow,
   });
+  const visits = new VisitLedger({ store: new MemoryVisitStore(() => fixedNow), classifier: new VisitorClassifier(), ttlDays: 30, now: () => fixedNow });
   const app = createApp({
     orchestrator,
     rateLimits: { enabled: false },
     alpinaSidecar: new AlpinaAvailabilitySidecar({ fetchImpl, now: () => fixedNow }),
+    visits,
   });
-  return { app, orchestrator };
+  return { app, orchestrator, visits };
 }
 
 async function alpinaReport(app: ReturnType<typeof testApp>["app"]) {
@@ -171,5 +176,23 @@ describe("Alpina availability sidecar", () => {
     const [, init] = fetchImpl.mock.calls[0] as unknown as [URL, RequestInit];
     expect(init.method).toBe("GET");
     expect(init.body).toBeUndefined();
+  });
+});
+
+describe("what the ledger counts of the sidecar", () => {
+  it("counts every activation by surface and outcome, and never by person", async () => {
+    const { app, visits } = testApp(vi.fn(async () => jsonResponse(upstream)) as unknown as typeof fetch);
+
+    await request(app).post("/api/sidecars/alpina/availability").send({ checkIn: "2026-09-12", checkOut: "2026-09-15", adults: 2, surface: "webmcp" }).expect(200);
+    await request(app).post("/api/sidecars/alpina/availability").send({ checkIn: "2026-09-12", checkOut: "2026-09-15", adults: 2 }).expect(200);
+    await request(app).post("/api/sidecars/alpina/availability").send({ checkIn: "2026-09-15", checkOut: "2026-09-12", adults: 2, surface: "web" }).expect(400);
+
+    expect(await visits.activations("alpina.travel")).toEqual(
+      expect.arrayContaining([
+        { day: "2026-08-27", tool: "check-availability", surface: "webmcp", outcome: "ok", count: 1 },
+        { day: "2026-08-27", tool: "check-availability", surface: "api", outcome: "ok", count: 1 },
+        { day: "2026-08-27", tool: "check-availability", surface: "web", outcome: "failed", count: 1 },
+      ]),
+    );
   });
 });

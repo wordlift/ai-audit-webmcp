@@ -6,6 +6,7 @@ import { ReportRequestError } from "../errors.js";
 import { UrlPolicyError } from "../security/urlPolicy.js";
 import type { AuditOrchestrator } from "../services/AuditOrchestrator.js";
 import type { DeepScanDelivery } from "../services/DeepScanDelivery.js";
+import type { VisitLedger } from "../services/VisitLedger.js";
 import { DeepScanGate } from "../services/DeepScanGate.js";
 import { ToolCallError } from "../services/toolErrors.js";
 
@@ -25,12 +26,21 @@ const createReportBodySchema = createReportRequestSchema.extend({
   surface: z.enum(["web", "webmcp"]).optional(),
 });
 
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
 export function createReportsRouter(
   orchestrator: AuditOrchestrator,
   auditLimiters: RequestHandler[] = [],
   deepScan: DeepScanGate = new DeepScanGate(null),
   writeLimiters: RequestHandler[] = [],
   delivery?: DeepScanDelivery,
+  visits?: VisitLedger,
 ): Router {
   const router = Router();
 
@@ -87,6 +97,28 @@ export function createReportsRouter(
     } catch (error) {
       sendError(response, error);
     }
+  });
+
+  // Who read this report, by class and by day, and which agents activated a capability on its
+  // site. Counts only, and reading them is never rate limited and never counted as a visit.
+  router.get("/:reportId/visits", async (request, response) => {
+    const report = await orchestrator.get(request.params.reportId);
+    if (!report) {
+      response.status(404).json({ error: "report_not_found", message: "Report not found or expired" });
+      return;
+    }
+    if (!visits) {
+      response.json({ reportId: report.id, since: report.createdAt, days: [], activations: [] });
+      return;
+    }
+    const site = hostOf(report.canonicalUrl ?? report.requestedUrl);
+    const [days, activations] = await Promise.all([visits.visits(report.id), visits.activations(site)]);
+    response.json({
+      reportId: report.id,
+      since: report.createdAt,
+      days: days.map((row) => ({ day: row.day, counts: row.counts })),
+      activations,
+    });
   });
 
   router.get("/:reportId/contracts/:actionId", async (request, response) => {

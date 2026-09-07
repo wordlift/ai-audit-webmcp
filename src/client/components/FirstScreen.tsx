@@ -1,9 +1,9 @@
 import { ArrowRight, Bot, ScanSearch } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DEEP_SCAN_PAGES } from "../../shared/format/deepScan.js";
 import type { CapabilityResult, ReportRecord } from "../../shared/types/index.js";
-import { startReport } from "../api/client";
+import { getVisits, startReport, type ReportVisits } from "../api/client";
 import { ActionDetailDialog } from "./ActionDetailDialog";
 
 /**
@@ -98,10 +98,41 @@ function hostOf(url: string): string {
   }
 }
 
+/** "3 crawlers and 1 agent have read this": the readers that are not people, summed across days. */
+export function readersLine(visits: ReportVisits | null): string | null {
+  if (!visits || !Array.isArray(visits.days)) return null;
+  let crawlers = 0;
+  let agents = 0;
+  for (const day of visits.days) {
+    for (const [cls, count] of Object.entries(day.counts)) {
+      if (cls.startsWith("crawler:") && !cls.startsWith("crawler:claimed-")) crawlers += count;
+      else if (cls.startsWith("agent:")) agents += count;
+    }
+  }
+  if (crawlers === 0 && agents === 0) return null;
+  const part = (count: number, noun: string) => `${count} ${count === 1 ? noun : `${noun}s`}`;
+  return `${part(crawlers, "crawler")} and ${part(agents, "agent")} have read this since it was published.`;
+}
+
 export function FirstScreen({ report, now = () => Date.now() }: { report: ReportRecord; now?: () => number }) {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<CapabilityResult | null>(null);
   const [rerunning, setRerunning] = useState(false);
+  const [visits, setVisits] = useState<ReportVisits | null>(null);
+
+  // The ledger is a separate read, and a report never waits for it.
+  useEffect(() => {
+    let cancelled = false;
+    getVisits(report.id)
+      .then((result) => {
+        if (!cancelled) setVisits(result);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [report.id]);
+  const readers = readersLine(visits);
 
   const capabilities = report.capabilities ?? [];
   const three = actionsThatMatter(capabilities);
@@ -172,6 +203,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
       {report.agentDiscovery?.catalog === "found" && (
         <p className="discovery-line">Agents can discover this site: a catalog is published at its well-known path.</p>
       )}
+      {readers && <p className="discovery-line readers-line">{readers}</p>}
 
       {report.scanDepth !== "deep" && (
         <a className="deep-scan-strip" href="#deep-scan">

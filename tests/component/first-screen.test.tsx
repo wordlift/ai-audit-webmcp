@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { FirstScreen, actionsThatMatter, openingSentence, readAgo } from "../../src/client/components/FirstScreen";
+import { FirstScreen, actionsThatMatter, openingSentence, readAgo, readersLine } from "../../src/client/components/FirstScreen";
 import type { CapabilityResult, ReportRecord } from "../../src/shared/types/index.js";
 
 function capability(overrides: Partial<CapabilityResult> & Pick<CapabilityResult, "actionId" | "label" | "state">): CapabilityResult {
@@ -127,5 +127,23 @@ describe("which actions matter", () => {
     expect(readAgo(at, t("2026-09-07T05:40:00.000Z"))).toBe("Read 40 minutes ago");
     expect(readAgo(at, t("2026-09-07T08:00:00.000Z"))).toBe("Read 3 hours ago");
     expect(readAgo(at, t("2026-09-09T06:00:00.000Z"))).toBe("Read 2 days ago");
+  });
+});
+
+describe("the readers line", () => {
+  it("sums crawlers and agents across days and leaves claims and people out", () => {
+    expect(readersLine(null)).toBeNull();
+    expect(readersLine({ reportId: "x", since: "2026-09-01", days: [], activations: [] })).toBeNull();
+    expect(
+      readersLine({
+        reportId: "x",
+        since: "2026-09-01",
+        days: [
+          { day: "2026-09-05", counts: { "crawler:googlebot": 2, "crawler:claimed-googlebot": 5, human: 9 } },
+          { day: "2026-09-06", counts: { "crawler:gptbot": 1, "agent:anthropic": 1 } },
+        ],
+        activations: [],
+      }),
+    ).toBe("3 crawlers and 1 agent have read this since it was published.");
   });
 });

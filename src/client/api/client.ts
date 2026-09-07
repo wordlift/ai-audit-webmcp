@@ -160,6 +160,8 @@ export async function refineReport(reportId: string, assertions: HumanAssertion)
 }
 
 export interface AlpinaAvailabilityInput {
+  /** Who is asking: a person on the page, or an agent in the page. Attribution, not authorization. */
+  surface?: "web" | "webmcp";
   reportId?: string;
   propertyId?: string;
   checkIn: string;
@@ -201,6 +203,21 @@ export async function checkAlpinaAvailability(input: AlpinaAvailabilityInput): P
     body: JSON.stringify(input),
   });
   return body as AlpinaAvailabilityResponse;
+}
+
+export interface ReportVisits {
+  reportId: string;
+  since: string;
+  days: Array<{ day: string; counts: Record<string, number> }>;
+  activations: Array<{ day: string; tool: string; surface: string; outcome: string; count: number }>;
+}
+
+/** Who has read this report, by class and by day. Counts only. */
+export async function getVisits(reportId: string): Promise<ReportVisits> {
+  const { body } = await requestJson(`/api/reports/${reportId}/visits`, { method: "GET" });
+  // A page under test, or a proxy, may answer with something else; the line is then left out.
+  if (!body || typeof body !== "object" || !Array.isArray((body as ReportVisits).days)) throw new Error("Not a visits ledger");
+  return body as ReportVisits;
 }
 
 export function contractPath(reportId: string, actionId: string): string {

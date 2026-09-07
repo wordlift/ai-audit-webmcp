@@ -191,6 +191,27 @@ WordLift's HTML-to-JSON-LD service replaces it there; the validator in `jsonLd.t
 nodes without a type or a name, non-schema.org types and non-URLs, stays in front of whichever
 model answers, and is where a SHACL pass goes once the shapes exist.
 
+## The ledger: who reads a report, and who acts
+
+Every read of a report — the page, its JSON, a contract — and of what we publish for agents is
+counted by class and by day: a crawler by name, an agent by the platform it acts from, or a
+person. The class is decided from the address and the user agent and then forgotten; only the
+count is stored, in `visits`, one document per report per day, expiring with the report. Every
+sidecar call is counted the same way in `activations`, one document per site per day, by tool,
+surface (`web`, `webmcp`, `api`, `mcp`, `audit`) and outcome. Both are read at
+`GET /api/reports/:id/visits`, which is never rate limited and never counted.
+
+A "Googlebot" is Google only from Google's published ranges, read at startup and daily from the
+three files Google publishes; from anywhere else it is counted as `crawler:claimed-googlebot`.
+Counts are batched in memory and written every fifteen seconds, so a burst is one write.
+
+The two collections need the same TTL policy the reports have, created once:
+
+```bash
+gcloud firestore fields ttls update expiresAt --collection-group=visits --enable-ttl --project ai-audit-wordlift
+gcloud firestore fields ttls update expiresAt --collection-group=activations --enable-ttl --project ai-audit-wordlift
+```
+
 ## Rate-limit tiers for hosted assistants
 
 Everyone who uses the audit through claude.ai or ChatGPT arrives from that platform's published

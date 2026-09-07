@@ -22,7 +22,7 @@ export function AlpinaSidecarPanel({ reportId, verified }: { reportId: string; v
     setBusy(true);
     setError(null);
     try {
-      const response = await checkAlpinaAvailability({ reportId, checkIn, checkOut, adults });
+      const response = await checkAlpinaAvailability({ reportId, checkIn, checkOut, adults, surface: "web" });
       setResult(response);
       if (response.updatedReportUrl) {
         window.setTimeout(() => navigate(response.updatedReportUrl as string), 1_200);

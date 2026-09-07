@@ -9,6 +9,10 @@ import { createScrapingBeeCollector } from "./adapters/scrape/ScrapingBee.js";
 import { FirestoreClaimStore, MemoryClaimStore } from "./adapters/claims/index.js";
 import { FirestoreLeadStore, HubSpotLeadDelivery, MemoryLeadStore } from "./adapters/leads/index.js";
 import { GeminiMarkupProvider } from "./adapters/markup/GeminiMarkup.js";
+import { FirestoreVisitStore } from "./adapters/visits/FirestoreVisitStore.js";
+import { MemoryVisitStore } from "./adapters/visits/MemoryVisitStore.js";
+import { GOOGLE_CRAWLER_RANGE_URLS, VisitorClassifier } from "./security/visitorClass.js";
+import { VisitLedger } from "./services/VisitLedger.js";
 import { FirestoreReportStore, MemoryReportStore } from "./adapters/store/index.js";
 import { loadConfig } from "./config.js";
 import { OPENAI_CONNECTOR_EGRESS, OPENAI_CONNECTOR_EGRESS_URL } from "./security/openaiConnectorEgress.js";
@@ -97,6 +101,21 @@ if (config.PLATFORM_EGRESS_REFRESH_MINUTES > 0 && config.NODE_ENV !== "test") {
   });
 }
 
+// The ledger: who reads a report and who activates a capability, by class and by day. Google's
+// crawler ranges are read the way OpenAI's are, so a "Googlebot" from elsewhere is a claim.
+const crawlerRanges = new PlatformEgress();
+if (config.NODE_ENV !== "test") {
+  for (const { platform, url } of GOOGLE_CRAWLER_RANGE_URLS) {
+    startPlatformEgressRefresh({ egress: crawlerRanges, platform, url, intervalMs: 24 * 60 * 60 * 1_000, log: (event, ...details) => console.log(event, ...details) });
+  }
+}
+const visits = new VisitLedger({
+  store: config.REPORT_STORE === "firestore" ? FirestoreVisitStore.fromProject(config.GOOGLE_CLOUD_PROJECT) : new MemoryVisitStore(),
+  classifier: new VisitorClassifier({ platforms: platformEgress, crawlers: crawlerRanges }),
+  ttlDays: config.REPORT_TTL_DAYS,
+  log: (event, ...details) => console.error(event, ...details),
+});
+
 const app = createApp({
   staticDirectory: path.resolve(process.cwd(), "dist"),
   orchestrator,
@@ -109,6 +128,7 @@ const app = createApp({
   rateLimits: config.NODE_ENV === "test" ? { enabled: false } : { daily: config.AUDIT_DAILY_BUDGET },
   platformEgress,
   markup,
+  visits,
 });
 
 const server = app.listen(config.PORT, () => {
@@ -117,6 +137,7 @@ const server = app.listen(config.PORT, () => {
 
 function shutdown(signal: string) {
   console.log(`${signal} received; closing HTTP server`);
+  void visits.close();
   server.close((error) => {
     if (error) {
       console.error(error);
