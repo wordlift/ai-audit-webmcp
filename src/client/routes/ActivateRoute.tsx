@@ -251,9 +251,14 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
       <section className="activate-section" aria-labelledby="carries-title">
         <h2 id="carries-title">What the page carries</h2>
         <p className="activate-lead">
-          {publication.decided > 0
-            ? `${plural(publication.decided, "decision")} of yours shaped this. `
-            : "Nobody has answered the three questions yet, so this is what the audit verified, no less. "}
+          {publication.decided > 0 ? (
+            <>{plural(publication.decided, "decision")} of yours shaped this. </>
+          ) : (
+            <>
+              Nobody has answered <Link to={`/reports/${report.id}#own-it`}>the three questions</Link> yet, so this is what the audit verified, no
+              less.{" "}
+            </>
+          )}
           Nothing is declared that the audit could not call.
         </p>
         <div className="table-scroll">

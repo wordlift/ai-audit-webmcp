@@ -32,7 +32,7 @@ export function App() {
         </Routes>
       </main>
       <footer>
-        <p>Agent perspective. Human-readable evidence. Implementation-ready contracts.</p>
+        <p>Audit what agents can do on your site. Fix what they cannot. Activate what works.</p>
         <a href="https://wordlift.io" target="_blank" rel="noreferrer">Build your Context Engine with WordLift</a>
         <a className="footer-legal" href="/privacy">Privacy policy</a>
       </footer>

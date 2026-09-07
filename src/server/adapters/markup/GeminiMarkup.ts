@@ -33,6 +33,7 @@ const MAX_TEXT_CHARACTERS = 12_000;
 const INSTRUCTIONS = [
   "You write schema.org JSON-LD for one web page, for search engines and AI agents.",
   'Answer with one JSON object: "@context": "https://schema.org" and "@graph": an array of the entities the page is about — the organisation or business, its products, services, offers, events, places, articles and people — with their key facts.',
+  "An entity is something a customer would look for by name. Never list the parts of one: rooms, floors, sections, features, amenities, menu items or components belong in the description of the thing they are part of, not in the graph.",
   "Use only facts stated in the page text. Never invent names, prices, addresses, ratings, dates or identifiers; omit a property rather than guess it.",
   'Use standard schema.org types and properties. Every entity has "@type" and "name". Add "url", "description", "sameAs" and "offers" (price, priceCurrency, availability) only where the page states them.',
   "At most 12 entities. Output JSON only, no commentary.",

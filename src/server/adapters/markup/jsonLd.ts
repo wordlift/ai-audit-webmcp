@@ -86,8 +86,11 @@ export function readJsonLd(document: unknown): { nodes: JsonLdNode[]; issues: st
  * Those are a page's furniture. The map keeps what the declared path keeps — the types the
  * business is made of — and says how many it left aside, so the count Fix shows is honest.
  */
+/** A room, floor or fitting is a part of a listing, not a thing a customer looks for: a model that names one is describing, not listing. */
+const PART_OF_A_LISTING = /^(?:master |main |second |third |guest |double |single |twin |family )?(?:bed ?room|bath ?room|living ?room|dining ?room|kitchen|hallway|balcony|terrace|garage|parking|cellar|attic|floor|lounge|wc|toilet|shower)(?:\s*\d+)?$/i;
+
 export function domainNodes(nodes: JsonLdNode[], issues: string[]): JsonLdNode[] {
-  const kept = nodes.filter((node) => node.types.some((type) => DOMAIN_ENTITY_TYPES.has(type)));
+  const kept = nodes.filter((node) => node.types.some((type) => DOMAIN_ENTITY_TYPES.has(type)) && !PART_OF_A_LISTING.test(node.name.trim()));
   const skipped = nodes.filter((node) => !kept.includes(node));
   if (skipped.length > 0) {
     const types = [...new Set(skipped.map((node) => node.types[0] ?? "Thing"))].slice(0, 8).join(", ");

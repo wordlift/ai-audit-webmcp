@@ -187,6 +187,7 @@ describe("the Activate screen", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText(/Nothing to activate yet: no interface has answered\./)).toBeVisible();
-    expect(screen.getByText(/Nobody has answered the three questions yet/)).toBeVisible();
+    expect(screen.getByText(/Nobody has answered/)).toHaveTextContent(/Nobody has answered the three questions yet/);
+    expect(screen.getByRole("link", { name: "the three questions" })).toHaveAttribute("href", `/reports/${REPORT_ID}#own-it`);
   });
 });

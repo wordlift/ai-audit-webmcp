@@ -130,6 +130,21 @@ describe("reading generated JSON-LD", () => {
     expect(issues).toContain("3 entities skipped as not domain entities: WebPage, Question, Rating");
   });
 
+  it("leaves the parts of a listing aside: a room is described, never listed as a thing the business is", () => {
+    const { nodes, issues } = readJsonLd({
+      "@context": "https://schema.org",
+      "@graph": [
+        { "@type": "Apartment", name: "Samspitze 4" },
+        { "@type": "Accommodation", name: "Bedroom 1" },
+        { "@type": "Accommodation", name: "Living room" },
+        { "@type": "Accommodation", name: "Master bedroom" },
+        { "@type": "LodgingBusiness", name: "Mountain Nests Rentals" },
+      ],
+    });
+    expect(domainNodes(nodes, issues).map((node) => node.name)).toEqual(["Samspitze 4", "Mountain Nests Rentals"]);
+    expect(issues).toContain("3 entities skipped as not domain entities: Accommodation");
+  });
+
   it("refuses what is not a document, and notes a missing context", () => {
     expect(readJsonLd("text")).toEqual({ nodes: [], issues: ["The document is not a JSON object"] });
     expect(readJsonLd({ "@type": "Thing", name: "X" }).issues).toContain("The document does not declare the schema.org context");

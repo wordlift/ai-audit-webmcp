@@ -97,7 +97,7 @@ export function OwnIt({ report }: { report: ReportRecord }) {
   }
 
   return (
-    <section className="own-it" aria-labelledby="own-it-title">
+    <section className="own-it" id="own-it" aria-labelledby="own-it-title">
       <p className="section-kicker"><UserRoundCheck size={16} /> Own it</p>
       <h2 id="own-it-title">Three questions only you can answer</h2>
       <p className="own-it-lead">Who runs each of these? Your answer shapes what the site publishes. It never changes the score; only an interface that answers does.</p>
