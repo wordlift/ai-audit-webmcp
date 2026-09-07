@@ -450,6 +450,28 @@ recurring basis.
   Verify: delivery tests with a fake transport; a scheduler test bounded by addresses.
   Commit as `feat: bring the number to the person`. Two days.
 
+## The UX pass of 2026-09-07, after the first preview
+
+Seen on the preview, fixed on the branch, all one click or less from the first screen:
+
+- The report opens on the three things an AI agent should be able to do on this kind of site and
+  how many work today; the rest is one click below, and the link says how many there are in all.
+- **Understand** replaces the Fix panel: every entity the audit read, named plainly, with where it
+  was found, in two groups, what agents already read and what exists only in the text, and one
+  button that publishes the second group. The markup sample waits behind a fold.
+- The discovery line lost its file path; the three questions became three pills a question; the
+  full audit explains itself before it opens; the progress screen says what it is doing in plain
+  words; the footer says what the product does.
+- Activate says an unchanged score is unchanged, says once what eight actions had said eight
+  times, and points at the three questions when nobody has answered.
+- The markup stand-in is told that a room is not a thing a business is, and room-like names are
+  left aside on the way in, because "Bedroom 1" on the first screen is the kind of thing an
+  investor remembers.
+
+Still to judge by eye on the next preview: the Activate documents' previews are heavy; the pitch
+result page has not been screenshotted with three live sites; the deep-scan strip and offer say
+the same thing twice on a page.
+
 ## Review pauses
 
 1. After Audit: the one-minute test with two people outside the team; the bill after a week of
