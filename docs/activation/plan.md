@@ -1,20 +1,25 @@
-# Audit, Fix, Promote
+# Audit, Fix, Activate
 
-Status: rewritten on 2026-09-06, replacing the seven-item draft of the same day. For review.
-Nothing below is started.
+Status: rewritten on 2026-09-06, replacing the seven-item draft of the same day; Activate replaced
+Activate on 2026-09-07, because the third stage makes the organisation operable, not merely visible.
+For review. Nothing below is started.
 
 The client is a human. The end consumer is an AI agent. What we have works and is overly complex:
 a site owner meets the machine's pipeline, its vocabulary and its provenance before they meet the
 one thing they came for. This plan keeps what works, the audit that earns readiness by invocation,
 and gives it three words a person can hold: **Audit** what an agent can do on your site, **Fix**
-what it cannot, **Promote** it so agents find it. Everything a person sees is written for a
+what it cannot, **Activate** your business for agents. Everything a person sees is written for a
 person. Everything the site publishes is written for an agent. Three numbers close the loop: who
 crawled the graph, whether Google came back, and which agents acted.
+
+Externally: **Audit. Fix. Activate. Make your business work with AI agents.** Internally, WordLift
+knows what that takes, entities, words, actions, governance, interfaces, verification, and none of
+it needs a name on the screen.
 
 ## Principles
 
 - **Readiness is earned by invocation.** Unchanged. Verification is not a fourth word; it is what
-  Audit does every time it runs, so a promoted site is re-verified by the tool that found the gap.
+  Audit does every time it runs, so a activated site is re-verified by the tool that found the gap.
 - **Human on the screen, agent in the file.** No pipeline stage, no provenance panel, no schema
   term on the first screen. The frozen vocabulary stays in the full audit, the docs and the tools.
 - **Free diagnoses; paid keeps it alive.** A snapshot rots when the site changes a template. The
@@ -27,11 +32,11 @@ crawled the graph, whether Google came back, and which agents acted.
   the knowledge graph as memory. An ARD catalog at the well-known path points at both. Three
   renderings of one model, no format of our own.
 - **Memory never outranks evidence.** A skill states boundaries; only the audit calling an
-  interface states readiness. Promote publishes both.
+  interface states readiness. Activate publishes both.
 - **We build graphs and expose capabilities. We do not run a directory.** Google's registry does
   discovery, ranking and spam. Decided 2026-09-06.
 - **Sidecars are read-first and sold as projects.** Alpina stays the demo.
-- **The loop closes with numbers.** Promote is a claim until a crawler comes, Google re-reads, and
+- **The loop closes with numbers.** Activate is a claim until a crawler comes, Google re-reads, and
   an agent acts. Three counts, by visitor class, shown to the owner where the claim was made.
   Aggregate only: no address and no user agent is ever stored raw.
 
@@ -41,8 +46,8 @@ crawled the graph, whether Google came back, and which agents acted.
 | --- | --- | --- |
 | **Audit** | URL in, one screen out: archetype, score, the three actions that matter with a state and one next step each, the deep-scan offer at the top. "Full audit" behind a fold. | The same over MCP: `audit-website`, `get-audit-report`, the explain tools. A report that says what works, with the evidence. |
 | **Fix** | "Here is the markup your site should have." Entities not published, actions with no entry point, a sample of the markup. One button: publish with WordLift, kept in sync. | JSON-LD on the pages: the entities, each with the `potentialAction`s that work and an `EntryPoint` for each. |
-| **Promote** | "Your site is discoverable by agents." A catalog at the well-known path, kept current, the audit attached as evidence, listed in Google's registry. Later, WordLift runs an interface for actions that have none. | `/.well-known/ai-catalog.json` pointing at the server card and at the skill, the site's Terms of Action as memory, the report as evidence, re-verified on each audit. |
-| **Close the loop** | "Since you promoted": crawler visits by name, how often Google re-read the entity, which agents activated a sidecar. Free: the single entity that stands for the site and its capabilities, hosted by us. Paid: the combined graph on the customer's domain. | Nothing new. Its visit is counted by class, never by identity. |
+| **Activate** | "Your site is discoverable by agents." A catalog at the well-known path, kept current, the audit attached as evidence, listed in Google's registry. Later, WordLift runs an interface for actions that have none. | `/.well-known/ai-catalog.json` pointing at the server card and at the skill, the site's Terms of Action as memory, the report as evidence, re-verified on each audit. |
+| **Close the loop** | "Since you activated": crawler visits by name, how often Google re-read the entity, which agents activated a sidecar. Free: the single entity that stands for the site and its capabilities, hosted by us. Paid: the combined graph on the customer's domain. | Nothing new. Its visit is counted by class, never by identity. |
 
 ## Free and paid
 
@@ -52,6 +57,21 @@ crawled the graph, whether Google came back, and which agents acted.
 | Email | The twelve-page deep scan, the report sent | A lead, not a tier; unchanged |
 | WordLift account | The full generated markup, published by the plugin and kept in sync, "own it" recorded on the site, the catalog kept current, readiness re-verified on a schedule | This is what rots as a snapshot and holds as a graph |
 | Project | A sidecar: WordLift runs an interface for a site | Services, never self-serve |
+
+The paid promise in one sentence: **WordLift keeps your business agent-ready.** JSON-LD, the
+catalog, the skill and the graph are how, never what is sold.
+
+## The ladder
+
+Nobody buys the vision on day one. They paste a URL.
+
+| Rung | What it is |
+| --- | --- |
+| Top of funnel | Audit my website |
+| Product | Make it agent-ready: Fix, then Activate |
+| Recurring | Keep it agent-ready: Activate, and the loop that proves it still works |
+| Enterprise expansion | Make more of the organisation operable: the interfaces that are missing, built as projects |
+| Infrastructure | The graph beneath it all: entities, words, actions, governance, interfaces, verification |
 
 ## Audit
 
@@ -103,7 +123,7 @@ crawled the graph, whether Google came back, and which agents acted.
   read as the site's memory: an instruction that names an interface is declared evidence, and one
   that names an interface the audit cannot call is a finding, "the site's instructions promise
   what the site does not do". A site without a catalog gets the finding "agents cannot discover
-  this site", whose next step is Promote.
+  this site", whose next step is Activate.
   Acceptance: a fixture with a catalog lists its interfaces as evidence; a skill that promises a
   failing interface produces the finding; one without a catalog gets its finding; no entry and no
   instruction raises an action past `unverified`.
@@ -143,7 +163,7 @@ crawled the graph, whether Google came back, and which agents acted.
   the interview in `plugins/ai-audit/skills/review-ai-audit/SKILL.md`.
   What to build: on the web, one question per action of the three: own it, hand it off, describe
   only. It calls the refine tool with `actionDecisions` alone and creates the child report as
-  today. Those three answers are exactly what P1 renders: own it with a working entry point
+  today. Those three answers are exactly what AC1 renders: own it with a working entry point
   publishes the action, hand it off publishes it with the partner as `provider`, describe only
   publishes the entity alone. The full interview stays in the MCP skill where an agent asks, and
   what it adds, role, entities, terminology, rationale, reaches the agent through the skill file,
@@ -154,9 +174,9 @@ crawled the graph, whether Google came back, and which agents acted.
   Verify: the existing refinement tests; `cyborg-journey.spec.ts`.
   Commit as `feat: three questions a site owner can answer`. One day.
 
-## Promote
+## Activate
 
-- [ ] **P1. Publish what the owner confirmed and what works**
+- [ ] **AC1. Publish what the owner confirmed and what works**
   Spec ref: the per-action JSON-LD at `/api/reports/:id/contracts/:actionId`, the refined
   report (`businessRole`, entity decisions, `terminology`, `actionDecisions`), the ARD entry
   schema (`spec/schemas/ard-entry.schema.json` in ards-project/ard-spec), the ARD base context,
@@ -196,7 +216,7 @@ crawled the graph, whether Google came back, and which agents acted.
   three as evidence.
   Commit as `feat: publish what the owner confirmed and what works`. Three to four days.
 
-- [ ] **P2. Verify by calling**
+- [ ] **AC2. Verify by calling**
   Spec ref: `mcpToolCalls.ts` and `searchAction.ts` (invocation evidence today),
   `src/server/sidecars/alpina/` (the read-only sidecar).
   What to build: the audit invokes a declared `EntryPoint` for a read action the way it invokes a
@@ -207,12 +227,14 @@ crawled the graph, whether Google came back, and which agents acted.
   Verify: the Alpina contract tests as the template; `alpina-sidecar.spec.ts`.
   Commit as `feat: verify what a site declares by calling it`. Two days.
 
-- [ ] **P3. Onboard to Google's registry** when publisher onboarding opens.
+- [ ] **AC3. Onboard to Google's registry** when publisher onboarding opens.
   What to build: submit the catalogs we publish for; nothing else. Half a day, when it exists.
 
-- [ ] **P4. Sidecar, on request**
+- [ ] **AC4. Sidecar, on request**
   A second sidecar is built when a paying customer asks, by hand, read-only, as the Alpina one.
-  Not sized.
+  Never in the self-serve product: Audit says the interface is missing, Fix structures what can be
+  structured, Activate publishes what is genuinely available, and "talk to us" is enterprise
+  expansion rather than PLG complexity. Not sized.
 
 ## Close the loop
 
@@ -222,6 +244,12 @@ stands for the site and its capabilities is the report page and the JSON-LD it c
 what is counted. In the paid tier the combined graph lives on the customer's domain, and the same
 three numbers come from the WordLift platform, the plugin's own logs and Search Console's crawl
 stats. This repository defines the shape both sides fill.
+
+Internally this stage is **Observe**, the fifth word, kept off the screen until it has numbers to
+show. The day it can say "GPTBot found you 17 times, Claude read your Terms of Action 8 times, 6
+agents checked availability, 5 succeeded, 1 failed because the capability changed", the product
+has crossed from SEO tooling into agent operations, and that is what an enterprise pays for on a
+recurring basis.
 
 - [ ] **L1. Visitor classes**
   Spec ref: `src/server/security/platformEgress.ts` (the address ranges already known and
@@ -241,7 +269,7 @@ stats. This repository defines the shape both sides fill.
 - [ ] **L2. The visits ledger**
   Spec ref: `FirestoreLeadStore.ts` as the store template; the URLs an agent or crawler fetches:
   `/reports/:id`, `/api/reports/:id`, `/api/reports/:id/contracts/*`, `/api/reports/:id/publish`
-  (P1), `/llms.txt`, `/.well-known/*`.
+  (AC1), `/llms.txt`, `/.well-known/*`.
   What to build: a middleware that counts each request to those URLs, and to the skill file the
   site serves for agents, into `visits/{reportId}/{day}` by class, batched in memory and flushed
   on an interval, a memory store in demo mode, the same TTL as the report. A fetch of the skill by
@@ -258,29 +286,30 @@ stats. This repository defines the shape both sides fill.
 
 - [ ] **L3. Sidecar activations**
   Spec ref: `src/server/routes/alpina.ts`, `AlpinaAvailabilityTool.tsx` (the in-page caller),
-  P2's verification calls.
+  AC2's verification calls.
   What to build: every sidecar call is counted by site, tool, surface and outcome into the same
   ledger, keyed by domain rather than report, because a sidecar serves the site across reports.
   Surfaces: `webmcp` (an agent in the page), `mcp` (the remote server), `api`, and `audit`
-  for P2's verification calls, which are counted apart so the number the owner sees is agents,
+  for AC2's verification calls, which are counted apart so the number the owner sees is agents,
   not us.
   Acceptance: an in-page agent's availability check is one `webmcp` activation; an audit's
   verification call lands under `audit` and is excluded from the owner's number.
   Verify: the sidecar route tests; `alpina-sidecar.spec.ts`.
   Commit as `feat: count the agents that actually act`. Half a day.
 
-- [ ] **L4. What happened since you promoted**
-  Spec ref: the Promote screen (P1), the three-actions screen (A2).
-  What to build: on the Promote screen, three numbers for the period since publication: crawler
+- [ ] **L4. What happened since you activated**
+  Spec ref: the Activate screen (AC1), the three-actions screen (A2).
+  What to build: on the Activate screen, three numbers for the period since publication: crawler
   visits by name; Google re-reads, the verified Googlebot requests to the entity, the catalog and
   the pages the plugin publishes; agents that read the site's instructions; and agents that
-  activated a sidecar. On the report, one line:
+  activated a capability, how many succeeded, and each failure with its reason, because a failure
+  is the moment the owner learns a capability changed before the agents gave up on it. On the report, one line:
   "N crawlers and M agents have read this since it was published." Empty states say what to
   expect and when: a crawler within days, an agent once a directory lists the site.
   Acceptance: the numbers on the screen equal the ledger; a report with no visits shows the
   expectation, never a row of zeros.
   Verify: component tests; the e2e report spec.
-  Commit as `feat: show whether promoting worked`. One to two days.
+  Commit as `feat: show whether activating worked`. One to two days.
 
 ## Review pauses
 
@@ -288,7 +317,7 @@ stats. This repository defines the shape both sides fill.
    traffic is the number A3 predicted.
 2. After Fix: a poorly marked-up site gets a Fix panel worth acting on; the dashboard receives the
    report id.
-3. After Promote: alpina.travel round trip. Audit, publish, re-audit finds the catalog, and the
+3. After Activate: alpina.travel round trip. Audit, publish, re-audit finds the catalog, and the
    availability action verifies through the sidecar demo.
 4. After the loop: within a week of publishing, alpina.travel's page shows Googlebot's re-reads and
    the demo agent's sidecar activations, and the audit's own verification calls are not in them.
