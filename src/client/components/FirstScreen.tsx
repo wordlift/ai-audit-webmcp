@@ -67,15 +67,24 @@ export function actionsThatMatter(capabilities: CapabilityResult[], count = 3): 
     .slice(0, count);
 }
 
-/** The sentence a report opens with. */
-export function openingSentence(capabilities: CapabilityResult[]): string {
-  const expected = capabilities.filter((capability) => capability.expected && capability.state !== "not-expected");
-  if (expected.length === 0) return "No agent capabilities are expected for this kind of site yet.";
-  const works = expected.filter((capability) => capability.state === "agent-ready").length;
-  const rest = expected.length - works;
-  return `Agents can discover ${expected.length} ${expected.length === 1 ? "capability" : "capabilities"} on this site. ${works} ${
-    works === 1 ? "works" : "work"
-  }. ${rest} ${rest === 1 ? "does" : "do"} not yet.`;
+/** The sentence a report opens with: the things that matter for this kind of site, and how many work today. */
+export function openingSentence(capabilities: CapabilityResult[], kind = "general"): string {
+  const three = actionsThatMatter(capabilities);
+  if (three.length === 0) return "No agent capabilities are expected for this kind of site yet.";
+  const works = three.filter((capability) => capability.state === "agent-ready").length;
+  const site = kind === "general" ? "a site like this" : `a ${kind} site`;
+  return `Of the ${three.length} ${three.length === 1 ? "thing" : "things"} an AI agent should be able to do on ${site}, ${works} ${works === 1 ? "works" : "work"} today.`;
+}
+
+/** How many expected actions the full audit covers beyond the three on the first screen. */
+export function beyondTheThree(capabilities: CapabilityResult[]): number {
+  const expected = capabilities.filter((capability) => capability.expected && capability.state !== "not-expected").length;
+  return Math.max(0, expected - actionsThatMatter(capabilities).length);
+}
+
+function openFullAudit() {
+  const fold = document.getElementById("full-audit") as HTMLDetailsElement | null;
+  if (fold) fold.open = true;
 }
 
 /** "Read 3 hours ago": when the site was actually read, which a reused crawl makes worth saying. */
@@ -136,6 +145,8 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
 
   const capabilities = report.capabilities ?? [];
   const three = actionsThatMatter(capabilities);
+  const working = three.filter((capability) => capability.state === "agent-ready").length;
+  const beyond = beyondTheThree(capabilities);
   const primary = report.classification?.primaryArchetype;
   const archetype = !primary || primary === "other" ? "general" : primary.replaceAll("-", " / ");
   const score = report.score?.value;
@@ -159,8 +170,8 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         <p className="section-kicker"><Bot size={16} /> What an AI agent can do here</p>
         <h1 id="first-screen-title">{hostOf(report.canonicalUrl ?? report.requestedUrl)}</h1>
         <p className="first-sentence">
-          {openingSentence(capabilities)}
-          {three.length > 0 && " Here is what prevents them."}
+          {openingSentence(capabilities, archetype)}
+          {three.length > 0 && (working < three.length ? " Here is what stops the others." : " Here is how.")}
         </p>
         <p className="first-meta">
           <span className="chip-arche">{archetype}</span>
@@ -195,13 +206,16 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         </ol>
       )}
 
-      {report.agentDiscovery?.catalog === "missing" && (
+      {beyond > 0 && (
         <p className="discovery-line">
-          Agents cannot discover this site yet: nothing is published at <code>/.well-known/ai-catalog.json</code>. Activating it publishes one.
+          <a href="#full-audit" onClick={openFullAudit}>All {beyond + three.length} actions a {archetype === "general" ? "site like this" : `${archetype} site`} should offer are in the full audit.</a>
         </p>
       )}
+      {report.agentDiscovery?.catalog === "missing" && (
+        <p className="discovery-line">Agents have no way to find this site's capabilities yet: it publishes no catalog. Activating publishes one.</p>
+      )}
       {report.agentDiscovery?.catalog === "found" && (
-        <p className="discovery-line">Agents can discover this site: a catalog is published at its well-known path.</p>
+        <p className="discovery-line">Agents can find this site's capabilities: it publishes a catalog.</p>
       )}
       {readers && <p className="discovery-line readers-line">{readers}</p>}
 

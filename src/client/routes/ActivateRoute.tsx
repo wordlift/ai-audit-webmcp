@@ -195,9 +195,21 @@ const PUBLISHED_ORDER: Record<PublishedAction["publishedAs"], number> = { action
 const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long" });
 const plural = (count: number, singular: string, pluralForm = `${singular}s`) => `${count} ${count === 1 ? singular : pluralForm}`;
 
+/** The rows that say something of their own, and the two groups that say one thing for many actions. */
+export function tableRows(actions: PublishedAction[]): { published: PublishedAction[]; entityOnly: PublishedAction[]; nothing: PublishedAction[] } {
+  const sorted = [...actions].sort((left, right) => PUBLISHED_ORDER[left.publishedAs] - PUBLISHED_ORDER[right.publishedAs]);
+  return {
+    published: sorted.filter((action) => action.publishedAs === "action" || action.publishedAs === "handoff"),
+    entityOnly: sorted.filter((action) => action.publishedAs === "entity"),
+    nothing: sorted.filter((action) => action.publishedAs === "nothing"),
+  };
+}
+
+const names = (actions: PublishedAction[]) => actions.map((action) => action.label).join(", ");
+
 export function ActivateScreen({ report, publication, visits }: { report: ReportRecord; publication: Publication; visits: ReportVisits | null }) {
   const host = hostOf(report.canonicalUrl ?? report.requestedUrl);
-  const rows = [...publication.actions].sort((left, right) => PUBLISHED_ORDER[left.publishedAs] - PUBLISHED_ORDER[right.publishedAs]);
+  const { published: publishedRows, entityOnly, nothing } = tableRows(publication.actions);
   const movement = scoreMovement(visits?.history);
   const crawlers = crawlersByName(visits);
   const google = googleReads(visits);
@@ -220,9 +232,13 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
         <h1>{host}</h1>
         <p className="first-sentence">What this site publishes from the report, and who has read it since.</p>
         <p className="activate-score">
-          {movement ? (
+          {movement && movement.from !== movement.to ? (
             <>
               <b>{movement.from}</b> <span aria-hidden="true">→</span> <b>{movement.to}</b> of 100 agent-ready since {longDate(movement.since)}
+            </>
+          ) : movement ? (
+            <>
+              <b>{movement.to}</b> of 100 agent-ready, unchanged since {longDate(movement.since)}.
             </>
           ) : (
             <>
@@ -250,7 +266,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
               </tr>
             </thead>
             <tbody>
-              {rows.map((action) => (
+              {publishedRows.map((action) => (
                 <tr key={action.actionId}>
                   <th scope="row">{action.label}</th>
                   <td>{saidWord(action)}</td>
@@ -260,6 +276,36 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
                   </td>
                 </tr>
               ))}
+              {publishedRows.length === 0 && (
+                <tr>
+                  <th scope="row">No action yet</th>
+                  <td>–</td>
+                  <td><span className="carries carries-nothing">Nothing an agent can call has answered, so no action is published.</span></td>
+                </tr>
+              )}
+              {entityOnly.length > 0 && (
+                <tr className="activate-group">
+                  <th scope="row">{entityOnly.length === 1 ? entityOnly[0]!.label : `${entityOnly.length} more actions`}</th>
+                  <td>{entityOnly.every((action) => !action.boundary) ? "Undecided" : entityOnly.some((action) => !action.boundary) ? "Mixed" : "Answered"}</td>
+                  <td>
+                    <span className="carries carries-entity">The entity, no action</span>
+                    <span className="carries-why">
+                      {entityOnly.length > 1 && <>{names(entityOnly)}. </>}
+                      Nothing is declared that an agent could not call; each becomes an action the day an entry point answers.
+                    </span>
+                  </td>
+                </tr>
+              )}
+              {nothing.length > 0 && (
+                <tr className="activate-group">
+                  <th scope="row">{nothing.length === 1 ? nothing[0]!.label : `${nothing.length} actions`}</th>
+                  <td>Not ours</td>
+                  <td>
+                    <span className="carries carries-nothing">Nothing</span>
+                    <span className="carries-why">{nothing.length > 1 ? `${names(nothing)}. ` : ""}You said these are not yours, so nothing is published for them.</span>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

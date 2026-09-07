@@ -138,13 +138,16 @@ describe("the Activate screen", () => {
     const search = within(table).getByRole("row", { name: /search the site/i });
     expect(search).toHaveTextContent("Ours");
     expect(search).toHaveTextContent("The action, with its entry point");
-    const compare = within(table).getByRole("row", { name: /compare options/i });
-    expect(compare).toHaveTextContent("Not ours");
-    expect(compare).toHaveTextContent("Nothing");
-    // Published actions lead; what publishes nothing trails.
+    // What publishes an entity only, and what publishes nothing, is said once each rather than once per action.
     const rows = within(table).getAllByRole("row").slice(1).map((row) => row.textContent);
+    expect(rows).toHaveLength(4);
     expect(rows[0]).toContain("Search the site");
+    expect(rows[1]).toContain("Check availability");
+    expect(rows[2]).toContain("Retrieve details");
+    expect(rows[2]).toContain("The entity, no action");
     expect(rows[3]).toContain("Compare options");
+    expect(rows[3]).toContain("Not ours");
+    expect(rows[3]).toContain("Nothing");
 
     for (const title of ["On your pages", "For agents", "For registries"]) expect(screen.getByRole("article", { name: title })).toBeVisible();
     expect(screen.getAllByRole("link", { name: /open the document/i })).toHaveLength(3);

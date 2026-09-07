@@ -16,7 +16,7 @@ test("the Activate screen shows what the page carries, the three documents, and 
   await expect(page.getByRole("heading", { name: "alpina.travel", level: 1 })).toBeVisible();
   // Other specs audit the same fixture, so the store may hold one reading or several: either the
   // movement or the promise of one, never a bare number.
-  await expect(page.locator(".activate-score")).toContainText(/of 100 agent-ready(\. The next reading shows how it moved\.| since )/);
+  await expect(page.locator(".activate-score")).toContainText(/of 100 agent-ready(\. The next reading shows how it moved\.| since |, unchanged since )/);
 
   const search = page.getByRole("row", { name: /search the site/i });
   await expect(search).toContainText("Undecided");

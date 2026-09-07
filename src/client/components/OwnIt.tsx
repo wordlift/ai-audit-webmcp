@@ -100,10 +100,7 @@ export function OwnIt({ report }: { report: ReportRecord }) {
     <section className="own-it" aria-labelledby="own-it-title">
       <p className="section-kicker"><UserRoundCheck size={16} /> Own it</p>
       <h2 id="own-it-title">Three questions only you can answer</h2>
-      <p className="own-it-lead">
-        Who runs each of these? Agents act on what you confirm, and your answers shape what the site publishes. They never change the
-        score: that moves only when an interface answers.
-      </p>
+      <p className="own-it-lead">Who runs each of these? Your answer shapes what the site publishes. It never changes the score; only an interface that answers does.</p>
 
       {!editing ? (
         <>
@@ -143,15 +140,16 @@ export function OwnIt({ report }: { report: ReportRecord }) {
                             value={option.value}
                             checked={current.boundary === option.value}
                             onChange={() => answer(capability.actionId, { boundary: option.value })}
-                            aria-describedby={`${id}-means`}
                           />
                           {option.label}
                         </label>
-                        <span id={`${id}-means`} className="own-it-option-means">{option.means}</span>
                       </div>
                     );
                   })}
                 </div>
+                {current.boundary && (
+                  <p className="own-it-means">{OPTIONS.find((option) => option.value === current.boundary)?.means}</p>
+                )}
                 {current.boundary === "partner-handoff" && (
                   <div className="own-it-partner">
                     <label>

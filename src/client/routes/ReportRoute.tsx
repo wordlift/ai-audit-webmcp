@@ -11,12 +11,12 @@ import { ContextEngineMap, heroEntityId } from "../components/ContextEngineMap";
 import { DeepScanOffer } from "../components/DeepScanOffer";
 import { ExecutiveSummary } from "../components/ExecutiveSummary";
 import { FirstScreen } from "../components/FirstScreen";
-import { FixPanel } from "../components/FixPanel";
 import { FoundationAuditDetails } from "../components/FoundationAuditDetails";
 import { OwnIt } from "../components/OwnIt";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { ReportProgress } from "../components/ReportProgress";
 import { ServiceMapProvenance } from "../components/ServiceMapProvenance";
+import { UnderstandPanel } from "../components/UnderstandPanel";
 import { SiteToolsBadge } from "../components/SiteToolsBadge";
 import { AlpinaAvailabilityTool } from "../webmcp/AlpinaAvailabilityTool";
 import { ExplainCapabilityTool } from "../webmcp/ExplainCapabilityTool";
@@ -131,8 +131,8 @@ export function ReportRoute() {
       )}
       {/* The first screen speaks three plain words. Everything precise is one click below. */}
       <FirstScreen report={report} />
-      {/* Fix: the difference between what the pages declare and what they contain, when there is one. */}
-      <FixPanel report={report} />
+      {/* Understand, then Fix: every entity the audit read, and the button that publishes the ones agents cannot see. */}
+      <UnderstandPanel report={report} />
       {/* Own it: who runs each of the three actions, answered in a minute. Readiness never moves on a word. */}
       <OwnIt key={report.id} report={report} />
       {/* Activate: one screen away, so the report stays three words and their fixes. */}
@@ -140,15 +140,21 @@ export function ReportRoute() {
         <p className="section-kicker"><Rocket size={16} /> Activate</p>
         <h2 id="activate-strip-title">Publish what works, and watch who reads it</h2>
         <p>
-          Three documents from this report: the markup for your pages, the instructions an agent loads, and the catalog registries crawl.
-          Then the numbers: crawlers, Google, agents, and every activation with its outcome.
+          Three documents from this report: markup for your pages, instructions an agent loads, the catalog registries crawl. Then who read
+          them: crawlers, Google, agents, and every activation with its outcome.
         </p>
         <Link className="activate-link" to={`/reports/${report.id}/activate`}>
           See what the site publishes <ArrowRight size={15} aria-hidden="true" />
         </Link>
       </section>
       <details className="full-audit" id="full-audit">
-        <summary>Full audit <span>Entities · Terminology · Actions · Terms of Action</span></summary>
+        <summary>
+          Full audit <span>Entities · Terminology · Actions · Terms of Action</span>
+          <small className="full-audit-hint">
+            The precise version of this page: every entity, term and action with its exact state and evidence, the way engineers,
+            agencies and agents read it.
+          </small>
+        </summary>
         <div className="full-audit-body">
           <div className="full-audit-tools"><SiteToolsBadge /></div>
           <ServiceMapProvenance report={report} />

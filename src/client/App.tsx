@@ -18,7 +18,7 @@ export function App() {
         <div className="header-status">
           <AuditWebsiteTool />
           <GetAuditReportTool />
-          <span className="open-source-label">Open source · WebMCP</span>
+          <span className="open-source-label">Open source</span>
         </div>
       </header>
       <main>

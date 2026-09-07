@@ -67,7 +67,9 @@ function renderScreen(record: ReportRecord = report) {
 describe("the first screen", () => {
   it("opens with one sentence a person can act on", () => {
     renderScreen();
-    expect(screen.getByText(/Agents can discover 4 capabilities on this site\. 1 works\. 3 do not yet\./)).toBeVisible();
+    expect(screen.getByText(/Of the 3 things an AI agent should be able to do on a travel \/ hospitality site, 1 works today\. Here is what stops the others\./)).toBeVisible();
+    // The other expected action is one click below, and the link says how many there are in all.
+    expect(screen.getByRole("link", { name: /All 4 actions a travel \/ hospitality site should offer are in the full audit/ })).toHaveAttribute("href", "#full-audit");
     expect(screen.getByRole("heading", { name: "alpina.travel" })).toBeVisible();
     expect(screen.getByText("62")).toBeVisible();
   });
@@ -95,7 +97,7 @@ describe("the first screen", () => {
 
   it("tells the owner when agents cannot discover the site", () => {
     renderScreen();
-    expect(screen.getByText(/Agents cannot discover this site yet/)).toBeVisible();
+    expect(screen.getByText(/Agents have no way to find this site's capabilities yet: it publishes no catalog\./)).toBeVisible();
   });
 
   it("points at the deeper read from the top, and not on a deep scan", () => {
@@ -115,7 +117,10 @@ describe("which actions matter", () => {
   it("writes an honest sentence when nothing is expected", () => {
     expect(openingSentence([])).toMatch(/No agent capabilities are expected/);
     expect(openingSentence([capability({ actionId: "a", label: "A", state: "agent-ready" })])).toBe(
-      "Agents can discover 1 capability on this site. 1 works. 0 do not yet.",
+      "Of the 1 thing an AI agent should be able to do on a site like this, 1 works today.",
+    );
+    expect(openingSentence(report.capabilities ?? [], "travel / hospitality")).toBe(
+      "Of the 3 things an AI agent should be able to do on a travel / hospitality site, 1 works today.",
     );
   });
 
