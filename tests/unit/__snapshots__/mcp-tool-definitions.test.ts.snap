@@ -38,6 +38,10 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
           "description": "Where to send a deep scan's report. Required when depth is "deep". Ask the person for their address — never guess one, and never reuse an address from elsewhere in the conversation without asking.",
           "type": "string",
         },
+        "fresh": {
+          "description": "Read the site again even if it was audited in the last day. By default a recent audit of the same site at the same depth is reused, so a second look costs nothing; set this to re-verify after a change.",
+          "type": "boolean",
+        },
         "url": {
           "description": "Public http(s) URL of the website to audit, for example https://example.com.",
           "type": "string",

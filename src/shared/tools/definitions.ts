@@ -70,6 +70,11 @@ export const AUDIT_WEBSITE_TOOL = {
         description:
           "Where to send a deep scan's report. Required when depth is \"deep\". Ask the person for their address — never guess one, and never reuse an address from elsewhere in the conversation without asking.",
       },
+      fresh: {
+        type: "boolean",
+        description:
+          "Read the site again even if it was audited in the last day. By default a recent audit of the same site at the same depth is reused, so a second look costs nothing; set this to re-verify after a change.",
+      },
     },
     required: ["url"],
     additionalProperties: false,

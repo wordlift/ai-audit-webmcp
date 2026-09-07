@@ -93,7 +93,7 @@ const app = createApp({
   reportTtlDays: config.REPORT_TTL_DAYS,
   appsChallenge: config.OPENAI_APPS_CHALLENGE,
   trustProxy: config.NODE_ENV === "production",
-  rateLimits: config.NODE_ENV === "test" ? { enabled: false } : undefined,
+  rateLimits: config.NODE_ENV === "test" ? { enabled: false } : { daily: config.AUDIT_DAILY_BUDGET },
   platformEgress,
 });
 

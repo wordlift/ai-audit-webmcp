@@ -11,6 +11,7 @@ import { recommendationFor, rankPriorities } from "../../domain/action-model/ran
 import { scoreReadiness } from "../../domain/action-model/scoreReadiness.js";
 import { appliesToForAction, compileContextGraph, refreshContextGraph } from "../../domain/context/compileContextGraph.js";
 import { detectSiteEvidence } from "../../domain/evidence/detectSiteEvidence.js";
+import type { AgentDiscovery } from "../../shared/types/index.js";
 import { detectWordLift, type WordLiftMarker } from "../../domain/evidence/detectWordLift.js";
 import { inferArchetype } from "../../domain/classification/inferArchetype.js";
 import {
@@ -49,7 +50,15 @@ export interface OrchestratorOptions {
     scrape?: ScrapeProvider;
     classify?: ClassifierProvider;
   };
+  /**
+   * How long a crawl of a site serves later requests for the same site at the same depth. Zero
+   * reads the site every time. The default is a day: the same site audited twice in an afternoon
+   * is one crawl, and "fresh" on the request is the explicit re-verify.
+   */
+  reuseWindowMs?: number;
 }
+
+const DEFAULT_REUSE_WINDOW_MS = 24 * 60 * 60 * 1_000;
 
 export const PINNED_ALPINA_REPORT_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -67,6 +76,7 @@ interface CompiledInputs {
   evidenceTruncated: boolean;
   pages: SitePageSnapshot[];
   wordlift?: WordLiftMarker;
+  agentDiscovery?: AgentDiscovery;
 }
 
 export class AuditOrchestrator {
@@ -94,6 +104,17 @@ export class AuditOrchestrator {
     const running = this.baseRecord(request.requestId, target.toString(), this.now(), undefined, request.depth);
     await this.store.put(running);
 
+    // A site read in the last day is not read again for the next caller: the crawl is reused, and
+    // the report and its claim are minted for this request. "fresh" is the explicit re-verify, and
+    // an archetype override asks for a different reading, which a stored one cannot give.
+    const source =
+      request.fresh || request.archetypeOverride
+        ? null
+        : await this.recentReport(target.toString(), request.depth ?? "basic", request.requestId);
+    if (source) {
+      return this.store.finalize(this.deriveFrom(running, source));
+    }
+
     // Progress is visible before the audit finishes: each patch replaces the running record, so
     // a reader polling the report watches it fill in. A failed update never fails the audit.
     let latest = running;
@@ -110,7 +131,7 @@ export class AuditOrchestrator {
         request.archetypeOverride ?? undefined,
         onProgress,
       );
-      return await this.store.finalize(finalReport);
+      return await this.store.finalize({ ...finalReport, collectedAt: running.createdAt });
     } catch (error) {
       // A record left `running` traps every retry of this requestId in polling until it expires,
       // so the failure itself becomes the terminal state before the error reaches the caller.
@@ -121,6 +142,60 @@ export class AuditOrchestrator {
 
   async get(id: string): Promise<ReportRecord | null> {
     return this.store.get(id);
+  }
+
+  /**
+   * The newest completed machine draft of the same site at the same depth within the reuse window,
+   * or null. A refined report carries someone's decisions and is never a source; a partial one is a
+   * sketch the next caller deserves better than; a failed one has nothing to give. A store that
+   * cannot answer — an index not yet built — means a fresh crawl, never a failed audit.
+   */
+  private async recentReport(requestedUrl: string, depth: ScanDepth, excludeId: string): Promise<ReportRecord | null> {
+    const windowMs = this.options.reuseWindowMs ?? DEFAULT_REUSE_WINDOW_MS;
+    if (windowMs <= 0) return null;
+    const since = new Date(this.now().getTime() - windowMs);
+    let candidates: ReportRecord[];
+    try {
+      candidates = await this.store.findRecent(requestedUrl, since, 10);
+    } catch (error) {
+      console.error("report_reuse_unavailable", error instanceof Error ? error.name : "unknown");
+      return null;
+    }
+    return (
+      candidates.find(
+        (report) =>
+          report.id !== excludeId &&
+          report.status === "completed" &&
+          report.mode === this.mode &&
+          (report.scanDepth ?? "basic") === depth &&
+          !report.refinement &&
+          Boolean(report.capabilities?.length) &&
+          new Date(report.collectedAt ?? report.createdAt) >= since,
+      ) ?? null
+    );
+  }
+
+  /** A new report from an existing crawl: its own id and claim, the source's reading of the site. */
+  private deriveFrom(base: ReportRecord, source: ReportRecord): ReportRecord {
+    return {
+      ...base,
+      status: "completed",
+      phase: "complete",
+      canonicalUrl: source.canonicalUrl,
+      completedAt: this.now().toISOString(),
+      collectedAt: source.collectedAt ?? source.createdAt,
+      reusedFrom: source.id,
+      classification: source.classification,
+      foundationAudit: source.foundationAudit,
+      publishedWith: source.publishedWith,
+      contextGraph: source.contextGraph,
+      capabilities: structuredClone(source.capabilities),
+      score: source.score,
+      priorities: source.priorities,
+      agentDiscovery: source.agentDiscovery,
+      errors: source.errors,
+      evidenceTruncated: source.evidenceTruncated,
+    };
   }
 
   /** Stable, dated fixture for judges; live audits remain available from the same URL-first flow. */
@@ -535,6 +610,7 @@ export class AuditOrchestrator {
       evidenceTruncated: sanitized.truncated || Boolean(snapshot?.truncated),
       pages: snapshot?.pages ?? [],
       wordlift: snapshot?.wordlift,
+      agentDiscovery: detection.agentDiscovery,
     };
   }
 
@@ -612,6 +688,7 @@ export class AuditOrchestrator {
       capabilities,
       score: scoreReadiness(capabilities),
       priorities: rankPriorities(capabilities),
+      agentDiscovery: inputs.agentDiscovery,
       errors: inputs.errors,
       evidenceTruncated: inputs.evidenceTruncated,
     };

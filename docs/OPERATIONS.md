@@ -37,6 +37,7 @@ inputs differ.
 | `HUBSPOT_SOURCE_FIELD` | — | A form property recording which surface a lead came from. Create it on the form before setting this |
 | `PLATFORM_EGRESS_RANGES` | — | Extra hosted-assistant egress ranges, `platform=cidr` entries separated by commas. Anthropic's range and a snapshot of OpenAI's are built in |
 | `PLATFORM_EGRESS_REFRESH_MINUTES` | `360` | How often OpenAI's published connector ranges are re-read at runtime. `0` keeps the built-in snapshot |
+| `AUDIT_DAILY_BUDGET` | `2000` | Audits the whole service runs in a day, whoever asks; past it audits answer "at capacity" until tomorrow and reads go on. `0` removes the ceiling. Per instance, like the other limits |
 
 Live mode fails fast at startup if a required credential is missing.
 
@@ -134,6 +135,35 @@ no form configured, deep scans still run and still record what they owe; nothing
 
 `GET /api/health` names the delivery system in `surfaces.reportDelivery`, or `null` when none is
 configured.
+
+## One crawl per site per day, and the bill
+
+A site read in the last day is not read again for the next caller. `POST /api/reports` and the
+`audit-website` tool mint a new report with its own id and claim, built from the newest completed
+machine draft of the same site at the same depth: `reusedFrom` names it and `collectedAt` says when
+the site was actually read. Refined reports, partial ones and failed ones are never a source.
+`fresh: true` on either surface reads the site again; that is the explicit re-verify.
+
+The lookup needs a Firestore composite index, declared in `firestore.indexes.json`. Until it exists
+the query throws, which the orchestrator reads as "nothing to reuse" and logs as
+`report_reuse_unavailable`; audits keep running, at full cost:
+
+```bash
+gcloud firestore indexes composite create --project ai-audit-wordlift \
+  --collection-group=reports \
+  --field-config=field-path=requestedUrl,order=ascending \
+  --field-config=field-path=createdAt,order=descending
+```
+
+`AUDIT_DAILY_BUDGET` is the ceiling on what a day can cost; the billing alert is the check that the
+ceiling is right. Create it once, on the billing account the project is attached to:
+
+```bash
+gcloud billing budgets create --billing-account=<BILLING_ACCOUNT_ID> \
+  --display-name="ai-audit-webmcp" --budget-amount=<EUR-PER-MONTH> \
+  --filter-projects=projects/ai-audit-wordlift \
+  --threshold-rule=percent=0.5 --threshold-rule=percent=0.9 --threshold-rule=percent=1.0
+```
 
 ## Rate-limit tiers for hosted assistants
 

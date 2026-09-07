@@ -440,6 +440,20 @@ export const reportErrorSchema = z
  */
 export const scanDepthSchema = z.enum(["basic", "deep"]);
 
+/**
+ * Whether agents can find this site and how it wants them to behave: the catalog at the well-known
+ * path (the envelope agent registries crawl) and the memory a skill file carries. `unknown` is a
+ * site that answers every path with its HTML page, where absence proves nothing.
+ */
+export const agentDiscoverySchema = z
+  .object({
+    catalog: z.enum(["found", "missing", "unknown"]),
+    catalogUrl: z.string().url().max(2_048).optional(),
+    memory: z.enum(["found", "missing", "unknown"]),
+    memoryUrl: z.string().url().max(2_048).optional(),
+  })
+  .strict();
+
 export const reportRecordSchema = z
   .object({
     id: z.string().uuid(),
@@ -454,6 +468,10 @@ export const reportRecordSchema = z
     expiresAt: z.string().datetime(),
     actionModelVersion: z.string().min(1).max(40),
     scanDepth: scanDepthSchema.optional(),
+    /** When the site was read. On a report built from a recent crawl of the same site, when that crawl ran. */
+    collectedAt: z.string().datetime().optional(),
+    /** The report whose crawl this one was built from, when the site had been read within the reuse window. */
+    reusedFrom: z.string().uuid().optional(),
     classification: classificationResultSchema.optional(),
     foundationAudit: foundationAuditSummarySchema.optional(),
     /** The publishing platform the site's own structured data names — detected, never guessed. */
@@ -471,6 +489,7 @@ export const reportRecordSchema = z
     refinement: refinementSchema.optional(),
     score: readinessScoreSchema.optional(),
     priorities: z.array(priorityGapSchema).max(3).optional(),
+    agentDiscovery: agentDiscoverySchema.optional(),
     errors: z.array(reportErrorSchema).max(30),
     evidenceTruncated: z.boolean(),
   })
@@ -497,6 +516,8 @@ export const createReportRequestSchema = z
     archetypeOverride: archetypeSchema.nullable().optional(),
     fixtureId: z.string().min(1).max(120).nullable().optional(),
     depth: scanDepthSchema.optional(),
+    /** Read the site again even if it was read in the last day; otherwise that crawl is reused. */
+    fresh: z.boolean().optional(),
   })
   .strict();
 

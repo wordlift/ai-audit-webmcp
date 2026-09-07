@@ -56,7 +56,9 @@ export interface DiscoveryDocument {
     | "webmcp-tools"
     | "mcp-server-card"
     | "agent-card"
-    | "api-catalog";
+    | "api-catalog"
+    | "ai-catalog"
+    | "ard";
   url: string;
   /**
    * `valid` means the document exists and parses as the format it claims. Many sites answer every
@@ -66,6 +68,8 @@ export interface DiscoveryDocument {
   found: boolean;
   /** Tool or operation names declared by the document, when it lists any. */
   declaredNames: string[];
+  /** For an agent catalog: what it points at, by artifact type and URL. */
+  entries?: Array<{ identifier?: string; type: string; url?: string }>;
 }
 
 export interface AgentToolParameter {
@@ -131,6 +135,11 @@ export interface McpEndpointProbe {
   protocolVersion: string;
   tools: McpToolProbe[];
   error?: string;
+  /**
+   * How the audit learned of the endpoint. A declared source — the server card, the catalog, the
+   * site's own instructions — makes a failed handshake a finding; a bare link makes no claim.
+   */
+  source?: "link" | "server-card" | "catalog" | "skill";
 }
 
 /**

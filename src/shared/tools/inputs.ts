@@ -19,6 +19,7 @@ export const auditWebsiteInputSchema = z
     depth: scanDepthSchema.optional(),
     /** Validated by the gate, which is where the address is recorded and where it stays. */
     email: z.string().max(254).optional(),
+    fresh: z.boolean().optional(),
   })
   .strict();
 

@@ -91,7 +91,7 @@ export class AuditToolService {
    * result — and the audit keeps running behind the answer, so `get-audit-report` completes it.
    */
   async auditWebsite(input: unknown): Promise<ToolAnswer<AuditToolResult | AuditRunningResult>> {
-    const { url, archetype, depth, email } = parse(auditWebsiteInputSchema, input);
+    const { url, archetype, depth, email, fresh } = parse(auditWebsiteInputSchema, input);
     const reportId = newReportId();
 
     // The exchange is settled before any crawling happens: a deep scan that fails still knows
@@ -107,7 +107,7 @@ export class AuditToolService {
     const claimToken = await this.issueClaim(reportId);
 
     const running = this.orchestrator
-      .create({ requestId: reportId, url, archetypeOverride: archetype ?? null, depth: access.depth })
+      .create({ requestId: reportId, url, archetypeOverride: archetype ?? null, depth: access.depth, fresh })
       .then((report) => ({ report }) as const, (error: unknown) => ({ error }) as const);
 
     // A deep scan is settled when its audit lands, whether or not the caller is still waiting: the

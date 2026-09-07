@@ -2,6 +2,16 @@ import { parseHTML } from "linkedom";
 import { BASIC_SCAN_PAGES, DEEP_SCAN_PAGES } from "../../../shared/format/deepScan.js";
 import { safeFetch, UrlPolicyError, type UrlPolicyOptions } from "../../security/urlPolicy.js";
 import { probeMcpEndpoint } from "./mcpProbe.js";
+import {
+  CATALOG_KINDS,
+  catalogHints,
+  interfacesNamedIn,
+  isServerCardEntry,
+  isSkillEntry,
+  parseCatalogEntries,
+  sameOriginEntries,
+  serverCardEndpoints,
+} from "./agentCatalog.js";
 import type {
   CollectOptions,
   DiscoveryDocument,
@@ -43,7 +53,23 @@ const DISCOVERY_PATHS: Array<{ kind: DiscoveryDocument["kind"]; path: string }> 
   { kind: "mcp-server-card", path: "/.well-known/mcp/server-card.json" },
   { kind: "agent-card", path: "/.well-known/agent-card.json" },
   { kind: "api-catalog", path: "/.well-known/api-catalog" },
+  // Agentic Resource Discovery, in both of the draft's spellings: Google's, and the spec's.
+  { kind: "ai-catalog", path: "/.well-known/ai-catalog.json" },
+  { kind: "ard", path: "/.well-known/ard.json" },
 ];
+
+/** An MCP endpoint the site declared somewhere, and where. */
+interface DeclaredEndpoint {
+  url: string;
+  source: NonNullable<McpEndpointProbe["source"]>;
+}
+
+interface FetchedDiscovery {
+  kind: DiscoveryDocument["kind"];
+  url: string;
+  status: DiscoveryDocument["status"];
+  body: string;
+}
 
 /** Asked for once, to learn whether a 200 on this site means anything at all. */
 const SOFT_NOT_FOUND_PROBE = "/.well-known/audit-soft-404-probe-do-not-implement";
@@ -123,8 +149,8 @@ export class NativeFetchCollector implements ScrapeProvider {
     const canonicalUrl = resolve(canonicalHref, finalUrl) ?? finalUrl.toString();
 
     const links = [...document.querySelectorAll("a[href]")].slice(0, MAX_LINKS);
-    const [{ discovery, softNotFound }, pageTools] = await Promise.all([
-      this.collectDiscovery(finalUrl),
+    const [{ discovery, softNotFound, declaredEndpoints }, pageTools] = await Promise.all([
+      this.collectDiscovery(finalUrl, document),
       this.collectPageTools(document, finalUrl),
     ]);
     const mainPage = extractPage(document, finalUrl, "entry", page.truncated, pageTools);
@@ -159,7 +185,7 @@ export class NativeFetchCollector implements ScrapeProvider {
     // The server card names its own transports, so it has to be read before anything is probed.
     // A search term taken from the page, so a tool call never needs invented vocabulary.
     const seedQuery = text(document.querySelector("h1")) || text(document.querySelector("title")) || finalUrl.hostname;
-    const mcpEndpoints = await this.probeMcpEndpoints(document, finalUrl, discovery, seedQuery.slice(0, 60));
+    const mcpEndpoints = await this.probeMcpEndpoints(document, finalUrl, discovery, seedQuery.slice(0, 60), declaredEndpoints);
 
     // The most widespread declared interface on the web gets the same treatment as an MCP tool:
     // it is executed, once and read-only, and only a page that acknowledges the query confirms it.
@@ -291,43 +317,86 @@ export class NativeFetchCollector implements ScrapeProvider {
       : safeFetch(url, { ...this.options, timeoutMs: this.options.timeoutMs ?? 15_000 });
   }
 
-  private async collectDiscovery(base: URL): Promise<{ discovery: DiscoveryDocument[]; softNotFound: boolean }> {
+  private async collectDiscovery(
+    base: URL,
+    page?: Document,
+  ): Promise<{ discovery: DiscoveryDocument[]; softNotFound: boolean; declaredEndpoints: DeclaredEndpoint[] }> {
     const [results, softNotFound] = await Promise.all([
       Promise.allSettled(
-        DISCOVERY_PATHS.map(async ({ kind, path: documentPath }) => {
-          const target = new URL(documentPath, base.origin);
-          const response = await safeFetch(target, { ...this.options, timeoutMs: 6_000, maxBytes: 250_000 });
-          return {
-            kind,
-            url: target.toString(),
-            status: documentStatus(kind, response.status, response.body),
-            body: response.body,
-          };
-        }),
+        DISCOVERY_PATHS.map(({ kind, path: documentPath }) => this.fetchDiscovery(kind, new URL(documentPath, base.origin))),
       ),
       this.detectSoftNotFound(base),
     ]);
 
+    // Bodies stay in hand only for what the catalog and the skill point at; nothing is stored.
+    const bodies = new Map<string, string>();
     const discovery = results.map((result, index) => {
       const { kind, path: documentPath } = DISCOVERY_PATHS[index];
       // A missing or blocked discovery document is a finding, not a failure.
       if (result.status !== "fulfilled") {
         return { kind, url: new URL(documentPath, base.origin).toString(), status: "missing", found: false, declaredNames: [] } satisfies DiscoveryDocument;
       }
-
-      // On a site that answers everything with its page, an HTML answer says nothing about this
-      // path in particular. Calling that a broken declaration would invent a claim the site never made.
-      const status = softNotFound && result.value.status === "invalid" ? "missing" : result.value.status;
-      return {
-        kind,
-        url: result.value.url,
-        status,
-        found: status === "valid",
-        declaredNames: status === "valid" ? declaredNames(kind, result.value.body) : [],
-      } satisfies DiscoveryDocument;
+      const described = describeDiscovery(result.value, softNotFound, base);
+      if (described.found) bodies.set(described.url, result.value.body);
+      return described;
     });
 
-    return { discovery, softNotFound };
+    // A catalog may live somewhere other than the well-known path: the page's link tag and the
+    // robots file both say where. Only the site's own origin is followed, and only twice.
+    const robots = discovery.find((entry) => entry.kind === "robots" && entry.found);
+    const known = new Set(discovery.map((entry) => entry.url));
+    const hints = catalogHints(page ?? null, robots ? (bodies.get(robots.url) ?? "") : "", base).filter((hint) => !known.has(hint));
+    for (const hint of hints) {
+      try {
+        const fetched = await this.fetchDiscovery("ai-catalog", new URL(hint));
+        const described = describeDiscovery(fetched, softNotFound, base);
+        if (described.found) bodies.set(described.url, fetched.body);
+        discovery.push(described);
+      } catch {
+        // A hint that does not answer is not a finding: the well-known path already was.
+      }
+    }
+
+    const declaredEndpoints = await this.followCatalog(discovery, bodies, base);
+    return { discovery, softNotFound, declaredEndpoints };
+  }
+
+  private async fetchDiscovery(kind: DiscoveryDocument["kind"], target: URL): Promise<FetchedDiscovery> {
+    const response = await safeFetch(target, { ...this.options, timeoutMs: 6_000, maxBytes: 250_000 });
+    return { kind, url: target.toString(), status: documentStatus(kind, response.status, response.body), body: response.body };
+  }
+
+  /**
+   * What the catalog and the skill point at on the site's own origin: the transports of a server
+   * card the catalog names, and the MCP endpoints a skill tells an agent to call. Both are
+   * declarations, so both are probed, and a probe that fails is a finding that names its source.
+   */
+  private async followCatalog(discovery: DiscoveryDocument[], bodies: Map<string, string>, base: URL): Promise<DeclaredEndpoint[]> {
+    const endpoints: DeclaredEndpoint[] = [];
+    const entries = discovery.filter((entry) => CATALOG_KINDS.has(entry.kind) && entry.found).flatMap((entry) => entry.entries ?? []);
+    const cards = sameOriginEntries(entries.filter(isServerCardEntry), base).slice(0, 2);
+    const skills = sameOriginEntries(entries.filter(isSkillEntry), base).slice(0, 2);
+
+    const followed = await Promise.allSettled([
+      ...cards.map(async (entry) => ({
+        source: "catalog" as const,
+        urls: serverCardEndpoints((await this.fetchDiscovery("mcp-server-card", new URL(entry.url))).body),
+      })),
+      ...skills.map(async (entry) => ({
+        source: "skill" as const,
+        urls: interfacesNamedIn((await this.fetchDiscovery("skill", new URL(entry.url))).body, base),
+      })),
+    ]);
+    for (const result of followed) {
+      if (result.status !== "fulfilled") continue;
+      for (const url of result.value.urls) endpoints.push({ url, source: result.value.source });
+    }
+
+    // The skill at the conventional path is memory too, whether or not a catalog names it.
+    for (const skill of discovery.filter((entry) => entry.kind === "skill" && entry.found)) {
+      for (const url of interfacesNamedIn(bodies.get(skill.url) ?? "", base)) endpoints.push({ url, source: "skill" });
+    }
+    return endpoints;
   }
 
   /** Asks for a path that cannot exist. A 200 with HTML means every other 200 here is suspect. */
@@ -382,6 +451,7 @@ export class NativeFetchCollector implements ScrapeProvider {
     base: URL,
     discovery: DiscoveryDocument[],
     seedQuery: string,
+    declared: DeclaredEndpoint[] = [],
   ): Promise<McpEndpointProbe[]> {
     const linked = [...document.querySelectorAll("a[href], link[href]")]
       .map((node) => resolve(node.getAttribute("href"), base))
@@ -389,18 +459,26 @@ export class NativeFetchCollector implements ScrapeProvider {
       .filter((href) => MCP_ENDPOINT_PATTERN.test(new URL(href).pathname.toLowerCase()));
 
     const card = discovery.find((entry) => entry.kind === "mcp-server-card" && entry.found);
-    const declared = card ? card.declaredNames.filter((name) => sameOrigin(name, base)) : [];
+    const fromCard = card ? card.declaredNames.filter((name) => sameOrigin(name, base)) : [];
 
     // A declared transport outranks a linked path: it is what the site says an agent should use.
-    const candidates = unique([...declared, ...linked]).slice(0, MAX_MCP_ENDPOINTS);
+    // Each endpoint keeps the first source that named it, and the order is the order of trust.
+    const candidates = new Map<string, NonNullable<McpEndpointProbe["source"]>>();
+    for (const url of fromCard) candidates.set(url, "server-card");
+    for (const entry of declared) if (!candidates.has(entry.url) && sameOrigin(entry.url, base)) candidates.set(entry.url, entry.source);
+    for (const url of linked) if (!candidates.has(url)) candidates.set(url, "link");
+    const list = [...candidates.entries()].slice(0, MAX_MCP_ENDPOINTS);
+
     const results = await Promise.allSettled(
-      candidates.map((candidate) =>
-        probeMcpEndpoint(new URL(candidate), { ...this.options, timeoutMs: 12_000, seedQuery }),
-      ),
+      list.map(([candidate]) => probeMcpEndpoint(new URL(candidate), { ...this.options, timeoutMs: 12_000, seedQuery })),
     );
 
     return results
-      .map((result) => (result.status === "fulfilled" ? result.value : null))
+      .map((result, index): McpEndpointProbe | null => {
+        if (result.status !== "fulfilled") return null;
+        const source = list[index]?.[1];
+        return source ? { ...result.value, source } : result.value;
+      })
       .filter((probe): probe is McpEndpointProbe => probe !== null);
   }
 }
@@ -414,7 +492,26 @@ const JSON_DOCUMENTS = new Set<DiscoveryDocument["kind"]>([
   "mcp-server-card",
   "agent-card",
   "api-catalog",
+  "ai-catalog",
+  "ard",
 ]);
+
+/** A fetched discovery document, read for what it is on this particular site. */
+function describeDiscovery(fetched: FetchedDiscovery, softNotFound: boolean, base: URL): DiscoveryDocument {
+  // On a site that answers everything with its page, an HTML answer says nothing about this
+  // path in particular. Calling that a broken declaration would invent a claim the site never made.
+  const status = softNotFound && fetched.status === "invalid" ? "missing" : fetched.status;
+  const found = status === "valid";
+  const entries = found && CATALOG_KINDS.has(fetched.kind) ? parseCatalogEntries(fetched.body) : undefined;
+  return {
+    kind: fetched.kind,
+    url: fetched.url,
+    status,
+    found,
+    declaredNames: found ? declaredNames(fetched.kind, fetched.body, base) : [],
+    ...(entries ? { entries } : {}),
+  };
+}
 
 /**
  * Decides whether a 200 response really is the document it claims to be. Single-page sites answer
@@ -442,7 +539,15 @@ export function documentStatus(
   return looksLikeHtml ? "invalid" : "valid";
 }
 
-function declaredNames(kind: DiscoveryDocument["kind"], body: string): string[] {
+function declaredNames(kind: DiscoveryDocument["kind"], body: string, base: URL): string[] {
+  // A skill is prose; what it declares is the interfaces it tells an agent to call.
+  if (kind === "skill") return interfacesNamedIn(body, base);
+  if (CATALOG_KINDS.has(kind)) {
+    return parseCatalogEntries(body)
+      .map((entry) => entry.url ?? entry.identifier ?? "")
+      .filter((name) => name.length > 0)
+      .slice(0, 40);
+  }
   if (!JSON_DOCUMENTS.has(kind)) return [];
   try {
     const parsed = JSON.parse(body) as Record<string, unknown>;
@@ -450,18 +555,8 @@ function declaredNames(kind: DiscoveryDocument["kind"], body: string): string[] 
       const paths = parsed.paths;
       return paths && typeof paths === "object" ? Object.keys(paths).slice(0, 40) : [];
     }
-    if (kind === "mcp-server-card") {
-      // The card names the transports an agent should use, which is what gets probed next. Streamable
-      // HTTP is listed first: it is the current transport, and the SSE one is deprecated.
-      const transports = Array.isArray(parsed.transports) ? parsed.transports : [];
-      return transports
-        .map((entry) => (entry && typeof entry === "object" ? (entry as { endpoint?: unknown; type?: unknown }) : {}))
-        .map((entry) => ({ endpoint: String(entry.endpoint ?? ""), streamable: String(entry.type ?? "") !== "sse" }))
-        .filter((entry) => /^https?:\/\//.test(entry.endpoint))
-        .sort((left, right) => Number(right.streamable) - Number(left.streamable))
-        .map((entry) => entry.endpoint)
-        .slice(0, 10);
-    }
+    // The card names the transports an agent should use, which is what gets probed next.
+    if (kind === "mcp-server-card") return serverCardEndpoints(body);
     if (kind === "api-catalog") {
       const linkset = Array.isArray(parsed.linkset) ? parsed.linkset : [];
       return linkset

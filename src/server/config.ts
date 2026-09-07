@@ -40,6 +40,8 @@ const environmentSchema = z
     PLATFORM_EGRESS_RANGES: z.string().max(20_000).optional(),
     /** How often OpenAI's published connector ranges are re-read at runtime; 0 keeps the snapshot. */
     PLATFORM_EGRESS_REFRESH_MINUTES: z.coerce.number().int().min(0).max(10_080).default(360),
+    /** Audits the whole service runs in a day, whoever asks: the bill's ceiling. 0 removes it. */
+    AUDIT_DAILY_BUDGET: z.coerce.number().int().min(0).max(1_000_000).default(2_000),
   })
   .strict()
   .superRefine((environment, context) => {
@@ -93,6 +95,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     HUBSPOT_SOURCE_FIELD: environment.HUBSPOT_SOURCE_FIELD,
     PLATFORM_EGRESS_RANGES: environment.PLATFORM_EGRESS_RANGES,
     PLATFORM_EGRESS_REFRESH_MINUTES: environment.PLATFORM_EGRESS_REFRESH_MINUTES,
+    AUDIT_DAILY_BUDGET: environment.AUDIT_DAILY_BUDGET,
   };
 
   return environmentSchema.parse(knownEnvironment);

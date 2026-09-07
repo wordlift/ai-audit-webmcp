@@ -36,6 +36,25 @@ export class FirestoreReportStore implements ReportStore {
     return report;
   }
 
+  /**
+   * Backed by the composite index in firestore.indexes.json (requestedUrl ascending, createdAt
+   * descending). Without it the query throws, and the caller reads that as "nothing to reuse",
+   * never as a failed audit.
+   */
+  async findRecent(requestedUrl: string, since: Date, limit = 10): Promise<ReportRecord[]> {
+    const snapshot = await this.firestore
+      .collection("reports")
+      .where("requestedUrl", "==", requestedUrl)
+      .where("createdAt", ">=", since.toISOString())
+      .orderBy("createdAt", "desc")
+      .limit(limit)
+      .get();
+    const now = this.now();
+    return snapshot.docs
+      .map((document) => parseStoredReport(document.data(), this.maximumBytes))
+      .filter((report) => new Date(report.expiresAt) > now);
+  }
+
   async update(input: ReportRecord): Promise<ReportRecord> {
     const report = parseStoredReport(input, this.maximumBytes);
     if (report.status !== "running") throw new Error("A progress update must stay running");

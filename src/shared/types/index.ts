@@ -3,6 +3,7 @@ import type {
   actionBoundarySchema,
   actionContractSchema,
   actionInterfaceSchema,
+  agentDiscoverySchema,
   archetypeSchema,
   auditedPageSchema,
   capabilityEvidenceSchema,
@@ -26,6 +27,7 @@ import type {
 
 export type ActionContract = z.infer<typeof actionContractSchema>;
 export type ActionInterface = z.infer<typeof actionInterfaceSchema>;
+export type AgentDiscovery = z.infer<typeof agentDiscoverySchema>;
 export type AuditedPage = z.infer<typeof auditedPageSchema>;
 export type ContentCategory = z.infer<typeof contentCategorySchema>;
 export type ContextGraph = z.infer<typeof contextGraphSchema>;

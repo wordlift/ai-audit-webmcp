@@ -1,11 +1,13 @@
 import type { SiteSnapshot } from "../../server/adapters/scrape/ScrapeProvider.js";
-import type { CapabilityEvidence } from "../../shared/types/index.js";
+import type { AgentDiscovery, CapabilityEvidence } from "../../shared/types/index.js";
 import { actionForDeclaredName, SCHEMA_ACTION_MAP } from "./schemaActions.js";
 
 export interface SiteDetection {
   evidence: CapabilityEvidence[];
   /** Behavioral signals for archetype inference, for example `path:booking`. */
   signals: string[];
+  /** Whether agents can find this site, and whether it tells them how to behave. */
+  agentDiscovery?: AgentDiscovery;
 }
 
 interface PathRule {
@@ -46,6 +48,8 @@ const DOCUMENT_DECLARATIONS: Partial<Record<SiteSnapshot["discovery"][number]["k
   "agent-skills": "The site publishes an agent-skills index",
   "api-catalog": "The site publishes an API catalogue for agents",
   "mcp-server-card": "The site publishes an MCP server card naming its transports",
+  "ai-catalog": "The site publishes an agent catalog at .well-known, the envelope agent registries crawl",
+  ard: "The site publishes an agent catalog at .well-known, the envelope agent registries crawl",
 };
 
 /** Documents that name the operations an agent could call. */
@@ -328,14 +332,22 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
       // A broken declaration needs a declaration: the endpoint opened a session and then failed,
       // or the server card names it as a transport. A merely linked path that never spoke MCP —
       // a blog post the endpoint pattern happened to match — made no claim, so nothing is said.
-      if (!probe.sessionOpened && !cardEndpoints.has(normalizeEndpoint(probe.url))) continue;
+      // An endpoint the catalog or the site's own instructions name is declared just as surely.
+      const declared = probe.source === "catalog" || probe.source === "skill" || probe.source === "server-card";
+      if (!probe.sessionOpened && !declared && !cardEndpoints.has(normalizeEndpoint(probe.url))) continue;
+      const failure = probe.error ? `: ${probe.error}` : "";
       add({
         id: `mcp-endpoint-failed-${probe.url}`.slice(0, 160),
         actionId: "site.search",
         audience: "agent",
         kind: "discovery",
         sourceUrl: probe.url,
-        claim: `This linked MCP endpoint did not complete a handshake${probe.error ? `: ${probe.error}` : ""}`,
+        claim:
+          probe.source === "skill"
+            ? `The site's instructions for agents name this MCP endpoint, but it did not complete a handshake${failure}: the memory promises what the site does not do`
+            : probe.source === "catalog"
+              ? `The site's agent catalog names this MCP endpoint, but it did not complete a handshake${failure}`
+              : `This linked MCP endpoint did not complete a handshake${failure}`,
         confidence: 0.9,
         verification: "failed",
       });
@@ -492,7 +504,22 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
     }
   }
 
-  return { evidence, signals: [...signals].sort() };
+  // Where agents would look first, and what they would find. On a site that answers every path
+  // with its HTML page, absence proves nothing, and the summary says so rather than accusing.
+  const catalog = snapshot.discovery.find((document) => (document.kind === "ai-catalog" || document.kind === "ard") && document.found);
+  const skillEntry = catalog?.entries?.find((entry) => entry.type === "application/ai-skill+md");
+  const memoryDocument = snapshot.discovery.find(
+    (document) => (document.kind === "skill" || document.kind === "agent-skills") && document.found,
+  );
+  const memoryUrl = memoryDocument?.url ?? skillEntry?.url;
+  const agentDiscovery: AgentDiscovery = {
+    catalog: catalog ? "found" : snapshot.softNotFound ? "unknown" : "missing",
+    ...(catalog ? { catalogUrl: catalog.url } : {}),
+    memory: memoryUrl ? "found" : snapshot.softNotFound ? "unknown" : "missing",
+    ...(memoryUrl ? { memoryUrl } : {}),
+  };
+
+  return { evidence, signals: [...signals].sort(), agentDiscovery };
 }
 
 /**
