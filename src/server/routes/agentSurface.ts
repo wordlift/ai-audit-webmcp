@@ -132,6 +132,7 @@ function llmsTxt(base: string): string {
     `- [Tool descriptors](${base}/.well-known/webmcp/tools.json): the declared WebMCP surface as JSON.`,
     `- [Report JSON](${base}/api/reports/): append a reportId for the full stored report.`,
     `- [Action contract](${base}/api/reports/): \`<reportId>/contracts/<actionId>\` returns JSON-LD for one action.`,
+    `- [Publication](${base}/api/reports/): \`<reportId>/publish\` returns what the site publishes from a report, and \`/publish/page.jsonld\`, \`/publish/skill.md\`, \`/publish/ai-catalog.json\` each document as itself.`,
     `- [Health](${base}/api/health): service status and released commit.`,
     "",
     "## Notes",

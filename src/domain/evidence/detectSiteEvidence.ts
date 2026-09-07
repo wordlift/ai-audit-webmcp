@@ -297,6 +297,8 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
         kind: "api-result",
         sourceUrl: search.url,
         claim: `An agent executed the site's declared SearchAction template with "${search.query}" and the site returned results for it`,
+        // The template travels with the evidence: it is what Activate publishes as the entry point.
+        snippet: search.template,
         confidence: 1,
         verification: "invoked",
       });
@@ -339,6 +341,7 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
         kind: "api-result",
         sourceUrl: probe.url,
         claim: `An agent executed the site's declared ${probe.actionType} entry point and it answered`,
+        snippet: probe.template,
         confidence: 1,
         verification: "invoked",
       });

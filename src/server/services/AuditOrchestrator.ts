@@ -21,6 +21,7 @@ import {
   refineReportRequestSchema,
 } from "../../shared/schemas/report.js";
 import { pagesForDepth } from "../../shared/format/deepScan.js";
+import { compilePublication, type Publication } from "../../domain/publish/publication.js";
 import type {
   Archetype,
   CapabilityEvidence,
@@ -425,6 +426,34 @@ export class AuditOrchestrator {
   async contract(reportId: string, actionId: string) {
     const report = await this.required(reportId);
     return report.capabilities?.find((capability) => capability.actionId === actionId)?.contract ?? null;
+  }
+
+  /**
+   * Activate: the three documents a site publishes from this report, page JSON-LD, skill and
+   * catalog, from one model. A report with no decisions still publishes what the audit verified.
+   */
+  async publish(reportId: string): Promise<Publication> {
+    const report = await this.required(reportId);
+    if (report.status === "running" || report.status === "failed" || !report.capabilities) {
+      throw new ReportRequestError("That report has nothing to publish yet.", 409);
+    }
+    return compilePublication(report, {
+      reportUrl: this.reportUrl(report.id),
+      apiUrl: new URL(`/api/reports/${report.id}`, this.options.publicAppUrl).toString(),
+      sidecarEndpoints: this.sidecarEndpoints(report),
+      now: () => this.now(),
+    });
+  }
+
+  /** Where WordLift runs an interface for a site: the one approved sidecar, on its one site. */
+  private sidecarEndpoints(report: ReportRecord): Record<string, string> {
+    let host: string;
+    try {
+      host = new URL(report.canonicalUrl ?? report.requestedUrl).hostname.replace(/^www\./, "");
+    } catch {
+      return {};
+    }
+    return host === "alpina.travel" ? { "availability.check": new URL("/api/sidecars/alpina/availability", this.options.publicAppUrl).toString() } : {};
   }
 
   reportUrl(id: string): string {

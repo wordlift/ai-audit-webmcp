@@ -121,6 +121,40 @@ export function createReportsRouter(
     });
   });
 
+  // Activate: what this report publishes, as one model and as the three documents a site serves.
+  // The plugin reads the model; a person, a crawler, or the audit itself reads the documents.
+  router.get("/:reportId/publish", async (request, response) => {
+    try {
+      response.json(await orchestrator.publish(param(request.params.reportId)));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+  router.get("/:reportId/publish/page.jsonld", async (request, response) => {
+    try {
+      const publication = await orchestrator.publish(param(request.params.reportId));
+      response.type("application/ld+json").send(JSON.stringify(publication.jsonLd, null, 2));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+  router.get("/:reportId/publish/skill.md", async (request, response) => {
+    try {
+      const publication = await orchestrator.publish(param(request.params.reportId));
+      response.type("text/markdown; charset=utf-8").send(publication.skill);
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+  router.get("/:reportId/publish/ai-catalog.json", async (request, response) => {
+    try {
+      const publication = await orchestrator.publish(param(request.params.reportId));
+      response.type("application/json").send(JSON.stringify(publication.catalog, null, 2));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
   router.get("/:reportId/contracts/:actionId", async (request, response) => {
     try {
       const contract = await orchestrator.contract(request.params.reportId, request.params.actionId);

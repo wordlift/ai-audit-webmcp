@@ -18,7 +18,7 @@ export interface VisitLedgerOptions {
 }
 
 /** The URLs a person, a crawler or an agent reads a report through. The ledger itself is not one of them. */
-const REPORT_PATH = /^\/(?:api\/)?reports\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\/contracts\/[^/]+)?\/?$/i;
+const REPORT_PATH = /^\/(?:api\/)?reports\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\/contracts\/[^/]+|\/publish(?:\/[^/]+)?)?\/?$/i;
 /** What we publish for agents about ourselves; counted under one bucket, by class, never by person. */
 const SITE_PATHS = /^\/(?:llms\.txt|\.well-known\/.+|skill\.md)$/i;
 export const SITE_BUCKET = "_site";

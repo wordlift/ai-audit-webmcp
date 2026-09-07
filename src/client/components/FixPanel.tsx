@@ -1,5 +1,6 @@
 import { ArrowUpRight, Braces, Copy } from "lucide-react";
 import { useState } from "react";
+import { entityJsonLd } from "../../shared/format/entityJsonLd.js";
 import type { CapabilityResult, DomainEntity, ReportRecord } from "../../shared/types/index.js";
 
 /**
@@ -15,30 +16,9 @@ export function actionsWithoutInterface(capabilities: CapabilityResult[]): Capab
   return capabilities.filter((capability) => capability.expected && (capability.state === "human-only" || capability.state === "missing"));
 }
 
-/** One inferred entity as the JSON-LD its page should carry: what the model read, in the shape agents read. */
+/** One inferred entity as the JSON-LD its page should carry, with the context Activate's page carries too. */
 export function sampleJsonLd(entity: DomainEntity): Record<string, unknown> {
-  return {
-    "@context": "https://schema.org",
-    "@type": entity.types.length === 1 ? entity.types[0] : entity.types,
-    "@id": entity.id,
-    name: entity.name,
-    ...(entity.description ? { description: entity.description } : {}),
-    ...(entity.alternateNames.length > 0 ? { alternateName: entity.alternateNames } : {}),
-    ...(entity.sourceUrls[0] ? { url: entity.sourceUrls[0] } : {}),
-    ...(entity.sameAs.length > 0 ? { sameAs: entity.sameAs } : {}),
-    ...(entity.offers.length > 0
-      ? {
-          offers: entity.offers.map((offer) => ({
-            "@type": "Offer",
-            ...(offer.name ? { name: offer.name } : {}),
-            ...(offer.price !== undefined ? { price: offer.price } : {}),
-            ...(offer.priceCurrency ? { priceCurrency: offer.priceCurrency } : {}),
-            ...(offer.availability ? { availability: `https://schema.org/${offer.availability}` } : {}),
-            ...(offer.url ? { url: offer.url } : {}),
-          })),
-        }
-      : {}),
-  };
+  return { "@context": "https://schema.org", ...entityJsonLd(entity) };
 }
 
 /** Where the dashboard picks the report up: the id travels, nothing else. */
