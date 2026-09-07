@@ -236,7 +236,10 @@ Nobody buys the vision on day one. They paste a URL.
   Verify: component tests; the e2e report spec.
   Commit as `feat: show the markup a site should have`. One to two days.
 
-- [ ] **F3. "Own it", lightly**
+- [x] **F3. "Own it", lightly** — built 2026-09-07. One question per action of the three on the
+  report: we do, a partner does, we only describe it; a handoff can name the partner, which the
+  published action carries as `provider`. The answers travel as `actionDecisions` alone into an
+  immutable child report; readiness does not move.
   Spec ref: `REFINE_SERVICE_MAP_TOOL` in `src/shared/tools/definitions.ts` (`actionDecisions`),
   the interview in `plugins/ai-audit/skills/review-ai-audit/SKILL.md`.
   What to build: on the web, one question per action of the three: own it, hand it off, describe
