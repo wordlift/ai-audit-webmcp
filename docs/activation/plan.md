@@ -18,8 +18,16 @@ it needs a name on the screen.
 
 ## Principles
 
+- **One question, then three buttons.** "Can AI agents understand and use your business?" Audit
+  it. Fix it. Activate it. Nothing else appears until the person has an answer.
 - **Readiness is earned by invocation.** Unchanged. Verification is not a fourth word; it is what
-  Audit does every time it runs, so a activated site is re-verified by the tool that found the gap.
+  Audit does every time it runs, so an activated site is re-verified by the tool that found the gap.
+- **We measure whether agents can act, not what AI says about you.** Visibility monitoring is a
+  crowded, well-funded category, and it is moving from measuring towards acting. We start from the
+  other side, the operational gap, and never drift into share of voice.
+- **A score that moves is the loop.** A one-time audit is a report; a readiness score that is
+  re-checked and can go up is a habit. "Has my score gone up?" is the question that brings a person
+  back.
 - **Human on the screen, agent in the file.** No pipeline stage, no provenance panel, no schema
   term on the first screen. The frozen vocabulary stays in the full audit, the docs and the tools.
 - **Free diagnoses; paid keeps it alive.** A snapshot rots when the site changes a template. The
@@ -91,10 +99,13 @@ Nobody buys the vision on day one. They paste a URL.
   `HomeRoute.tsx`, the per-archetype expectations in `action-model/v0.1.0/archetypes/`.
   What to build: above the fold, the site, its archetype, the three actions that matter most for
   that archetype (expected, ranked by gap), each with its state, one line of evidence and one next
-  step in plain words: "works", "fix this", "talk to us". The deep-scan offer beside the summary,
-  and still at the end. The provenance panel, the tools badge, the foundation audit, the context
-  graph and the "Published with" component move behind "Full audit". The landing page shows the
-  three words, not the pipeline's stages.
+  step in plain words: "works", "fix this", "talk to us". The report opens with one sentence in
+  the shape "Agents can discover 7 capabilities on this site. 4 work. 3 are missing. Here is what
+  prevents them." The deep-scan offer beside the summary, and still at the end. The provenance
+  panel, the tools badge, the foundation audit, the context graph and the "Published with"
+  component move behind "Full audit". The landing page asks one question, "Can AI agents
+  understand and use your business?", with one field for a URL; today it says "Teach ChatGPT how
+  your business should work for agents" and previews the pipeline's stages.
   Acceptance: a first-time visitor sees the three actions, their next steps and the deep-scan
   offer without scrolling on a laptop; the full audit is one click away; WebMCP registrations and
   tool identifiers are untouched.
@@ -129,6 +140,21 @@ Nobody buys the vision on day one. They paste a URL.
   instruction raises an action past `unverified`.
   Verify: fixtures for both spellings; the existing well-known tests as the template.
   Commit as `feat: read the catalog a site publishes for agents`. Half a day.
+
+- [ ] **A5. The pitch: one screen, three sites**
+  Spec ref: A2's screen, A3's reuse (three audits per pitch is what makes reuse pay), the report
+  pages that are already public by link.
+  What to build: a compare page. A URL and up to two competitors, audited side by side: readiness
+  score for each, the three actions that matter for the archetype with each site's state, and the
+  gap list for the first site, "Fix these 7 issues". Shareable by link like any report, and free.
+  This is how an agency walks into a prospect: "here is what AI agents cannot do with your website,
+  and here is what they can do with your competitor's". The audit becomes their sales tool; Fix
+  and Activate become the work they sell, powered by WordLift.
+  Acceptance: three audits, one screen, one link; a repeated competitor is served from the day's
+  stored report rather than crawled again; nothing on the page names a WordLift client site other
+  than alpina.travel.
+  Verify: e2e compare spec; the reuse test from A3 counted against a pitch.
+  Commit as `feat: three sites on one screen`. Two to three days.
 
 ## Fix
 
@@ -246,7 +272,8 @@ three numbers come from the WordLift platform, the plugin's own logs and Search 
 stats. This repository defines the shape both sides fill.
 
 Internally this stage is **Observe**, the fifth word, kept off the screen until it has numbers to
-show. The day it can say "GPTBot found you 17 times, Claude read your Terms of Action 8 times, 6
+show. Its first number is the readiness score itself, re-checked on a schedule for activated sites
+and shown as a movement, "74 → 86", because that movement is the recurring loop. The day it can say "GPTBot found you 17 times, Claude read your Terms of Action 8 times, 6
 agents checked availability, 5 succeeded, 1 failed because the capability changed", the product
 has crossed from SEO tooling into agent operations, and that is what an enterprise pays for on a
 recurring basis.
@@ -299,8 +326,8 @@ recurring basis.
 
 - [ ] **L4. What happened since you activated**
   Spec ref: the Activate screen (AC1), the three-actions screen (A2).
-  What to build: on the Activate screen, three numbers for the period since publication: crawler
-  visits by name; Google re-reads, the verified Googlebot requests to the entity, the catalog and
+  What to build: on the Activate screen, the readiness score and how it moved since activation,
+  then three numbers for the period since publication: crawler visits by name; Google re-reads, the verified Googlebot requests to the entity, the catalog and
   the pages the plugin publishes; agents that read the site's instructions; and agents that
   activated a capability, how many succeeded, and each failure with its reason, because a failure
   is the moment the owner learns a capability changed before the agents gave up on it. On the report, one line:
@@ -314,7 +341,8 @@ recurring basis.
 ## Review pauses
 
 1. After Audit: the one-minute test with two people outside the team; the bill after a week of
-   traffic is the number A3 predicted.
+   traffic is the number A3 predicted; one agency runs a pitch on a prospect and two competitors
+   and says whether they would walk into the meeting with it.
 2. After Fix: a poorly marked-up site gets a Fix panel worth acting on; the dashboard receives the
    report id.
 3. After Activate: alpina.travel round trip. Audit, publish, re-audit finds the catalog, and the
@@ -342,3 +370,24 @@ refinement as a gate before publishing, and any index of our own.
   URL when Fix ships, because that is the thing Google would come back for.
 - The paid side's numbers come from the plugin's logs and Search Console's crawl stats, owned by
   the WordLift platform. This repository only fixes the shape.
+- What the readiness score breaks into. Today the report carries two numbers, agent readiness and
+  the foundation score. The dimensions a person would watch move are discovery, entity
+  understanding, action availability, successful invocation, evidence quality, Terms of Action
+  coverage and agent compatibility. Proposal: keep one headline number in A2 and show the
+  dimensions in Observe, once there is a second audit to compare with.
+- Price bands. Proposal from the Peec review: free for the audit and the pitch; a hundred to a few
+  hundred euros a month to keep a smaller site agent-ready; agency workspaces; enterprise for
+  governance, APIs, integrations and the interfaces that are missing. Expansion earns the contract
+  value, never the entry product. Andrea's call.
+
+## Borrowed from Peec
+
+Peec AI went from launch to ten million dollars of annual revenue in sixteen months by selling one
+question, "how does AI see your brand?", checked daily, with a frictionless first minute and
+agencies as distribution, including free seven-day pitch projects an agency runs on a prospect
+before the meeting. Four things are borrowed here: the one question (principles), the score that
+moves (Observe), the pitch (A5), and the discipline of hiding the machinery. One thing is not:
+their category. They measure what AI says; we measure whether agents can act, and that is the
+side of the problem the semantic and action infrastructure already answers.
+Sources: https://peec.ai/for-agencies, https://peec.ai/pricing,
+https://techcrunch.com/2025/11/17/as-consumers-ditch-google-for-chatgpt-peec-ai-raises-21m-to-help-brands-adapt/
