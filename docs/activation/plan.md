@@ -295,7 +295,11 @@ Nobody buys the vision on day one. They paste a URL.
   three as evidence.
   Commit as `feat: publish what the owner confirmed and what works`. Three to four days.
 
-- [ ] **AC2. Verify by calling**
+- [x] **AC2. Verify by calling** — built 2026-09-07. Every declared `potentialAction` target on
+  the site's origin is read off the sampled pages; a read over GET is executed once and judged,
+  a write is never executed, an unfillable input is left declared, and each says why. An answer
+  is invocation evidence for the action it serves; a failure is a failed declaration. No sidecar
+  registry.
   Spec ref: `mcpToolCalls.ts` and `searchAction.ts` (invocation evidence today),
   `src/server/sidecars/alpina/` (the read-only sidecar).
   What to build: the audit invokes a declared `EntryPoint` for a read action the way it invokes a
