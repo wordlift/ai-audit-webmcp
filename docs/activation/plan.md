@@ -423,7 +423,12 @@ recurring basis.
   Verify: component tests; the e2e report spec.
   Commit as `feat: show whether activating worked`. One to two days.
 
-- [ ] **L5. The number that comes to you**
+- [x] **L5. The number that comes to you** — built 2026-09-07. `Observer`: a delivered deep-scan
+  address has its site re-read every `OBSERVE_INTERVAL_DAYS` (7), at most `OBSERVE_PER_TICK` (5)
+  a check; a note goes out only when something moved (score, a capability that stopped or started
+  answering with the reason, the first crawler, Google's first read, failed activations), through
+  the same HubSpot form named "what moved", with one link that stops notes and re-reads together.
+  Health reports the cadence. The weekly cadence starts on deploy with the defaults; `0` disables.
   Spec ref: the deep-scan address and its HubSpot delivery (`DeepScanDelivery.ts`), the
   privacy page's follow-up wording, L2's ledger, L3's outcomes.
   What to build: a short email to a deep-scan address when something moves, never on a timer
