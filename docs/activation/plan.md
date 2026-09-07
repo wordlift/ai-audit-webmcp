@@ -182,7 +182,10 @@ Nobody buys the vision on day one. They paste a URL.
   Verify: fixtures for both spellings; the existing well-known tests as the template.
   Commit as `feat: read the catalog a site publishes for agents`. Half a day.
 
-- [ ] **A5. The pitch: one screen, three sites**
+- [x] **A5. The pitch: one screen, three sites** — built 2026-09-07 at `/pitch`: a form, then
+  `/pitch/<id>,<id>,<id>` as the shareable link; the same three actions across the sites, the
+  prospect's gaps as the list to fix, the report id on the dashboard button; a repeated competitor
+  is served from the day's crawl, and the browser test proves it.
   Spec ref: A2's screen, A3's reuse (three audits per pitch is what makes reuse pay), the report
   pages that are already public by link.
   What to build: a compare page. A URL and up to two competitors, audited side by side: readiness
@@ -480,6 +483,10 @@ refinement as a gate before publishing, and any index of our own.
   URL when Fix ships, because that is the thing Google would come back for.
 - The paid side's numbers come from the plugin's logs and Search Console's crawl stats, owned by
   the WordLift platform. This repository only fixes the shape.
+- An intermittent failure in the full parallel unit run, roughly one run in four, always in an
+  "audit then read" test and never reproduced alone or in two consecutive full runs. Tracked, not
+  understood; suspect timing under load rather than a logic fault, since the failing test differs
+  each time.
 - What the readiness score breaks into. Today the report carries two numbers, agent readiness and
   the foundation score. The dimensions a person would watch move are discovery, entity
   understanding, action availability, successful invocation, evidence quality, Terms of Action
