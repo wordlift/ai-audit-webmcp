@@ -21,6 +21,10 @@ test("a report opens with three words and keeps the full audit one click away", 
   const three = page.getByRole("list", { name: /the actions that matter/i });
   await expect(three.getByRole("listitem")).toHaveCount(3);
   await expect(three).toContainText(/works|fix this|talk to us/i);
+  // Fix follows, when there is something to fix, with the report id on its way to the dashboard.
+  const publish = page.getByRole("link", { name: /publish with wordlift/i });
+  await expect(publish).toBeVisible();
+  await expect(publish).toHaveAttribute("href", /report=[0-9a-f-]{36}/);
   await expect(page.getByRole("heading", { name: /commerce \/ retail/i })).toBeHidden();
 
   // One click below, the model with its exact names.

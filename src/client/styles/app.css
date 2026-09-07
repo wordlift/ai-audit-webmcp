@@ -807,6 +807,21 @@ button:disabled { opacity: 0.6; cursor: wait; }
 }
 .deep-scan-strip:hover { background: color-mix(in srgb, var(--brand) 14%, white); }
 
+/* ---------- Fix: the markup the site should have ---------- */
+.fix-panel { display: grid; gap: 14px; padding: clamp(22px, 4vw, 36px); background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 18px; }
+.fix-panel h2 { margin: 0; font-size: 1.35rem; }
+.fix-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.fix-stat { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: baseline; padding: 12px 14px; border: 1px solid var(--line-subtle); border-radius: 10px; background: var(--wl-neutral-100); }
+.fix-stat b { font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fix-stat span { color: var(--muted); font-size: 0.9rem; line-height: 1.4; }
+.fix-sample { margin: 0; border: 1px solid var(--line-subtle); border-radius: 12px; overflow: hidden; background: var(--wl-neutral-900); color: var(--wl-neutral-0); }
+.fix-sample figcaption { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.12); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--wl-neutral-500); }
+.fix-sample figcaption button { display: inline-flex; align-items: center; gap: 6px; background: none; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; padding: 3px 8px; color: var(--wl-neutral-0); font: inherit; cursor: pointer; }
+.fix-sample pre { margin: 0; padding: 14px; overflow-x: auto; font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.5; }
+.fix-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0; color: var(--muted); font-size: 0.9rem; }
+.fix-publish { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 10px; background: var(--brand); color: var(--wl-neutral-0); font-weight: 600; text-decoration: none; }
+.fix-publish:hover { background: var(--brand-hover); }
+
 /* ---------- Full audit: the model, one click below ---------- */
 .full-audit { border: 1px solid var(--line-subtle); border-radius: 16px; background: var(--surface); }
 .full-audit > summary {

@@ -11,6 +11,7 @@ import { ContextEngineMap, heroEntityId } from "../components/ContextEngineMap";
 import { DeepScanOffer } from "../components/DeepScanOffer";
 import { ExecutiveSummary } from "../components/ExecutiveSummary";
 import { FirstScreen } from "../components/FirstScreen";
+import { FixPanel } from "../components/FixPanel";
 import { FoundationAuditDetails } from "../components/FoundationAuditDetails";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { ReportProgress } from "../components/ReportProgress";
@@ -129,6 +130,8 @@ export function ReportRoute() {
       )}
       {/* The first screen speaks three plain words. Everything precise is one click below. */}
       <FirstScreen report={report} />
+      {/* Fix: the difference between what the pages declare and what they contain, when there is one. */}
+      <FixPanel report={report} />
       <details className="full-audit" id="full-audit">
         <summary>Full audit <span>Entities · Terminology · Actions · Terms of Action</span></summary>
         <div className="full-audit-body">

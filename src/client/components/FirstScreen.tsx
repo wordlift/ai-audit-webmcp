@@ -172,14 +172,6 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
       {report.agentDiscovery?.catalog === "found" && (
         <p className="discovery-line">Agents can discover this site: a catalog is published at its well-known path.</p>
       )}
-      {report.markup && report.markup.inferredEntities > 0 && (
-        <p className="discovery-line">
-          {report.markup.inferredEntities === 1
-            ? "1 entity appears on your pages and is not published as structured data."
-            : `${report.markup.inferredEntities} entities appear on your pages and are not published as structured data.`}{" "}
-          Fixing it publishes them.
-        </p>
-      )}
 
       {report.scanDepth !== "deep" && (
         <a className="deep-scan-strip" href="#deep-scan">
