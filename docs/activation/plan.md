@@ -341,7 +341,8 @@ agents checked availability, 5 succeeded, 1 failed because the capability change
 has crossed from SEO tooling into agent operations, and that is what an enterprise pays for on a
 recurring basis.
 
-- [ ] **L1. Visitor classes**
+- [x] **L1. Visitor classes** — done 2026-09-07. Crawlers by name, agents by platform, people;
+  Googlebot verified against Google's three published range files, refreshed daily.
   Spec ref: `src/server/security/platformEgress.ts` (the address ranges already known and
   refreshed), Google's published crawler ranges (`googlebot.json`, `special-crawlers.json`,
   `user-triggered-fetchers.json`), the crawler user agents that matter.
@@ -356,7 +357,9 @@ recurring basis.
   Verify: unit tests over the fixture; the egress tests as the template for the range refresh.
   Commit as `feat: know a crawler from an agent from a person`. Half a day.
 
-- [ ] **L2. The visits ledger**
+- [x] **L2. The visits ledger** — done 2026-09-07. `visits` per report per day by class,
+  batched and flushed every fifteen seconds, read at `GET /api/reports/:id/visits`, never counted,
+  never rate limited. The two TTL policies are documented in OPERATIONS.md and need running once.
   Spec ref: `FirestoreLeadStore.ts` as the store template; the URLs an agent or crawler fetches:
   `/reports/:id`, `/api/reports/:id`, `/api/reports/:id/contracts/*`, `/api/reports/:id/publish`
   (AC1), `/llms.txt`, `/.well-known/*`.
@@ -374,7 +377,8 @@ recurring basis.
   flush test; the privacy page updated in the same commit.
   Commit as `feat: count who reads a report, by kind and never by name`. One day.
 
-- [ ] **L3. Sidecar activations**
+- [x] **L3. Sidecar activations** — done 2026-09-07. `activations` per site per day by tool,
+  surface and outcome; `web`, `webmcp`, `api` today, `audit` reserved for AC2's calls.
   Spec ref: `src/server/routes/alpina.ts`, `AlpinaAvailabilityTool.tsx` (the in-page caller),
   AC2's verification calls.
   What to build: every sidecar call is counted by site, tool, surface and outcome into the same
@@ -387,7 +391,8 @@ recurring basis.
   Verify: the sidecar route tests; `alpina-sidecar.spec.ts`.
   Commit as `feat: count the agents that actually act`. Half a day.
 
-- [ ] **L4. What happened since you activated**
+- [ ] **L4. What happened since you activated** — the report's one line is done with A2: "N
+  crawlers and M agents have read this since it was published". The Activate screen remains.
   Spec ref: the Activate screen (AC1), the three-actions screen (A2).
   What to build: on the Activate screen, the readiness score and how it moved since activation,
   then three numbers for the period since publication: crawler visits by name; Google re-reads, the verified Googlebot requests to the entity, the catalog and
