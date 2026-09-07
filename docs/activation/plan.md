@@ -2,7 +2,8 @@
 
 Status: rewritten on 2026-09-06, replacing the seven-item draft of the same day; Activate replaced
 Activate on 2026-09-07, because the third stage makes the organisation operable, not merely visible.
-For review. Nothing below is started.
+Started on 2026-09-07 on the branch `docs/activation-plan`, with A1. Items are ticked as they
+land, and the review pauses stand.
 
 The client is a human. The end consumer is an AI agent. What we have works and is overly complex:
 a site owner meets the machine's pipeline, its vocabulary and its provenance before they meet the
@@ -29,6 +30,9 @@ the model is the enterprise conversation and it is also the file an agent reads.
 - **A score that moves is the loop.** A one-time audit is a report; a readiness score that is
   re-checked and can go up is a habit. "Has my score gone up?" is the question that brings a person
   back.
+- **Data that updates is the relationship.** A number that never changes is a report. A number
+  that changes is a reason to come back, and the product brings it to the person rather than
+  waiting for them. So the counting starts in the first week, on free reports, before anyone pays.
 - **Human on the screen, agent in the file.** No pipeline stage, no provenance panel, no schema
   term on the first screen. The frozen vocabulary stays in the full audit, the docs and the tools.
 - **Simple, never inaccurate.** Every plain word on the first screen maps to one precise state and
@@ -101,7 +105,8 @@ Nobody buys the vision on day one. They paste a URL.
 
 ## Audit
 
-- [ ] **A1. One state for an action an agent can perform**
+- [x] **A1. One state for an action an agent can perform** — done 2026-09-07. The retired value
+  is normalised on read, so every stored report and fixture still parses; provenance is `via`.
   Spec ref: `src/domain/action-model/deriveState.ts:33`, `src/shared/schemas/report.ts`, the state
   tokens in `src/client/styles/app.css`, `ActionNode`.
   What to build: `sidecar-enabled` becomes `agent-ready` with `via: "site" | "sidecar"`. The
@@ -284,6 +289,11 @@ Nobody buys the vision on day one. They paste a URL.
 
 ## Close the loop
 
+L1, L2 and L3 ship in the Audit week, not after Activate: they depend on nothing in Fix or
+Activate, cost about two days, and every free report then starts accumulating "N crawlers and M
+agents have read this since it was published" from its first hour. The relationship starts before
+anyone pays. L4's full panel arrives with Activate; its one line on the report arrives with A2.
+
 Nothing observes visitors today: there is no request classification, sidecar calls are not
 recorded, and the only trace is the 30-day request log. In the free tier the single entity that
 stands for the site and its capabilities is the report page and the JSON-LD it carries; that is
@@ -358,6 +368,22 @@ recurring basis.
   Verify: component tests; the e2e report spec.
   Commit as `feat: show whether activating worked`. One to two days.
 
+- [ ] **L5. The number that comes to you**
+  Spec ref: the deep-scan address and its HubSpot delivery (`DeepScanDelivery.ts`), the
+  privacy page's follow-up wording, L2's ledger, L3's outcomes.
+  What to build: a short email to a deep-scan address when something moves, never on a timer
+  alone: the score changed, a first crawler came, Google re-read the entity for the first time,
+  and above all a capability that stopped working, "availability failed today, here is why",
+  which is the email an enterprise forwards to engineering. One unsubscribe, honoured everywhere.
+  The cadence that makes the numbers move: a free site with a deep-scan address is re-audited
+  weekly, bounded by the number of such addresses, which is a cost that can be seen; an activated
+  site is re-audited on the schedule its account sets, and on change. Both feed the same email.
+  Acceptance: no email without a change; a failure email names the capability and the reason;
+  unsubscribing stops every email and leaves the report intact; the weekly re-audit count never
+  exceeds the number of confirmed addresses.
+  Verify: delivery tests with a fake transport; a scheduler test bounded by addresses.
+  Commit as `feat: bring the number to the person`. Two days.
+
 ## Review pauses
 
 1. After Audit: the one-minute test with two people outside the team; the bill after a week of
@@ -369,6 +395,24 @@ recurring basis.
    availability action verifies through the sidecar demo.
 4. After the loop: within a week of publishing, alpina.travel's page shows Googlebot's re-reads and
    the demo agent's sidecar activations, and the audit's own verification calls are not in them.
+
+## Drift from beta
+
+The drift is small in the contracts and large in the journey. The six MCP tools, their
+identifiers, titles and schemas, the claim-token model, the ChatGPT plugin and the Claude connector,
+the WebMCP registrations, the REST API, the report shell and the privacy page are unchanged by
+anything above; the skill's full interview is the one the plan keeps for agents. Almost every item
+adds optional fields or new routes, which the report schema's own rule, new fields optional and
+yesterday's report still parses, already allows. Three items would break beta if done the obvious
+way, and each has a safe way, which is the way they are specified:
+
+- **A1.** Renaming `sidecar-enabled` would break reports stored for thirty days, the fixtures and
+  the screenshots. It is normalised on read instead, and that is how it landed.
+- **A3.** Reusing a stored report for a second caller would hand them a report they cannot refine
+  and break the directory's "refine someone else's report" test. The crawl is reused, the report
+  and its claim are minted per request.
+- **A2.** Two end-to-end specs pin today's layout and the frozen vocabulary is a written rule;
+  the specs are re-baselined on purpose, and plain words on the first screen wait for a yes.
 
 ## Dropped from the previous draft
 
