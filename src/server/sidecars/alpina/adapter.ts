@@ -198,7 +198,7 @@ export function resolveSidecarEntity(
 
 /**
  * Evidence for a successful controlled invocation. Only this — an actual call that returned a
- * usable answer — may move an action to `sidecar-enabled`.
+ * usable answer — may make an action agent-ready, run by WordLift.
  */
 export function sidecarInvocationEvidence(result: AlpinaAvailabilityResult): CapabilityEvidence {
   return {

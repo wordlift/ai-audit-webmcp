@@ -43,7 +43,7 @@ export function AlpinaSidecarPanel({ reportId, verified }: { reportId: string; v
         </h2>
         <p>
           {verified
-            ? "A successful agent call is recorded as evidence in this revision, so the availability check reads sidecar-enabled. Run it again for new dates; each verified call creates its own revision."
+            ? "A successful agent call is recorded as evidence in this revision, so the availability check reads agent-ready, run by WordLift. Run it again for new dates; each verified call creates its own revision."
             : "People can check dates here and an availability interface is declared, but no agent call has been verified. Run the approved read-only sidecar to prove it; the result becomes a new immutable revision of this report."}
         </p>
       </div>

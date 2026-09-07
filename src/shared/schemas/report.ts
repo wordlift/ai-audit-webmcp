@@ -19,12 +19,32 @@ export const reportPhaseSchema = z.enum(["understanding", "mapping", "checking",
 export const capabilityStageSchema = z.enum(["discover", "understand-decide", "act", "manage"]);
 export const capabilityStateSchema = z.enum([
   "not-expected",
-  "sidecar-enabled",
   "agent-ready",
   "unverified",
   "human-only",
   "missing",
 ]);
+
+/** Who runs the interface an agent-ready action was verified through: the site, or a WordLift sidecar. */
+export const capabilityViaSchema = z.enum(["site", "sidecar"]);
+
+/**
+ * `sidecar-enabled` was a fifth state until September 2026. It only ever meant agent-ready with
+ * WordLift running the interface — the same outcome for an agent, a different provenance — so it
+ * is now agent-ready with `via: "sidecar"`. Reports stored with the old value still parse: the
+ * value is read as what it always was.
+ */
+const RETIRED_SIDECAR_STATE = "sidecar-enabled";
+const legacyCapabilityStateSchema = z.preprocess(
+  (value) => (value === RETIRED_SIDECAR_STATE ? "agent-ready" : value),
+  capabilityStateSchema,
+);
+function readRetiredState(value: unknown): unknown {
+  if (value && typeof value === "object" && (value as { state?: unknown }).state === RETIRED_SIDECAR_STATE) {
+    return { ...(value as Record<string, unknown>), state: "agent-ready", via: "sidecar" };
+  }
+  return value;
+}
 
 export const contentCategorySchema = z
   .object({
@@ -107,7 +127,7 @@ export const entityActionBindingSchema = z
     actionId: z.string().min(1).max(160),
     role: z.enum(["provider", "object"]),
     basis: z.array(z.enum(["archetype", "structured-data", "observed-interface"])).min(1).max(3),
-    state: capabilityStateSchema,
+    state: legacyCapabilityStateSchema,
     evidenceIds: z.array(z.string().min(1).max(160)).max(MAX_EVIDENCE_ITEMS),
     interfaceIds: z.array(z.string().min(1).max(300)).max(40),
     confidence: z.number().min(0).max(1),
@@ -215,7 +235,9 @@ export const actionContractSchema = z
   })
   .strict();
 
-export const capabilityResultSchema = z
+export const capabilityResultSchema = z.preprocess(
+  readRetiredState,
+  z
   .object({
     actionId: z.string().min(1).max(160),
     label: z.string().min(1).max(240),
@@ -226,6 +248,8 @@ export const capabilityResultSchema = z
     expected: z.boolean(),
     expectationSource: z.array(z.string().min(1).max(240)).min(1).max(20),
     state: capabilityStateSchema,
+    /** Present on agent-ready actions: who ran the interface the audit verified. */
+    via: capabilityViaSchema.optional(),
     humanSupport: z.boolean(),
     agentSupport: z.boolean(),
     appliesTo: z
@@ -248,7 +272,8 @@ export const capabilityResultSchema = z
     boundaryRationale: z.string().min(1).max(500).optional(),
     boundarySource: z.literal("human-provided").optional(),
   })
-  .strict();
+  .strict(),
+);
 
 export const readinessScoreSchema = z
   .object({

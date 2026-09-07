@@ -231,7 +231,7 @@ export function inspectSummaryText(result: InspectServiceMapResult): string {
   return lines.join("\n");
 }
 
-const READY_STATES = new Set(["agent-ready", "sidecar-enabled"]);
+const READY_STATES = new Set(["agent-ready"]);
 const MAX_AGENT_EVIDENCE = 6;
 
 function countStage(capabilities: CapabilityResult[], stage: CapabilityResult["stage"]): StageCount {

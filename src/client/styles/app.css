@@ -96,8 +96,6 @@
      against it, per the brand book's verified contrast table. */
   --state-agent-ready: var(--wl-leaf);
   --state-agent-ready-ink: var(--wl-neutral-900);
-  --state-sidecar-enabled: var(--wl-petal);
-  --state-sidecar-enabled-ink: var(--wl-neutral-0);
   --state-unverified: var(--wl-sand);
   --state-unverified-ink: var(--wl-neutral-900);
   --state-human-only: var(--wl-moss);
@@ -1009,6 +1007,8 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .action-node-dimmed { opacity: 0.28; filter: grayscale(0.7); }
 .action-node-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .importance-label { color: var(--muted); font-family: var(--font-mono); font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.08em; }
+/* Provenance beside a state: the same colour as the brand, never a colour of its own. */
+.via-chip { color: var(--brand); font-family: var(--font-mono); font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.08em; }
 .action-node-copy { display: grid; gap: 4px; }
 .action-node-copy > small { display: -webkit-box; overflow: hidden; color: var(--muted); font-size: 0.66rem; line-height: 1.4; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .entity-chips { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -1016,7 +1016,6 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .entity-chips > .entity-chip-selected { color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, white); }
 
 .state-border-agent-ready { border-left-color: var(--state-agent-ready); }
-.state-border-sidecar-enabled { border-left-color: var(--state-sidecar-enabled); }
 .state-border-unverified { border-left-color: var(--state-unverified); }
 .state-border-human-only { border-left-color: var(--state-human-only); }
 .state-border-missing { border-left-color: var(--state-missing); }
@@ -1030,13 +1029,11 @@ button:disabled { opacity: 0.6; cursor: wait; }
 }
 
 .state-agent-ready { background: var(--state-agent-ready); color: var(--state-agent-ready-ink); }
-.state-sidecar-enabled { background: var(--state-sidecar-enabled); color: var(--state-sidecar-enabled-ink); }
 .state-unverified { background: var(--state-unverified); color: var(--state-unverified-ink); }
 .state-human-only { background: var(--state-human-only); color: var(--state-human-only-ink); }
 .state-missing { background: var(--state-missing); color: var(--state-missing-ink); }
 
 .state-dot.state-agent-ready { background: var(--state-agent-ready); }
-.state-dot.state-sidecar-enabled { background: var(--state-sidecar-enabled); }
 .state-dot.state-unverified { background: var(--state-unverified); }
 .state-dot.state-human-only { background: var(--state-human-only); }
 .state-dot.state-missing { background: var(--state-missing); }

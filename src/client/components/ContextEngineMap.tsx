@@ -144,7 +144,7 @@ export function ContextEngineMap({
     : actions.length;
 
   const tally = [
-    { label: "ready", tone: "ready", count: actions.filter((a) => a.state === "agent-ready" || a.state === "sidecar-enabled").length },
+    { label: "ready", tone: "ready", count: actions.filter((a) => a.state === "agent-ready").length },
     { label: "unverified", tone: "unverified", count: actions.filter((a) => a.state === "unverified").length },
     { label: "human-only", tone: "human-only", count: actions.filter((a) => a.state === "human-only").length },
     { label: "missing", tone: "missing", count: actions.filter((a) => a.state === "missing").length },

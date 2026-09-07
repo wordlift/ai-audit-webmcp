@@ -66,7 +66,7 @@ describe("Alpina availability sidecar", () => {
     expect(response.body.provider).toBeUndefined();
   });
 
-  it("turns the human-only capability into a sidecar-enabled child report", async () => {
+  it("turns the human-only capability into an agent-ready child report, run by WordLift", async () => {
     const { app } = testApp(vi.fn(async () => jsonResponse(upstream)) as unknown as typeof fetch);
     const parent = await alpinaReport(app);
 
@@ -95,7 +95,8 @@ describe("Alpina availability sidecar", () => {
     const after = child.body.capabilities.find((item: { actionId: string }) => item.actionId === "availability.check");
 
     expect(child.body.parentReportId).toBe(parent.id);
-    expect(after.state).toBe("sidecar-enabled");
+    expect(after.state).toBe("agent-ready");
+      expect(after.via).toBe("sidecar");
     expect(after.agentSupport).toBe(true);
     expect(after.evidence.some((item: { verification: string }) => item.verification === "invoked")).toBe(true);
     expect(child.body.score.value).toBeGreaterThan(parent.score.value);

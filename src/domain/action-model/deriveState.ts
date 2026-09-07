@@ -29,10 +29,14 @@ export function deriveCapability(
    * action with nothing observed at all collapses to `not-expected`.
    */
   let state: CapabilityResult["state"];
+  let via: CapabilityResult["via"];
   if (!expected && evidence.length === 0) state = "not-expected";
-  else if (options.approvedSidecar && invokedAgent) state = "sidecar-enabled";
-  else if (invokedAgent) state = "agent-ready";
-  else if (agentEvidence.length > 0) state = "unverified";
+  else if (invokedAgent) {
+    // One state for an action an agent can perform. Who ran the interface — the site, or a
+    // WordLift sidecar — is provenance, and rides beside the state rather than being one.
+    state = "agent-ready";
+    via = options.approvedSidecar ? "sidecar" : "site";
+  } else if (agentEvidence.length > 0) state = "unverified";
   else if (humanSupport) state = "human-only";
   else state = expected ? "missing" : "not-expected";
 
@@ -46,6 +50,7 @@ export function deriveCapability(
     expected,
     expectationSource: action.expectationSource,
     state,
+    ...(via ? { via } : {}),
     humanSupport,
     agentSupport: invokedAgent,
     appliesTo: [],

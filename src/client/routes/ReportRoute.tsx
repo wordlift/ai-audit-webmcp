@@ -156,7 +156,8 @@ export function ReportRoute() {
             reportId={report.id}
             verified={
               report.capabilities?.some(
-                (capability) => capability.actionId === "availability.check" && capability.state === "sidecar-enabled",
+                (capability) =>
+                  capability.actionId === "availability.check" && capability.state === "agent-ready" && capability.via === "sidecar",
               ) ?? false
             }
           />

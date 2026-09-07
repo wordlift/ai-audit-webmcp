@@ -15,7 +15,7 @@ that constrain the code; the full system lives with the WordLift team.
 | Leaf | `#22A286` | `agent-ready` state, WebMCP live badge |
 | Sand | `#C2A41D` | `unverified` state, partial-report banner |
 | Moss | `#125054` | `human-only` state, supported-evidence text |
-| Petal | `#A10269` | `sidecar-enabled` state and the approved-sidecar panel — the hero moment |
+| Petal | `#A10269` | The approved-sidecar panel. Sidecar-run actions are `agent-ready` like any other, tagged "Run by WordLift" in Sky; there is no fifth state colour |
 | Danger | `#C53030` | `missing` state (non-brand red, per the system's status guidance) |
 
 **Contrast is paired, not guessed.** Each state fill carries the text colour that clears WCAG AA

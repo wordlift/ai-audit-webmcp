@@ -16,6 +16,7 @@ export function ActionDetailDialog({ reportId, capability, onOpenChange }: { rep
             <p className="dialog-description">{capability.description}</p>
             <div className="dialog-state">
               <span className={`state-badge state-${capability.state}`}>{capability.state.replace("-", " ")}</span>
+              {capability.via === "sidecar" && <span className="via-chip">Run by WordLift</span>}
               {/* Whose expectation this is: the model inferred it from the site type, or a human decided. */}
               <span className="provenance-badge">
                 {capability.expectationSource.some((source) => source.startsWith("human:")) ? "Human-provided" : "Machine-inferred"}

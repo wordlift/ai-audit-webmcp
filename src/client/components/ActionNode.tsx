@@ -23,6 +23,8 @@ export function ActionNode({
     >
       <span className="action-node-meta">
         <span className={`state-badge state-${capability.state}`}>{capability.state.replace("-", " ")}</span>
+        {/* Provenance, not a state: the outcome for an agent is the same whoever runs the interface. */}
+        {capability.via === "sidecar" && <span className="via-chip">Run by WordLift</span>}
         {/* A human decision about responsibility outranks the generic chips. */}
         {capability.boundary && <span className={`boundary-chip boundary-${capability.boundary}`}>{BOUNDARY_LABELS[capability.boundary]}</span>}
         {/* Observed on the site even though the current site type does not expect it. */}
@@ -53,21 +55,20 @@ export function ActionNode({
           {agentEvidence.length > 0 && <em>{agentEvidence.length}</em>}
         </span>
       </span>
-      <span className="action-node-next"><span><ArrowUpRight />{nextStep(capability.state)}</span><span className="inspect-label"><CircleHelp /> Evidence & contract</span></span>
+      <span className="action-node-next"><span><ArrowUpRight />{nextStep(capability)}</span><span className="inspect-label"><CircleHelp /> Evidence & contract</span></span>
     </button>
   );
 }
 
 function agentLabel(state: CapabilityResult["state"]): string {
-  if (state === "agent-ready" || state === "sidecar-enabled") return "Verified";
+  if (state === "agent-ready") return "Verified";
   if (state === "unverified") return "Declared";
   return "Not ready";
 }
 
-function nextStep(state: CapabilityResult["state"]): string {
-  switch (state) {
-    case "agent-ready": return "Maintain verification";
-    case "sidecar-enabled": return "Sidecar is active";
+function nextStep(capability: CapabilityResult): string {
+  switch (capability.state) {
+    case "agent-ready": return capability.via === "sidecar" ? "Keep the sidecar verified" : "Maintain verification";
     case "unverified": return "Verify this interface";
     case "human-only": return "Expose this flow to agents";
     case "missing": return "Implement the contract";

@@ -636,7 +636,7 @@ export class AuditOrchestrator {
     );
     return graphActions.map((action) => {
       const actionEvidence = evidence.filter((item) => item.actionId === action.id);
-      // Only an approved sidecar's own verified invocation may claim `sidecar-enabled`.
+      // Only an approved sidecar's own verified invocation may say WordLift ran the interface.
       const approvedSidecar = actionEvidence.some(
         (item) => item.verification === "invoked" && item.kind === "tool-result" && item.id.startsWith("sidecar:"),
       );
