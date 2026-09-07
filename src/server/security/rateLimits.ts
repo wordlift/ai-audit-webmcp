@@ -1,76 +1,117 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import rateLimit, { type RateLimitRequestHandler } from "express-rate-limit";
+import type { PlatformEgress } from "./platformEgress.js";
 
 export interface RateLimitOptions {
   windowMs?: number;
   perIp?: number;
   global?: number;
   enabled?: boolean;
+  /**
+   * The budget one hosted assistant's whole user base shares. Everyone using the audit through
+   * claude.ai or ChatGPT arrives from that platform's egress addresses, so a per-address budget
+   * would be a budget for the platform; this is the one that is (see platformEgress.ts).
+   */
+  platform?: number;
 }
 
-const DEFAULTS = { windowMs: 10 * 60 * 1_000, perIp: 12, global: 240 };
+const DEFAULTS = { windowMs: 10 * 60 * 1_000, perIp: 12, global: 240, platform: 120 };
+
+/** How a pool is named to the person who hit it. A platform without a label is named as declared. */
+const PLATFORM_LABELS: Record<string, string> = { anthropic: "Claude", openai: "ChatGPT" };
 
 function limitResponse(message: string) {
   return { error: "rate_limited", message };
 }
 
-/**
- * Two limits guard the expensive audit path: one per caller, and one for the whole service so a
- * distributed burst cannot exhaust the downstream provider budget.
- */
-export function createAuditRateLimiters(options: RateLimitOptions = {}): RateLimitRequestHandler[] {
-  if (options.enabled === false) return [];
-  const windowMs = options.windowMs ?? DEFAULTS.windowMs;
+interface TierOptions {
+  windowMs: number;
+  perIp: number;
+  platform: number;
+  what: string;
+  egress?: PlatformEgress;
+}
 
-  const perIp = rateLimit({
-    windowMs,
-    limit: options.perIp ?? DEFAULTS.perIp,
+/**
+ * One limiter with two tiers. A request from a hosted assistant's published egress draws on a pool
+ * keyed by the platform and sized for all of its users at once; any other request draws on the
+ * budget of its own address. The ranges tier the limit and never gate access: an address nobody
+ * published is a direct client — Claude Desktop, Claude Code, Codex, MCP Inspector — and is
+ * simply itself.
+ */
+function tieredLimiter(options: TierOptions): RateLimitRequestHandler {
+  const platformOf = (request: Request): string | null => options.egress?.platformOf(request.ip) ?? null;
+  return rateLimit({
+    windowMs: options.windowMs,
+    limit: (request) => (platformOf(request) ? options.platform : options.perIp),
+    keyGenerator: (request) => {
+      const platform = platformOf(request);
+      return platform ? `platform:${platform}` : `ip:${request.ip ?? request.socket.remoteAddress ?? "unknown"}`;
+    },
     standardHeaders: "draft-7",
     legacyHeaders: false,
-    message: limitResponse("Too many audits from this address. Try again in a few minutes."),
+    message: (request: Request) => {
+      const platform = platformOf(request);
+      return platform
+        ? limitResponse(
+            `${PLATFORM_LABELS[platform] ?? platform} has used the ${options.what} reserved for it for now. Try again in a few minutes.`,
+          )
+        : limitResponse(`Too many ${options.what} from this address. Try again in a few minutes.`);
+    },
   });
+}
 
-  const global = rateLimit({
+function globalLimiter(windowMs: number, limit: number, message: string): RateLimitRequestHandler {
+  return rateLimit({
     windowMs,
-    limit: options.global ?? DEFAULTS.global,
+    limit,
     standardHeaders: false,
     legacyHeaders: false,
     keyGenerator: () => "global",
-    message: limitResponse("The audit service is at capacity. Try again in a few minutes."),
+    message: limitResponse(message),
   });
-
-  return [perIp, global];
 }
 
-const MCP_DEFAULTS = { perIp: 90, global: 1_800 };
+/**
+ * Two limits guard the expensive audit path: one per caller — an address, or a hosted platform's
+ * pool — and one for the whole service so a distributed burst cannot exhaust the downstream
+ * provider budget.
+ */
+export function createAuditRateLimiters(options: RateLimitOptions = {}, egress?: PlatformEgress): RateLimitRequestHandler[] {
+  if (options.enabled === false) return [];
+  const windowMs = options.windowMs ?? DEFAULTS.windowMs;
+  return [
+    tieredLimiter({
+      windowMs,
+      perIp: options.perIp ?? DEFAULTS.perIp,
+      platform: options.platform ?? DEFAULTS.platform,
+      what: "audits",
+      egress,
+    }),
+    globalLimiter(windowMs, options.global ?? DEFAULTS.global, "The audit service is at capacity. Try again in a few minutes."),
+  ];
+}
+
+const MCP_DEFAULTS = { perIp: 90, global: 1_800, platform: 900 };
 
 /**
  * The remote transport carries discovery and reads as well as audits, and a caller that cannot
  * call `tools/list` cannot use the server at all. This pool is sized for conversation; the audit
- * budget below is what actually guards the expensive path.
+ * budget above is what actually guards the expensive path.
  */
-export function createMcpRateLimiters(options: RateLimitOptions = {}): RequestHandler[] {
+export function createMcpRateLimiters(options: RateLimitOptions = {}, egress?: PlatformEgress): RequestHandler[] {
   if (options.enabled === false) return [];
   const windowMs = options.windowMs ?? DEFAULTS.windowMs;
-
-  const perIp = rateLimit({
-    windowMs,
-    limit: options.perIp ?? MCP_DEFAULTS.perIp,
-    standardHeaders: "draft-7",
-    legacyHeaders: false,
-    message: limitResponse("Too many MCP calls from this address. Try again in a few minutes."),
-  });
-
-  const global = rateLimit({
-    windowMs,
-    limit: options.global ?? MCP_DEFAULTS.global,
-    standardHeaders: false,
-    legacyHeaders: false,
-    keyGenerator: () => "global",
-    message: limitResponse("The MCP endpoint is at capacity. Try again in a few minutes."),
-  });
-
-  return [perIp, global];
+  return [
+    tieredLimiter({
+      windowMs,
+      perIp: options.perIp ?? MCP_DEFAULTS.perIp,
+      platform: options.platform ?? MCP_DEFAULTS.platform,
+      what: "MCP calls",
+      egress,
+    }),
+    globalLimiter(windowMs, options.global ?? MCP_DEFAULTS.global, "The MCP endpoint is at capacity. Try again in a few minutes."),
+  ];
 }
 
 /** The MCP calls that cost a collection or create a report; everything else is a read. */

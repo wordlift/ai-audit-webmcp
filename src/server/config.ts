@@ -32,6 +32,14 @@ const environmentSchema = z
      * exists on the form: HubSpot rejects a submission naming a field the form does not have.
      */
     HUBSPOT_SOURCE_FIELD: z.string().min(1).max(80).optional(),
+    /**
+     * Extra egress ranges for hosted assistants, `platform=cidr` entries separated by commas.
+     * Anthropic's range and a snapshot of OpenAI's are built in; this adds a platform or a range
+     * published after the build.
+     */
+    PLATFORM_EGRESS_RANGES: z.string().max(20_000).optional(),
+    /** How often OpenAI's published connector ranges are re-read at runtime; 0 keeps the snapshot. */
+    PLATFORM_EGRESS_REFRESH_MINUTES: z.coerce.number().int().min(0).max(10_080).default(360),
   })
   .strict()
   .superRefine((environment, context) => {
@@ -83,6 +91,8 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     HUBSPOT_FORM_GUID: environment.HUBSPOT_FORM_GUID,
     HUBSPOT_REGION: environment.HUBSPOT_REGION,
     HUBSPOT_SOURCE_FIELD: environment.HUBSPOT_SOURCE_FIELD,
+    PLATFORM_EGRESS_RANGES: environment.PLATFORM_EGRESS_RANGES,
+    PLATFORM_EGRESS_REFRESH_MINUTES: environment.PLATFORM_EGRESS_REFRESH_MINUTES,
   };
 
   return environmentSchema.parse(knownEnvironment);

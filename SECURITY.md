@@ -60,6 +60,10 @@ Audits are expensive and call paid services. Two limits guard the path: per-IP a
 (`src/server/security/rateLimits.ts`). Reading a shared report is never rate limited, so a link you
 send to someone keeps working.
 
+A hosted assistant's users all arrive from its published egress addresses, so those addresses draw
+on a pool per platform rather than one address's budget (`src/server/security/platformEgress.ts`).
+The ranges tier limits and never gate access: an address nobody published is a direct client.
+
 The remote MCP endpoint has a pool of its own, sized for conversation: a caller that has spent its
 audit budget can still list tools and read reports. Only the calls that create something —
 `audit-website` and `refine-terms-of-action` — draw on the audit budget, and the writes that make a

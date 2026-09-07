@@ -35,6 +35,8 @@ inputs differ.
 | `HUBSPOT_FORM_GUID` | — | The form a deep scan's report is delivered through |
 | `HUBSPOT_REGION` | `na1` | `eu1` for an EU-hosted portal: it has its own submission host |
 | `HUBSPOT_SOURCE_FIELD` | — | A form property recording which surface a lead came from. Create it on the form before setting this |
+| `PLATFORM_EGRESS_RANGES` | — | Extra hosted-assistant egress ranges, `platform=cidr` entries separated by commas. Anthropic's range and a snapshot of OpenAI's are built in |
+| `PLATFORM_EGRESS_REFRESH_MINUTES` | `360` | How often OpenAI's published connector ranges are re-read at runtime. `0` keeps the built-in snapshot |
 
 Live mode fails fast at startup if a required credential is missing.
 
@@ -132,6 +134,35 @@ no form configured, deep scans still run and still record what they owe; nothing
 
 `GET /api/health` names the delivery system in `surfaces.reportDelivery`, or `null` when none is
 configured.
+
+## Rate-limit tiers for hosted assistants
+
+Everyone who uses the audit through claude.ai or ChatGPT arrives from that platform's published
+egress addresses, not their own, so a per-address budget would be a budget for the whole platform.
+`src/server/security/platformEgress.ts` tells the limiters which platform an address belongs to,
+and each platform draws on a pool of its own. Every other address — Claude Desktop, Claude Code,
+Codex, MCP Inspector, a browser — keeps the per-address budget. The ranges tier limits and never
+gate access: an address nobody published is a direct client, not a refusal.
+
+| Pool, per 10 minutes | Per address | Per hosted platform | Whole service |
+| --- | --- | --- | --- |
+| Audits and refinements (`audit-website`, `refine-terms-of-action`, `POST /api/reports`) | 12 | 120 | 240 |
+| Other MCP calls (`tools/list`, reads) | 90 | 900 | 1800 |
+
+Where the ranges come from:
+
+- **Anthropic**: `160.79.104.0/21` and `2607:6bc0::/48`, published at
+  https://platform.claude.com/docs/en/api/ip-addresses and stable by Anthropic's statement.
+- **OpenAI**: https://openai.com/chatgpt-connectors.json, which changes with their infrastructure.
+  A snapshot ships in `src/server/security/openaiConnectorEgress.ts` (`npm run egress:refresh`
+  rewrites it), and the service re-reads the published list every
+  `PLATFORM_EGRESS_REFRESH_MINUTES` (six hours by default), keeping the last good list when a
+  read fails. An `openai=` entry in `PLATFORM_EGRESS_RANGES` is replaced by the next refresh, so
+  use that variable for a platform that is not built in, or with the refresh set to `0`.
+
+`GET /api/health` reports how many ranges each platform currently holds under `platformEgress`,
+so a refresh that stopped working is visible without reading logs; each refresh also logs
+`platform_egress_refreshed` or `platform_egress_refresh_failed`.
 
 ## One-time Google Cloud setup
 

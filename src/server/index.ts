@@ -10,6 +10,13 @@ import { FirestoreClaimStore, MemoryClaimStore } from "./adapters/claims/index.j
 import { FirestoreLeadStore, HubSpotLeadDelivery, MemoryLeadStore } from "./adapters/leads/index.js";
 import { FirestoreReportStore, MemoryReportStore } from "./adapters/store/index.js";
 import { loadConfig } from "./config.js";
+import { OPENAI_CONNECTOR_EGRESS, OPENAI_CONNECTOR_EGRESS_URL } from "./security/openaiConnectorEgress.js";
+import {
+  ANTHROPIC_EGRESS,
+  PlatformEgress,
+  parsePlatformRanges,
+  startPlatformEgressRefresh,
+} from "./security/platformEgress.js";
 import { AuditOrchestrator, type OrchestratorOptions } from "./services/AuditOrchestrator.js";
 
 const config = loadConfig();
@@ -59,6 +66,24 @@ const orchestrator = new AuditOrchestrator(store, loadActionModel(config.ACTION_
   providers,
 });
 
+// A hosted assistant's users all arrive from its published addresses, so those draw on a pool per
+// platform rather than one address's budget. Anthropic's range is stable; OpenAI's changes with
+// their infrastructure, so the snapshot is re-read on an interval and kept if a read fails.
+const platformEgress = new PlatformEgress([
+  ...ANTHROPIC_EGRESS,
+  ...OPENAI_CONNECTOR_EGRESS.map((cidr) => ({ platform: "openai", cidr })),
+  ...parsePlatformRanges(config.PLATFORM_EGRESS_RANGES),
+]);
+if (config.PLATFORM_EGRESS_REFRESH_MINUTES > 0 && config.NODE_ENV !== "test") {
+  startPlatformEgressRefresh({
+    egress: platformEgress,
+    platform: "openai",
+    url: OPENAI_CONNECTOR_EGRESS_URL,
+    intervalMs: config.PLATFORM_EGRESS_REFRESH_MINUTES * 60_000,
+    log: (event, ...details) => console.log(event, ...details),
+  });
+}
+
 const app = createApp({
   staticDirectory: path.resolve(process.cwd(), "dist"),
   orchestrator,
@@ -69,6 +94,7 @@ const app = createApp({
   appsChallenge: config.OPENAI_APPS_CHALLENGE,
   trustProxy: config.NODE_ENV === "production",
   rateLimits: config.NODE_ENV === "test" ? { enabled: false } : undefined,
+  platformEgress,
 });
 
 const server = app.listen(config.PORT, () => {
