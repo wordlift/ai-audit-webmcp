@@ -88,6 +88,25 @@ export const domainEntitySchema = z
     confidence: z.number().min(0).max(1),
     /** A reviewer's judgment about this entity's place in the map; absent on the machine draft. */
     humanPriority: z.enum(["primary", "demoted"]).optional(),
+    /**
+     * Declared in the page's markup (absent means declared), or inferred from the page's text by a
+     * markup provider. An inferred entity is a candidate: it appears in the map and in the
+     * refinement interview, never in the evidence, and never moves readiness.
+     */
+    origin: z.enum(["markup", "inferred"]).optional(),
+  })
+  .strict();
+
+/** What the markup provider did for this report: the Fix finding's numbers, never its cost. */
+export const markupSummarySchema = z
+  .object({
+    provider: z.string().min(1).max(80),
+    model: z.string().min(1).max(80),
+    pagesGenerated: z.number().int().nonnegative(),
+    pagesFailed: z.number().int().nonnegative(),
+    /** Entities the pages have but do not declare: what Fix would publish. */
+    inferredEntities: z.number().int().nonnegative(),
+    declaredEntities: z.number().int().nonnegative(),
   })
   .strict();
 
@@ -490,6 +509,7 @@ export const reportRecordSchema = z
     score: readinessScoreSchema.optional(),
     priorities: z.array(priorityGapSchema).max(3).optional(),
     agentDiscovery: agentDiscoverySchema.optional(),
+    markup: markupSummarySchema.optional(),
     errors: z.array(reportErrorSchema).max(30),
     evidenceTruncated: z.boolean(),
   })

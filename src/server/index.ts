@@ -8,6 +8,7 @@ import { NativeFetchCollector } from "./adapters/scrape/NativeFetch.js";
 import { createScrapingBeeCollector } from "./adapters/scrape/ScrapingBee.js";
 import { FirestoreClaimStore, MemoryClaimStore } from "./adapters/claims/index.js";
 import { FirestoreLeadStore, HubSpotLeadDelivery, MemoryLeadStore } from "./adapters/leads/index.js";
+import { GeminiMarkupProvider } from "./adapters/markup/GeminiMarkup.js";
 import { FirestoreReportStore, MemoryReportStore } from "./adapters/store/index.js";
 import { loadConfig } from "./config.js";
 import { OPENAI_CONNECTOR_EGRESS, OPENAI_CONNECTOR_EGRESS_URL } from "./security/openaiConnectorEgress.js";
@@ -43,6 +44,16 @@ const leadDelivery = config.HUBSPOT_PORTAL_ID && config.HUBSPOT_FORM_GUID
     })
   : undefined;
 
+// The markup a page should have: a stand-in model today, WordLift's own service tomorrow, behind
+// one interface. Nothing else in the audit knows which.
+const markup = config.MARKUP_PROVIDER === "gemini"
+  ? new GeminiMarkupProvider({
+      apiKey: config.GEMINI_API_KEY as string,
+      model: config.GEMINI_MODEL,
+      pricing: { inputUsdPerMillion: config.GEMINI_INPUT_USD_PER_MILLION, outputUsdPerMillion: config.GEMINI_OUTPUT_USD_PER_MILLION },
+    })
+  : undefined;
+
 const mode: OrchestratorOptions["mode"] = config.AUDIT_PROVIDER === "wordlift" ? "live" : "demo";
 const providers: OrchestratorOptions["providers"] = mode === "live"
   ? {
@@ -56,6 +67,7 @@ const providers: OrchestratorOptions["providers"] = mode === "live"
       classify: config.CLASSIFIER_PROVIDER === "google-nlp"
         ? new GoogleNlpClassifier({ projectId: config.GOOGLE_CLOUD_PROJECT })
         : undefined,
+      markup,
     }
   : undefined;
 
@@ -64,6 +76,7 @@ const orchestrator = new AuditOrchestrator(store, loadActionModel(config.ACTION_
   ttlDays: config.REPORT_TTL_DAYS,
   mode,
   providers,
+  markupOnBasic: config.MARKUP_ON_BASIC,
 });
 
 // A hosted assistant's users all arrive from its published addresses, so those draw on a pool per
@@ -95,6 +108,7 @@ const app = createApp({
   trustProxy: config.NODE_ENV === "production",
   rateLimits: config.NODE_ENV === "test" ? { enabled: false } : { daily: config.AUDIT_DAILY_BUDGET },
   platformEgress,
+  markup,
 });
 
 const server = app.listen(config.PORT, () => {

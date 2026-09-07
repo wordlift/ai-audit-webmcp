@@ -11,7 +11,8 @@ import { recommendationFor, rankPriorities } from "../../domain/action-model/ran
 import { scoreReadiness } from "../../domain/action-model/scoreReadiness.js";
 import { appliesToForAction, compileContextGraph, refreshContextGraph } from "../../domain/context/compileContextGraph.js";
 import { detectSiteEvidence } from "../../domain/evidence/detectSiteEvidence.js";
-import type { AgentDiscovery } from "../../shared/types/index.js";
+import type { AgentDiscovery, MarkupSummary } from "../../shared/types/index.js";
+import type { MarkupProvider } from "../adapters/markup/MarkupProvider.js";
 import { detectWordLift, type WordLiftMarker } from "../../domain/evidence/detectWordLift.js";
 import { inferArchetype } from "../../domain/classification/inferArchetype.js";
 import {
@@ -49,7 +50,15 @@ export interface OrchestratorOptions {
     audit?: AuditProvider;
     scrape?: ScrapeProvider;
     classify?: ClassifierProvider;
+    /** Infers the markup a page should have from its text; absent means Fix has no second source. */
+    markup?: MarkupProvider;
   };
+  /**
+   * Which pages of a basic scan get their markup inferred: only the pages that declare no
+   * entities (the default, so cost follows value), every page, or none. A deep scan always
+   * reads every page.
+   */
+  markupOnBasic?: "thin" | "all" | "none";
   /**
    * How long a crawl of a site serves later requests for the same site at the same depth. Zero
    * reads the site every time. The default is a day: the same site audited twice in an afternoon
@@ -77,6 +86,7 @@ interface CompiledInputs {
   pages: SitePageSnapshot[];
   wordlift?: WordLiftMarker;
   agentDiscovery?: AgentDiscovery;
+  markup?: Omit<MarkupSummary, "inferredEntities" | "declaredEntities">;
 }
 
 export class AuditOrchestrator {
@@ -197,6 +207,7 @@ export class AuditOrchestrator {
       score: source.score,
       priorities: source.priorities,
       agentDiscovery: source.agentDiscovery,
+      markup: source.markup,
       errors: source.errors,
       evidenceTruncated: source.evidenceTruncated,
     };
@@ -574,6 +585,11 @@ export class AuditOrchestrator {
       errors.push(auditErrorToReportError(auditResult.reason));
     }
 
+    // The markup a page should have, inferred from its text: a second source of entities beside
+    // the declared one, labelled as such, read before the graph is compiled and after the
+    // collector has said what the page declares.
+    const markup = snapshot && providers.markup ? await this.inferMarkup(snapshot, providers.markup, scanDepth) : undefined;
+
     const detection = snapshot ? detectSiteEvidence(snapshot, collectedAt) : { evidence: [], signals: [] };
     const classification = snapshot && providers.classify
       ? await providers.classify.classify({ text: snapshot.text, url: snapshot.canonicalUrl })
@@ -615,7 +631,56 @@ export class AuditOrchestrator {
       pages: snapshot?.pages ?? [],
       wordlift: snapshot?.wordlift,
       agentDiscovery: detection.agentDiscovery,
+      ...(markup ? { markup } : {}),
     };
+  }
+
+  /**
+   * Sends each page that qualifies to the markup provider and adds what comes back to the page's
+   * entities as inferred. A provider failure on one page is that page's loss, never the audit's;
+   * what it cost is logged once per audit, never stored in the public report.
+   */
+  private async inferMarkup(
+    snapshot: SiteSnapshot,
+    provider: MarkupProvider,
+    scanDepth?: ScanDepth,
+  ): Promise<CompiledInputs["markup"] | undefined> {
+    const onBasic = this.options.markupOnBasic ?? "thin";
+    const pages =
+      scanDepth === "deep" || onBasic === "all"
+        ? snapshot.pages
+        : onBasic === "thin"
+          ? snapshot.pages.filter((page) => page.entities.length === 0)
+          : [];
+    const chosen = pages.slice(0, pagesForDepth(scanDepth));
+    if (chosen.length === 0) return { provider: provider.name, model: provider.model, pagesGenerated: 0, pagesFailed: 0 };
+
+    const outcomes = await Promise.allSettled(
+      chosen.map((page) =>
+        provider.generate({ url: page.url, title: page.title, description: page.description, headings: page.headings, text: page.text }),
+      ),
+    );
+    let generated = 0;
+    let failed = 0;
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let estimatedUsd = 0;
+    outcomes.forEach((outcome, index) => {
+      const page = chosen[index];
+      if (!page) return;
+      if (outcome.status !== "fulfilled") {
+        failed += 1;
+        console.error("markup_failed", page.url, outcome.reason instanceof Error ? outcome.reason.message : "unknown");
+        return;
+      }
+      generated += 1;
+      inputTokens += outcome.value.usage.inputTokens;
+      outputTokens += outcome.value.usage.outputTokens;
+      estimatedUsd += outcome.value.usage.estimatedUsd;
+      page.entities.push(...outcome.value.entities);
+    });
+    console.log("markup_generated", provider.name, provider.model, generated, failed, inputTokens, outputTokens, estimatedUsd.toFixed(5));
+    return { provider: provider.name, model: provider.model, pagesGenerated: generated, pagesFailed: failed };
   }
 
   private compileFixture(base: ReportRecord, fixture: FixtureAudit, override?: Archetype): ReportRecord {
@@ -693,6 +758,15 @@ export class AuditOrchestrator {
       score: scoreReadiness(capabilities),
       priorities: rankPriorities(capabilities),
       agentDiscovery: inputs.agentDiscovery,
+      ...(inputs.markup
+        ? {
+            markup: {
+              ...inputs.markup,
+              inferredEntities: contextGraph.entities.filter((entity) => entity.origin === "inferred").length,
+              declaredEntities: contextGraph.entities.filter((entity) => entity.origin !== "inferred").length,
+            },
+          }
+        : {}),
       errors: inputs.errors,
       evidenceTruncated: inputs.evidenceTruncated,
     };

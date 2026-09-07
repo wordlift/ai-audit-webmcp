@@ -17,6 +17,7 @@ import type {
   foundationAuditSummarySchema,
   humanAssertionSchema,
   lexicalEntrySchema,
+  markupSummarySchema,
   refinementSchema,
   priorityGapSchema,
   readinessScoreSchema,
@@ -28,6 +29,7 @@ import type {
 export type ActionContract = z.infer<typeof actionContractSchema>;
 export type ActionInterface = z.infer<typeof actionInterfaceSchema>;
 export type AgentDiscovery = z.infer<typeof agentDiscoverySchema>;
+export type MarkupSummary = z.infer<typeof markupSummarySchema>;
 export type AuditedPage = z.infer<typeof auditedPageSchema>;
 export type ContentCategory = z.infer<typeof contentCategorySchema>;
 export type ContextGraph = z.infer<typeof contextGraphSchema>;

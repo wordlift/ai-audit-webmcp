@@ -38,6 +38,11 @@ inputs differ.
 | `PLATFORM_EGRESS_RANGES` | — | Extra hosted-assistant egress ranges, `platform=cidr` entries separated by commas. Anthropic's range and a snapshot of OpenAI's are built in |
 | `PLATFORM_EGRESS_REFRESH_MINUTES` | `360` | How often OpenAI's published connector ranges are re-read at runtime. `0` keeps the built-in snapshot |
 | `AUDIT_DAILY_BUDGET` | `2000` | Audits the whole service runs in a day, whoever asks; past it audits answer "at capacity" until tomorrow and reads go on. `0` removes the ceiling. Per instance, like the other limits |
+| `MARKUP_PROVIDER` | `none` | `gemini` infers the markup a page should have, from its text, through the Gemini API. The stand-in until WordLift's own service replaces it |
+| `GEMINI_API_KEY` | — | Secret Manager in production; required when the provider is `gemini` |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | The model behind the stand-in |
+| `MARKUP_ON_BASIC` | `thin` | Which pages of a basic scan are sent: `thin` (those that declare no entities), `all`, or `none`. A deep scan sends every page |
+| `GEMINI_INPUT_USD_PER_MILLION`, `GEMINI_OUTPUT_USD_PER_MILLION` | `0.3`, `2.5` | List prices used for the estimate on `/api/health` and in the `markup_generated` log line |
 
 Live mode fails fast at startup if a required credential is missing.
 
@@ -164,6 +169,27 @@ gcloud billing budgets create --billing-account=<BILLING_ACCOUNT_ID> \
   --filter-projects=projects/ai-audit-wordlift \
   --threshold-rule=percent=0.5 --threshold-rule=percent=0.9 --threshold-rule=percent=1.0
 ```
+
+## Generated markup, the Fix preview, and what it costs
+
+With `MARKUP_PROVIDER=gemini`, each page a scan qualifies is sent to Gemini 2.5 Flash as readable
+text — title, description, headings and the bounded body the collector already keeps, never raw
+HTML — and the JSON-LD that comes back is read by the same rules as declared markup, then added to
+the page's entities marked `inferred`. Inferred entities appear in the context graph with an
+"Inferred" chip and in the refinement interview as candidates; they never enter the evidence and
+never move a readiness score. The report carries `markup` with the counts the Fix finding needs
+(entities inferred and not declared) and never the cost.
+
+The cost is a log line per audit, `markup_generated provider model pages failed in out usd`, and a
+running total on `GET /api/health` under `markup`. At list price a page is roughly 3,000 input and
+600 output tokens, about \$0.0025; a basic scan sends only pages that declare nothing, so at most
+four, about \$0.01; a deep scan sends all twelve, about \$0.03. At the daily budget's ceiling of
+2,000 audits that is \$20 to \$60 a day, and the real number is on the health endpoint.
+
+The model is one file, `src/server/adapters/markup/GeminiMarkup.ts`, behind `MarkupProvider`.
+WordLift's HTML-to-JSON-LD service replaces it there; the validator in `jsonLd.ts`, which refuses
+nodes without a type or a name, non-schema.org types and non-URLs, stays in front of whichever
+model answers, and is where a SHACL pass goes once the shapes exist.
 
 ## Rate-limit tiers for hosted assistants
 

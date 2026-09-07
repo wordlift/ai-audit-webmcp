@@ -30,6 +30,16 @@ if [ "$SCRAPE" = "scrapingbee" ]; then
   SECRETS="$SECRETS,SCRAPINGBEE_API_KEY=SCRAPINGBEE_API_KEY:latest"
 fi
 
+# Generated markup — the Fix preview — runs on Gemini 2.5 Flash through the Gemini API until
+# WordLift's own service replaces it. Enable it with MARKUP_PROVIDER=gemini; the GEMINI_API_KEY
+# secret already exists in this project. /api/health reports what it has cost.
+MARKUP="${MARKUP_PROVIDER:-none}"
+MARKUP_ENV=""
+if [ "$MARKUP" = "gemini" ]; then
+  SECRETS="$SECRETS,GEMINI_API_KEY=GEMINI_API_KEY:latest"
+  MARKUP_ENV="##MARKUP_PROVIDER=gemini##GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}##MARKUP_ON_BASIC=${MARKUP_ON_BASIC:-thin}"
+fi
+
 # The app directory verifies this domain by fetching a token from /.well-known. Export
 # OPENAI_APPS_CHALLENGE before deploying to serve it; without it the path simply 404s.
 CHALLENGE_ENV=""
@@ -66,7 +76,7 @@ gcloud run deploy "$SERVICE" \
   --cpu 1 \
   --max-instances 5 \
   --concurrency 20 \
-  --set-env-vars "^##^NODE_ENV=production##AUDIT_PROVIDER=wordlift##AI_AUDIT_BASE_URL=https://api.wordlift.io##SCRAPE_PROVIDER=${SCRAPE}##CLASSIFIER_PROVIDER=google-nlp##REPORT_STORE=firestore##GOOGLE_CLOUD_PROJECT=${PROJECT}##PUBLIC_APP_URL=${PUBLIC_URL}##REPORT_TTL_DAYS=30##BUILD_SHA=${RELEASE_SHA}${CHALLENGE_ENV}${HUBSPOT_ENV}" \
+  --set-env-vars "^##^NODE_ENV=production##AUDIT_PROVIDER=wordlift##AI_AUDIT_BASE_URL=https://api.wordlift.io##SCRAPE_PROVIDER=${SCRAPE}##CLASSIFIER_PROVIDER=google-nlp##REPORT_STORE=firestore##GOOGLE_CLOUD_PROJECT=${PROJECT}##PUBLIC_APP_URL=${PUBLIC_URL}##REPORT_TTL_DAYS=30##BUILD_SHA=${RELEASE_SHA}${CHALLENGE_ENV}${HUBSPOT_ENV}${MARKUP_ENV}" \
   --set-secrets "$SECRETS"
 
 echo

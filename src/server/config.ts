@@ -42,6 +42,18 @@ const environmentSchema = z
     PLATFORM_EGRESS_REFRESH_MINUTES: z.coerce.number().int().min(0).max(10_080).default(360),
     /** Audits the whole service runs in a day, whoever asks: the bill's ceiling. 0 removes it. */
     AUDIT_DAILY_BUDGET: z.coerce.number().int().min(0).max(1_000_000).default(2_000),
+    /**
+     * Where the markup a page should have comes from. `gemini` is the stand-in — Gemini 2.5 Flash
+     * through the Gemini API — until WordLift's own service replaces it behind the same interface.
+     */
+    MARKUP_PROVIDER: z.enum(["none", "gemini"]).default("none"),
+    GEMINI_API_KEY: z.string().min(1).optional(),
+    GEMINI_MODEL: z.string().min(1).max(80).default("gemini-2.5-flash"),
+    /** List price used for the estimate, USD per million tokens. Change when Google does. */
+    GEMINI_INPUT_USD_PER_MILLION: z.coerce.number().min(0).default(0.3),
+    GEMINI_OUTPUT_USD_PER_MILLION: z.coerce.number().min(0).default(2.5),
+    /** Which pages of a basic scan are sent: those that declare no entities, all, or none. */
+    MARKUP_ON_BASIC: z.enum(["thin", "all", "none"]).default("thin"),
   })
   .strict()
   .superRefine((environment, context) => {
@@ -67,6 +79,10 @@ const environmentSchema = z
 
     if (environment.SCRAPE_PROVIDER === "scrapingbee" && !environment.SCRAPINGBEE_API_KEY) {
       context.addIssue({ code: "custom", path: ["SCRAPINGBEE_API_KEY"], message: "Required for ScrapingBee" });
+    }
+
+    if (environment.MARKUP_PROVIDER === "gemini" && !environment.GEMINI_API_KEY) {
+      context.addIssue({ code: "custom", path: ["GEMINI_API_KEY"], message: "Required for the Gemini markup provider" });
     }
   });
 
@@ -96,6 +112,12 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     PLATFORM_EGRESS_RANGES: environment.PLATFORM_EGRESS_RANGES,
     PLATFORM_EGRESS_REFRESH_MINUTES: environment.PLATFORM_EGRESS_REFRESH_MINUTES,
     AUDIT_DAILY_BUDGET: environment.AUDIT_DAILY_BUDGET,
+    MARKUP_PROVIDER: environment.MARKUP_PROVIDER,
+    GEMINI_API_KEY: environment.GEMINI_API_KEY,
+    GEMINI_MODEL: environment.GEMINI_MODEL,
+    GEMINI_INPUT_USD_PER_MILLION: environment.GEMINI_INPUT_USD_PER_MILLION,
+    GEMINI_OUTPUT_USD_PER_MILLION: environment.GEMINI_OUTPUT_USD_PER_MILLION,
+    MARKUP_ON_BASIC: environment.MARKUP_ON_BASIC,
   };
 
   return environmentSchema.parse(knownEnvironment);

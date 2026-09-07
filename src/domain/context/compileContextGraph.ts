@@ -171,6 +171,10 @@ function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, business
       const known = idsByName.get(name) ?? [];
       if (!known.includes(id)) idsByName.set(name, [...known, id]);
       const existing = byId.get(id);
+      // One declared sighting makes an entity declared; only an entity every page merely implies
+      // stays inferred, at lower confidence, as a candidate rather than a fact.
+      const origin: DomainEntity["origin"] =
+        existing?.origin === "markup" || (existing && !existing.origin) || extracted.origin !== "inferred" ? "markup" : "inferred";
       const next: DomainEntity = {
         id,
         types: unique([...(existing?.types ?? []), ...extracted.types]).slice(0, 12),
@@ -180,7 +184,8 @@ function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, business
         sourceUrls: unique([...(existing?.sourceUrls ?? []), extracted.sourceUrl]).slice(0, 12),
         sameAs: unique([...(existing?.sameAs ?? []), ...extracted.sameAs]).slice(0, 12),
         offers: [...(existing?.offers ?? []), ...extracted.offers].slice(0, 12),
-        confidence: 0.95,
+        confidence: origin === "inferred" ? 0.6 : 0.95,
+        ...(origin === "inferred" ? { origin } : {}),
       };
       byId.set(id, next);
     }

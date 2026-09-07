@@ -769,7 +769,8 @@ function collectTypes(node: unknown, types: Set<string>, depth: number): void {
   }
 }
 
-const DOMAIN_ENTITY_TYPES = new Set([
+/** The types the map is about. Declared or inferred, anything else is a page's furniture, not an entity of the business. */
+export const DOMAIN_ENTITY_TYPES: ReadonlySet<string> = new Set([
   "Organization",
   "LocalBusiness",
   "LodgingBusiness",

@@ -26,6 +26,8 @@ export interface ExtractedEntity {
   sourceUrl: string;
   sameAs: string[];
   offers: ExtractedOffer[];
+  /** Declared in the page's markup (the default), or inferred from its text by a markup provider. */
+  origin?: "markup" | "inferred";
 }
 
 export interface SitePageSnapshot {

@@ -13,6 +13,7 @@ import {
 import type { ClaimStore } from "./adapters/claims/index.js";
 import type { LeadDelivery, LeadStore } from "./adapters/leads/index.js";
 import type { AuditOrchestrator } from "./services/AuditOrchestrator.js";
+import type { MarkupProvider } from "./adapters/markup/MarkupProvider.js";
 import type { PlatformEgress } from "./security/platformEgress.js";
 import { AuditToolService, type AuditToolServiceOptions } from "./services/AuditToolService.js";
 import { DeepScanDelivery } from "./services/DeepScanDelivery.js";
@@ -38,6 +39,8 @@ export interface AppOptions {
    * one address's budget; absent, every address is limited as itself.
    */
   platformEgress?: PlatformEgress;
+  /** The markup provider, for the health endpoint's running cost estimate only. */
+  markup?: MarkupProvider;
   toolService?: AuditToolServiceOptions;
   /** Where a deep scan's email address is filed. Absent means deep scans are unavailable here. */
   leads?: LeadStore;
@@ -103,6 +106,8 @@ export function createApp(options: AppOptions = {}): Express {
       },
       // How many egress ranges each hosted platform holds: a refresh that stopped is visible here.
       platformEgress: options.platformEgress?.summary() ?? null,
+      // What the markup stand-in has cost since this instance started: the estimate, live.
+      markup: options.markup ? { provider: options.markup.name, model: options.markup.model, ...options.markup.totals() } : null,
     });
   });
 

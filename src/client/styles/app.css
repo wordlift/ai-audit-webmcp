@@ -697,6 +697,7 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .map-diff[open] > summary { margin-bottom: 8px; }
 .machine-archetype { display: flex; gap: 8px; align-items: center; margin: 2px 0 0; color: var(--muted); font-size: 0.75rem; }
 .entity-primary-chip { margin-left: 6px; padding: 1px 6px; border-radius: 5px; background: color-mix(in srgb, var(--wl-moss) 22%, white); color: var(--wl-neutral-900); font-family: var(--font-mono); font-size: 0.5rem; font-style: normal; text-transform: uppercase; letter-spacing: 0.08em; }
+.entity-inferred-chip { margin-left: 6px; padding: 1px 6px; border-radius: 5px; background: color-mix(in srgb, var(--wl-sand) 26%, white); color: var(--wl-neutral-900); font-family: var(--font-mono); font-size: 0.5rem; font-style: normal; text-transform: uppercase; letter-spacing: 0.08em; }
 .entity-card-demoted { opacity: 0.55; cursor: default; }
 .entity-card-demoted strong { text-decoration: line-through; text-decoration-thickness: 1px; }
 .demoted-fold { grid-column: 1 / -1; margin-top: 6px; }

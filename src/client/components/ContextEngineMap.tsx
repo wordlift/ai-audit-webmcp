@@ -214,7 +214,12 @@ export function ContextEngineMap({
                 onMouseEnter={() => setHovered({ kind: "entity", id: entity.id })}
                 onMouseLeave={() => setHovered(null)}
               >
-                <span>{entity.types[0]}{entity.humanPriority === "primary" && <em className="entity-primary-chip">Primary</em>}</span>
+                <span>
+                  {entity.types[0]}
+                  {entity.humanPriority === "primary" && <em className="entity-primary-chip">Primary</em>}
+                  {/* Inferred from the page's text, not declared by its markup: a candidate, not a fact. */}
+                  {entity.origin === "inferred" && <em className="entity-inferred-chip">Inferred</em>}
+                </span>
                 <strong>{entity.name}</strong>
                 <small>{entity.offers.length > 0 ? `${entity.offers.length} offer${entity.offers.length === 1 ? "" : "s"}` : `${entity.sourceUrls.length} source page${entity.sourceUrls.length === 1 ? "" : "s"}`}</small>
               </button>
