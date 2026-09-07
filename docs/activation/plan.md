@@ -325,6 +325,12 @@ Nobody buys the vision on day one. They paste a URL.
 
 ## Distribute (later, and theirs)
 
+- [x] **D1a. The entry source** — built 2026-09-07. `GET /feed/ai-catalog.json` lists the
+  entries of every site whose own catalog carries our Terms of Action, each on its own domain,
+  observed by the audits and forgotten when the catalog goes; `publishedSites` is the shape the
+  platform can fill too. One submission registers every customer when Google's onboarding opens.
+  The service serves its own catalog and MCP server card as well. A `PREVIEW=1` deploy mode tries
+  the branch on a separate service with a memory store, no HubSpot, no re-reads and noindex.
 - [ ] **D1. Register wherever agent ecosystems allow**
   Spec ref: Google Cloud's Agent Registry and its publisher onboarding; any other registry that
   reads ARD catalogs as they appear.
