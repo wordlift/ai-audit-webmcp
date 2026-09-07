@@ -20,6 +20,7 @@ import { AuditToolService, type AuditToolServiceOptions } from "./services/Audit
 import { DeepScanDelivery } from "./services/DeepScanDelivery.js";
 import { Observer, type ObserveOptions } from "./services/Observer.js";
 import { createObserveRouter } from "./routes/observe.js";
+import type { PublishedSiteStore } from "./adapters/published/PublishedSiteStore.js";
 import { DeepScanGate } from "./services/DeepScanGate.js";
 import { AlpinaAvailabilitySidecar } from "./sidecars/alpina/adapter.js";
 
@@ -59,6 +60,10 @@ export interface AppOptions {
    * Absent means no cadence runs here; it needs the orchestrator, the lead store and a delivery.
    */
   observe?: ObserveOptions;
+  /** The sites that publish through us, read by the entry source at /feed/ai-catalog.json. */
+  published?: PublishedSiteStore;
+  /** False on a preview deployment: every response carries noindex and robots are told to stay out. */
+  indexable?: boolean;
 }
 
 /**
@@ -82,8 +87,10 @@ export function createApp(options: AppOptions = {}): Express {
   app.disable("x-powered-by");
   if (options.trustProxy) app.set("trust proxy", 1);
 
+  const indexable = options.indexable ?? true;
   app.use((_request, response, next) => {
     for (const [header, value] of Object.entries(SECURITY_HEADERS)) response.setHeader(header, value);
+    if (!indexable) response.setHeader("x-robots-tag", "noindex, nofollow");
     next();
   });
   app.use(express.json({ limit: "256kb" }));
@@ -198,7 +205,14 @@ export function createApp(options: AppOptions = {}): Express {
 
   // Discovery documents and the prerendered report shell answer before the SPA fallback, so a
   // reader that does not run scripts gets the report rather than an empty shell.
-  app.use(createAgentSurfaceRouter({ orchestrator: options.orchestrator, staticDirectory: options.staticDirectory }));
+  app.use(
+    createAgentSurfaceRouter({
+      orchestrator: options.orchestrator,
+      staticDirectory: options.staticDirectory,
+      indexable,
+      ...(options.published ? { published: options.published } : {}),
+    }),
+  );
 
   if (options.staticDirectory) {
     app.use(express.static(options.staticDirectory));

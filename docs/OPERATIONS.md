@@ -46,6 +46,7 @@ inputs differ.
 | `OBSERVE_INTERVAL_DAYS` | `7` | How often a site whose owner gave a deep-scan address is read again. `0` never re-reads and never writes |
 | `OBSERVE_TICK_MINUTES` | `60` | How often the due list is checked |
 | `OBSERVE_PER_TICK` | `5` | How many sites one check may re-read: with the interval, the ceiling on what Observe can cost |
+| `PUBLIC_INDEXABLE` | `true` | `false` on a preview: robots are told to stay out and every response carries `X-Robots-Tag: noindex, nofollow` |
 
 Live mode fails fast at startup if a required credential is missing.
 
@@ -239,7 +240,29 @@ The two collections need the same TTL policy the reports have, created once:
 ```bash
 gcloud firestore fields ttls update expiresAt --collection-group=visits --enable-ttl --project ai-audit-wordlift
 gcloud firestore fields ttls update expiresAt --collection-group=activations --enable-ttl --project ai-audit-wordlift
+gcloud firestore fields ttls update expiresAt --collection-group=publishedSites --enable-ttl --project ai-audit-wordlift
 ```
+
+## The entry source: the sites that publish through us
+
+Registries such as Google's read Agentic Resource Discovery catalogs from each site's well-known
+path, and the spec allows a manifest at "any entry source". `GET /feed/ai-catalog.json` is ours:
+the entries of every site whose own catalog carries the Terms of Action this service writes, each
+`url` on the site's own domain. We are the sitemap index, not the directory: no ranking, no
+browsing, nothing about a site that did not publish, and the trust anchor stays the publisher's.
+When Google's publisher onboarding opens, one submission registers every customer at once.
+
+Membership is observed, never declared. Every live audit reads the site's catalog; if it lists a
+`terms-of-action` entry for that host pointing back at that host, the site is recorded in
+`publishedSites` (one document per host, the same TTL as reports); if a later audit finds the
+catalog gone or no longer ours, the site is removed, so the feed never points a registry at a
+document that is not there. The WordLift platform may write the same rows for the sites its plugin
+keeps current; the shape is the same. Entries written in Google's `urn:ai:` spelling are rewritten
+to the spec's `urn:air:` so the feed validates; an entry with nothing to follow is dropped.
+
+The service also serves its own catalog at `/.well-known/ai-catalog.json`, one entry for its MCP
+server, with the card at `/.well-known/mcp/server-card.json`: the audit answers the questions it
+asks.
 
 ## Rate-limit tiers for hosted assistants
 
@@ -331,6 +354,31 @@ Everything on that command line is dropped by the next deploy that forgets it:
 
 `GET /api/health` reports which of these took effect under `surfaces`, so a redeploy that dropped
 one is visible without reading the service configuration.
+
+### Preview a branch without touching production
+
+A branch can be tried on a separate Cloud Run service with nothing shared with production:
+
+```bash
+git checkout docs/activation-plan
+PREVIEW=1 SCRAPE_PROVIDER=scrapingbee MARKUP_PROVIDER=gemini scripts/deploy-cloud-run.sh "$PROJECT" us-west1
+```
+
+`PREVIEW=1` deploys to `ai-audit-webmcp-preview` on its own `run.app` URL (`SERVICE` overrides
+the name) and refuses the production shape: reports live in memory on a single instance and are
+gone on restart, so nothing is written to the production Firestore; no HubSpot form and no
+directory token are passed even when the shell has them exported, so no contact is created and no
+email is sent; `OBSERVE_INTERVAL_DAYS=0`, so no site is re-read on anyone's behalf;
+`PUBLIC_INDEXABLE=false`, so robots are told to stay out and every response carries noindex; and
+`PUBLIC_APP_URL` is ignored, so the brand's domain stays where it is. The production service, its
+domain mapping and its data are untouched, and the preview is deleted with
+`gcloud run services delete ai-audit-webmcp-preview`.
+
+What a preview does share is the WordLift API key, the ScrapingBee key and, with
+`MARKUP_PROVIDER=gemini`, the Gemini key: each audit it runs costs what a production audit costs,
+and `/api/health` on the preview shows the Gemini running total. Rate limits and the daily budget
+apply per instance as on production. A deep scan on a preview records the address in memory and
+sends nothing.
 
 The service runs one container with the SPA and the API. The request timeout is 300 seconds because
 a live audit takes 30–60 seconds and is handled synchronously; a client that disconnects recovers

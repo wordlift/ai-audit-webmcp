@@ -22,6 +22,8 @@ import {
   parsePlatformRanges,
   startPlatformEgressRefresh,
 } from "./security/platformEgress.js";
+import { FirestorePublishedSiteStore } from "./adapters/published/FirestorePublishedSiteStore.js";
+import { MemoryPublishedSiteStore } from "./adapters/published/MemoryPublishedSiteStore.js";
 import { AuditOrchestrator, type OrchestratorOptions } from "./services/AuditOrchestrator.js";
 
 const config = loadConfig();
@@ -36,6 +38,11 @@ const leads = config.REPORT_STORE === "firestore"
 const claims = config.REPORT_STORE === "firestore"
   ? FirestoreClaimStore.fromProject(config.GOOGLE_CLOUD_PROJECT)
   : new MemoryClaimStore();
+
+// The sites that publish through us, for the entry source registries read.
+const published = config.REPORT_STORE === "firestore"
+  ? FirestorePublishedSiteStore.fromProject(config.GOOGLE_CLOUD_PROJECT)
+  : new MemoryPublishedSiteStore();
 
 // Without a form configured, a deep scan still runs and still records what it owes; nothing is
 // sent until the delivery form is set.
@@ -81,6 +88,7 @@ const orchestrator = new AuditOrchestrator(store, loadActionModel(config.ACTION_
   mode,
   providers,
   markupOnBasic: config.MARKUP_ON_BASIC,
+  published,
 });
 
 // A hosted assistant's users all arrive from its published addresses, so those draw on a pool per
@@ -129,6 +137,8 @@ const app = createApp({
   platformEgress,
   markup,
   visits,
+  published,
+  indexable: config.PUBLIC_INDEXABLE,
   ...(config.NODE_ENV === "test"
     ? {}
     : { observe: { intervalDays: config.OBSERVE_INTERVAL_DAYS, tickMinutes: config.OBSERVE_TICK_MINUTES, perTick: config.OBSERVE_PER_TICK } }),

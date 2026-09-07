@@ -1,3 +1,5 @@
+import { buildFeed, ownCatalog, ownServerCard } from "../../domain/publish/feed.js";
+import type { PublishedSiteStore } from "../adapters/published/PublishedSiteStore.js";
 import { Router, type Request } from "express";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -23,6 +25,10 @@ import type { AuditOrchestrator } from "../services/AuditOrchestrator.js";
 export interface AgentSurfaceOptions {
   orchestrator?: AuditOrchestrator;
   staticDirectory?: string;
+  /** The sites that publish through us, for the entry source. Absent means an empty feed. */
+  published?: PublishedSiteStore;
+  /** False on a preview: robots are told to stay out, and every response says noindex. */
+  indexable?: boolean;
 }
 
 /**
@@ -93,6 +99,9 @@ function truncate(value: string, limit: number): string {
  * This service measures whether sites let agents in, so it answers the same questions it asks.
  * Everything here is public and safe to read; the write paths live behind /api and are rate limited.
  */
+/** A preview asks every crawler to stay out: the brand lives on the production domain and nowhere else. */
+const PREVIEW_ROBOTS = ["# Preview deployment: not for indexing.", "User-agent: *", "Disallow: /", ""].join("\n");
+
 function robotsTxt(base: string): string {
   return [
     "# WordLift AI Audit — this service maps websites for AI agents, and welcomes them.",
@@ -240,7 +249,8 @@ export function prerenderReport(shell: string, report: ReportRecord, reportUrl: 
  */
 export function createAgentSurfaceRouter(options: AgentSurfaceOptions = {}): Router {
   const router = Router();
-  const { orchestrator, staticDirectory } = options;
+  const { orchestrator, staticDirectory, published } = options;
+  const indexable = options.indexable ?? true;
 
   let shell: string | null = null;
   const loadShell = (): string | null => {
@@ -278,11 +288,24 @@ export function createAgentSurfaceRouter(options: AgentSurfaceOptions = {}): Rou
   });
 
   router.get("/robots.txt", (request, response) => {
-    response.type("text/plain; charset=utf-8").set("cache-control", "public, max-age=3600").send(robotsTxt(baseUrl(request)));
+    response.type("text/plain; charset=utf-8").set("cache-control", "public, max-age=3600").send(indexable ? robotsTxt(baseUrl(request)) : PREVIEW_ROBOTS);
   });
 
   router.get("/llms.txt", (request, response) => {
     response.type("text/plain; charset=utf-8").set("cache-control", "public, max-age=3600").send(llmsTxt(baseUrl(request)));
+  });
+
+  // This service's own catalog, and the card it points at: the audit answers the questions it asks.
+  router.get("/.well-known/ai-catalog.json", (request, response) => {
+    response.type("application/json").set("cache-control", "public, max-age=3600").send(JSON.stringify(ownCatalog(baseUrl(request)), null, 2));
+  });
+  router.get("/.well-known/mcp/server-card.json", (request, response) => {
+    response.type("application/json").set("cache-control", "public, max-age=3600").send(JSON.stringify(ownServerCard(baseUrl(request)), null, 2));
+  });
+  // The entry source for registries: the sites that publish through us, each on its own domain.
+  router.get("/feed/ai-catalog.json", async (request, response) => {
+    const sites = published ? await published.list().catch(() => []) : [];
+    response.type("application/json").set("cache-control", "public, max-age=3600").send(JSON.stringify(buildFeed(sites, { base: baseUrl(request) }), null, 2));
   });
 
   router.get("/.well-known/webmcp/tools.json", (request, response) => {

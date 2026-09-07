@@ -23,6 +23,8 @@ import {
 import { pagesForDepth } from "../../shared/format/deepScan.js";
 import { compilePublication, type Publication } from "../../domain/publish/publication.js";
 import type { ScoreReading } from "../../shared/types/activate.js";
+import { publishedSiteIn } from "../../domain/publish/feed.js";
+import type { PublishedSiteStore } from "../adapters/published/PublishedSiteStore.js";
 import type {
   Archetype,
   CapabilityEvidence,
@@ -37,7 +39,7 @@ import type { AuditEvidenceBundle, AuditProvider } from "../adapters/audit/Audit
 import { auditErrorToReportError } from "../adapters/audit/WordLiftAudit.js";
 import type { ClassifierProvider } from "../adapters/classify/ClassifierProvider.js";
 import { FixtureProvider, type FixtureAudit } from "../adapters/fixtures/FixtureProvider.js";
-import type { ScrapeProvider, SitePageSnapshot, SiteSnapshot } from "../adapters/scrape/ScrapeProvider.js";
+import type { DiscoveryDocument, ScrapeProvider, SitePageSnapshot, SiteSnapshot } from "../adapters/scrape/ScrapeProvider.js";
 import type { ReportStore } from "../adapters/store/ReportStore.js";
 import { ReportRequestError } from "../errors.js";
 import { sanitizeEvidence } from "../security/sanitizeEvidence.js";
@@ -67,6 +69,8 @@ export interface OrchestratorOptions {
    * is one crawl, and "fresh" on the request is the explicit re-verify.
    */
   reuseWindowMs?: number;
+  /** Where the sites that publish through us are kept, for the entry source. Absent means none is kept. */
+  published?: PublishedSiteStore;
 }
 
 const DEFAULT_REUSE_WINDOW_MS = 24 * 60 * 60 * 1_000;
@@ -88,6 +92,8 @@ interface CompiledInputs {
   pages: SitePageSnapshot[];
   wordlift?: WordLiftMarker;
   agentDiscovery?: AgentDiscovery;
+  /** The discovery documents as fetched: what the feed reads a site's catalog from. A fixture has none. */
+  discovery?: DiscoveryDocument[];
   markup?: Omit<MarkupSummary, "inferredEntities" | "declaredEntities">;
 }
 
@@ -567,6 +573,8 @@ export class AuditOrchestrator {
     onProgress?: ProgressListener,
   ): Promise<ReportRecord> {
     const inputs = await this.collectLiveInputs(target, onProgress, base.scanDepth);
+    // Whether this site publishes through us is read off the same crawl, and never delays the audit.
+    void this.recordPublished(inputs.discovery ?? [], inputs.canonicalUrl, base.id).catch(() => undefined);
 
     if (inputs.evidence.length === 0 && !inputs.foundation) {
       return {
@@ -686,8 +694,30 @@ export class AuditOrchestrator {
       pages: snapshot?.pages ?? [],
       wordlift: snapshot?.wordlift,
       agentDiscovery: detection.agentDiscovery,
+      discovery: snapshot?.discovery ?? [],
       ...(markup ? { markup } : {}),
     };
+  }
+
+  /** The feed's source of truth: a site whose own catalog carries our Terms of Action is kept; one that stopped is forgotten. */
+  private async recordPublished(discovery: DiscoveryDocument[], canonicalUrl: string, reportId: string): Promise<void> {
+    const store = this.options.published;
+    if (!store || discovery.length === 0) return;
+    const now = this.now();
+    const expiresAt = new Date(now);
+    expiresAt.setUTCDate(expiresAt.getUTCDate() + this.options.ttlDays);
+    const site = publishedSiteIn(discovery, canonicalUrl, reportId, now.toISOString(), expiresAt.toISOString());
+    if (site) {
+      await store.put(site);
+      return;
+    }
+    let host: string;
+    try {
+      host = new URL(canonicalUrl).hostname.replace(/^www\./, "");
+    } catch {
+      return;
+    }
+    if (await store.get(host)) await store.remove(host);
   }
 
   /**

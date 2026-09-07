@@ -61,6 +61,11 @@ const environmentSchema = z
     OBSERVE_INTERVAL_DAYS: z.coerce.number().int().min(0).max(90).default(7),
     OBSERVE_TICK_MINUTES: z.coerce.number().int().min(1).max(1_440).default(60),
     OBSERVE_PER_TICK: z.coerce.number().int().min(1).max(100).default(5),
+    /** False on a preview deployment: robots are told to stay out and every response says noindex. */
+    PUBLIC_INDEXABLE: z
+      .enum(["true", "false"])
+      .default("true")
+      .transform((value) => value === "true"),
   })
   .strict()
   .superRefine((environment, context) => {
@@ -128,6 +133,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     OBSERVE_INTERVAL_DAYS: environment.OBSERVE_INTERVAL_DAYS,
     OBSERVE_TICK_MINUTES: environment.OBSERVE_TICK_MINUTES,
     OBSERVE_PER_TICK: environment.OBSERVE_PER_TICK,
+    PUBLIC_INDEXABLE: environment.PUBLIC_INDEXABLE,
   };
 
   return environmentSchema.parse(knownEnvironment);

@@ -14,11 +14,36 @@
 #     --project "$PROJECT"
 #
 # Usage: scripts/deploy-cloud-run.sh [project-id] [region]
+#
+# Preview: PREVIEW=1 deploys the checked-out branch to a separate service on its own run.app URL,
+# with nothing shared with production: reports in memory (one instance, gone on restart), no
+# HubSpot form, no directory challenge, no weekly re-reads, robots told to stay out and every
+# response marked noindex. The WordLift API and ScrapingBee keys are the same accounts; the audits
+# a preview runs cost what production's do. Production's service, domain and Firestore are untouched.
+#
+#   PREVIEW=1 SCRAPE_PROVIDER=scrapingbee MARKUP_PROVIDER=gemini scripts/deploy-cloud-run.sh "$PROJECT" us-west1
 set -euo pipefail
 
 PROJECT="${1:-${GOOGLE_CLOUD_PROJECT:-ai-audit-wordlift}}"
 REGION="${2:-us-west1}"
-SERVICE="ai-audit-webmcp"
+PREVIEW="${PREVIEW:-}"
+if [ -n "$PREVIEW" ]; then
+  SERVICE="${SERVICE:-ai-audit-webmcp-preview}"
+  STORE="memory"
+  MAX_INSTANCES=1
+  PREVIEW_ENV="##PUBLIC_INDEXABLE=false##OBSERVE_INTERVAL_DAYS=0"
+  # A preview never writes to HubSpot or serves the directory's token, whatever the shell has exported.
+  unset HUBSPOT_PORTAL_ID HUBSPOT_FORM_GUID OPENAI_APPS_CHALLENGE
+  if [ -n "${PUBLIC_APP_URL:-}" ]; then
+    echo "A preview keeps its own run.app URL; PUBLIC_APP_URL is ignored." >&2
+    unset PUBLIC_APP_URL
+  fi
+else
+  SERVICE="${SERVICE:-ai-audit-webmcp}"
+  STORE="firestore"
+  MAX_INSTANCES=5
+  PREVIEW_ENV=""
+fi
 RELEASE_SHA="${BUILD_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)}"
 
 # Rendered collection reads JSON-LD that only exists after scripts run. Enable it with
@@ -63,7 +88,7 @@ PROJECT_NUMBER="$(gcloud projects describe "$PROJECT" --format='value(projectNum
 # Share links are baked into stored reports, so a custom domain must survive a redeploy.
 PUBLIC_URL="${PUBLIC_APP_URL:-https://${SERVICE}-${PROJECT_NUMBER}.${REGION}.run.app}"
 
-echo "Deploying ${SERVICE} to ${PROJECT} (${REGION})"
+echo "Deploying ${SERVICE} to ${PROJECT} (${REGION})${PREVIEW:+ as a preview: memory store, noindex, nothing sent}"
 echo "Public URL will be ${PUBLIC_URL}"
 
 gcloud run deploy "$SERVICE" \
@@ -74,9 +99,9 @@ gcloud run deploy "$SERVICE" \
   --timeout 300 \
   --memory 1Gi \
   --cpu 1 \
-  --max-instances 5 \
+  --max-instances "$MAX_INSTANCES" \
   --concurrency 20 \
-  --set-env-vars "^##^NODE_ENV=production##AUDIT_PROVIDER=wordlift##AI_AUDIT_BASE_URL=https://api.wordlift.io##SCRAPE_PROVIDER=${SCRAPE}##CLASSIFIER_PROVIDER=google-nlp##REPORT_STORE=firestore##GOOGLE_CLOUD_PROJECT=${PROJECT}##PUBLIC_APP_URL=${PUBLIC_URL}##REPORT_TTL_DAYS=30##BUILD_SHA=${RELEASE_SHA}${CHALLENGE_ENV}${HUBSPOT_ENV}${MARKUP_ENV}" \
+  --set-env-vars "^##^NODE_ENV=production##AUDIT_PROVIDER=wordlift##AI_AUDIT_BASE_URL=https://api.wordlift.io##SCRAPE_PROVIDER=${SCRAPE}##CLASSIFIER_PROVIDER=google-nlp##REPORT_STORE=${STORE}##GOOGLE_CLOUD_PROJECT=${PROJECT}##PUBLIC_APP_URL=${PUBLIC_URL}##REPORT_TTL_DAYS=30##BUILD_SHA=${RELEASE_SHA}${CHALLENGE_ENV}${HUBSPOT_ENV}${MARKUP_ENV}${PREVIEW_ENV}" \
   --set-secrets "$SECRETS"
 
 echo

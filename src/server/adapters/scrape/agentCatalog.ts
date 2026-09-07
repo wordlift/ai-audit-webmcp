@@ -16,6 +16,20 @@ export interface CatalogEntry {
   identifier?: string;
   type: string;
   url?: string;
+  /** The descriptive terms a registry indexes, kept when the site gives them, bounded. */
+  displayName?: string;
+  description?: string;
+  capabilities?: string[];
+  representativeQueries?: string[];
+}
+
+const MAX_TERMS = 40;
+const MAX_TERM_LENGTH = 300;
+
+function strings(value: unknown, limit = MAX_TERMS): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const kept = value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map((item) => item.slice(0, MAX_TERM_LENGTH)).slice(0, limit);
+  return kept.length > 0 ? kept : undefined;
 }
 
 const SERVER_CARD_TYPES = new Set(["application/mcp-server-card+json", "application/mcp-server+json"]);
@@ -38,11 +52,19 @@ export function parseCatalogEntries(body: string): CatalogEntry[] {
   if (!Array.isArray(entries)) return [];
   return entries
     .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
-    .map((entry) => ({
-      ...(typeof entry.identifier === "string" ? { identifier: entry.identifier.slice(0, 300) } : {}),
-      type: typeof entry.type === "string" ? entry.type.trim().toLowerCase() : "",
-      ...(typeof entry.url === "string" && /^https?:\/\//.test(entry.url) ? { url: entry.url.slice(0, 2_048) } : {}),
-    }))
+    .map((entry) => {
+      const capabilities = strings(entry.capabilities);
+      const queries = strings(entry.representativeQueries, 20);
+      return {
+        ...(typeof entry.identifier === "string" ? { identifier: entry.identifier.slice(0, 300) } : {}),
+        type: typeof entry.type === "string" ? entry.type.trim().toLowerCase() : "",
+        ...(typeof entry.url === "string" && /^https?:\/\//.test(entry.url) ? { url: entry.url.slice(0, 2_048) } : {}),
+        ...(typeof entry.displayName === "string" && entry.displayName.trim() ? { displayName: entry.displayName.trim().slice(0, MAX_TERM_LENGTH) } : {}),
+        ...(typeof entry.description === "string" && entry.description.trim() ? { description: entry.description.trim().slice(0, 1_000) } : {}),
+        ...(capabilities ? { capabilities } : {}),
+        ...(queries ? { representativeQueries: queries } : {}),
+      };
+    })
     .filter((entry) => entry.type.length > 0)
     .slice(0, MAX_CATALOG_ENTRIES);
 }
