@@ -2,8 +2,8 @@
 
 Status: rewritten on 2026-09-06, replacing the seven-item draft of the same day; Activate replaced
 Activate on 2026-09-07, because the third stage makes the organisation operable, not merely visible.
-Started on 2026-09-07 on the branch `docs/activation-plan`, with A1. Items are ticked as they
-land, and the review pauses stand.
+Started on 2026-09-07 on the branch `docs/activation-plan`, with A1, A3 and A4. Items are ticked
+as they land, and the review pauses stand.
 
 The client is a human. The end consumer is an AI agent. What we have works and is overly complex:
 a site owner meets the machine's pipeline, its vocabulary and its provenance before they meet the
@@ -138,7 +138,10 @@ Nobody buys the vision on day one. They paste a URL.
   a report and say what an agent can do on the site, and what to do next, in under a minute.
   Commit as `feat: three actions, three words`. Two to three days.
 
-- [ ] **A3. Cost guards**
+- [x] **A3. Cost guards** — done 2026-09-07. The crawl is reused, never the report: a second
+  request gets its own id and claim, `reusedFrom` and `collectedAt` say what it was built from,
+  and `fresh` reads again. The daily budget is `AUDIT_DAILY_BUDGET` (2,000 by default); the
+  Firestore index and the billing alert are documented in OPERATIONS.md and need running once.
   Spec ref: `AuditOrchestrator.ts:86` (reuse is by request id only), `rateLimits.ts` (the
   service-wide ceiling), `docs/OPERATIONS.md`.
   What to build: a completed report for the same canonical URL and depth is reused for a day;
@@ -149,7 +152,10 @@ Nobody buys the vision on day one. They paste a URL.
   Verify: orchestrator tests for reuse and bypass; a rate-limit test for the daily budget.
   Commit as `feat: one crawl per site per day unless asked`. One day.
 
-- [ ] **A4. Read the catalog a site publishes for agents**
+- [x] **A4. Read the catalog a site publishes for agents** — done 2026-09-07. Both spellings, the
+  link tag and the robots directive; server cards and skills the catalog points at are followed
+  on the site's own origin and probed; a failed probe names its source; `agentDiscovery` on the
+  report says found, missing or unknown for the catalog and the memory.
   Spec ref: `DISCOVERY_PATHS` in `NativeFetch.ts`, the well-known signals in
   `WordLiftAudit.ts:364`, the ARD spec (https://agenticresourcediscovery.org/spec/).
   What to build: probe `/.well-known/ai-catalog.json` and `/.well-known/ard.json`, honour
