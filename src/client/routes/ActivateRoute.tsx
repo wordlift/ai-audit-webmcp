@@ -16,7 +16,7 @@ import { ReportErrorState } from "../components/ReportErrorState";
  * and its reason. Every number here equals the ledger; an empty ledger says what to expect, never a
  * row of zeros.
  */
-const PREVIEW_LINES = 28;
+const PREVIEW_LINES = 16;
 
 function hostOf(url: string): string {
   try {
