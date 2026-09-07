@@ -86,6 +86,17 @@ describe("one crawl per site per day", () => {
     expect(next.refinement).toBeUndefined();
   });
 
+  it("never uses a revision as a source, even a newer one", async () => {
+    const orchestrator = orchestratorWith();
+    const first = await audit(orchestrator);
+    const recompiled = await orchestrator.recompile(first.id, { archetype: "saas" });
+    expect(recompiled.parentReportId).toBe(first.id);
+
+    const next = await audit(orchestrator);
+    expect(next.reusedFrom).toBe(first.id);
+    expect(next.classification?.primaryArchetype).toBe(first.classification?.primaryArchetype);
+  });
+
   it("can be switched off", async () => {
     const orchestrator = orchestratorWith(clock(), 0);
     await audit(orchestrator);

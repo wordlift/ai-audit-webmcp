@@ -146,8 +146,9 @@ export class AuditOrchestrator {
 
   /**
    * The newest completed machine draft of the same site at the same depth within the reuse window,
-   * or null. A refined report carries someone's decisions and is never a source; a partial one is a
-   * sketch the next caller deserves better than; a failed one has nothing to give. A store that
+   * or null. A revision of any kind — refined, recompiled, verified through a sidecar — is someone's
+   * report about the site rather than a crawl of it and is never a source; a partial one is a sketch
+   * the next caller deserves better than; a failed one has nothing to give. A store that
    * cannot answer — an index not yet built — means a fresh crawl, never a failed audit.
    */
   private async recentReport(requestedUrl: string, depth: ScanDepth, excludeId: string): Promise<ReportRecord | null> {
@@ -168,6 +169,9 @@ export class AuditOrchestrator {
           report.status === "completed" &&
           report.mode === this.mode &&
           (report.scanDepth ?? "basic") === depth &&
+          // A revision — a refinement, a recompile, a sidecar's verified child — is someone's
+          // report about the site, not a crawl of it. Only a machine draft from a crawl is reused.
+          !report.parentReportId &&
           !report.refinement &&
           Boolean(report.capabilities?.length) &&
           new Date(report.collectedAt ?? report.createdAt) >= since,
