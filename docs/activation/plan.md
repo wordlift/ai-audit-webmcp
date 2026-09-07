@@ -405,8 +405,11 @@ recurring basis.
   Verify: the sidecar route tests; `alpina-sidecar.spec.ts`.
   Commit as `feat: count the agents that actually act`. Half a day.
 
-- [ ] **L4. What happened since you activated** — the report's one line is done with A2: "N
-  crawlers and M agents have read this since it was published". The Activate screen remains.
+- [x] **L4. What happened since you activated** — built 2026-09-07. The Activate screen at
+  `/reports/:id/activate`: the score and its movement, what the owner said against what the page
+  carries, the three documents, then crawlers by name, Google's verified reads, agents by platform
+  and activations with each failure's reason, which the ledger now records. Empty states say what
+  to expect. The report's one line was done with A2.
   Spec ref: the Activate screen (AC1), the three-actions screen (A2).
   What to build: on the Activate screen, the readiness score and how it moved since activation,
   then three numbers for the period since publication: crawler visits by name; Google re-reads, the verified Googlebot requests to the entity, the catalog and
