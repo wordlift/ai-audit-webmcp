@@ -47,16 +47,16 @@ describe("ReportProgress", () => {
     render(<ReportProgress report={running} />);
 
     expect(screen.getByText("northstar-lending.example")).toBeVisible();
-    expect(screen.getByText("Mapping expected actions")).toBeVisible();
+    expect(screen.getByText("Working out what an agent should be able to do here")).toBeVisible();
     expect(screen.getByText("85/100")).toBeVisible();
     expect(screen.getByText("Northstar Lending")).toBeVisible();
-    expect(screen.getByText(/declared interfaces are being called/)).toBeVisible();
+    expect(screen.getByText(/We call what the site declares rather than counting it/)).toBeVisible();
   });
 
   it("shows the phases alone when nothing has landed yet", () => {
     render(<ReportProgress report={{ ...running, foundationAudit: undefined, contextGraph: undefined, phase: "understanding" }} />);
 
-    expect(screen.getByText("Understanding the site")).toBeVisible();
+    expect(screen.getByText("Reading the pages")).toBeVisible();
     expect(screen.queryByText("85/100")).toBeNull();
   });
 });

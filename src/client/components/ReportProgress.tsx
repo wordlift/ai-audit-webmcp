@@ -2,9 +2,9 @@ import { Bot, Check, LoaderCircle } from "lucide-react";
 import type { ReportRecord } from "../../shared/types/index.js";
 
 const PHASES: Array<{ id: ReportRecord["phase"]; label: string }> = [
-  { id: "understanding", label: "Understanding the site" },
-  { id: "mapping", label: "Mapping expected actions" },
-  { id: "checking", label: "Checking agent readiness" },
+  { id: "understanding", label: "Reading the pages" },
+  { id: "mapping", label: "Working out what an agent should be able to do here" },
+  { id: "checking", label: "Calling what the site declares, to see what answers" },
 ];
 
 /**
@@ -19,7 +19,7 @@ export function ReportProgress({ report }: { report: ReportRecord }) {
 
   return (
     <div className="report-page report-progress" aria-busy="true">
-      <p className="eyebrow"><Bot size={16} /> Terms of Action</p>
+      <p className="eyebrow"><Bot size={16} /> What an AI agent can do here</p>
       <h1>Reading <span>{host}</span>…</h1>
 
       <ol className="progress-phases">
@@ -35,7 +35,7 @@ export function ReportProgress({ report }: { report: ReportRecord }) {
         <section className="progress-arrival" aria-label="Foundation audit">
           <header>
             <strong>{report.foundationAudit.score}/100</strong>
-            <span>WordLift AI Audit foundation — already in</span>
+            <span>Foundation score, already in</span>
           </header>
           <p>{report.foundationAudit.summary}</p>
         </section>
@@ -43,7 +43,7 @@ export function ReportProgress({ report }: { report: ReportRecord }) {
 
       {entities.length > 0 && (
         <section className="progress-arrival" aria-label="Entities">
-          <header><span>Entities — read from the site while the audit continues</span></header>
+          <header><span>What we have read so far</span></header>
           <ul className="progress-entities">
             {entities.slice(0, 12).map((entity) => (
               <li key={entity.id}>
@@ -56,8 +56,8 @@ export function ReportProgress({ report }: { report: ReportRecord }) {
       )}
 
       <p className="progress-footnote" role="status">
-        Verification is live: declared interfaces are being called, not just counted. This page
-        updates itself — the full report appears when the audit lands.
+        We call what the site declares rather than counting it. This page updates itself; the report
+        appears when the audit lands, usually within a minute.
       </p>
     </div>
   );
