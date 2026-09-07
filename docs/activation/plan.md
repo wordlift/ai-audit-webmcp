@@ -219,8 +219,9 @@ Nobody buys the vision on day one. They paste a URL.
   Verify: fixtures with and without markup; unit tests on merge and labelling; `npm run test:mcp`.
   Commit as `feat: read the markup a page should have, not only the markup it has`. Two days.
 
-- [ ] **F2. The Fix panel** — the first line is already on the first screen: "N entities appear
-  on your pages and are not published as structured data"; the sample and the button remain.
+- [x] **F2. The Fix panel** — built 2026-09-07. The difference between declared and inferred,
+  the actions no agent can reach, one sample of valid JSON-LD for one inferred entity, and one
+  button to the dashboard carrying the report id. Shown only when there is something to fix.
   Spec ref: A2's screen; `FoundationAuditDetails.tsx` for the existing link to the WordLift
   dashboard.
   What to build: under the three actions, the difference between declared and inferred: "N
