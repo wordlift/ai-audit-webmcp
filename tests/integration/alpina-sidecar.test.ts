@@ -191,7 +191,7 @@ describe("what the ledger counts of the sidecar", () => {
       expect.arrayContaining([
         { day: "2026-08-27", tool: "check-availability", surface: "webmcp", outcome: "ok", count: 1 },
         { day: "2026-08-27", tool: "check-availability", surface: "api", outcome: "ok", count: 1 },
-        { day: "2026-08-27", tool: "check-availability", surface: "web", outcome: "failed", count: 1 },
+        { day: "2026-08-27", tool: "check-availability", surface: "web", outcome: "failed:invalid_input", count: 1 },
       ]),
     );
   });

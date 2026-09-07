@@ -1,4 +1,5 @@
 import { reportRecordSchema, runningReportResponseSchema } from "../../shared/schemas/report.js";
+import type { Publication, ScoreReading } from "../../shared/types/activate.js";
 import type { Archetype, HumanAssertion, ReportRecord, ScanDepth } from "../../shared/types/index.js";
 
 const POLL_INTERVAL_MS = 1_500;
@@ -210,6 +211,15 @@ export interface ReportVisits {
   since: string;
   days: Array<{ day: string; counts: Record<string, number> }>;
   activations: Array<{ day: string; tool: string; surface: string; outcome: string; count: number }>;
+  /** The site's readiness readings still in the store, newest first. */
+  history?: ScoreReading[];
+}
+
+/** What the site publishes from a report: one model, three documents. */
+export async function getPublication(reportId: string): Promise<Publication> {
+  const { body } = await requestJson(`/api/reports/${reportId}/publish`, { method: "GET" });
+  if (!body || typeof body !== "object" || !Array.isArray((body as Publication).actions)) throw new Error("Not a publication");
+  return body as Publication;
 }
 
 /** Who has read this report, by class and by day. Counts only. */

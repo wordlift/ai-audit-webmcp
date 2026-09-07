@@ -848,6 +848,51 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .own-it-error { margin: 0; color: var(--state-missing); }
 .boundary-partner { color: var(--muted); font-size: 0.85rem; }
 
+/* Activate: the strip on the report, and the screen one click away. */
+.activate-strip { display: grid; gap: 10px; padding: clamp(22px, 4vw, 36px); background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 18px; }
+.activate-strip h2 { margin: 0; font-size: 1.35rem; }
+.activate-strip > p:not(.section-kicker) { margin: 0; color: var(--muted); max-width: 66ch; }
+.activate-link { display: inline-flex; align-items: center; gap: 6px; justify-self: start; font-weight: 600; color: var(--brand); text-decoration: none; }
+.activate-link:hover { text-decoration: underline; }
+.activate-page { display: grid; gap: 22px; }
+.activate-head { display: grid; gap: 8px; max-width: 70ch; }
+.activate-head h1 { margin: 0; font-size: clamp(1.6rem, 3.4vw, 2.3rem); overflow-wrap: anywhere; }
+.activate-score { margin: 0; color: var(--muted); }
+.activate-score b { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.activate-section { display: grid; gap: 14px; padding: clamp(22px, 4vw, 36px); background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 18px; }
+.activate-section h2 { margin: 0; font-size: 1.35rem; }
+.activate-lead { margin: 0; color: var(--muted); max-width: 66ch; }
+.activate-table td { vertical-align: top; }
+.carries { display: block; font-weight: 600; }
+.carries-nothing { color: var(--muted); font-weight: 500; }
+.carries-why { display: block; color: var(--muted); font-size: 0.85rem; line-height: 1.4; margin-top: 2px; }
+.doc-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.doc-card { display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; padding: 16px; border: 1px solid var(--line-subtle); border-radius: 14px; background: var(--wl-neutral-100); }
+.doc-card header { display: grid; gap: 4px; }
+.doc-card h3 { margin: 0; font-size: 1.05rem; }
+.doc-kind { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.doc-card > p { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.45; }
+.doc-card pre { margin: 0; padding: 12px; max-height: 320px; overflow: auto; border-radius: 10px; background: var(--wl-neutral-900); color: var(--wl-neutral-0); font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.doc-card footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 0.88rem; }
+.doc-card footer button { display: inline-flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--line); border-radius: 6px; padding: 4px 9px; font: inherit; font-size: 0.85rem; cursor: pointer; color: var(--ink); }
+.doc-card footer a { display: inline-flex; align-items: center; gap: 4px; color: var(--brand); font-weight: 600; text-decoration: none; }
+.observe { display: grid; gap: 14px; padding: clamp(22px, 4vw, 36px); background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 18px; }
+.observe h2 { margin: 0; font-size: 1.35rem; }
+.observe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.observe-card { display: grid; gap: 8px; align-content: start; padding: 16px; border: 1px solid var(--line-subtle); border-radius: 14px; }
+.observe-card h3 { margin: 0; font-size: 0.95rem; }
+.observe-card ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.observe-card li { display: flex; justify-content: space-between; gap: 10px; font-size: 0.92rem; }
+.observe-card li b { font-variant-numeric: tabular-nums; }
+.observe-number { margin: 0; }
+.observe-number b { font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-right: 4px; }
+.observe-empty, .observe-note { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.45; }
+.observe-activations li { display: grid; gap: 4px; }
+.observe-tool { font-family: var(--font-mono); font-size: 0.8rem; }
+.observe-failures { padding-left: 0; }
+.observe-failures li { display: block; color: var(--state-missing); font-size: 0.85rem; }
+.observe-surfaces { color: var(--muted); font-size: 0.8rem; }
+
 /* ---------- The pitch: three sites, one screen ---------- */
 .pitch-link { margin: 8px 0 0 !important; }
 .pitch-form { display: grid; gap: 12px; }

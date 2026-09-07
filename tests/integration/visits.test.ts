@@ -92,7 +92,13 @@ describe("who read a report", () => {
       rateLimits: { enabled: false },
     });
     const id = await report(plain);
-    expect((await request(plain).get(`/api/reports/${id}/visits`).expect(200)).body).toEqual({ reportId: id, since: fixedNow.toISOString(), days: [], activations: [] });
+    expect((await request(plain).get(`/api/reports/${id}/visits`).expect(200)).body).toEqual({
+      reportId: id,
+      since: fixedNow.toISOString(),
+      days: [],
+      activations: [],
+      history: [{ reportId: id, createdAt: fixedNow.toISOString(), score: expect.any(Number), kind: "audit" }],
+    });
   });
 
   it("knows which paths are a read of a report", () => {

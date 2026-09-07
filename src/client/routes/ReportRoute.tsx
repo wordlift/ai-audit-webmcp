@@ -1,4 +1,4 @@
-import { ArrowLeft, Share2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Rocket, Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { explainReportError, failureTitle, visibleErrors } from "../../shared/format/explainError.js";
@@ -135,6 +135,18 @@ export function ReportRoute() {
       <FixPanel report={report} />
       {/* Own it: who runs each of the three actions, answered in a minute. Readiness never moves on a word. */}
       <OwnIt key={report.id} report={report} />
+      {/* Activate: one screen away, so the report stays three words and their fixes. */}
+      <section className="activate-strip" aria-labelledby="activate-strip-title">
+        <p className="section-kicker"><Rocket size={16} /> Activate</p>
+        <h2 id="activate-strip-title">Publish what works, and watch who reads it</h2>
+        <p>
+          Three documents from this report: the markup for your pages, the instructions an agent loads, and the catalog registries crawl.
+          Then the numbers: crawlers, Google, agents, and every activation with its outcome.
+        </p>
+        <Link className="activate-link" to={`/reports/${report.id}/activate`}>
+          See what the site publishes <ArrowRight size={15} aria-hidden="true" />
+        </Link>
+      </section>
       <details className="full-audit" id="full-audit">
         <summary>Full audit <span>Entities · Terminology · Actions · Terms of Action</span></summary>
         <div className="full-audit-body">

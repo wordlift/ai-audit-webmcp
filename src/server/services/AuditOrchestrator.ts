@@ -22,6 +22,7 @@ import {
 } from "../../shared/schemas/report.js";
 import { pagesForDepth } from "../../shared/format/deepScan.js";
 import { compilePublication, type Publication } from "../../domain/publish/publication.js";
+import type { ScoreReading } from "../../shared/types/activate.js";
 import type {
   Archetype,
   CapabilityEvidence,
@@ -443,6 +444,30 @@ export class AuditOrchestrator {
       sidecarEndpoints: this.sidecarEndpoints(report),
       now: () => this.now(),
     });
+  }
+
+  /**
+   * The readiness readings of one site still in the store, newest first: the movement Observe
+   * shows. The report itself is always one of them; a store that cannot answer yields it alone.
+   */
+  async history(report: ReportRecord): Promise<ScoreReading[]> {
+    const since = new Date(this.now().getTime() - this.options.ttlDays * 24 * 60 * 60 * 1_000);
+    let siblings: ReportRecord[] = [];
+    try {
+      siblings = await this.store.findRecent(report.requestedUrl, since, 50);
+    } catch (error) {
+      console.error("report_history_unavailable", error instanceof Error ? error.name : "unknown");
+    }
+    const readings = siblings.some((sibling) => sibling.id === report.id) ? siblings : [report, ...siblings];
+    return readings
+      .filter((reading) => reading.score && (reading.status === "completed" || reading.status === "partial"))
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .map((reading) => ({
+        reportId: reading.id,
+        createdAt: reading.createdAt,
+        score: reading.score!.value,
+        kind: reading.refinement ? "refinement" : reading.reusedFrom ? "reused" : "audit",
+      }));
   }
 
   /** Where WordLift runs an interface for a site: the one approved sidecar, on its one site. */

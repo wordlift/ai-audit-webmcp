@@ -26,7 +26,7 @@ export function createAlpinaRouter(
     // The surface is attribution for the ledger, never input to the sidecar.
     const { surface: claimedSurface, ...input } = (request.body ?? {}) as Record<string, unknown>;
     const surface = typeof claimedSurface === "string" && SURFACES.has(claimedSurface) ? claimedSurface : "api";
-    const activated = (outcome: "ok" | "failed") => visits?.recordActivation(SIDECAR_SITE, SIDECAR_TOOL, surface, outcome);
+    const activated = (outcome: "ok" | "failed", reason?: string) => visits?.recordActivation(SIDECAR_SITE, SIDECAR_TOOL, surface, outcome, reason);
     try {
       const result = await sidecar.check(input);
       activated("ok");
@@ -61,7 +61,7 @@ export function createAlpinaRouter(
         });
       }
     } catch (error) {
-      activated("failed");
+      activated("failed", error instanceof AlpinaSidecarError ? error.code : "sidecar_error");
       if (error instanceof AlpinaSidecarError) {
         response.status(error.status).json({ error: error.code, message: error.message });
         return;

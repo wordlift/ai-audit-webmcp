@@ -54,10 +54,11 @@ export class VisitLedger {
     this.schedule();
   }
 
-  recordActivation(site: string, tool: string, surface: string, outcome: "ok" | "failed"): void {
+  /** A failure carries its reason, as a short code: the moment an owner learns a capability changed. */
+  recordActivation(site: string, tool: string, surface: string, outcome: "ok" | "failed", reason?: string): void {
     const key = `${site}\n${this.day()}`;
     const counts = this.#pendingActivations.get(key) ?? new Map<string, number>();
-    const activation = activationKey(tool, surface, outcome);
+    const activation = activationKey(tool, surface, outcome === "failed" && reason ? `failed:${reasonSlug(reason)}` : outcome);
     counts.set(activation, (counts.get(activation) ?? 0) + 1);
     this.#pendingActivations.set(key, counts);
     this.schedule();
@@ -132,6 +133,11 @@ export class VisitLedger {
     at.setUTCDate(at.getUTCDate() + this.options.ttlDays);
     return at.toISOString();
   }
+}
+
+/** A failure reason as a short, safe code: letters, digits, underscores and dashes, forty characters at most. */
+export function reasonSlug(reason: string): string {
+  return reason.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "unknown";
 }
 
 /** The report a path reads, the site bucket for what we publish about ourselves, or nothing. */

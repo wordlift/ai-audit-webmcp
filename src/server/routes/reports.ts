@@ -107,8 +107,10 @@ export function createReportsRouter(
       response.status(404).json({ error: "report_not_found", message: "Report not found or expired" });
       return;
     }
+    // The readiness readings travel with the ledger: one read for everything Observe shows.
+    const history = await orchestrator.history(report);
     if (!visits) {
-      response.json({ reportId: report.id, since: report.createdAt, days: [], activations: [] });
+      response.json({ reportId: report.id, since: report.createdAt, days: [], activations: [], history });
       return;
     }
     const site = hostOf(report.canonicalUrl ?? report.requestedUrl);
@@ -118,6 +120,7 @@ export function createReportsRouter(
       since: report.createdAt,
       days: days.map((row) => ({ day: row.day, counts: row.counts })),
       activations,
+      history,
     });
   });
 

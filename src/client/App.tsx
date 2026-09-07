@@ -1,5 +1,6 @@
 import { Link, Route, Routes } from "react-router-dom";
 import { HomeRoute } from "./routes/HomeRoute";
+import { ActivateRoute } from "./routes/ActivateRoute";
 import { ReportRoute } from "./routes/ReportRoute";
 import { PinnedAlpinaRoute } from "./routes/PinnedAlpinaRoute";
 import { PitchRoute } from "./routes/PitchRoute";
@@ -25,6 +26,7 @@ export function App() {
           <Route path="/" element={<HomeRoute />} />
           <Route path="/demo/alpina" element={<PinnedAlpinaRoute />} />
           <Route path="/reports/:reportId" element={<ReportRoute />} />
+          <Route path="/reports/:reportId/activate" element={<ActivateRoute />} />
           <Route path="/pitch" element={<PitchRoute />} />
           <Route path="/pitch/:ids" element={<PitchRoute />} />
         </Routes>

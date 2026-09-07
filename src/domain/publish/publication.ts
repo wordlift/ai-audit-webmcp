@@ -1,6 +1,9 @@
 import { entityJsonLd } from "../../shared/format/entityJsonLd.js";
 import type { ActionBoundary, CapabilityEvidence, CapabilityResult, ContextGraph, DomainEntity, ReportRecord } from "../../shared/types/index.js";
+import type { EntryProtocol, Publication, PublishedAction, PublishedAs, PublishedEntryPoint } from "../../shared/types/activate.js";
 import { ARD, ardManifestSchema, type ArdEntry, type ArdManifest } from "./ardSchema.js";
+
+export type { EntryProtocol, Publication, PublishedAction, PublishedAs, PublishedEntryPoint };
 
 /**
  * Activate: one model, rendered three ways. The page JSON-LD for finding, the skill for acting,
@@ -18,45 +21,6 @@ export interface PublicationOptions {
   now?: () => Date;
 }
 
-export type PublishedAs = "action" | "handoff" | "entity" | "nothing";
-export type EntryProtocol = "http" | "mcp" | "webmcp" | "sidecar";
-
-export interface PublishedEntryPoint {
-  url: string;
-  urlTemplate?: string;
-  protocol: EntryProtocol;
-  httpMethod: "GET" | "POST";
-  via: "site" | "sidecar";
-  /** The tool an MCP server exposes for this action, when the audit called one by name. */
-  tool?: string;
-}
-
-export interface PublishedAction {
-  actionId: string;
-  label: string;
-  state: CapabilityResult["state"];
-  boundary: ActionBoundary | null;
-  publishedAs: PublishedAs;
-  /** Why, in a sentence the Activate screen shows. */
-  because: string;
-  entryPoint?: PublishedEntryPoint;
-  provider?: { name: string; url?: string };
-}
-
-export interface Publication {
-  site: string;
-  host: string;
-  reportId: string;
-  reportUrl: string;
-  publishedAt: string;
-  /** How many human decisions the report carries; zero publishes what the audit verified, no less. */
-  decided: number;
-  actions: PublishedAction[];
-  documents: { pageJsonLd: string; skill: string; catalog: string };
-  jsonLd: Record<string, unknown>;
-  skill: string;
-  catalog: ArdManifest;
-}
 
 export const WLCAP_CONTEXT = { wlcap: "https://wordlift.io/vocab/agent-capability/" } as const;
 
@@ -469,6 +433,7 @@ export function compilePublication(report: ReportRecord, options: PublicationOpt
       skill: `${options.apiUrl}/publish/skill.md`,
       catalog: `${options.apiUrl}/publish/ai-catalog.json`,
     },
+    catalogPath: ARD.path,
     jsonLd: pageJsonLd(report, entities, actions, origin, host),
     skill: skillMarkdown(report, entities, actions, host, options, publishedAt),
     catalog: catalogFor(report, actions, host, origin, siteName, options, publishedAt),
