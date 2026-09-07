@@ -2,10 +2,11 @@
 
 Status: rewritten on 2026-09-06, replacing the seven-item draft of the same day; Activate replaced
 Activate on 2026-09-07, because the third stage makes the organisation operable, not merely visible.
-Started on 2026-09-07 on the branch `docs/activation-plan`, with A1, A3 and A4, then A2. Items are
-ticked as they land, and the review pauses stand. Nothing ships from the branch; it is kept ready.
-The HTML-to-JSON-LD endpoint (F1) arrives the week of 2026-09-14 and is the highest-priority
-decision in here: it is what turns an expert audit into a PLG interface.
+Started on 2026-09-07 on the branch `docs/activation-plan`, with A1, A3 and A4, then A2, then F1
+on a stand-in. Items are ticked as they land, and the review pauses stand. Nothing ships from the
+branch; it is kept ready. WordLift's HTML-to-JSON-LD endpoint arrives the week of 2026-09-14 and
+replaces the stand-in behind the same interface; it is the highest-priority decision in here,
+because it is what turns an expert audit into a PLG interface.
 
 The client is a human. The end consumer is an AI agent. What we have works and is overly complex:
 a site owner meets the machine's pipeline, its vocabulary and its provenance before they meet the
@@ -198,7 +199,13 @@ Nobody buys the vision on day one. They paste a URL.
 
 ## Fix
 
-- [ ] **F1. The markup a page should have**
+- [x] **F1. The markup a page should have** — built 2026-09-07 on a stand-in: Gemini 2.5 Flash
+  through the Gemini API, behind `MarkupProvider`, one file to replace when WordLift's endpoint
+  lands. Inferred entities enter the existing merge marked `inferred` at lower confidence, merge
+  with a declared namesake, never move readiness, and the report carries `markup` with the
+  counts. Measured live on alpina.travel: \$0.0023 a page, \$0.009 for a basic scan, on the
+  health endpoint as a running total. The validator in `jsonLd.ts` is the base a SHACL pass
+  slots into.
   Spec ref: `compileContextGraph.ts` (entities come from the page's JSON-LD only),
   `GoogleNlp.ts` (the bounded-text pattern), WordLift's HTML-to-JSON-LD endpoint, which Andrea
   is confirming with its cost per page.
@@ -212,7 +219,8 @@ Nobody buys the vision on day one. They paste a URL.
   Verify: fixtures with and without markup; unit tests on merge and labelling; `npm run test:mcp`.
   Commit as `feat: read the markup a page should have, not only the markup it has`. Two days.
 
-- [ ] **F2. The Fix panel**
+- [ ] **F2. The Fix panel** — the first line is already on the first screen: "N entities appear
+  on your pages and are not published as structured data"; the sample and the button remain.
   Spec ref: A2's screen; `FoundationAuditDetails.tsx` for the existing link to the WordLift
   dashboard.
   What to build: under the three actions, the difference between declared and inferred: "N
@@ -456,7 +464,8 @@ refinement as a gate before publishing, and any index of our own.
 
 ## Open, for review
 
-- The HTML-to-JSON-LD endpoint and its cost per page. Andrea is confirming.
+- The HTML-to-JSON-LD endpoint, arriving the week of 2026-09-14, replaces the Gemini stand-in.
+  The stand-in's measured cost, \$0.0023 a page at list price, is the number to beat.
 - The reuse window in A3. Proposal: one day.
 - The daily audit budget in A3. Proposal: a number the bill can absorb twice over; ops sets it.
 - What free Fix shows. Proposal: the finding and one entity's markup, never the full set.
