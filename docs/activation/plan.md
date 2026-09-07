@@ -13,8 +13,9 @@ person. Everything the site publishes is written for an agent. Three numbers clo
 crawled the graph, whether Google came back, and which agents acted.
 
 Externally: **Audit. Fix. Activate. Make your business work with AI agents.** Internally, WordLift
-knows what that takes, entities, words, actions, governance, interfaces, verification, and none of
-it needs a name on the screen.
+knows what that takes, entities, taxonomies, actions, governance, interfaces, verification, and
+none of it needs a name on the first screen. All of it has its exact name one click below, because
+the model is the enterprise conversation and it is also the file an agent reads.
 
 ## Principles
 
@@ -30,6 +31,10 @@ it needs a name on the screen.
   back.
 - **Human on the screen, agent in the file.** No pipeline stage, no provenance panel, no schema
   term on the first screen. The frozen vocabulary stays in the full audit, the docs and the tools.
+- **Simple, never inaccurate.** Every plain word on the first screen maps to one precise state and
+  nothing else: "works" is verified by invocation, "fix this" is a named gap in a named layer,
+  "talk to us" is an interface that does not exist. The depth one click below is where a reader
+  checks that, and it uses the model's own names: entities, taxonomies, actions, Terms of Action.
 - **Free diagnoses; paid keeps it alive.** A snapshot rots when the site changes a template. The
   recurring value is markup kept in sync and readiness re-verified, and the WordLift account is the
   only gate.
@@ -57,6 +62,19 @@ it needs a name on the screen.
 | **Activate** | "Your site is discoverable by agents." A catalog at the well-known path, kept current, the audit attached as evidence, listed in Google's registry. Later, WordLift runs an interface for actions that have none. | `/.well-known/ai-catalog.json` pointing at the server card and at the skill, the site's Terms of Action as memory, the report as evidence, re-verified on each audit. |
 | **Close the loop** | "Since you activated": crawler visits by name, how often Google re-read the entity, which agents activated a sidecar. Free: the single entity that stands for the site and its capabilities, hosted by us. Paid: the combined graph on the customer's domain. | Nothing new. Its visit is counted by class, never by identity. |
 
+## Depth: one click below
+
+The first screen has three words. One click below, the model has its exact names, because the
+model is the enterprise conversation and it is also the file an agent reads. The same nouns run
+from the screen to the graph to the file, and that is what makes the simple version honest.
+
+| Layer | On the first screen | One click below | In the graph | In the agent's files |
+| --- | --- | --- | --- | --- |
+| Entities | "N entities on your pages are not published" | The context graph: what the business is and owns, declared and inferred, each with its sources | The entity graph, one `@id` per thing | JSON-LD identities on the page; the skill's entities by id |
+| Taxonomies | Not shown | Terminology: the lexical graph, the site's words and what they mean here, machine terms confirmed, replaced or rejected | The lexical graph | `DefinedTermSet` on the page; the skill's "Words" |
+| Actions | The three that matter, with "works", "fix this", "talk to us" | Every action for the archetype: its state, its evidence, its interface, who owns it | The action graph, bound to entities | `potentialAction` with `EntryPoint`; the skill's "Actions"; the audit's evidence |
+| Terms of Action | Not named | The composition: role, entities, words, actions with boundaries and rationale, evidence | The graph as a whole, governed | The skill file, cited by the catalog |
+
 ## Free and paid
 
 | Layer | What it includes | Why the line is here |
@@ -78,7 +96,7 @@ Nobody buys the vision on day one. They paste a URL.
 | Top of funnel | Audit my website |
 | Product | Make it agent-ready: Fix, then Activate |
 | Recurring | Keep it agent-ready: Activate, and the loop that proves it still works |
-| Enterprise expansion | Make more of the organisation operable: the interfaces that are missing, built as projects |
+| Enterprise expansion | Make more of the organisation operable: the interfaces that are missing, built as projects. The model is the conversation: entities, taxonomies, actions, Terms of Action, shown exactly |
 | Infrastructure | The graph beneath it all: entities, words, actions, governance, interfaces, verification |
 
 ## Audit
@@ -103,7 +121,9 @@ Nobody buys the vision on day one. They paste a URL.
   the shape "Agents can discover 7 capabilities on this site. 4 work. 3 are missing. Here is what
   prevents them." The deep-scan offer beside the summary, and still at the end. The provenance
   panel, the tools badge, the foundation audit, the context graph and the "Published with"
-  component move behind "Full audit". The landing page asks one question, "Can AI agents
+  component move behind "Full audit", which is the depth surface, laid out as the model rather
+  than as the pipeline's stages: Entities, Terminology, Actions, and the Terms of Action they
+  compose, in the frozen vocabulary, with the evidence behind every state. The landing page asks one question, "Can AI agents
   understand and use your business?", with one field for a URL; today it says "Teach ChatGPT how
   your business should work for agents" and previews the pipeline's stages.
   Acceptance: a first-time visitor sees the three actions, their next steps and the deep-scan
