@@ -257,8 +257,12 @@ Nobody buys the vision on day one. They paste a URL.
 
 ## Activate
 
-- [ ] **AC1. Activate: publish what the owner confirmed and what works** — ours, and waits on
-  nobody: the three documents go on the site whether or not any registry reads them yet.
+- [x] **AC1. Activate: publish what the owner confirmed and what works** — built 2026-09-07,
+  server side: `GET /api/reports/:id/publish` and the three documents beneath it, from
+  `src/domain/publish/publication.ts`. The catalog validates against the spec's entry schema, so
+  the URN is `urn:air:` while the path is Google's; both live in `ardSchema.ts`. The Activate
+  screen arrives with L4. Ours, and waits on nobody: the three documents go on the site whether or
+  not any registry reads them yet.
   Spec ref: the per-action JSON-LD at `/api/reports/:id/contracts/:actionId`, the refined
   report (`businessRole`, entity decisions, `terminology`, `actionDecisions`), the ARD entry
   schema (`spec/schemas/ard-entry.schema.json` in ards-project/ard-spec), the ARD base context,
