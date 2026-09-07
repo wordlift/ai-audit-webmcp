@@ -2,8 +2,10 @@
 
 Status: rewritten on 2026-09-06, replacing the seven-item draft of the same day; Activate replaced
 Activate on 2026-09-07, because the third stage makes the organisation operable, not merely visible.
-Started on 2026-09-07 on the branch `docs/activation-plan`, with A1, A3 and A4. Items are ticked
-as they land, and the review pauses stand.
+Started on 2026-09-07 on the branch `docs/activation-plan`, with A1, A3 and A4, then A2. Items are
+ticked as they land, and the review pauses stand. Nothing ships from the branch; it is kept ready.
+The HTML-to-JSON-LD endpoint (F1) arrives the week of 2026-09-14 and is the highest-priority
+decision in here: it is what turns an expert audit into a PLG interface.
 
 The client is a human. The end consumer is an AI agent. What we have works and is overly complex:
 a site owner meets the machine's pipeline, its vocabulary and its provenance before they meet the
@@ -79,6 +81,11 @@ from the screen to the graph to the file, and that is what makes the simple vers
 | Actions | The three that matter, with "works", "fix this", "talk to us" | Every action for the archetype: its state, its evidence, its interface, who owns it | The action graph, bound to entities | `potentialAction` with `EntryPoint`; the skill's "Actions"; the audit's evidence |
 | Terms of Action | Not named | The composition: role, entities, words, actions with boundaries and rationale, evidence | The graph as a whole, governed | The skill file, cited by the catalog |
 
+Activate has two meanings, and only one is ours. **Activate** publishes the organisation's
+agent-facing representation on its own site: the page markup, the skill, the catalog. That waits on
+nobody. **Distribute** registers it wherever agent ecosystems allow, Google's registry first, and
+depends on Google and others. Distribute is later, and it is not a word on the screen.
+
 ## Free and paid
 
 | Layer | What it includes | Why the line is here |
@@ -116,7 +123,9 @@ Nobody buys the vision on day one. They paste a URL.
   Verify: golden snapshots updated on purpose; `npm run verify && npm run test:e2e`.
   Commit as `feat: one state for an action an agent can perform`. One day.
 
-- [ ] **A2. The three-actions screen**
+- [x] **A2. The three-actions screen** — built 2026-09-07, kept ready on the branch. Plain words on
+  the first screen, the precise vocabulary one click below; the landing page asks one question.
+  Ships first, when Andrea says so.
   Spec ref: `src/client/routes/ReportRoute.tsx` (today: progress, tools badge, provenance,
   summary, classification, foundation, deep scan, in that order), `ExecutiveSummary.tsx`,
   `HomeRoute.tsx`, the per-archetype expectations in `action-model/v0.1.0/archetypes/`.
@@ -233,7 +242,8 @@ Nobody buys the vision on day one. They paste a URL.
 
 ## Activate
 
-- [ ] **AC1. Publish what the owner confirmed and what works**
+- [ ] **AC1. Activate: publish what the owner confirmed and what works** — ours, and waits on
+  nobody: the three documents go on the site whether or not any registry reads them yet.
   Spec ref: the per-action JSON-LD at `/api/reports/:id/contracts/:actionId`, the refined
   report (`businessRole`, entity decisions, `terminology`, `actionDecisions`), the ARD entry
   schema (`spec/schemas/ard-entry.schema.json` in ards-project/ard-spec), the ARD base context,
@@ -284,14 +294,22 @@ Nobody buys the vision on day one. They paste a URL.
   Verify: the Alpina contract tests as the template; `alpina-sidecar.spec.ts`.
   Commit as `feat: verify what a site declares by calling it`. Two days.
 
-- [ ] **AC3. Onboard to Google's registry** when publisher onboarding opens.
-  What to build: submit the catalogs we publish for; nothing else. Half a day, when it exists.
-
 - [ ] **AC4. Sidecar, on request**
   A second sidecar is built when a paying customer asks, by hand, read-only, as the Alpina one.
   Never in the self-serve product: Audit says the interface is missing, Fix structures what can be
   structured, Activate publishes what is genuinely available, and "talk to us" is enterprise
   expansion rather than PLG complexity. Not sized.
+
+## Distribute (later, and theirs)
+
+- [ ] **D1. Register wherever agent ecosystems allow**
+  Spec ref: Google Cloud's Agent Registry and its publisher onboarding; any other registry that
+  reads ARD catalogs as they appear.
+  What to build: submit the catalogs we publish for, and nothing else. Every site that Activate
+  published is already crawlable by any registry that reads the well-known path; Distribute is the
+  hand-raise where a registry wants one. Half a day per registry, when each exists.
+  Acceptance: a site published through AC1 appears in the registry's search with the report
+  linked from its entry.
 
 ## Close the loop
 
@@ -398,7 +416,7 @@ recurring basis.
 2. After Fix: a poorly marked-up site gets a Fix panel worth acting on; the dashboard receives the
    report id.
 3. After Activate: alpina.travel round trip. Audit, publish, re-audit finds the catalog, and the
-   availability action verifies through the sidecar demo.
+   availability action verifies through the sidecar demo. Distribute is not in this pause.
 4. After the loop: within a week of publishing, alpina.travel's page shows Googlebot's re-reads and
    the demo agent's sidecar activations, and the audit's own verification calls are not in them.
 
@@ -420,6 +438,16 @@ way, and each has a safe way, which is the way they are specified:
 - **A2.** Two end-to-end specs pin today's layout and the frozen vocabulary is a written rule;
   the specs are re-baselined on purpose, and plain words on the first screen wait for a yes.
 
+## Decided on 2026-09-07
+
+- Plain words on the first screen: works, fix this, talk to us, each mapping onto exactly one
+  precise state. The precise vocabulary, agent-ready, unverified, human-only, missing, and the
+  boundaries, owned, handoff, informational, not applicable, stays in the full audit, the docs and
+  the machine-facing layer. AGENTS.md > Frozen says so.
+- A2 ships first. It is what already feels like product. Built and kept ready on the branch.
+- F1 is the highest-priority decision. The endpoint arrives the week of 2026-09-14.
+- Activate is publishing, ours, and waits on nobody. Distribute is registering, theirs, and later.
+
 ## Dropped from the previous draft
 
 The boundaries namespace (boundaries live in memory as prose, and in markup as what is and is not
@@ -432,9 +460,6 @@ refinement as a gate before publishing, and any index of our own.
 - The reuse window in A3. Proposal: one day.
 - The daily audit budget in A3. Proposal: a number the bill can absorb twice over; ops sets it.
 - What free Fix shows. Proposal: the finding and one entity's markup, never the full set.
-- The first screen uses plain words ("works", "fix this", "talk to us") while the frozen
-  vocabulary stays in the full audit, the docs and the tools. This touches AGENTS.md > Frozen and
-  needs Andrea's yes.
 - Whether the free entity gets a URL of its own, one page per site carrying the `WebSite` and its
   `potentialAction`s, or stays the report page. Proposal: the report page now, a per-site entity
   URL when Fix ships, because that is the thing Google would come back for.
