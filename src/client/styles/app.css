@@ -748,6 +748,82 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .labs-fold > summary { padding: 14px 20px; color: var(--muted); font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; cursor: pointer; }
 .labs-fold[open] > summary { border-bottom: 1px dashed var(--line-subtle); }
 
+/* ---------- First screen: three words ----------
+   Written for a person. Each plain word maps onto exactly one precise state; the precise
+   vocabulary keeps its own colours one click below, in the full audit. */
+.first-screen {
+  display: grid;
+  gap: 18px;
+  padding: clamp(22px, 4vw, 36px);
+  background: var(--surface);
+  border: 1px solid var(--line-subtle);
+  border-radius: 18px;
+}
+.first-screen-head { display: grid; gap: 8px; }
+.first-screen h1 { margin: 0; font-size: clamp(1.6rem, 3.4vw, 2.3rem); overflow-wrap: anywhere; }
+.first-sentence { margin: 0; font-size: 1.12rem; max-width: 62ch; }
+.first-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; margin: 0; color: var(--muted); font-size: 0.9rem; }
+.chip-arche { padding: 3px 9px; border-radius: 999px; background: var(--wl-neutral-100); color: var(--muted); font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.first-score b { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; margin-right: 4px; }
+.read-when button { background: none; border: 0; padding: 0; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
+.read-when button:disabled { color: var(--faint); cursor: default; }
+.three-actions { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.three-action {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 14px;
+  align-items: center;
+  text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--line-subtle);
+  border-radius: 12px;
+  background: var(--wl-neutral-100);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.three-action:hover, .three-action:focus-visible { border-color: var(--brand); }
+.three-action-name { font-weight: 600; font-size: 1.02rem; }
+.three-action-why { grid-column: 1 / -1; color: var(--muted); font-size: 0.9rem; line-height: 1.45; }
+.plain-word { justify-self: end; padding: 4px 10px; border-radius: 999px; font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; white-space: nowrap; }
+.plain-word-works { background: color-mix(in srgb, var(--state-agent-ready) 20%, white); color: var(--ink); }
+.plain-word-fix { background: color-mix(in srgb, var(--state-unverified) 24%, white); color: var(--ink); }
+.plain-word-talk { background: color-mix(in srgb, var(--state-missing) 14%, white); color: var(--state-missing); }
+.discovery-line { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.discovery-line code { font-family: var(--font-mono); font-size: 0.82em; }
+.deep-scan-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--brand) 9%, white);
+  color: var(--brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+.deep-scan-strip:hover { background: color-mix(in srgb, var(--brand) 14%, white); }
+
+/* ---------- Full audit: the model, one click below ---------- */
+.full-audit { border: 1px solid var(--line-subtle); border-radius: 16px; background: var(--surface); }
+.full-audit > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  padding: 16px 22px;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.full-audit > summary span { color: var(--muted); font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 400; }
+.full-audit[open] > summary { border-bottom: 1px solid var(--line-subtle); }
+.full-audit-body { display: grid; gap: 22px; padding: clamp(14px, 3vw, 24px); }
+.full-audit-tools { display: flex; justify-content: flex-end; }
+
 /* ---------- Context engine ---------- */
 .context-engine {
   display: grid;

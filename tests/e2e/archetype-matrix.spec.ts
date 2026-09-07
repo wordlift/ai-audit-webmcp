@@ -14,9 +14,11 @@ for (const fixture of FIXTURES) {
   test(`${fixture.url} compiles complete entity-aware Terms of Action`, async ({ page }) => {
     await page.goto("/");
     await page.getByLabel("Website URL").fill(fixture.url);
-    await page.getByRole("button", { name: /audit and refine my site/i }).click();
+    await page.getByRole("button", { name: /audit my site/i }).click();
 
     await expect(page).toHaveURL(/\/reports\//);
+    await expect(page.getByText(/agents can discover \d+ capabilities on this site/i)).toBeVisible();
+    await page.locator("summary", { hasText: "Full audit" }).click();
     await expect(page.getByRole("heading", { name: fixture.archetype }).first()).toBeVisible();
     await expect(page.getByText(`${fixture.pages} representative pages analyzed`)).toBeVisible();
     await expect(page.getByText(/classification selects the expected action journey/i)).toBeVisible();

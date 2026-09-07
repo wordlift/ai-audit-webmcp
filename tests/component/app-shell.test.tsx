@@ -7,9 +7,9 @@ describe("application shell", () => {
   it("leads with the action-first product thesis", () => {
     render(<MemoryRouter><App /></MemoryRouter>);
 
-    expect(screen.getByRole("heading", { name: /teach chatgpt how your business should work/i })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /can ai agents understand and use your business/i })).toBeVisible();
     expect(screen.getByLabelText(/website url/i)).toBeVisible();
-    expect(screen.getByText(/refine with chatgpt/i)).toBeVisible();
-    expect(screen.getByRole("button", { name: /audit and refine my site/i })).toBeVisible();
+    expect(screen.getByText(/audit it\. fix it\. activate it\./i)).toBeVisible();
+    expect(screen.getByRole("button", { name: /audit my site/i })).toBeVisible();
   });
 });

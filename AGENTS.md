@@ -28,7 +28,11 @@ support them. Declarations never earn readiness; only invoked evidence does.
 - **The report schema** in `src/shared/schemas/report.ts` is strict; new fields are optional, and a
   report stored yesterday must still parse today.
 - **Vocabulary the UI uses**: Terms of Action, Context Engine, capability map, Full WordLift audit,
-  foundation score, agent readiness. Public copy (README, Devpost, video) follows what the deployed page says.
+  foundation score, agent readiness — in the full audit, the docs and the tools. The first screen of
+  a report speaks plain words, decided on 2026-09-07: **works**, **fix this**, **talk to us**, each
+  mapping onto exactly one precise state (agent-ready; unverified or human-only; missing), never two.
+  The boundary vocabulary — owned, handoff, informational, not applicable — stays precise and one
+  click below. Public copy (README, Devpost, video) follows what the deployed page says.
 - **Registration on both `navigator.modelContext` and `document.modelContext`** — the alias in
   `src/client/webmcp/modelContextAlias.ts` covers whichever the browser exposes; public copy names
   `navigator.modelContext`, which is what Chrome ships.

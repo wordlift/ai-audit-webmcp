@@ -1,14 +1,7 @@
-import { ArrowRight, Bot, Braces, ScanSearch, Sparkles, Tags } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError, getReport, startReport } from "../api/client";
-
-const journey = [
-  { label: "Read the pages that matter", icon: ScanSearch },
-  { label: "Draft entities, language & actions", icon: Tags },
-  { label: "Refine with ChatGPT", icon: Bot },
-  { label: "Compile Terms of Action", icon: Braces },
-];
 
 /** Real phase durations for a live audit, which takes about a minute end to end. */
 const PHASES = [
@@ -146,12 +139,11 @@ export function HomeRoute() {
   return (
     <section className="home-page">
       <div className="hero" aria-labelledby="hero-title">
-        <div className="eyebrow"><Sparkles size={16} /> Built for the agentic web</div>
-        <h1 id="hero-title">Teach ChatGPT how your business should work <span>for agents.</span></h1>
+        <div className="eyebrow"><Sparkles size={16} /> Free · no account · public websites</div>
+        <h1 id="hero-title">Can AI agents understand <span>and use your business?</span></h1>
         <p className="hero-copy">
-          AI Audit reads your website and drafts its entities, language, actions and boundaries.
-          You add the business knowledge only a human has. ChatGPT recompiles both into the business's
-          Terms of Action: what it owns, what it only describes, and what it hands off.
+          Paste a URL. In about a minute you get what an agent can do on your site today, what it
+          cannot, and what to do next. Audit it. Fix it. Activate it.
         </p>
         <form className="audit-form" onSubmit={submit}>
           <label htmlFor="site-url">Website URL</label>
@@ -166,7 +158,7 @@ export function HomeRoute() {
               required
             />
             <button type="submit" disabled={Boolean(phase)}>
-              {phase ? "Drafting the Terms" : "Audit and refine my site"} <ArrowRight size={18} />
+              {phase ? "Reading your site" : "Audit my site"} <ArrowRight size={18} />
             </button>
           </div>
           <p>No account required. Public websites only.</p>
@@ -202,13 +194,6 @@ export function HomeRoute() {
           {error && <p className="form-error" role="alert">{error}</p>}
         </form>
       </div>
-      <section className="journey-preview" aria-label="Audit stages">
-        {journey.map(({ label, icon: Icon }, index) => (
-          <article key={label}>
-            <span>{index + 1}</span><Icon aria-hidden="true" /><h2>{label}</h2>
-          </article>
-        ))}
-      </section>
     </section>
   );
 }

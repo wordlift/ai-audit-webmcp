@@ -11,11 +11,12 @@ test("a human refinement turns the machine draft into refined Terms of Action", 
   // 1. Audit: the fixture travel site compiles a machine draft.
   await page.goto("/");
   await page.getByLabel("Website URL").fill("https://alpina.travel");
-  await page.getByRole("button", { name: /audit and refine my site/i }).click();
+  await page.getByRole("button", { name: /audit my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
 
   // 2. The draft says whose interpretation it is, and offers the review path. Playwright has no
   // WebMCP, so the self-test badge must say exactly which browser the reader needs.
+  await page.locator("summary", { hasText: "Full audit" }).click();
   await expect(page.getByText("Machine-generated Terms of Action")).toBeVisible();
   await expect(page.getByRole("button", { name: /review with chatgpt/i })).toBeVisible();
   await expect(page.getByText(/site tools require a webmcp-enabled browser/i)).toBeVisible();
@@ -44,6 +45,7 @@ test("a human refinement turns the machine draft into refined Terms of Action", 
   // header, the change summary is compact with the full log folded away, and human vocabulary
   // sits in the lexical graph itself.
   await page.goto(`/reports/${child.id}`);
+  await page.locator("summary", { hasText: "Full audit" }).click();
   await expect(page.getByText("Human-refined Terms of Action")).toBeVisible();
   await expect(page.getByRole("heading", { name: /destination organization/i })).toBeVisible();
   await expect(page.getByText(/machine archetype: travel \/ hospitality/i)).toBeVisible();
@@ -54,7 +56,7 @@ test("a human refinement turns the machine draft into refined Terms of Action", 
   await expect(page.locator(".lexical-human").filter({ hasText: "availability" })).toBeVisible();
 
   // 5. The affected action carries its responsibility boundary and the human rationale.
-  const availability = page.getByRole("button", { name: /check availability/i });
+  const availability = page.locator(".action-map").getByRole("button", { name: /check availability/i });
   await expect(availability).toContainText(/partner handoff/i);
   await availability.click();
   await expect(page.getByRole("dialog")).toContainText(/partners own the inventory/i);
@@ -63,6 +65,7 @@ test("a human refinement turns the machine draft into refined Terms of Action", 
 
   // 6. The machine draft is unchanged at its own URL.
   await page.goto(`/reports/${parentId}`);
+  await page.locator("summary", { hasText: "Full audit" }).click();
   await expect(page.getByText("Machine-generated Terms of Action")).toBeVisible();
 
   // A refinement that references nothing in the report is refused, not silently accepted.
@@ -84,7 +87,7 @@ test("a human refinement turns the machine draft into refined Terms of Action", 
 test("the report offers the deeper read in exchange for an address", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Website URL").fill("https://alpina.travel");
-  await page.getByRole("button", { name: /audit and refine my site/i }).click();
+  await page.getByRole("button", { name: /audit my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
 
   const offer = page.getByRole("region", { name: /read 4 representative pages/i });

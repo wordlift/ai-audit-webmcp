@@ -10,6 +10,7 @@ import { ClassificationCard } from "../components/ClassificationCard";
 import { ContextEngineMap, heroEntityId } from "../components/ContextEngineMap";
 import { DeepScanOffer } from "../components/DeepScanOffer";
 import { ExecutiveSummary } from "../components/ExecutiveSummary";
+import { FirstScreen } from "../components/FirstScreen";
 import { FoundationAuditDetails } from "../components/FoundationAuditDetails";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { ReportProgress } from "../components/ReportProgress";
@@ -121,48 +122,55 @@ export function ReportRoute() {
       <AlpinaAvailabilityTool reportId={report.id} enabled={sidecarApplies(report)} />
       <nav className="report-toolbar" aria-label="Report actions">
         <Link to="/"><ArrowLeft size={17} /> New audit</Link>
-        <SiteToolsBadge />
         <button type="button" onClick={share}><Share2 size={17} /> {copied ? "Copied" : "Share report"}</button>
       </nav>
       {report.status === "partial" && (
         <div className="partial-banner" role="status">Partial report: {visibleErrors(report.errors).map(explainReportError).join(" ")}</div>
       )}
-      <ServiceMapProvenance report={report} />
-      <ExecutiveSummary report={report} />
-      {/* Keyed by report so a recompile that lands on the child report hands back a fresh form. */}
-      {report.classification && <ClassificationCard key={report.id} classification={report.classification} onOverride={override} />}
-      {report.contextGraph && report.classification && (
-        <ContextEngineMap
-          context={report.contextGraph}
-          classification={report.classification}
-          capabilities={report.capabilities ?? []}
-          selectedEntityId={selectedEntityId}
-          onSelectEntity={setSelectedEntityId}
-        />
-      )}
-      <ActionJourney
-        reportId={report.id}
-        capabilities={report.capabilities ?? []}
-        selectedEntityId={selectedEntityId}
-      />
-      {report.foundationAudit && <FoundationAuditDetails audit={report.foundationAudit} />}
-      {/* Offered after the reader has seen what the free scan found, never before it. */}
-      <DeepScanOffer report={report} />
-      {/* Labs: a contained technical proof, deliberately out of the product's primary story. */}
-      {sidecarApplies(report) && (
-        <details className="labs-fold">
-          <summary>Labs — approved-adapter reference (alpina.travel)</summary>
-          <AlpinaSidecarPanel
+      {/* The first screen speaks three plain words. Everything precise is one click below. */}
+      <FirstScreen report={report} />
+      <details className="full-audit" id="full-audit">
+        <summary>Full audit <span>Entities · Terminology · Actions · Terms of Action</span></summary>
+        <div className="full-audit-body">
+          <div className="full-audit-tools"><SiteToolsBadge /></div>
+          <ServiceMapProvenance report={report} />
+          <ExecutiveSummary report={report} />
+          {/* Keyed by report so a recompile that lands on the child report hands back a fresh form. */}
+          {report.classification && <ClassificationCard key={report.id} classification={report.classification} onOverride={override} />}
+          {report.contextGraph && report.classification && (
+            <ContextEngineMap
+              context={report.contextGraph}
+              classification={report.classification}
+              capabilities={report.capabilities ?? []}
+              selectedEntityId={selectedEntityId}
+              onSelectEntity={setSelectedEntityId}
+            />
+          )}
+          <ActionJourney
             reportId={report.id}
-            verified={
-              report.capabilities?.some(
-                (capability) =>
-                  capability.actionId === "availability.check" && capability.state === "agent-ready" && capability.via === "sidecar",
-              ) ?? false
-            }
+            capabilities={report.capabilities ?? []}
+            selectedEntityId={selectedEntityId}
           />
-        </details>
-      )}
+          {report.foundationAudit && <FoundationAuditDetails audit={report.foundationAudit} />}
+          {/* Labs: a contained technical proof, deliberately out of the product's primary story. */}
+          {sidecarApplies(report) && (
+            <details className="labs-fold">
+              <summary>Labs — approved-adapter reference (alpina.travel)</summary>
+              <AlpinaSidecarPanel
+                reportId={report.id}
+                verified={
+                  report.capabilities?.some(
+                    (capability) =>
+                      capability.actionId === "availability.check" && capability.state === "agent-ready" && capability.via === "sidecar",
+                  ) ?? false
+                }
+              />
+            </details>
+          )}
+        </div>
+      </details>
+      {/* The deeper read is offered from the top of the page and still here at the end. */}
+      <DeepScanOffer report={report} />
     </div>
   );
 }

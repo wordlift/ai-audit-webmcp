@@ -1,23 +1,36 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-test("landing page communicates the human-guided compilation", async ({ page }) => {
+/** The full audit is one click away, and the specs take that click before reading it. */
+const openFullAudit = (page: Page) => page.locator("summary", { hasText: "Full audit" }).click();
+
+test("landing page asks one question and takes a URL", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /teach chatgpt how your business should work/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /can ai agents understand and use your business/i })).toBeVisible();
   await expect(page.getByLabel("Website URL")).toBeVisible();
-  await expect(page.getByText("Refine with ChatGPT")).toBeVisible();
+  await expect(page.getByText(/audit it\. fix it\. activate it\./i)).toBeVisible();
 });
 
-test("fixture report presents the action graph and expandable evidence", async ({ page }) => {
+test("a report opens with three words and keeps the full audit one click away", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Website URL").fill("https://shop.example");
-  await page.getByRole("button", { name: /audit and refine my site/i }).click();
+  await page.getByRole("button", { name: /audit my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
+
+  // The first screen: one sentence, three actions, plain words, nothing precise.
+  await expect(page.getByText(/agents can discover \d+ capabilities on this site/i)).toBeVisible();
+  const three = page.getByRole("list", { name: /the actions that matter/i });
+  await expect(three.getByRole("listitem")).toHaveCount(3);
+  await expect(three).toContainText(/works|fix this|talk to us/i);
+  await expect(page.getByRole("heading", { name: /commerce \/ retail/i })).toBeHidden();
+
+  // One click below, the model with its exact names.
+  await openFullAudit(page);
   await expect(page.getByRole("heading", { name: /commerce \/ retail/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: /from what the site means to what an agent can do/i })).toBeVisible();
   await expect(page.getByText("Trail Jacket", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "What an agent should be able to do" })).toBeVisible();
   await expect(page.getByText("Highest-impact gaps")).toBeVisible();
-  await page.getByRole("button", { name: /retrieve details/i }).click();
+  await page.locator(".action-map").getByRole("button", { name: /retrieve details/i }).click();
   await expect(page.getByRole("dialog")).toContainText("Product structured data is declared");
   await expect(page.getByRole("dialog")).toContainText("Machine-readable capability contract");
 });

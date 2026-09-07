@@ -70,7 +70,7 @@ export function DeepScanOffer({ report }: { report: ReportRecord }) {
   }
 
   return (
-    <section className="deep-scan-offer" aria-labelledby="deep-scan-heading">
+    <section className="deep-scan-offer" id="deep-scan" aria-labelledby="deep-scan-heading">
       <p className="section-kicker"><ScanSearch size={18} /> Read the whole site</p>
       <h2 id="deep-scan-heading">This report read {pagesRead} representative {pagesRead === 1 ? "page" : "pages"}.</h2>
       <p>

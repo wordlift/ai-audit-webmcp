@@ -12,10 +12,11 @@ test("a human-run sidecar call turns an unverified action into a verified agent 
 
   await page.goto("/");
   await page.getByLabel("Website URL").fill("https://alpina.travel");
-  await page.getByRole("button", { name: /audit and refine my site/i }).click();
+  await page.getByRole("button", { name: /audit my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
 
-  const availabilityNode = page.getByRole("button", { name: /check availability/i });
+  await page.locator("summary", { hasText: "Full audit" }).click();
+  const availabilityNode = page.locator(".action-map").getByRole("button", { name: /check availability/i });
   await expect(availabilityNode).toContainText(/unverified/i);
   await page.screenshot({ path: testInfo.outputPath("sidecar-before.png"), fullPage: true });
 
@@ -29,7 +30,7 @@ test("a human-run sidecar call turns an unverified action into a verified agent 
 
   // The successful invocation becomes a new immutable revision of the report.
   await expect(page).toHaveURL(/\/reports\//, { timeout: 15_000 });
-  await expect(page.getByRole("button", { name: /check availability/i })).toContainText(/run by wordlift/i, {
+  await expect(page.locator(".first-screen").getByRole("button", { name: /check availability/i })).toContainText(/run by wordlift/i, {
     timeout: 15_000,
   });
   await page.screenshot({ path: testInfo.outputPath("sidecar-after.png"), fullPage: true });

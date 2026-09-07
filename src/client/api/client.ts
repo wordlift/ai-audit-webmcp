@@ -34,6 +34,8 @@ export interface CreateReportOptions {
   email?: string;
   /** Which surface asked, so the page's form and an agent driving the page stay distinguishable. */
   surface?: "web" | "webmcp";
+  /** Read the site again even if it was read in the last day; the explicit re-verify. */
+  fresh?: boolean;
   requestId?: string;
   signal?: AbortSignal;
   /** Overridable so tests do not wait on real timers. */
@@ -56,6 +58,7 @@ async function postReport(url: string, requestId: string, options: CreateReportO
       ...(options.depth ? { depth: options.depth } : {}),
       ...(options.email ? { email: options.email } : {}),
       ...(options.surface ? { surface: options.surface } : {}),
+      ...(options.fresh ? { fresh: true } : {}),
     }),
     signal: options.signal,
   });
