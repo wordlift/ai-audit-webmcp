@@ -354,6 +354,7 @@ export class AuditOrchestrator {
         next.boundary = decision.boundary;
         next.boundarySource = "human-provided";
         if (decision.rationale) next.boundaryRationale = decision.rationale;
+        if (decision.partner) next.boundaryPartner = decision.partner;
       }
       next.expectationSource = [...new Set([...next.expectationSource, "human:decision"])].slice(0, 20);
       return next;

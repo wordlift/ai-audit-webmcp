@@ -221,6 +221,11 @@ export const jsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
 /** Who is responsible for an action: the site itself, a partner, nobody transactionally, or nobody at all. */
 export const actionBoundarySchema = z.enum(["owned", "partner-handoff", "informational-only", "not-applicable"]);
 
+/** Who runs a handed-off action: the partner's name, and its site when it has one. */
+export const actionPartnerSchema = z
+  .object({ name: z.string().min(1).max(120), url: z.string().url().max(2_048).optional() })
+  .strict();
+
 export const governanceSchema = z
   .object({
     requiresAuthentication: z.boolean(),
@@ -290,6 +295,7 @@ export const capabilityResultSchema = z.preprocess(
     boundary: actionBoundarySchema.optional(),
     boundaryRationale: z.string().min(1).max(500).optional(),
     boundarySource: z.literal("human-provided").optional(),
+    boundaryPartner: actionPartnerSchema.optional(),
   })
   .strict(),
 );
@@ -423,6 +429,8 @@ export const humanAssertionSchema = z
             decision: z.enum(["confirm", "reject"]),
             boundary: actionBoundarySchema.optional(),
             rationale: z.string().min(1).max(500).optional(),
+            /** For a partner handoff: who runs it. Published as the action's provider. */
+            partner: actionPartnerSchema.optional(),
           })
           .strict(),
       )

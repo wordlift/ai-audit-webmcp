@@ -197,6 +197,24 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
                 ],
                 "type": "string",
               },
+              "partner": {
+                "additionalProperties": false,
+                "description": "For a partner handoff: who runs the action. Published as its provider.",
+                "properties": {
+                  "name": {
+                    "description": "The partner's name.",
+                    "type": "string",
+                  },
+                  "url": {
+                    "description": "The partner's website, when it has one.",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "name",
+                ],
+                "type": "object",
+              },
               "rationale": {
                 "description": "Why, in one or two sentences.",
                 "type": "string",

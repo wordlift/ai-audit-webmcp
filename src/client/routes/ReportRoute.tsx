@@ -13,6 +13,7 @@ import { ExecutiveSummary } from "../components/ExecutiveSummary";
 import { FirstScreen } from "../components/FirstScreen";
 import { FixPanel } from "../components/FixPanel";
 import { FoundationAuditDetails } from "../components/FoundationAuditDetails";
+import { OwnIt } from "../components/OwnIt";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { ReportProgress } from "../components/ReportProgress";
 import { ServiceMapProvenance } from "../components/ServiceMapProvenance";
@@ -132,6 +133,8 @@ export function ReportRoute() {
       <FirstScreen report={report} />
       {/* Fix: the difference between what the pages declare and what they contain, when there is one. */}
       <FixPanel report={report} />
+      {/* Own it: who runs each of the three actions, answered in a minute. Readiness never moves on a word. */}
+      <OwnIt key={report.id} report={report} />
       <details className="full-audit" id="full-audit">
         <summary>Full audit <span>Entities · Terminology · Actions · Terms of Action</span></summary>
         <div className="full-audit-body">

@@ -78,7 +78,8 @@ Write back exactly what you intend to submit, grouped so a person can check it:
 - the operating role, in their words;
 - entities to promote or demote, by name;
 - terminology entries, term by term, with the meaning they gave;
-- each action decision: confirm or reject, with its boundary and a one-line rationale.
+- each action decision: confirm or reject, with its boundary and a one-line rationale, and for a
+  partner handoff the partner's name and site when they know it.
 
 Then stop and ask for explicit confirmation. "Shall I apply these?" is the whole step. Do not call
 the refine tool on an implied yes, on enthusiasm, or on a partial answer. If they change something,

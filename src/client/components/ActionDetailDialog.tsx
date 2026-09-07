@@ -30,6 +30,16 @@ export function ActionDetailDialog({ reportId, capability, onOpenChange }: { rep
                   <span className={`boundary-chip boundary-${capability.boundary}`}>{BOUNDARY_LABELS[capability.boundary]}</span>
                   <span className="provenance-badge">Human-provided</span>
                 </p>
+                {capability.boundaryPartner && (
+                  <p className="boundary-partner">
+                    Runs with{" "}
+                    {capability.boundaryPartner.url ? (
+                      <a href={capability.boundaryPartner.url} target="_blank" rel="noreferrer">{capability.boundaryPartner.name}</a>
+                    ) : (
+                      capability.boundaryPartner.name
+                    )}
+                  </p>
+                )}
                 {capability.boundaryRationale && <p className="boundary-rationale">{capability.boundaryRationale}</p>}
               </section>
             )}

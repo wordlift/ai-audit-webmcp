@@ -252,6 +252,16 @@ export const REFINE_SERVICE_MAP_TOOL = {
               description: "Who is responsible: the site itself, a partner it hands off to, information only, or nobody.",
             },
             rationale: { type: "string", description: "Why, in one or two sentences." },
+            partner: {
+              type: "object",
+              properties: {
+                name: { type: "string", description: "The partner's name." },
+                url: { type: "string", description: "The partner's website, when it has one." },
+              },
+              required: ["name"],
+              additionalProperties: false,
+              description: "For a partner handoff: who runs the action. Published as its provider.",
+            },
           },
           required: ["actionId", "decision"],
           additionalProperties: false,
