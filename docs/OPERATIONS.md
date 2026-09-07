@@ -43,6 +43,9 @@ inputs differ.
 | `GEMINI_MODEL` | `gemini-2.5-flash` | The model behind the stand-in |
 | `MARKUP_ON_BASIC` | `thin` | Which pages of a basic scan are sent: `thin` (those that declare no entities), `all`, or `none`. A deep scan sends every page |
 | `GEMINI_INPUT_USD_PER_MILLION`, `GEMINI_OUTPUT_USD_PER_MILLION` | `0.3`, `2.5` | List prices used for the estimate on `/api/health` and in the `markup_generated` log line |
+| `OBSERVE_INTERVAL_DAYS` | `7` | How often a site whose owner gave a deep-scan address is read again. `0` never re-reads and never writes |
+| `OBSERVE_TICK_MINUTES` | `60` | How often the due list is checked |
+| `OBSERVE_PER_TICK` | `5` | How many sites one check may re-read: with the interval, the ceiling on what Observe can cost |
 
 Live mode fails fast at startup if a required credential is missing.
 
@@ -140,6 +143,32 @@ no form configured, deep scans still run and still record what they owe; nothing
 
 `GET /api/health` names the delivery system in `surfaces.reportDelivery`, or `null` when none is
 configured.
+
+### The number that comes to you
+
+A site whose owner gave a deep-scan address, and whose report was delivered, is read again every
+`OBSERVE_INTERVAL_DAYS` days, at the depth it was first read, as an explicit re-verify: a new
+report, a new reading. Each check re-reads at most `OBSERVE_PER_TICK` sites, so the cost per week
+is bounded by the number of delivered addresses, not by traffic. These re-reads call the
+orchestrator directly and are not counted against the HTTP daily budget; the ceiling is the
+address count, which `pending` and `watchable` on the lead store make visible.
+
+A note goes out only when something moved, never on a timer alone: the score changed; a capability
+that answered last time did not, with the audit's reason ("availability failed today, here is why");
+one started answering; the first crawler read the report; Google's first verified read; an agent's
+failed activation since the last read, by tool and reason. The first crawler and Google's first read
+are told once each. Nothing moved, nothing sent, and the lead's `watchedAt` still advances.
+
+The note travels through the same HubSpot form as the report, with the page context
+`WordLift AI Audit — what moved` so a workflow can route it, and `audit_summary` carrying the lines
+and two links: the new report, and the one link that stops the notes,
+`/api/observe/unsubscribe/:reportId/:key`. The key is derived from the report id and the address,
+so a report's public link alone cannot silence its owner. Clicking it sets `unsubscribedAt` on the
+lead: no further re-read, no further note; the report stays where it is. HubSpot's own unsubscribe
+governs HubSpot's sending as before; this link governs what this service does.
+
+`GET /api/health` reports `observe` with the interval, and how many sites this instance re-read
+and how many notes it sent since it started.
 
 ## One crawl per site per day, and the bill
 

@@ -54,6 +54,13 @@ const environmentSchema = z
     GEMINI_OUTPUT_USD_PER_MILLION: z.coerce.number().min(0).default(2.5),
     /** Which pages of a basic scan are sent: those that declare no entities, all, or none. */
     MARKUP_ON_BASIC: z.enum(["thin", "all", "none"]).default("thin"),
+    /**
+     * Observe: a site with a delivered deep-scan address is read again every this many days, and a
+     * note goes to the address only when something moved. Zero never re-reads and never writes.
+     */
+    OBSERVE_INTERVAL_DAYS: z.coerce.number().int().min(0).max(90).default(7),
+    OBSERVE_TICK_MINUTES: z.coerce.number().int().min(1).max(1_440).default(60),
+    OBSERVE_PER_TICK: z.coerce.number().int().min(1).max(100).default(5),
   })
   .strict()
   .superRefine((environment, context) => {
@@ -118,6 +125,9 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     GEMINI_INPUT_USD_PER_MILLION: environment.GEMINI_INPUT_USD_PER_MILLION,
     GEMINI_OUTPUT_USD_PER_MILLION: environment.GEMINI_OUTPUT_USD_PER_MILLION,
     MARKUP_ON_BASIC: environment.MARKUP_ON_BASIC,
+    OBSERVE_INTERVAL_DAYS: environment.OBSERVE_INTERVAL_DAYS,
+    OBSERVE_TICK_MINUTES: environment.OBSERVE_TICK_MINUTES,
+    OBSERVE_PER_TICK: environment.OBSERVE_PER_TICK,
   };
 
   return environmentSchema.parse(knownEnvironment);

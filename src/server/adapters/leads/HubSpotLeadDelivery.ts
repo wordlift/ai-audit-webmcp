@@ -60,6 +60,9 @@ const SOURCE_VALUES: Record<DeepScanLead["source"], string> = {
   mcp: "ai-audit-webmcp:mcp-server",
 };
 
+/** A note about what moved names itself apart from the report it follows, so the portal can route it. */
+const MOVEMENT_NAME = "WordLift AI Audit — what moved";
+
 const SOURCE_NAMES: Record<DeepScanLead["source"], string> = {
   web: "WordLift AI Audit — deep scan (web form)",
   webmcp: "WordLift AI Audit — deep scan (in-page agent)",
@@ -91,7 +94,7 @@ export class HubSpotLeadDelivery implements LeadDelivery {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           fields,
-          context: { pageUri: report.reportUrl, pageName: SOURCE_NAMES[lead.source] },
+          context: { pageUri: report.reportUrl, pageName: report.subject === "movement" ? MOVEMENT_NAME : SOURCE_NAMES[lead.source] },
         }),
         signal: controller.signal,
       });

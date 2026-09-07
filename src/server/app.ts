@@ -18,6 +18,8 @@ import type { PlatformEgress } from "./security/platformEgress.js";
 import type { VisitLedger } from "./services/VisitLedger.js";
 import { AuditToolService, type AuditToolServiceOptions } from "./services/AuditToolService.js";
 import { DeepScanDelivery } from "./services/DeepScanDelivery.js";
+import { Observer, type ObserveOptions } from "./services/Observer.js";
+import { createObserveRouter } from "./routes/observe.js";
 import { DeepScanGate } from "./services/DeepScanGate.js";
 import { AlpinaAvailabilitySidecar } from "./sidecars/alpina/adapter.js";
 
@@ -52,6 +54,11 @@ export interface AppOptions {
   /** How a deep scan's report reaches the address that bought it. Absent means it queues only. */
   leadDelivery?: LeadDelivery;
   reportTtlDays?: number;
+  /**
+   * Observe: re-read the sites whose owners gave an address, and write only when something moved.
+   * Absent means no cadence runs here; it needs the orchestrator, the lead store and a delivery.
+   */
+  observe?: ObserveOptions;
 }
 
 /**
@@ -95,6 +102,20 @@ export function createApp(options: AppOptions = {}): Express {
     response.type("text/plain").send(options.appsChallenge);
   });
 
+  // The number that comes to you: bounded by the addresses held, started only when asked to.
+  const observer =
+    options.observe && options.orchestrator && options.leads && options.leadDelivery
+      ? new Observer({
+          ...options.observe,
+          orchestrator: options.orchestrator,
+          leads: options.leads,
+          delivery: options.leadDelivery,
+          ...(options.visits ? { visits: options.visits } : {}),
+        })
+      : null;
+  observer?.start();
+  if (options.leads) app.use("/api/observe", createObserveRouter(options.leads));
+
   app.get("/api/health", (_request, response) => {
     response.status(200).json({
       status: "ok",
@@ -113,6 +134,8 @@ export function createApp(options: AppOptions = {}): Express {
       platformEgress: options.platformEgress?.summary() ?? null,
       // What the markup stand-in has cost since this instance started: the estimate, live.
       markup: options.markup ? { provider: options.markup.name, model: options.markup.model, ...options.markup.totals() } : null,
+      // Whether sites are re-read on their owners' behalf here, and what this instance has sent.
+      observe: observer?.summary() ?? null,
     });
   });
 

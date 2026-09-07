@@ -1,5 +1,5 @@
 import { Firestore } from "@google-cloud/firestore";
-import { deepScanLeadSchema, type DeepScanLead, type LeadStore } from "./LeadStore.js";
+import { deepScanLeadSchema, type DeepScanLead, type LeadStore, type WatchPatch } from "./LeadStore.js";
 
 /**
  * Leads live in their own collection, apart from reports, so nothing that serves a public report
@@ -25,7 +25,7 @@ export class FirestoreLeadStore implements LeadStore {
     const snapshot = await reference.get();
     const existing = snapshot.exists ? deepScanLeadSchema.parse(snapshot.data()) : null;
     const stored = existing
-      ? { ...lead, confirmedAt: existing.confirmedAt, deliveredAt: existing.deliveredAt }
+      ? { ...existing, ...lead, confirmedAt: existing.confirmedAt, deliveredAt: existing.deliveredAt }
       : lead;
     await reference.set(stored);
     return stored;
@@ -53,6 +53,25 @@ export class FirestoreLeadStore implements LeadStore {
 
   async markDelivered(reportId: string, at: string): Promise<DeepScanLead | null> {
     return this.#mark(reportId, { deliveredAt: at });
+  }
+
+  /** Read in request order and filtered here, as `pending` is: no composite index for a small collection. */
+  async watchable(limit = 50): Promise<DeepScanLead[]> {
+    const snapshot = await this.collection.orderBy("requestedAt").limit(Math.max(limit * 4, 200)).get();
+    const now = this.now();
+    return snapshot.docs
+      .map((document) => deepScanLeadSchema.parse(document.data()))
+      .filter((lead) => lead.deliveredAt && !lead.unsubscribedAt && new Date(lead.expiresAt) > now)
+      .sort((left, right) => (left.watchedAt ?? "").localeCompare(right.watchedAt ?? "") || left.requestedAt.localeCompare(right.requestedAt))
+      .slice(0, limit);
+  }
+
+  async markWatched(reportId: string, patch: WatchPatch): Promise<DeepScanLead | null> {
+    return this.#mark(reportId, patch);
+  }
+
+  async markUnsubscribed(reportId: string, at: string): Promise<DeepScanLead | null> {
+    return this.#mark(reportId, { unsubscribedAt: at });
   }
 
   async #mark(reportId: string, patch: Partial<DeepScanLead>): Promise<DeepScanLead | null> {

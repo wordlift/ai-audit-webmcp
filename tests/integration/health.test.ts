@@ -20,6 +20,7 @@ describe("GET /api/health", () => {
       surfaces: { mcp: null, deepScans: false, reportDelivery: null, claimedRefinement: false },
       platformEgress: null,
       markup: null,
+      observe: null,
     });
     expect(response.headers["x-powered-by"]).toBeUndefined();
   });

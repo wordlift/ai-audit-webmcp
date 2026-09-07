@@ -129,6 +129,9 @@ const app = createApp({
   platformEgress,
   markup,
   visits,
+  ...(config.NODE_ENV === "test"
+    ? {}
+    : { observe: { intervalDays: config.OBSERVE_INTERVAL_DAYS, tickMinutes: config.OBSERVE_TICK_MINUTES, perTick: config.OBSERVE_PER_TICK } }),
 });
 
 const server = app.listen(config.PORT, () => {
