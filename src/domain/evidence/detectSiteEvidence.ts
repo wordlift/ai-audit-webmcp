@@ -327,6 +327,48 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
     }
   }
 
+  // Declared entry points, used or deliberately not. Only a call that answered earns readiness.
+  for (const probe of snapshot.entryPoints ?? []) {
+    const id = `entry-point-${probe.actionId}-${probe.actionType}`.slice(0, 160);
+    if (probe.invoked && probe.ok) {
+      signals.add("agent:entry-point");
+      add({
+        id,
+        actionId: probe.actionId,
+        audience: "agent",
+        kind: "api-result",
+        sourceUrl: probe.url,
+        claim: `An agent executed the site's declared ${probe.actionType} entry point and it answered`,
+        confidence: 1,
+        verification: "invoked",
+      });
+      continue;
+    }
+    if (probe.invoked) {
+      add({
+        id,
+        actionId: probe.actionId,
+        audience: "agent",
+        kind: "api-result",
+        sourceUrl: probe.url,
+        claim: `The site's declared ${probe.actionType} entry point did not answer when an agent executed it${probe.note ? `: ${probe.note}` : ""}`,
+        confidence: 0.9,
+        verification: "failed",
+      });
+      continue;
+    }
+    add({
+      id,
+      actionId: probe.actionId,
+      audience: "agent",
+      kind: "structured-data",
+      sourceUrl: probe.sourceUrl,
+      claim: `A ${probe.actionType} entry point is declared for this action; the audit did not call it${probe.note ? `: ${probe.note}` : ""}`,
+      confidence: 0.8,
+      verification: "declared",
+    });
+  }
+
   for (const probe of snapshot.mcpEndpoints) {
     if (!probe.initialized) {
       // A broken declaration needs a declaration: the endpoint opened a session and then failed,

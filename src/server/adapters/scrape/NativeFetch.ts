@@ -13,6 +13,7 @@ import {
   serverCardEndpoints,
 } from "./agentCatalog.js";
 import type {
+  DeclaredEntryPoint,
   CollectOptions,
   DiscoveryDocument,
   ExtractedEntity,
@@ -24,6 +25,7 @@ import type {
   SiteSnapshot,
 } from "./ScrapeProvider.js";
 import { detectWordLiftMarker, wordLiftDatasetEntity } from "../../../domain/evidence/detectWordLift.js";
+import { executeEntryPoint, findEntryPoints, MAX_ENTRY_POINTS } from "./entryPoints.js";
 import { executeSearchAction, findSearchActionTemplate } from "./searchAction.js";
 import { collectDeclarativeTools, dedupePageTools, extractImperativeTools } from "./webmcpTools.js";
 
@@ -194,6 +196,15 @@ export class NativeFetchCollector implements ScrapeProvider {
       ? await executeSearchAction(searchTemplate, seedQuery.slice(0, 60), this.options)
       : undefined;
 
+    // Every other entry point the sampled pages declare gets the same treatment: a read over GET
+    // is executed once, a write is never executed, and both are recorded for what they are.
+    const declaredEntryPoints = unique(pages.flatMap((entry) => entry.entryPoints ?? []).map((entry) => JSON.stringify(entry)))
+      .map((entry) => JSON.parse(entry) as DeclaredEntryPoint)
+      .slice(0, MAX_ENTRY_POINTS);
+    const entryPoints = await Promise.all(
+      declaredEntryPoints.map((entry) => executeEntryPoint(entry, seedQuery.slice(0, 60), this.options)),
+    );
+
     // The entry page's raw body is only in hand here, so its platform fingerprints are read now.
     // Without one, a server-side install still shows itself: entity ids on the site's own data.
     // subdomain, confirmed by the one header the dataset portal answers with.
@@ -223,6 +234,7 @@ export class NativeFetchCollector implements ScrapeProvider {
       pageTools: dedupePageTools(pages.flatMap((entry) => entry.pageTools)),
       mcpEndpoints,
       ...(searchAction ? { searchAction } : {}),
+      ...(entryPoints.length > 0 ? { entryPoints } : {}),
       ...(wordlift ? { wordlift } : {}),
       softNotFound,
       truncated: pages.some((entry) => entry.truncated) || collectedPages.some((result) => result.status === "rejected"),
@@ -704,6 +716,7 @@ function extractPage(
     jsonLdTypes: jsonLd.types,
     entities: jsonLd.entities,
     pageTools,
+    entryPoints: findEntryPoints(document, base, base.toString()),
     truncated,
   };
 }

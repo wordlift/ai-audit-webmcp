@@ -43,6 +43,8 @@ export interface SitePageSnapshot {
   jsonLdTypes: string[];
   entities: ExtractedEntity[];
   pageTools: PageAgentTool[];
+  /** The entry points this page declares; collector-only, never stored in a report. */
+  entryPoints?: DeclaredEntryPoint[];
   truncated: boolean;
 }
 
@@ -124,6 +126,34 @@ export interface SearchActionProbe {
   note?: string;
 }
 
+/** A schema.org `potentialAction` with a target on the site's own origin, as the page declared it. */
+export interface DeclaredEntryPoint {
+  actionType: string;
+  /** The action in the model this entry point serves. */
+  actionId: string;
+  template: string;
+  httpMethod: string;
+  /** True when it is a read over GET, the only kind the audit executes. */
+  read: boolean;
+  name?: string;
+  sourceUrl: string;
+}
+
+/** What happened when an agent used a declared entry point, or why it did not try. */
+export interface EntryPointProbe {
+  actionType: string;
+  actionId: string;
+  template: string;
+  url: string;
+  sourceUrl: string;
+  status: number;
+  /** False for a write, or for an input the audit could not supply: declared, not tested. */
+  invoked: boolean;
+  /** True only when the call answered and, if a query was sent, acknowledged it. */
+  ok: boolean;
+  note?: string;
+}
+
 /**
  * The result of talking to an MCP endpoint the page links to. `initialized` means the handshake
  * completed, which is a real round trip; a listed tool is a declaration until it is called.
@@ -169,6 +199,8 @@ export interface SiteSnapshot {
   mcpEndpoints: McpEndpointProbe[];
   /** The declared SearchAction template and what happened when an agent executed it. */
   searchAction?: SearchActionProbe;
+  /** Every other declared entry point and what happened when an agent used it, or why it did not. */
+  entryPoints?: EntryPointProbe[];
   /** A WordLift fingerprint the entry page itself carries (plugin path, SDK host, dataset URI). */
   wordlift?: { marker: string; sourceUrl: string };
   /**
