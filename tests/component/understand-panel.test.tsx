@@ -77,7 +77,9 @@ describe("what an agent understands", () => {
     expect(detail).toHaveAttribute("open");
 
     const [reads, textOnly] = screen.getAllByRole("list");
-    expect(within(reads!).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["AlpiNestLodging businesshome pageCheck availability“Alpine stays”"]);
+    // The chips say what they are before they say which: an action the reader has not met yet needs the label.
+    expect(within(reads!).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["AlpiNestLodging businesshome pageAnswers forCheck availabilityIn the site's words“Alpine stays”"]);
+    expect(screen.getByText("Check availability")).toHaveAttribute("title", expect.stringMatching(/^Check availability: /));
     // The owner's primary entity leads the text-only group, whatever its confidence.
     expect(within(textOnly!).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
       "LungauPlace/lungau/apartments/samspitze-4-mariapfarrWikidata Q696371",
