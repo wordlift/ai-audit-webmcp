@@ -58,13 +58,11 @@ const base: ReportRecord = {
 };
 
 describe("what an agent understands", () => {
-  it("leads with the fix, and keeps what agents currently understand one click below", () => {
+  it("leads with the fix, with what agents currently understand open beneath it as the evidence", () => {
     render(<UnderstandPanel report={base} />);
     expect(screen.getByRole("heading", { name: /fix what agents cannot understand/i })).toBeVisible();
     expect(screen.getByText(/Agents found 3 important things on these pages\./)).toHaveTextContent("1 is already machine-readable. 2 exist only in the text.");
-    const detail = screen.getByText(/see what agents currently understand/i).closest("details")!;
-    expect(detail).not.toHaveAttribute("open");
-    fireEvent.click(screen.getByText(/see what agents currently understand/i));
+    const detail = screen.getByText(/what agents currently understand/i).closest("details")!;
     expect(detail).toHaveAttribute("open");
 
     const [reads, textOnly] = screen.getAllByRole("list");
@@ -85,7 +83,6 @@ describe("what an agent understands", () => {
     const link = screen.getByRole("link", { name: /publish the missing 2 with wordlift/i });
     expect(link).toHaveAttribute("href", "https://my.wordlift.io/?source=ai-audit&report=4a8a04c0-e247-4bec-a440-d9f3506f9212&intent=fix");
 
-    fireEvent.click(screen.getByText(/see what agents currently understand/i));
     const fold = screen.getByText(/see the markup for one of them/i).closest("details")!;
     expect(fold).not.toHaveAttribute("open");
     fireEvent.click(screen.getByText(/see the markup for one of them/i));
@@ -100,7 +97,6 @@ describe("what an agent understands", () => {
     render(<UnderstandPanel report={{ ...base, contextGraph: { ...base.contextGraph!, entities: [declared] } }} />);
     expect(screen.getByRole("heading", { name: /agents understand your business/i })).toBeVisible();
     expect(screen.getByText(/Agents found 1 important thing on these pages\./)).toHaveTextContent("All of it is already machine-readable.");
-    fireEvent.click(screen.getByText(/see what agents currently understand/i));
     expect(screen.getByText(/Everything the pages describe is already machine-readable/)).toBeVisible();
     expect(screen.queryByRole("link", { name: /publish/i })).toBeNull();
   });

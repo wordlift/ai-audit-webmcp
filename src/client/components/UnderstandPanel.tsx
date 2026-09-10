@@ -7,7 +7,7 @@ import { publishUrl, sampleJsonLd } from "./FixPanel";
  * Fix what agents cannot understand. Every entity the audit read on the site's pages, counted:
  * what is already machine-readable, and what exists only in the text. The second group is the
  * finding, and publishing it is the button. What agents currently understand, entity by entity,
- * waits one click below as the evidence explaining the fix; one entity's markup waits behind it.
+ * is the evidence explaining the fix, open on the page; one entity's markup waits behind a fold.
  */
 const MAX_PER_GROUP = 12;
 
@@ -123,8 +123,9 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
         </p>
       )}
 
-      <details className="understand-detail">
-        <summary>See what agents currently understand</summary>
+      {/* Open by default: the lists are the evidence for the fix, and a person wants to see them. */}
+      <details className="understand-detail" open>
+        <summary>What agents currently understand</summary>
         <div className="entity-groups">
           <div className="entity-group">
             <h3>

@@ -23,7 +23,6 @@ test("a report opens with three words and keeps the full audit one click away", 
   await expect(three).toContainText(/works|fix this|talk to us/i);
   // Understand follows: every entity the audit read, named plainly, with where it was found.
   await expect(page.getByRole("heading", { name: /fix what agents cannot understand|agents understand your business/i })).toBeVisible();
-  await page.getByText(/see what agents currently understand/i).click();
   await expect(page.locator(".entity-row").filter({ hasText: "Trail Jacket" })).toBeVisible();
   await expect(page.locator(".entity-row").filter({ hasText: "Trail Jacket" })).toContainText("Product");
   // The full audit says what it is before it opens, and the precise names stay behind it.
