@@ -161,7 +161,6 @@ export function HomeRoute() {
               {phase ? "Reading your site" : "Audit my site"} <ArrowRight size={18} />
             </button>
           </div>
-          <p>No account required. Public websites only.</p>
           <p className="pitch-link"><Link to="/pitch">Pitching to a client? Compare a site with two competitors →</Link></p>
           {(
             <div className="try-sites" aria-label="Suggested sites">
