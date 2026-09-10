@@ -63,7 +63,8 @@ export function HomeRoute() {
   const [wordIndex, setWordIndex] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<"demo" | "live" | null>(null);
+  // The live sites show at once; only a demo deployment swaps them, once its health check says so.
+  const [mode, setMode] = useState<"demo" | "live">("live");
   const timers = useRef<number[]>([]);
   const tickers = useRef<number[]>([]);
   const phase = phaseIndex === null ? null : PHASES[phaseIndex].label;
@@ -162,7 +163,7 @@ export function HomeRoute() {
           </div>
           <p>No account required. Public websites only.</p>
           <p className="pitch-link"><Link to="/pitch">Pitching to a client? Compare a site with two competitors →</Link></p>
-          {mode && (
+          {(
             <div className="try-sites" aria-label="Suggested sites">
               <span className="try-sites-label">
                 {mode === "demo" ? "Demo mode — pick a sample site:" : "No site handy? Try one of these:"}

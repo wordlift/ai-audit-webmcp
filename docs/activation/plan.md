@@ -558,7 +558,11 @@ punctuation and a legal form. On wordlift.io the chips that remain are Google, K
 Open API and Eyewear, each right. Andrea saw "Mauro" and "Valentina" as entities there: wordlift.io's
 own JSON-LD declares its blog authors as Persons named by a lowercase first name, with empty
 givenName and familyName (a plugin habit worth fixing on the site). A person now needs a surname to
-be listed, declared or inferred.
+be listed, declared or inferred. Andrea's reading of the entity rows: the action chips name actions
+the reader has never met, and the footnote sat too close. Each row now says "Answers for" before
+its action chips and "In the site's words" before its quoted terms, a chip explains its colour on
+hover, and the footnote breathes. The suggested sites on the home page show at once instead of
+waiting for the health check, which on a cold instance took seconds.
 
 Next (P1): Gemini as a recall lever in parallel, page-confirmed, if the lists stay short; usage on the action card
 from the ledger; the enterprise test as a browser spec proving each of the eight questions is two

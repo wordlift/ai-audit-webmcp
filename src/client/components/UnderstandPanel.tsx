@@ -94,6 +94,9 @@ function openFullAudit() {
   if (fold) fold.open = true;
 }
 
+/** What the chip's colour says about the action today, for the reader who hovers. */
+const PLAIN_WORDS: Record<string, string> = { works: "an AI agent can do this today", fix: "fix this, agents cannot do it yet", talk: "talk to us, there is no interface for it", none: "not expected of this kind of site" };
+
 function EntityList({ entities, tone, report }: { entities: DomainEntity[]; tone: "published" | "text"; report: ReportRecord }) {
   const shown = entities.slice(0, MAX_PER_GROUP);
   const more = entities.length - shown.length;
@@ -114,9 +117,11 @@ function EntityList({ entities, tone, report }: { entities: DomainEntity[]; tone
                       Wikidata {links.wikidata.id}
                     </a>
                   )}
+                  {links.actions.length > 0 && <small className="entity-links-label">Answers for</small>}
                   {links.actions.map((action) => (
-                    <span key={action.actionId} className={`entity-link entity-link-${action.word ?? "none"}`}>{action.label}</span>
+                    <span key={action.actionId} className={`entity-link entity-link-${action.word ?? "none"}`} title={`${action.label}: ${PLAIN_WORDS[action.word ?? "none"]}`}>{action.label}</span>
                   ))}
+                  {links.terms.length > 0 && <small className="entity-links-label">In the site's words</small>}
                   {links.terms.map((term) => (
                     <span key={term} className="entity-link entity-link-term">“{term}”</span>
                   ))}
@@ -207,8 +212,8 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
             )}
           </div>
         </div>
-        <p className="entity-more">
-          Each row shows the actions the entity answers for and the words the site uses for it.{" "}
+        <p className="entity-more understand-footnote">
+          Each row shows the actions the entity answers for, in the colour of what agents can do today, and the words the site uses for it.{" "}
           <a href="#full-audit" onClick={openFullMap}>Open the full map</a>, where entities, terms and actions are drawn together.
         </p>
         {sample && sampleText && (
