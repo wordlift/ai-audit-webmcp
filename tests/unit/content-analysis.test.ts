@@ -1,4 +1,4 @@
-import { ContentAnalysisProvider, ENTITY_LABELS, nodesFrom } from "../../src/server/adapters/markup/ContentAnalysis.js";
+import { ContentAnalysisProvider, ENTITY_LABELS, labelsFor, nodesFrom } from "../../src/server/adapters/markup/ContentAnalysis.js";
 
 const page = {
   url: "https://alpina.travel/lungau/apartments/",
@@ -52,6 +52,12 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
     expect((calls[0]?.init.headers as Record<string, string>).authorization).toBe("Key wl-key");
     const body = JSON.parse(String(calls[0]?.init.body)) as { text: string; labels: string[]; confidence: number };
     expect(body.labels).toEqual([...ENTITY_LABELS]);
+
+    // Told what kind of site it is reading, the provider asks for the things that kind of business is made of.
+    await provider.generate({ ...page, siteType: "travel-hospitality" });
+    const travel = JSON.parse(String(calls[1]?.init.body)) as { labels: string[] };
+    expect(travel.labels).toEqual(expect.arrayContaining(["Apartment", "Hotel", "Tour", "Pass", "Attraction", "Restaurant"]));
+    expect(travel.labels).not.toContain("Integration");
     expect(body.text.startsWith("Apartments in Lungau\nFamily apartments in Mariapfarr.\nSamspitze 4\n")).toBe(true);
     expect(body.confidence).toBeLessThanOrEqual(0.5);
   });
@@ -90,6 +96,18 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
   it("never lets a name the page does not contain through, whatever the service says", () => {
     const nodes = nodesFrom([{ text: "Samspitze 4", label: "Apartment", score: 0.9 }, { text: "Hotel Invented", label: "Hotel", score: 0.99 }], 0.6, 0.7, [], "Welcome to Samspitze 4 in Lungau.");
     expect(nodes.map((node) => node.name)).toEqual(["Samspitze 4"]);
+  });
+
+  it("asks each kind of site for what it is made of, on top of what every site is asked for", () => {
+    expect(labelsFor(undefined)).toEqual([...ENTITY_LABELS]);
+    expect(labelsFor("commerce-retail")).toEqual(expect.arrayContaining(["Product", "Brand", "Collection", "Store"]));
+    expect(labelsFor("saas")).toEqual(expect.arrayContaining(["Plan", "Integration", "API"]));
+    expect(labelsFor("publisher-content")).toEqual(expect.arrayContaining(["Article", "Author", "Podcast"]));
+    expect(labelsFor("finance-insurance")).toEqual(expect.arrayContaining(["Policy", "Fund", "Card"]));
+    expect(labelsFor("other")).toEqual([...ENTITY_LABELS]);
+    // A trip, a pass and a plan land on types the map already speaks.
+    const nodes = nodesFrom([{ text: "Lungau Card", label: "Pass", score: 0.9 }, { text: "Glacier Tour", label: "Tour", score: 0.9 }, { text: "Team plan", label: "Plan", score: 0.9 }], 0.6, 0.7, []);
+    expect(nodes.map((node) => `${node.types[0]}:${node.name}`)).toEqual(["Product:Lungau Card", "TouristTrip:Glacier Tour", "Product:Team plan"]);
   });
 
   it("maps the service's labels onto schema.org types the map already speaks", () => {

@@ -66,7 +66,7 @@ function snapshot(): SiteSnapshot {
 const scraper: ScrapeProvider = { name: "stub", collect: async () => snapshot() };
 
 /** Answers with the same two entities for any page: one namesake of the declared entity, one new. */
-function fakeMarkup(options: { fail?: boolean } = {}) {
+function fakeMarkup(options: { fail?: boolean; withOffer?: boolean } = {}) {
   const asked: MarkupPageInput[] = [];
   const provider: MarkupProvider = {
     name: "fake",
@@ -80,7 +80,16 @@ function fakeMarkup(options: { fail?: boolean } = {}) {
         usage: { inputTokens: 100, outputTokens: 50, estimatedUsd: 0.0001 },
         entities: [
           { id: `${page.url}#inferred-lodgingbusiness-samspitze-4`, types: ["LodgingBusiness"], name: "Samspitze 4", alternateNames: [], sourceUrl: page.url, sameAs: [], offers: [], origin: "inferred" },
-          { id: "https://alpina.travel/#inferred-place-lungau-valley", types: ["Place"], name: "Lungau Valley", alternateNames: [], sourceUrl: page.url, sameAs: [], offers: [], origin: "inferred" },
+          {
+            id: "https://alpina.travel/#inferred-place-lungau-valley",
+            types: ["Place"],
+            name: "Lungau Valley",
+            alternateNames: [],
+            sourceUrl: page.url,
+            sameAs: [],
+            offers: options.withOffer ? [{ name: "Valley pass", price: "49", priceCurrency: "EUR" }] : [],
+            origin: "inferred",
+          },
         ],
       };
       return outcome;
@@ -106,6 +115,18 @@ const audit = (target: AuditOrchestrator, depth?: "basic" | "deep") =>
   target.create({ requestId: randomUUID(), url: "https://alpina.travel/", ...(depth ? { depth } : {}) });
 
 describe("the markup a page should have", () => {
+  it("tells the extractor what kind of site it is reading, and reads the evidence before anything is inferred", async () => {
+    const { provider, asked } = fakeMarkup({ withOffer: true });
+    const report = await audit(orchestrator(provider));
+    // The site type the extractor was told is the one the report ends with.
+    expect(asked.length).toBeGreaterThan(0);
+    for (const page of asked) expect(page.siteType).toBe(report.classification?.primaryArchetype);
+    // An offer a model read into the text is never evidence that people can see prices here.
+    const claims = (report.capabilities ?? []).flatMap((capability) => capability.evidence.map((item) => item.claim));
+    expect(claims.some((claim) => claim.includes("Lungau Valley"))).toBe(false);
+    expect(report.contextGraph?.entities.find((entity) => entity.name === "Lungau Valley")?.offers).toEqual([{ name: "Valley pass", price: "49", priceCurrency: "EUR" }]);
+  });
+
   it("adds inferred entities beside the declared ones, labelled, and merges a namesake into the declared one", async () => {
     const { provider } = fakeMarkup();
     const report = await audit(orchestrator(provider));

@@ -33,24 +33,26 @@ const DEFAULT_TIMEOUT_MS = 60_000;
 const MAX_TEXT_CHARACTERS = 12_000;
 const MAX_ENTITIES = 20;
 
-/** The things a business is made of, asked for by name. The zero-shot recogniser takes labels as instructions. */
-export const ENTITY_LABELS = [
-  "Organization",
-  "Person",
-  "Place",
-  "City",
-  "Region",
-  "Country",
-  "Product",
-  "Service",
-  "Offer",
-  "Apartment",
-  "Hotel",
-  "Accommodation",
-  "Attraction",
-  "Event",
-  "Brand",
-] as const;
+/**
+ * The things a business is made of, asked for by name. The zero-shot recogniser takes labels as
+ * instructions, so a travel site is asked for its stays, tours and passes, a shop for its products
+ * and brands, a software company for its plans and integrations. What every site is asked for
+ * comes first; the rest depends on what kind of site the audit is reading.
+ */
+export const ENTITY_LABELS = ["Organization", "Person", "Place", "City", "Region", "Country", "Product", "Service", "Offer", "Event", "Brand"] as const;
+
+const LABELS_BY_SITE_TYPE: Record<string, readonly string[]> = {
+  "travel-hospitality": ["Apartment", "Hotel", "Resort", "Accommodation", "Attraction", "Tour", "Pass", "Package", "Restaurant", "Ski area", "Lake", "Mountain"],
+  "commerce-retail": ["Collection", "Store", "Discount", "Bundle", "Model"],
+  saas: ["Plan", "Integration", "Platform", "Tool", "API", "Company"],
+  "publisher-content": ["Article", "Author", "Publication", "Series", "Podcast"],
+  "finance-insurance": ["Plan", "Policy", "Bank", "Insurer", "Fund", "Account", "Card"],
+};
+
+/** The labels for a page: what every site is asked for, then what this kind of site is made of. */
+export function labelsFor(siteType?: string): string[] {
+  return [...ENTITY_LABELS, ...(siteType ? (LABELS_BY_SITE_TYPE[siteType] ?? []) : [])];
+}
 
 /**
  * The service's labels as schema.org types, the vocabulary the rest of the map speaks. A country
@@ -72,7 +74,36 @@ const SCHEMA_TYPES: Record<string, string> = {
   Offer: "Offer",
   Apartment: "Apartment",
   Hotel: "Hotel",
+  Resort: "Resort",
   Accommodation: "Accommodation",
+  Tour: "TouristTrip",
+  Pass: "Product",
+  Package: "Offer",
+  Restaurant: "Restaurant",
+  "Ski area": "Place",
+  Lake: "Place",
+  Mountain: "Place",
+  Collection: "ProductGroup",
+  Store: "Store",
+  Discount: "Offer",
+  Bundle: "Offer",
+  Model: "Product",
+  Plan: "Product",
+  Integration: "SoftwareApplication",
+  Platform: "SoftwareApplication",
+  Tool: "SoftwareApplication",
+  API: "SoftwareApplication",
+  Article: "Article",
+  Author: "Person",
+  Publication: "Organization",
+  Series: "CreativeWork",
+  Podcast: "CreativeWork",
+  Policy: "Product",
+  Bank: "Organization",
+  Insurer: "Organization",
+  Fund: "Product",
+  Account: "Product",
+  Card: "Product",
   Event: "Event",
   Brand: "Brand",
   Book: "Book",
@@ -120,7 +151,7 @@ export class ContentAnalysisProvider implements MarkupProvider {
       response = await fetchImpl(`${(this.options.endpoint ?? CONTENT_ANALYSIS_ENDPOINT).replace(/\/$/, "")}/analyze/text`, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Key ${this.options.apiKey}` },
-        body: JSON.stringify({ text, confidence: Math.min(confidence, 0.5), labels: [...ENTITY_LABELS] }),
+        body: JSON.stringify({ text, confidence: Math.min(confidence, 0.5), labels: labelsFor(page.siteType) }),
         signal: controller.signal,
       });
     } catch (error) {

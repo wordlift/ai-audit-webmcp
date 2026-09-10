@@ -1,3 +1,4 @@
+import type { Archetype } from "../../../shared/types/index.js";
 import type { ExtractedEntity } from "../scrape/ScrapeProvider.js";
 
 /**
@@ -13,6 +14,8 @@ export interface MarkupPageInput {
   headings: string[];
   /** The page's readable text, already bounded by the collector. Raw HTML never reaches here. */
   text: string;
+  /** What kind of site this is, as far as the audit can tell before compiling: it decides what to look for. */
+  siteType?: Archetype;
 }
 
 export interface MarkupUsage {

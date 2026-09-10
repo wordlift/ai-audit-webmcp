@@ -811,6 +811,7 @@ export const DOMAIN_ENTITY_TYPES: ReadonlySet<string> = new Set([
   "AdministrativeArea",
   "TouristAttraction",
   "TouristDestination",
+  "TouristTrip",
   "Brand",
   "Offer",
   "Restaurant",

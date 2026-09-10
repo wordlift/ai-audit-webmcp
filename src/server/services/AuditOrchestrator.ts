@@ -648,15 +648,18 @@ export class AuditOrchestrator {
       errors.push(auditErrorToReportError(auditResult.reason));
     }
 
-    // The markup a page should have, inferred from its text: a second source of entities beside
-    // the declared one, labelled as such, read before the graph is compiled and after the
-    // collector has said what the page declares.
-    const markup = snapshot && providers.markup ? await this.inferMarkup(snapshot, providers.markup, scanDepth) : undefined;
-
+    // Evidence is read from what the collector found, before any entity is inferred: what a model
+    // reads into the text can never become a claim about the site.
     const detection = snapshot ? detectSiteEvidence(snapshot, collectedAt) : { evidence: [], signals: [] };
     const classification = snapshot && providers.classify
       ? await providers.classify.classify({ text: snapshot.text, url: snapshot.canonicalUrl })
       : { categories: [], model: "behavior-only", failureReason: snapshot ? undefined : "No page text was collected." };
+
+    // The entities a page is about, read from its text once the audit knows what kind of site it
+    // is reading, so the extractor looks for the things that kind of business is made of. A second
+    // source beside the declared one, labelled as such, never evidence, never readiness.
+    const siteType = inferArchetype(this.model, classification.categories, [...detection.signals, ...(audit?.signals ?? [])]).primaryArchetype;
+    const markup = snapshot && providers.markup ? await this.inferMarkup(snapshot, providers.markup, scanDepth, siteType) : undefined;
 
     if (classification.failureReason) {
       errors.push(failure("classifier_unavailable", "understanding", classification.failureReason, false));
@@ -729,6 +732,7 @@ export class AuditOrchestrator {
     snapshot: SiteSnapshot,
     provider: MarkupProvider,
     scanDepth?: ScanDepth,
+    siteType?: Archetype,
   ): Promise<CompiledInputs["markup"] | undefined> {
     const onBasic = this.options.markupOnBasic ?? "thin";
     const pages =
@@ -742,7 +746,7 @@ export class AuditOrchestrator {
 
     const outcomes = await Promise.allSettled(
       chosen.map((page) =>
-        provider.generate({ url: page.url, title: page.title, description: page.description, headings: page.headings, text: page.text }),
+        provider.generate({ url: page.url, title: page.title, description: page.description, headings: page.headings, text: page.text, ...(siteType ? { siteType } : {}) }),
       ),
     );
     let generated = 0;
