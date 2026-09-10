@@ -492,6 +492,41 @@ Two load-sensitive tests, tracked and not understood: an "audit then read" case,
 upstream-failure case timing out at five seconds, each roughly one full parallel run in four,
 never alone and never twice running.
 
+## The brief of 2026-09-10: simplify the product without simplifying the system
+
+Andrea's brief sets the journey as Audit → Fix → Activate → Prove and the rule as "make the
+interface simpler as the underlying system becomes more sophisticated": plain words on the surface,
+the exact model one click below, every simple state mapping to one precise state. Decisions taken
+with it: Fix and Activate go to the WordLift dashboard with the report, the action and an intent
+(`fix`, `agent-ready`, `activate`, `keep`); Talk to us goes to the team's book-a-demo page;
+the agent's diary stays, folded; "Not relevant" is the fourth answer; the entity lists stay open on
+the page; and Content Analysis v3 replaces the Gemini stand-in as the entities behind Fix, because
+that list is the business card.
+
+Built (P0, 2026-09-10):
+
+- The first screen is an action screen: "AI agents can do 1 of the 3 things that matter on
+  alpina.travel. Fix the other 2.", readiness as evidence, three doors, the diary folded.
+- Fix this opens remediation: what needs to change, in the person's words, one door per diagnosed
+  case, the business owner, when it was verified, then the technical detail (`remedyFor`).
+- Understand moved under Fix: the counts, "Publish the missing 7 with WordLift", the lists open.
+- Before publishing: who actually performs these actions, four answers, one explanation, and the
+  ChatGPT interview as the precise path.
+- Activate: "Make alpina.travel usable by AI agents", what WordLift keeps synchronized, the table,
+  the exact artifacts, then Prove.
+- The landing copy; the full audit labelled as the evidence layer, with agent-facing surfaces.
+- Content Analysis v3 as the provider (`ContentAnalysis.ts`): asked for the things a business is
+  made of by name, one name one thing, no country, no glued labels, Wikidata links only when sure.
+
+Next (P1): the full audit reorganised into the brief's seven sections; usage on the action card
+from the ledger; the enterprise test as a browser spec proving each of the eight questions is two
+clicks away; labels per site type for the extractor. P2: recurring proof beyond the ledger; the
+enterprise review path the model already supports.
+
+The two tests the brief sets: the Replit test (a stranger reads the first screen and can say what
+agents can do, what is broken and what to click, within thirty seconds) is for two people outside
+the team on the preview; the enterprise test (eight questions, two clicks) is the P1 spec.
+
 ## Review pauses
 
 1. After Audit: the one-minute test with two people outside the team; the bill after a week of
