@@ -54,6 +54,8 @@ const base: ReportRecord = {
     lexicalEntries: [
       { id: "term:stays", label: "Alpine stays", aliases: [], kind: "topic", entityIds: [declared.id], sourceUrls: ["https://alpina.travel/"], confidence: 0.8 },
       { id: "term:alpinest", label: "AlpiNest", aliases: [], kind: "entity-name", entityIds: [declared.id], sourceUrls: ["https://alpina.travel/"], confidence: 0.9 },
+      // A headline the page uses for everything on it is not a word the site uses for one entity.
+      { id: "term:headline", label: "Mountain days. One easy apartment base.", aliases: [], kind: "topic", entityIds: [declared.id, inferred.id, promoted.id], sourceUrls: ["https://alpina.travel/"], confidence: 0.7 },
     ],
     interfaces: [],
     bindings: [],
@@ -108,8 +110,9 @@ describe("what an agent understands", () => {
     const links = within(row).getByLabelText(/what the map links to alpinest/i);
     expect(links).toHaveTextContent("Check availability");
     expect(links).toHaveTextContent("“Alpine stays”");
-    // The entity's own name is not a word the site uses for it.
+    // The entity's own name is not a word the site uses for it, and neither is the page's headline.
     expect(links).not.toHaveTextContent("“AlpiNest”");
+    expect(links).not.toHaveTextContent("Mountain days");
     expect(screen.getByRole("link", { name: /open the full map/i })).toHaveAttribute("href", "#full-audit");
     expect(linksFor(inferred, base)).toEqual({ actions: [], terms: [], wikidata: null });
     // A Wikidata link the extractor was sure of is shown, and only when it exists.

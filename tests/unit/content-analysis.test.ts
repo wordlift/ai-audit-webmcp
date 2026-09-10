@@ -1,4 +1,4 @@
-import { ContentAnalysisProvider, ENTITY_LABELS, labelsFor, nodesFrom } from "../../src/server/adapters/markup/ContentAnalysis.js";
+import { ContentAnalysisProvider, ENTITY_LABELS, labelMatches, labelsFor, nodesFrom } from "../../src/server/adapters/markup/ContentAnalysis.js";
 
 const page = {
   url: "https://alpina.travel/lungau/apartments/",
@@ -15,7 +15,8 @@ const answer = {
   processing_time_ms: 13544,
   pipeline_version: "0.1.0",
   entities: [
-    { text: "Samspitze 4", label: "Apartment", start: 0, end: 11, score: 0.83, entity_id: "Q1774463", entity_label: "Klimmspitze", entity_description: "mountain in Austria", disambiguation_score: 0.5 },
+    // The linker is sure, and wrong: a mountain's label shares nothing with the apartment's name.
+    { text: "Samspitze 4", label: "Apartment", start: 0, end: 11, score: 0.83, entity_id: "Q1774463", entity_label: "Klimmspitze", entity_description: "mountain in Austria", disambiguation_score: 0.9 },
     { text: "two-bedroom family apartment", label: "Apartment", start: 17, end: 45, score: 0.51 },
     { text: "Mariapfarr", label: "City", start: 49, end: 59, score: 0.94, entity_id: "Q266703", entity_label: "Salzkammergut", disambiguation_score: 0.5 },
     { text: "Lungau", label: "Place", start: 61, end: 67, score: 0.65, entity_id: "Q47621", entity_label: "Longone al Segrino", disambiguation_score: 0.5 },
@@ -77,7 +78,7 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
       ["Place", "Rome", "inferred"],
     ]);
     const byName = Object.fromEntries(outcome.entities.map((entity) => [entity.name, entity]));
-    // Sure: Rome at 0.73 carries its link and description. Guessed: Samspitze 4 at 0.5 carries nothing of "Klimmspitze".
+    // Sure and matching: Rome at 0.73 carries its link and description. Sure and wrong: Samspitze 4 carries nothing of "Klimmspitze".
     expect(byName["Rome"]).toMatchObject({ sameAs: ["https://www.wikidata.org/wiki/Q220"], description: "capital of Italy" });
     expect(byName["Samspitze 4"]).toMatchObject({ sameAs: [], alternateNames: [] });
     expect(byName["Samspitze 4"]?.description).toBeUndefined();
@@ -127,6 +128,17 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
     // A trip, a pass and a plan land on types the map already speaks.
     const nodes = nodesFrom([{ text: "Lungau Card", label: "Pass", score: 0.9 }, { text: "Glacier Tour", label: "Tour", score: 0.9 }, { text: "Team plan", label: "Plan", score: 0.9 }], 0.6, 0.7, []);
     expect(nodes.map((node) => `${node.types[0]}:${node.name}`)).toEqual(["Product:Lungau Card", "TouristTrip:Glacier Tour", "Product:Team plan"]);
+  });
+
+  it("keeps a link only when the linked thing's label matches the name", () => {
+    expect(labelMatches("Austria", "Austria")).toBe(true);
+    expect(labelMatches("Knowledge Graph", "knowledge graph")).toBe(true);
+    expect(labelMatches("Open API", "OpenAPI Specification")).toBe(true);
+    expect(labelMatches("Lungau", "Longone al Segrino")).toBe(false);
+    expect(labelMatches("Samspitze 4", "Klimmspitze")).toBe(false);
+    expect(labelMatches("WordLift", "Mahdtalhaus")).toBe(false);
+    expect(labelMatches("Mariapfarr", "Salzkammergut")).toBe(false);
+    expect(labelMatches("Salzburg region", "Salzburg")).toBe(true);
   });
 
   it("maps the service's labels onto schema.org types the map already speaks", () => {

@@ -116,6 +116,22 @@ const SCHEMA_TYPES: Record<string, string> = {
   SportsTeam: "SportsTeam",
 };
 
+/**
+ * A Wikidata link is kept only when the linked thing's own label matches the name on the page.
+ * The linker was sure that "Samspitze 4" is Klimmspitze, a mountain; its score cannot gate a
+ * link alone, and a label that shares nothing with the name is the tell.
+ */
+export function labelMatches(name: string, label: string): boolean {
+  const normalise = (value: string) => value.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+  const squash = (value: string) => normalise(value).replace(/[^\p{L}\p{N}]+/gu, "");
+  const tokens = (value: string) => normalise(value).split(/[^\p{L}\p{N}]+/u).filter((token) => token.length >= 3);
+  const [a, b] = [squash(name), squash(label)];
+  if (!a || !b) return false;
+  if (a.includes(b) || b.includes(a)) return true;
+  const shared = new Set(tokens(label));
+  return tokens(name).some((token) => shared.has(token));
+}
+
 /** Role nouns the recogniser reads as people, and the generic phrases it reads as things. Neither is an entity. */
 const NOT_A_NAME = /^(guests?|visitors?|customers?|users?|members?|teams?|staff|family|families|children|kids|adults?|people|clients?|partners?|travellers?|travelers?|owners?|hosts?|breakfast|lunch|dinner|summer|winter|spring|autumn|fall|weekend|holidays?|vacations?)$/i;
 
@@ -233,12 +249,17 @@ export function nodesFrom(found: AnalysedEntity[], confidence: number, linkConfi
     const key = name.toLowerCase();
     if (nodes.has(key)) continue;
 
-    const linked = typeof entity.entity_id === "string" && /^Q\d+$/.test(entity.entity_id) && typeof entity.disambiguation_score === "number" && entity.disambiguation_score >= linkConfidence;
-    const canonical = linked && typeof entity.entity_label === "string" ? entity.entity_label.trim() : "";
+    const canonical = typeof entity.entity_label === "string" ? entity.entity_label.trim() : "";
+    const linked =
+      typeof entity.entity_id === "string" &&
+      /^Q\d+$/.test(entity.entity_id) &&
+      typeof entity.disambiguation_score === "number" &&
+      entity.disambiguation_score >= linkConfidence &&
+      labelMatches(name, canonical);
     nodes.set(key, {
       types: [type],
       name,
-      alternateNames: canonical && canonical.toLowerCase() !== name.toLowerCase() ? [canonical] : [],
+      alternateNames: linked && canonical && canonical.toLowerCase() !== name.toLowerCase() ? [canonical] : [],
       ...(linked && typeof entity.entity_description === "string" && entity.entity_description.trim() ? { description: entity.entity_description.trim() } : {}),
       sameAs: linked ? [`https://www.wikidata.org/wiki/${entity.entity_id as string}`] : [],
       offers: [],
