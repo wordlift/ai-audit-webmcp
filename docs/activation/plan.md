@@ -547,6 +547,15 @@ scores each mention on its own, and both the page's first mention and the merge'
 leave an entity bare that a later mention or page had linked. Now a later mention lends its link on
 the page, and between two inferred sightings the link travels in the merge; a declared entity still
 takes nothing from an inferred namesake. The ChatGPT review sits beside its sentence, button right.
+Reproduced page by page, the links turned out to be the linker's, not ours: on alpina.travel every
+Lungau, Mariapfarr and Austrian Alps mention came back linked to a wrong item at the 0.5 floor, and
+the one label-matching top-score link it can be coaxed into (Lungau, Q4255352) is a village in
+Indonesia. Decision, 2026-09-10: keep the gate as it is, links stay rare until the linker improves;
+the evidence goes to the Content Analysis team as an issue on wordlift/content-analysis (#1). No
+lookup of our own. The same run showed our own gate letting "Data Connect" through as "data
+integration" on a shared word: the label must now be the name itself, give or take case, accents,
+punctuation and a legal form. On wordlift.io the chips that remain are Google, Knowledge Graph,
+Open API and Eyewear, each right.
 
 Next (P1): Gemini as a recall lever in parallel, page-confirmed, if the lists stay short; usage on the action card
 from the ledger; the enterprise test as a browser spec proving each of the eight questions is two

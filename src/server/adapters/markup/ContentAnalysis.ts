@@ -117,20 +117,25 @@ const SCHEMA_TYPES: Record<string, string> = {
 };
 
 /**
- * A Wikidata link is kept only when the linked thing's own label matches the name on the page.
- * The linker was sure that "Samspitze 4" is Klimmspitze, a mountain; its score cannot gate a
- * link alone, and a label that shares nothing with the name is the tell.
+ * A Wikidata link is kept only when the linked thing's own label is the name on the page. The
+ * linker was sure that "Samspitze 4" is Klimmspitze, a mountain, and that "Data Connect" is data
+ * integration, a concept: its score cannot gate a link alone, and a label that is not the name is
+ * the tell. Case, accents, punctuation and a legal form ("Google LLC") are the only differences
+ * allowed; a label that contains the name, or shares a word with it, names something else.
  */
 export function labelMatches(name: string, label: string): boolean {
   const normalise = (value: string) => value.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
-  const squash = (value: string) => normalise(value).replace(/[^\p{L}\p{N}]+/gu, "");
-  const tokens = (value: string) => normalise(value).split(/[^\p{L}\p{N}]+/u).filter((token) => token.length >= 3);
-  const [a, b] = [squash(name), squash(label)];
-  if (!a || !b) return false;
-  if (a.includes(b) || b.includes(a)) return true;
-  const shared = new Set(tokens(label));
-  return tokens(name).some((token) => shared.has(token));
+  const tokens = (value: string) =>
+    normalise(value)
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((token) => token.length > 0)
+      .filter((token, index, all) => !(index === 0 && all.length > 1 && token === "the"))
+      .filter((token, index, all) => !(index === all.length - 1 && all.length > 1 && LEGAL_FORMS.has(token)));
+  const [a, b] = [tokens(name).join(" "), tokens(label).join(" ")];
+  return a.length > 0 && a === b;
 }
+
+const LEGAL_FORMS = new Set(["inc", "llc", "ltd", "limited", "gmbh", "ag", "srl", "spa", "sa", "sas", "plc", "co", "corp", "corporation", "company", "bv", "nv", "oy", "ab", "as"]);
 
 /** Role nouns the recogniser reads as people, and the generic phrases it reads as things. Neither is an entity. */
 const NOT_A_NAME = /^(guests?|visitors?|customers?|users?|members?|teams?|staff|family|families|children|kids|adults?|people|clients?|partners?|travellers?|travelers?|owners?|hosts?|breakfast|lunch|dinner|summer|winter|spring|autumn|fall|weekend|holidays?|vacations?)$/i;

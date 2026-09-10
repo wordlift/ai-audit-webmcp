@@ -146,15 +146,22 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
     expect(nodes.map((node) => `${node.types[0]}:${node.name}`)).toEqual(["Product:Lungau Card", "TouristTrip:Glacier Tour", "Product:Team plan"]);
   });
 
-  it("keeps a link only when the linked thing's label matches the name", () => {
+  it("keeps a link only when the linked thing's label is the name, give or take case, accents and a legal form", () => {
     expect(labelMatches("Austria", "Austria")).toBe(true);
     expect(labelMatches("Knowledge Graph", "knowledge graph")).toBe(true);
-    expect(labelMatches("Open API", "OpenAPI Specification")).toBe(true);
+    expect(labelMatches("Google", "Google LLC")).toBe(true);
+    expect(labelMatches("The Alpina", "Alpina")).toBe(true);
+    expect(labelMatches("Kitzbühel", "Kitzbuhel")).toBe(true);
+    // A label that contains the name, or shares a word with it, names something else.
+    expect(labelMatches("Data Connect", "data integration")).toBe(false);
+    expect(labelMatches("Open API", "OpenAPI Specification")).toBe(false);
+    expect(labelMatches("Mariapfarr", "Pfarrhof Mariapfarr")).toBe(false);
+    expect(labelMatches("AlpiNest Feriendorf Lungau", "Lungau")).toBe(false);
+    expect(labelMatches("Salzburg region", "Salzburg")).toBe(false);
     expect(labelMatches("Lungau", "Longone al Segrino")).toBe(false);
     expect(labelMatches("Samspitze 4", "Klimmspitze")).toBe(false);
     expect(labelMatches("WordLift", "Mahdtalhaus")).toBe(false);
     expect(labelMatches("Mariapfarr", "Salzkammergut")).toBe(false);
-    expect(labelMatches("Salzburg region", "Salzburg")).toBe(true);
   });
 
   it("maps the service's labels onto schema.org types the map already speaks", () => {
