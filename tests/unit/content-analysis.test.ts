@@ -64,10 +64,10 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
     // One Lungau, whatever the recogniser labelled it the second time; no country; no name with a button glued on.
     expect(outcome.entities.map((entity) => [entity.types[0], entity.name, entity.origin])).toEqual([
       ["Apartment", "Samspitze 4", "inferred"],
-      ["City", "Mariapfarr", "inferred"],
+      ["Place", "Mariapfarr", "inferred"],
       ["Place", "Lungau", "inferred"],
       ["Organization", "Mountain Nests Rentals", "inferred"],
-      ["City", "Rome", "inferred"],
+      ["Place", "Rome", "inferred"],
     ]);
     const byName = Object.fromEntries(outcome.entities.map((entity) => [entity.name, entity]));
     // Sure: Rome at 0.73 carries its link and description. Guessed: Samspitze 4 at 0.5 carries nothing of "Klimmspitze".
@@ -105,6 +105,7 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
       0.7,
       [],
     );
-    expect(nodes.map((node) => `${node.types[0]}:${node.name}`)).toEqual(["TouristAttraction:Katschberg", "AdministrativeArea:Salzburg region", "Place:Longone", "Organization:ACME"]);
+    // Every geographic label is a Place, so the same name on two pages merges into one entity.
+    expect(nodes.map((node) => `${node.types[0]}:${node.name}`)).toEqual(["Place:Katschberg", "Place:Salzburg region", "Place:Longone", "Organization:ACME"]);
   });
 });

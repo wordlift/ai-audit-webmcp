@@ -52,22 +52,27 @@ export const ENTITY_LABELS = [
   "Brand",
 ] as const;
 
-/** The service's labels as schema.org types, the vocabulary the rest of the map speaks. A country is where a business is, not what it is. */
+/**
+ * The service's labels as schema.org types, the vocabulary the rest of the map speaks. A country
+ * is where a business is, not what it is. Every geographic label becomes Place: the recogniser
+ * calls Lungau a city on one page and a place on the next, and the map merges across pages by
+ * name and type, so one type for places is what keeps one Lungau one Lungau.
+ */
 const SCHEMA_TYPES: Record<string, string> = {
   Organization: "Organization",
   Company: "Organization",
   Person: "Person",
   Place: "Place",
   Location: "Place",
-  City: "City",
-  Region: "AdministrativeArea",
+  City: "Place",
+  Region: "Place",
+  Attraction: "Place",
   Product: "Product",
   Service: "Service",
   Offer: "Offer",
   Apartment: "Apartment",
   Hotel: "Hotel",
   Accommodation: "Accommodation",
-  Attraction: "TouristAttraction",
   Event: "Event",
   Brand: "Brand",
   Book: "Book",
