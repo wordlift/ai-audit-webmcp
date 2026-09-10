@@ -537,8 +537,14 @@ entity row, the actions it answers for and the words the site uses for it, with 
 click away. Andrea's rule for the list: the same name is one entity, no suggestions, only links
 that exist, because that list is the business card.
 
-Next (P1): Gemini as a recall lever in parallel, page-confirmed, if the lists stay short; the full
-audit reorganised into the brief's seven sections; usage on the action card
+The next iteration, 2026-09-10 evening, on the branch: Observe's tick as an endpoint a Cloud
+Scheduler job calls behind a token (`POST /api/observe/tick`, recipe in OPERATIONS.md), so the
+weekly re-read no longer depends on an instance being awake; the enterprise test as a browser
+spec, the brief's eight questions each proven two clicks from the report; the full audit in the
+brief's seven sections with a nav, and a business-boundaries table it never had; the toolbar's
+Activate button given its own ink.
+
+Next (P1): Gemini as a recall lever in parallel, page-confirmed, if the lists stay short; usage on the action card
 from the ledger; the enterprise test as a browser spec proving each of the eight questions is two
 clicks away; labels per site type for the extractor. P2: recurring proof beyond the ledger; the
 enterprise review path the model already supports.
