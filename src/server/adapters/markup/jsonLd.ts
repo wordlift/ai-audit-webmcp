@@ -1,4 +1,4 @@
-import { DOMAIN_ENTITY_TYPES } from "../scrape/NativeFetch.js";
+import { DOMAIN_ENTITY_TYPES, isNamedEntity } from "../scrape/NativeFetch.js";
 import type { ExtractedEntity, ExtractedOffer } from "../scrape/ScrapeProvider.js";
 
 /**
@@ -90,7 +90,7 @@ export function readJsonLd(document: unknown): { nodes: JsonLdNode[]; issues: st
 const PART_OF_A_LISTING = /^(?:master |main |second |third |guest |double |single |twin |family )?(?:bed ?room|bath ?room|living ?room|dining ?room|kitchen|hallway|balcony|terrace|garage|parking|cellar|attic|floor|lounge|wc|toilet|shower)(?:\s*\d+)?$/i;
 
 export function domainNodes(nodes: JsonLdNode[], issues: string[]): JsonLdNode[] {
-  const kept = nodes.filter((node) => node.types.some((type) => DOMAIN_ENTITY_TYPES.has(type)) && !PART_OF_A_LISTING.test(node.name.trim()));
+  const kept = nodes.filter((node) => node.types.some((type) => DOMAIN_ENTITY_TYPES.has(type)) && !PART_OF_A_LISTING.test(node.name.trim()) && isNamedEntity(node.name, node.types));
   const skipped = nodes.filter((node) => !kept.includes(node));
   if (skipped.length > 0) {
     const types = [...new Set(skipped.map((node) => node.types[0] ?? "Thing"))].slice(0, 8).join(", ");

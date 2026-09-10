@@ -44,6 +44,27 @@ describe("readable text for classification", () => {
   });
 });
 
+describe("declared people", () => {
+  it("keeps a person only with a surname: the blog authors a plugin declares as first names are nobody an agent can look up", async () => {
+    const filler = `<p>${"Structured data for publishers and brands, made to be read. ".repeat(30)}</p>`;
+    const page = `<html><head><title>WordLift</title></head><body><main><h1>WordLift</h1>${filler}</main>
+      <script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+        {"@type":"Organization","@id":"https://site.example/#org","name":"WordLift"},
+        {"@type":"Person","@id":"https://site.example/author/mauro","name":"mauro","givenName":"","familyName":""},
+        {"@type":"Person","@id":"https://site.example/author/valentina","name":"valentina"},
+        {"@type":"Person","@id":"https://site.example/#founder","name":"Andrea Volpini"}
+      ]}</script></body></html>`;
+    const fetcher = async (url: URL) => ({ finalUrl: url.toString(), body: page, truncated: false, status: 200 });
+    const collector = new NativeFetchCollector({}, fetcher);
+    const snapshot = await collector.collect(new URL("https://site.example/"));
+
+    const names = snapshot.pages[0]?.entities.map((entity) => entity.name) ?? [];
+    expect(names).toEqual(expect.arrayContaining(["WordLift", "Andrea Volpini"]));
+    expect(names).not.toContain("mauro");
+    expect(names).not.toContain("valentina");
+  });
+});
+
 describe("the catalog second hop", () => {
   const filler = `<p>${"Fine jewellery for every day, made to be worn. ".repeat(30)}</p>`;
   const site: Record<string, string> = {

@@ -823,6 +823,18 @@ export const DOMAIN_ENTITY_TYPES: ReadonlySet<string> = new Set([
   "SportsTeam",
 ]);
 
+/**
+ * A person an agent can identify has a surname: a site whose markup declares its blog authors as
+ * "mauro" and "valentina", and a model that reads a first name in a testimonial, both name a
+ * person nobody can look up. Declared or inferred, such a mention is a page's furniture, not an
+ * entity of the business.
+ */
+export function isNamedEntity(name: string, types: readonly string[]): boolean {
+  if (!types.includes("Person")) return true;
+  const words = name.trim().split(/\s+/u).filter((word) => /\p{L}/u.test(word));
+  return words.length >= 2;
+}
+
 function collectEntities(node: unknown, entities: ExtractedEntity[], base: URL, depth: number): void {
   if (depth > 8 || !node) return;
   if (Array.isArray(node)) {
@@ -833,7 +845,7 @@ function collectEntities(node: unknown, entities: ExtractedEntity[], base: URL, 
   const record = node as Record<string, unknown>;
   const types = stringList(record["@type"]).map((type) => type.replace(/^https?:\/\/schema\.org\//, ""));
   const name = firstString(record.name, record.headline);
-  if (name && types.some((type) => DOMAIN_ENTITY_TYPES.has(type))) {
+  if (name && types.some((type) => DOMAIN_ENTITY_TYPES.has(type)) && isNamedEntity(name, types)) {
     entities.push({
       id: entityId(record, types[0] ?? "Thing", name, base),
       types: unique(types).slice(0, 12),

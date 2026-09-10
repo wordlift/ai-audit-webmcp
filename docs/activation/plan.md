@@ -555,7 +555,10 @@ the evidence goes to the Content Analysis team as an issue on wordlift/content-a
 lookup of our own. The same run showed our own gate letting "Data Connect" through as "data
 integration" on a shared word: the label must now be the name itself, give or take case, accents,
 punctuation and a legal form. On wordlift.io the chips that remain are Google, Knowledge Graph,
-Open API and Eyewear, each right.
+Open API and Eyewear, each right. Andrea saw "Mauro" and "Valentina" as entities there: wordlift.io's
+own JSON-LD declares its blog authors as Persons named by a lowercase first name, with empty
+givenName and familyName (a plugin habit worth fixing on the site). A person now needs a surname to
+be listed, declared or inferred.
 
 Next (P1): Gemini as a recall lever in parallel, page-confirmed, if the lists stay short; usage on the action card
 from the ledger; the enterprise test as a browser spec proving each of the eight questions is two
