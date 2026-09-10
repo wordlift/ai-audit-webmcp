@@ -562,7 +562,12 @@ be listed, declared or inferred. Andrea's reading of the entity rows: the action
 the reader has never met, and the footnote sat too close. Each row now says "Answers for" before
 its action chips and "In the site's words" before its quoted terms, a chip explains its colour on
 hover, and the footnote breathes. The suggested sites on the home page show at once instead of
-waiting for the health check, which on a cold instance took seconds.
+waiting for the health check, which on a cold instance took seconds. "Runs on WordLift" is back at
+the top, as a chip beside the archetype (detected from the site's own data, never asserted, the
+owner's door to the dashboard), and next to the score a line says what WordLift already delivers
+here, agents can read the business, against what the score measures, whether agents can act.
+Andrea's framing: WordLift's existing impact is readability; the actions are where we take clients
+next.
 
 Next (P1): Gemini as a recall lever in parallel, page-confirmed, if the lists stay short; usage on the action card
 from the ledger; the enterprise test as a browser spec proving each of the eight questions is two

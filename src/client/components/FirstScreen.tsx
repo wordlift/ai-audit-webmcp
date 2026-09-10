@@ -6,6 +6,8 @@ import { getVisits, startReport, type ReportVisits } from "../api/client";
 import { ActionDetailDialog } from "./ActionDetailDialog";
 import { AgentDiary } from "./AgentDiary";
 import { DeepScanOffer } from "./DeepScanOffer";
+import { publishUrl } from "./FixPanel";
+import { groupEntities } from "./UnderstandPanel";
 
 /**
  * The first screen of a report is an action screen. It answers, in under a minute, what agents
@@ -134,6 +136,19 @@ export function readersLine(visits: ReportVisits | null): string | null {
   return `${part(crawlers, "crawler")} and ${part(agents, "agent")} have read this since it was published.`;
 }
 
+/**
+ * Next to a score that measures whether agents can act, what the platform the site runs on already
+ * delivers: agents can read the business. The two are different things, and a reader who sees
+ * "Runs on WordLift" beside a low score deserves to be told which one WordLift is responsible for.
+ */
+export function runsOnLine(report: ReportRecord): string {
+  const name = report.publishedWith?.name ?? "WordLift";
+  const { published, textOnly } = groupEntities(report.contextGraph?.entities ?? []);
+  const total = published.length + textOnly.length;
+  const read = total > 0 && published.length > 0 ? `: ${published.length} of the ${total} things that matter here ${published.length === 1 ? "is" : "are"} machine-readable` : "";
+  return `${name} already makes this business readable to agents${read}. The score measures whether agents can act, which is the next step.`;
+}
+
 export function FirstScreen({ report, now = () => Date.now() }: { report: ReportRecord; now?: () => number }) {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<CapabilityResult | null>(null);
@@ -188,12 +203,18 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
             <span className="first-score">Agent readiness <b>{score}</b>/100</span>
           )}
           <span className="chip-arche">{archetype}</span>
+          {report.publishedWith && (
+            <a className="chip-arche chip-runs-on" href={publishUrl(report.id)} target="_blank" rel="noreferrer" title={`${report.publishedWith.evidence}. Own this site? Open your WordLift dashboard.`}>
+              Runs on {report.publishedWith.name}
+            </a>
+          )}
           {ago && (
             <button type="button" className="run-again" onClick={() => void runAgain()} disabled={rerunning}>
               {rerunning ? "Reading again…" : "Run again"}
             </button>
           )}
         </p>
+        {report.publishedWith && <p className="runs-on-note">{runsOnLine(report)}</p>}
       </div>
 
       {three.length > 0 && (

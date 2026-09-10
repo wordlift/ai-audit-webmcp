@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { FirstScreen, actionsThatMatter, gapLine, headline, readAgo, readersLine } from "../../src/client/components/FirstScreen";
+import { FirstScreen, actionsThatMatter, gapLine, headline, readAgo, readersLine, runsOnLine } from "../../src/client/components/FirstScreen";
 import type { CapabilityResult, ReportRecord } from "../../src/shared/types/index.js";
 
 function capability(overrides: Partial<CapabilityResult> & Pick<CapabilityResult, "actionId" | "label" | "state">): CapabilityResult {
@@ -55,6 +55,11 @@ const report: ReportRecord = {
 };
 
 const NOW = new Date("2026-09-07T08:00:00.000Z").getTime();
+
+const onWordLift: ReportRecord = {
+  ...report,
+  publishedWith: { name: "WordLift", evidence: "Entity ids on data.wordlift.io", sourceUrl: "https://www.alpina.travel/" },
+};
 
 function renderScreen(record: ReportRecord = report) {
   return render(
@@ -165,5 +170,27 @@ describe("the readers line", () => {
         activations: [],
       }),
     ).toBe("3 crawlers and 1 agent have read this since it was published.");
+  });
+
+  it("names the platform the site's own data declares, beside the archetype, and says what it already delivers next to the score", () => {
+    renderScreen(onWordLift);
+    const chip = screen.getByRole("link", { name: "Runs on WordLift" });
+    expect(chip).toHaveAttribute("href", expect.stringContaining("my.wordlift.io"));
+    expect(chip).toHaveAttribute("href", expect.stringContaining(report.id));
+    expect(chip).toHaveAttribute("title", expect.stringContaining("Entity ids on data.wordlift.io"));
+    expect(screen.getByText(/WordLift already makes this business readable to agents/)).toHaveTextContent(/The score measures whether agents can act, which is the next step/);
+  });
+
+  it("says nothing about a platform when the site's data names none", () => {
+    renderScreen();
+    expect(screen.queryByText(/Runs on/)).toBeNull();
+    expect(screen.queryByText(/readable to agents/)).toBeNull();
+  });
+
+  it("counts what the platform published against what only the text holds", () => {
+    const entity = (name: string, origin?: "inferred") => ({ id: `https://www.alpina.travel/#${name}`, types: ["Place"], name, alternateNames: [], sourceUrls: [], sameAs: [], offers: [], confidence: 0.9, ...(origin ? { origin } : {}) });
+    const withGraph = { ...onWordLift, contextGraph: { entities: [entity("AlpiNest"), entity("Samspitze 4"), entity("Lungau", "inferred")] } } as unknown as ReportRecord;
+    expect(runsOnLine(withGraph)).toBe("WordLift already makes this business readable to agents: 2 of the 3 things that matter here are machine-readable. The score measures whether agents can act, which is the next step.");
+    expect(runsOnLine(onWordLift)).toBe("WordLift already makes this business readable to agents. The score measures whether agents can act, which is the next step.");
   });
 });
