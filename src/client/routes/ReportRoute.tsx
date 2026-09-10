@@ -5,7 +5,7 @@ import { explainReportError, failureTitle, visibleErrors } from "../../shared/fo
 import type { Archetype, ReportRecord } from "../../shared/types/index.js";
 import { ApiError, getReport, recompileReport } from "../api/client";
 import { ActionJourney } from "../components/ActionJourney";
-import { AgentDiary } from "../components/AgentDiary";
+import { AgentSurfaces } from "../components/AgentSurfaces";
 import { AlpinaSidecarPanel } from "../components/AlpinaSidecarPanel";
 import { ClassificationCard } from "../components/ClassificationCard";
 import { ContextEngineMap, heroEntityId } from "../components/ContextEngineMap";
@@ -140,8 +140,6 @@ export function ReportRoute() {
       )}
       {/* The first screen speaks three plain words. Everything precise is one click below. */}
       <FirstScreen key={`first-${report.id}`} report={report} />
-      {/* The proof, told plainly: what the audit's agent actually did on the site. */}
-      <AgentDiary report={report} />
       {/* Understand, then Fix: every entity the audit read, and the button that publishes the ones agents cannot see. */}
       <UnderstandPanel report={report} />
       {/* Own it: who runs each of the three actions, answered in a minute. Readiness never moves on a word. */}
@@ -149,21 +147,18 @@ export function ReportRoute() {
       {/* Activate: one screen away, so the report stays three words and their fixes. */}
       <section className="activate-strip" aria-labelledby="activate-strip-title">
         <p className="section-kicker"><Rocket size={16} /> Activate</p>
-        <h2 id="activate-strip-title">Publish what works, and watch who reads it</h2>
-        <p>
-          Three documents from this report: what to add to your pages, the instructions agents read, and the listing directories crawl. Then
-          who read them: crawlers, Google, agents, and every time an agent acted, with the outcome.
-        </p>
+        <h2 id="activate-strip-title">Activate your business for agents</h2>
+        <p>Publish what agents need to discover, understand and use your business, and see who reads it.</p>
         <Link className="activate-link" to={`/reports/${report.id}/activate`}>
-          See what the site publishes <ArrowRight size={15} aria-hidden="true" />
+          Activate <ArrowRight size={15} aria-hidden="true" />
         </Link>
       </section>
       <details className="full-audit" id="full-audit">
         <summary>
-          Full audit <span>Entities · Terminology · Actions · Terms of Action</span>
+          Full audit <span>Entities · Terminology · Actions · Terms of Action · Evidence</span>
           <small className="full-audit-hint">
-            The precise version of this page: every entity, term and action with its exact state and evidence, the way engineers,
-            agencies and agents read it.
+            Evidence, entities, terminology, actions, governance and agent-readiness details: the precise layer, the way engineers,
+            agencies, auditors and agents read it.
           </small>
         </summary>
         <div className="full-audit-body">
@@ -187,6 +182,7 @@ export function ReportRoute() {
             selectedEntityId={selectedEntityId}
           />
           {report.foundationAudit && <FoundationAuditDetails audit={report.foundationAudit} />}
+          <AgentSurfaces report={report} />
           {/* Labs: a contained technical proof, deliberately out of the product's primary story. */}
           {sidecarApplies(report) && (
             <details className="labs-fold">

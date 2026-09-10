@@ -825,6 +825,53 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .diary-failed::before { background: var(--state-missing); }
 .diary-looked::before { background: var(--state-unverified); }
 .own-it-alt { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line-subtle); }
+.first-meta .run-again { background: none; border: 0; padding: 0; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
+.first-meta .run-again:disabled { color: var(--faint); cursor: default; }
+.plain-word { display: inline-flex; align-items: center; gap: 5px; }
+.plain-word-fix, .plain-word-talk { border: 1px solid transparent; }
+.three-action:hover .plain-word-fix, .three-action:hover .plain-word-talk { border-color: currentColor; }
+
+/* The diary, folded: the proof behind the three words. */
+details.agent-diary { border: 1px solid var(--line-subtle); border-radius: 12px; padding: 0; background: var(--surface); }
+details.agent-diary > summary { display: flex; align-items: center; gap: 8px; padding: 12px 16px; cursor: pointer; font-weight: 600; }
+details.agent-diary > summary .diary-count { margin-left: auto; font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 400; }
+details.agent-diary .diary-lines { padding: 0 16px 14px; }
+
+/* The remedy: what needs to change, in the person's words, before the technical detail. */
+.remedy { display: grid; gap: 10px; margin-top: 14px; padding: 16px 18px; border-radius: 12px; background: color-mix(in srgb, var(--brand) 6%, white); border: 1px solid color-mix(in srgb, var(--brand) 18%, white); }
+.remedy-works { background: color-mix(in srgb, var(--state-agent-ready) 10%, white); border-color: color-mix(in srgb, var(--state-agent-ready) 30%, white); }
+.remedy-talk { background: color-mix(in srgb, var(--state-missing) 7%, white); border-color: color-mix(in srgb, var(--state-missing) 25%, white); }
+.remedy-why { margin: 0; font-weight: 600; font-size: 1.02rem; line-height: 1.45; }
+.remedy-required { margin: 0; color: var(--muted); line-height: 1.45; }
+.remedy-facts { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 0.9rem; }
+.remedy-facts span { display: grid; gap: 2px; }
+.remedy-facts small { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.remedy .fix-publish { justify-self: start; border: 0; font: inherit; font-weight: 600; cursor: pointer; }
+.dialog-section-title { margin: 22px 0 6px; font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+
+/* Understand, under Fix. */
+.understand-detail > summary { cursor: pointer; color: var(--brand); font-weight: 600; }
+.understand-detail[open] > summary { margin-bottom: 12px; }
+.understand-detail .fix-sample-fold { margin-top: 12px; }
+
+/* Agent-facing surfaces, in the full audit. */
+.agent-surfaces { display: grid; gap: 10px; padding: 20px 22px; border: 1px solid var(--line-subtle); border-radius: 14px; background: var(--surface); }
+.agent-surfaces h2 { margin: 0; font-size: 1.15rem; }
+.surface-list { display: grid; gap: 12px; margin: 0; }
+.surface-list > div { display: grid; grid-template-columns: minmax(160px, 220px) 1fr; gap: 6px 16px; }
+.surface-list dt { font-weight: 600; font-size: 0.9rem; }
+.surface-list dd { margin: 0; display: grid; gap: 4px; font-size: 0.9rem; color: var(--muted); overflow-wrap: anywhere; }
+.surface-list dd a { display: inline-flex; align-items: center; gap: 4px; color: var(--brand); font-weight: 500; }
+.surface-list code { font-family: var(--font-mono); font-size: 0.8em; }
+@media (max-width: 640px) { .surface-list > div { grid-template-columns: 1fr; } }
+
+/* Activate: outcome first, architecture second, proof last. */
+.outcomes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.outcome { display: grid; gap: 6px; padding: 16px; border: 1px solid var(--line-subtle); border-radius: 14px; background: var(--wl-neutral-100); }
+.outcome h3 { margin: 0; font-size: 1rem; }
+.outcome p { margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.45; }
+.activate-head .fix-publish { justify-self: start; margin-top: 6px; }
+.activate-page .activate-head { display: grid; }
 .own-it-alt p { margin: 0; color: var(--muted); max-width: 66ch; }
 .own-it-alt .review-cta { justify-self: start; }
 

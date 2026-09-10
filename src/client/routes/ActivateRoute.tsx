@@ -9,12 +9,11 @@ import { OWN_WORDS } from "../components/OwnIt";
 import { ReportErrorState } from "../components/ReportErrorState";
 
 /**
- * Activate: what the site publishes from this report, and what happened since. One model rendered
- * three ways, a table of what the owner said against what the page carries, and then the numbers
- * that close the loop: the score and how it moved, crawlers by name, Google's verified reads, the
- * agents that read the instructions, and the agents that activated a capability, with each failure
- * and its reason. Every number here equals the ledger; an empty ledger says what to expect, never a
- * row of zeros.
+ * Activate sells the outcome: make the business usable by AI agents. What WordLift publishes and
+ * keeps synchronized comes first, in three sentences a person reads; the table of what the page
+ * carries and the exact artifacts follow for the architect. Then Prove: is the business still
+ * agent-ready, the score and how it moved, and the numbers since publication, every one equal to
+ * the ledger. An empty ledger says what to expect, never a row of zeros.
  */
 const PREVIEW_LINES = 16;
 
@@ -192,9 +191,6 @@ function DocCard({ kind, title, note, text, href }: { kind: string; title: strin
 
 const PUBLISHED_ORDER: Record<PublishedAction["publishedAs"], number> = { action: 0, handoff: 1, entity: 2, nothing: 3 };
 
-const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long" });
-const plural = (count: number, singular: string, pluralForm = `${singular}s`) => `${count} ${count === 1 ? singular : pluralForm}`;
-
 /** The rows that say something of their own, and the two groups that say one thing for many actions. */
 export function tableRows(actions: PublishedAction[]): { published: PublishedAction[]; entityOnly: PublishedAction[]; nothing: PublishedAction[] } {
   const sorted = [...actions].sort((left, right) => PUBLISHED_ORDER[left.publishedAs] - PUBLISHED_ORDER[right.publishedAs]);
@@ -206,6 +202,8 @@ export function tableRows(actions: PublishedAction[]): { published: PublishedAct
 }
 
 const names = (actions: PublishedAction[]) => actions.map((action) => action.label).join(", ");
+const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long" });
+const plural = (count: number, singular: string, pluralForm = `${singular}s`) => `${count} ${count === 1 ? singular : pluralForm}`;
 
 export function ActivateScreen({ report, publication, visits }: { report: ReportRecord; publication: Publication; visits: ReportVisits | null }) {
   const host = hostOf(report.canonicalUrl ?? report.requestedUrl);
@@ -217,50 +215,57 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
   const agents = agentsByPlatform(visits);
   const activations = activationSummary(visits);
   const hasInterface = publication.actions.some((action) => action.publishedAs === "action");
+  const activate = publishUrl(report.id, { intent: "activate" });
 
   return (
     <div className="activate-page">
       <nav className="report-toolbar" aria-label="Activate actions">
         <Link to={`/reports/${report.id}`}><ArrowLeft size={17} /> Back to the report</Link>
-        <a className="fix-publish" href={publishUrl(report.id)} target="_blank" rel="noreferrer">
-          Publish with WordLift <ArrowUpRight size={15} aria-hidden="true" />
+        <a className="fix-publish" href={activate} target="_blank" rel="noreferrer">
+          Activate <ArrowUpRight size={15} aria-hidden="true" />
         </a>
       </nav>
 
       <header className="activate-head">
         <p className="section-kicker"><Rocket size={16} /> Activate</p>
-        <h1>{host}</h1>
-        <p className="first-sentence">What this site publishes from the report, and who has read it since.</p>
-        <p className="activate-score">
-          {movement && movement.from !== movement.to ? (
-            <>
-              <b>{movement.from}</b> <span aria-hidden="true">→</span> <b>{movement.to}</b> of 100 agent-ready since {longDate(movement.since)}
-            </>
-          ) : movement ? (
-            <>
-              <b>{movement.to}</b> of 100 agent-ready, unchanged since {longDate(movement.since)}.
-            </>
-          ) : (
-            <>
-              <b>{report.score?.value ?? "–"}</b> of 100 agent-ready. The next reading shows how it moved.
-            </>
-          )}
-        </p>
+        <h1>Make {host} usable by AI agents</h1>
+        <p className="first-sentence">Publish what agents need to discover your business, understand its rules and use the actions that work.</p>
+        <a className="fix-publish" href={activate} target="_blank" rel="noreferrer">
+          Activate with WordLift <ArrowUpRight size={15} aria-hidden="true" />
+        </a>
       </header>
+
+      <section className="activate-section" aria-labelledby="outcomes-title">
+        <h2 id="outcomes-title">WordLift publishes and keeps synchronized</h2>
+        <div className="outcomes">
+          <article className="outcome">
+            <h3>Business data</h3>
+            <p>Machine-readable entities and actions on your pages: what you are, what you offer, and what an agent may do with it.</p>
+          </article>
+          <article className="outcome">
+            <h3>Agent instructions</h3>
+            <p>The Terms of Action: what the business does itself, hands off to a partner, or only describes, in a file agents load before acting.</p>
+          </article>
+          <article className="outcome">
+            <h3>Discovery</h3>
+            <p>A machine-readable catalog of the capabilities that work, where agent directories look for it.</p>
+          </article>
+        </div>
+        <p className="activate-lead">
+          {publication.decided > 0
+            ? `${plural(publication.decided, "decision")} of yours shaped this. `
+            : "The three questions are unanswered, so this publishes what the audit verified, no less. "}
+          Nothing is declared that the audit could not call.
+        </p>
+      </section>
 
       <section className="activate-section" aria-labelledby="carries-title">
         <h2 id="carries-title">What the page carries</h2>
-        <p className="activate-lead">
-          {publication.decided > 0 ? (
-            <>{plural(publication.decided, "decision")} of yours shaped this. </>
-          ) : (
-            <>
-              Nobody has answered <Link to={`/reports/${report.id}#own-it`}>the three questions</Link> yet, so this is what the audit verified, no
-              less.{" "}
-            </>
-          )}
-          Nothing is declared that the audit could not call.
-        </p>
+        {publication.decided === 0 && (
+          <p className="activate-lead">
+            Answer <Link to={`/reports/${report.id}#own-it`}>the three questions</Link> on the report and the page says who runs each action.
+          </p>
+        )}
         <div className="table-scroll">
           <table className="pitch-table activate-table">
             <thead>
@@ -304,10 +309,10 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
               {nothing.length > 0 && (
                 <tr className="activate-group">
                   <th scope="row">{nothing.length === 1 ? nothing[0]!.label : `${nothing.length} actions`}</th>
-                  <td>Not ours</td>
+                  <td>Not relevant</td>
                   <td>
                     <span className="carries carries-nothing">Nothing</span>
-                    <span className="carries-why">{nothing.length > 1 ? `${names(nothing)}. ` : ""}You said these are not yours, so nothing is published for them.</span>
+                    <span className="carries-why">{nothing.length > 1 ? `${names(nothing)}. ` : ""}You said these are not relevant, so nothing is published for them.</span>
                   </td>
                 </tr>
               )}
@@ -317,41 +322,54 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
       </section>
 
       <section className="activate-section" aria-labelledby="documents-title">
-        <h2 id="documents-title">Three documents, one model</h2>
+        <h2 id="documents-title">The exact artifacts</h2>
+        <p className="activate-lead">One model, three documents, each readable now. The plugin puts all three on your site and keeps them current.</p>
         <div className="doc-cards">
           <DocCard
-            kind="For finding"
+            kind="Business data"
             title="On your pages"
             note="JSON-LD for the site's pages: the entities, and the actions agents may take, each with its entry point or its provider."
             text={JSON.stringify(publication.jsonLd, null, 2)}
             href={publication.documents.pageJsonLd}
           />
           <DocCard
-            kind="For acting"
+            kind="Agent instructions"
             title="For agents"
             note="The Terms of Action as a file an agent loads before acting. It states boundaries and cites the report; it never claims an action works."
             text={publication.skill}
             href={publication.documents.skill}
           />
           <DocCard
-            kind="For discovery"
+            kind="Discovery"
             title="For registries"
             note={`The catalog registries crawl, served from ${publication.catalogPath} on the site.`}
             text={JSON.stringify(publication.catalog, null, 2)}
             href={publication.documents.catalog}
           />
         </div>
-        <p className="fix-cta">
-          <a className="fix-publish" href={publishUrl(report.id)} target="_blank" rel="noreferrer">
-            Publish with WordLift <ArrowUpRight size={15} aria-hidden="true" />
-          </a>
-          <span>The plugin puts all three on your site and keeps them current as the site changes. The report id travels with you.</span>
+        <p className="activate-lead">
+          The evidence behind every line is in the report's <Link to={`/reports/${report.id}#full-audit`}>full audit</Link>.
         </p>
       </section>
 
       <section className="observe" aria-labelledby="observe-title">
-        <p className="section-kicker"><Radar size={16} /> Since it was published</p>
-        <h2 id="observe-title">Who has read it</h2>
+        <p className="section-kicker"><Radar size={16} /> Prove</p>
+        <h2 id="observe-title">Is {host} still agent-ready?</h2>
+        <p className="activate-score">
+          {movement && movement.from !== movement.to ? (
+            <>
+              <b>{movement.from}</b> <span aria-hidden="true">→</span> <b>{movement.to}</b> of 100 agent-ready since {longDate(movement.since)}
+            </>
+          ) : movement ? (
+            <>
+              <b>{movement.to}</b> of 100 agent-ready, unchanged since {longDate(movement.since)}.
+            </>
+          ) : (
+            <>
+              <b>{report.score?.value ?? "–"}</b> of 100 agent-ready. The next reading shows how it moved.
+            </>
+          )}
+        </p>
         <div className="observe-grid">
           <article className="observe-card" aria-labelledby="crawlers-title">
             <h3 id="crawlers-title">Crawlers</h3>
@@ -416,6 +434,10 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
             )}
           </article>
         </div>
+        <p className="activate-lead">
+          <a href={publishUrl(report.id, { intent: "keep" })} target="_blank" rel="noreferrer">Keep it agent-ready</a>: WordLift re-verifies on a
+          schedule and writes only when something moves.
+        </p>
       </section>
     </div>
   );

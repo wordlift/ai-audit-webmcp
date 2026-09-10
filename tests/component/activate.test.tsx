@@ -131,7 +131,8 @@ describe("the numbers equal the ledger", () => {
 describe("the Activate screen", () => {
   it("shows the movement, the table, the three documents, and who read it", () => {
     renderScreen(ledger);
-    expect(screen.getByRole("heading", { name: "alpina.travel" })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1, name: "Make alpina.travel usable by AI agents" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /wordlift publishes and keeps synchronized/i })).toBeVisible();
     expect(screen.getByText(/of 100 agent-ready since 1 September/)).toHaveTextContent("62 → 74");
 
     const table = screen.getByRole("table");
@@ -146,12 +147,13 @@ describe("the Activate screen", () => {
     expect(rows[2]).toContain("Retrieve details");
     expect(rows[2]).toContain("The entity, no action");
     expect(rows[3]).toContain("Compare options");
-    expect(rows[3]).toContain("Not ours");
+    expect(rows[3]).toContain("Not relevant");
     expect(rows[3]).toContain("Nothing");
 
     for (const title of ["On your pages", "For agents", "For registries"]) expect(screen.getByRole("article", { name: title })).toBeVisible();
     expect(screen.getAllByRole("link", { name: /open the document/i })).toHaveLength(3);
-    expect(screen.getAllByRole("link", { name: /publish with wordlift/i })[0]).toHaveAttribute("href", expect.stringContaining(REPORT_ID));
+    expect(screen.getAllByRole("link", { name: /^activate/i })[0]).toHaveAttribute("href", expect.stringContaining(`report=${REPORT_ID}`));
+    expect(screen.getAllByRole("link", { name: /^activate/i })[0]).toHaveAttribute("href", expect.stringContaining("intent=activate"));
 
     const crawlers = screen.getByRole("article", { name: /crawlers/i });
     expect(crawlers).toHaveTextContent("Googlebot3");
@@ -187,7 +189,8 @@ describe("the Activate screen", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText(/Nothing to activate yet: no interface has answered\./)).toBeVisible();
-    expect(screen.getByText(/Nobody has answered/)).toHaveTextContent(/Nobody has answered the three questions yet/);
+    expect(screen.getByText(/The three questions are unanswered/)).toBeVisible();
     expect(screen.getByRole("link", { name: "the three questions" })).toHaveAttribute("href", `/reports/${REPORT_ID}#own-it`);
+    expect(screen.getByRole("heading", { name: /is alpina\.travel still agent-ready/i })).toBeVisible();
   });
 });

@@ -1,0 +1,189 @@
+import { domainNodes, entitiesFromJsonLd, type JsonLdNode } from "./jsonLd.js";
+import type { MarkupOutcome, MarkupPageInput, MarkupProvider, MarkupTotals, MarkupUsage } from "./MarkupProvider.js";
+
+/**
+ * WordLift's own entity extraction, Content Analysis v3: multilingual named-entity recognition
+ * with Wikidata linking, on WordLift's infrastructure, behind the same interface the Gemini
+ * stand-in used. It is asked for the things a business is made of, by name, with a label set
+ * that says so; what it finds becomes inferred entities, never evidence, never readiness. A
+ * Wikidata link travels only when the linker is sure of it: a place in Lungau linked to an
+ * Italian comune at the floor score is a guess, and a guess is worse than no link.
+ */
+export interface ContentAnalysisOptions {
+  /** The WordLift API key: the service authenticates as `Key <key>`. */
+  apiKey: string;
+  endpoint?: string;
+  /** The extraction confidence asked of the service, and the floor an entity must reach to be kept. */
+  confidence?: number;
+  /** A Wikidata link is kept only from this disambiguation score up. */
+  linkConfidence?: number;
+  timeoutMs?: number;
+  fetch?: typeof fetch;
+}
+
+export const CONTENT_ANALYSIS_ENDPOINT = "https://wordlift-lab--content-analysis-v3-web-app.modal.run";
+const DEFAULT_CONFIDENCE = 0.6;
+const DEFAULT_LINK_CONFIDENCE = 0.7;
+const DEFAULT_TIMEOUT_MS = 60_000;
+const MAX_TEXT_CHARACTERS = 12_000;
+const MAX_ENTITIES = 20;
+
+/** The things a business is made of, asked for by name. The zero-shot recogniser takes labels as instructions. */
+export const ENTITY_LABELS = [
+  "Organization",
+  "Person",
+  "Place",
+  "City",
+  "Region",
+  "Country",
+  "Product",
+  "Service",
+  "Offer",
+  "Apartment",
+  "Hotel",
+  "Accommodation",
+  "Attraction",
+  "Event",
+  "Brand",
+] as const;
+
+/** The service's labels as schema.org types, the vocabulary the rest of the map speaks. */
+const SCHEMA_TYPES: Record<string, string> = {
+  Organization: "Organization",
+  Company: "Organization",
+  Person: "Person",
+  Place: "Place",
+  Location: "Place",
+  City: "City",
+  Region: "AdministrativeArea",
+  Country: "Country",
+  Product: "Product",
+  Service: "Service",
+  Offer: "Offer",
+  Apartment: "Apartment",
+  Hotel: "Hotel",
+  Accommodation: "Accommodation",
+  Attraction: "TouristAttraction",
+  Event: "Event",
+  Brand: "Brand",
+  Book: "Book",
+  Movie: "Movie",
+  Song: "MusicRecording",
+  CreativeWork: "CreativeWork",
+  SportsTeam: "SportsTeam",
+};
+
+/** Role nouns the recogniser reads as people, and the generic phrases it reads as things. Neither is an entity. */
+const NOT_A_NAME = /^(guests?|visitors?|customers?|users?|members?|teams?|staff|family|families|children|kids|adults?|people|clients?|partners?|travellers?|travelers?|owners?|hosts?|breakfast|lunch|dinner|summer|winter|spring|autumn|fall|weekend|holidays?|vacations?)$/i;
+
+interface AnalysedEntity {
+  text?: unknown;
+  label?: unknown;
+  score?: unknown;
+  entity_id?: unknown;
+  entity_label?: unknown;
+  entity_description?: unknown;
+  disambiguation_score?: unknown;
+}
+
+interface AnalysisResponse {
+  entities?: unknown;
+  language?: unknown;
+  text_length?: unknown;
+  pipeline_version?: unknown;
+}
+
+export class ContentAnalysisProvider implements MarkupProvider {
+  readonly name = "content-analysis";
+  readonly model = "content-analysis-v3";
+  readonly #totals: MarkupTotals = { pages: 0, inputTokens: 0, outputTokens: 0, estimatedUsd: 0 };
+
+  constructor(private readonly options: ContentAnalysisOptions) {}
+
+  async generate(page: MarkupPageInput): Promise<MarkupOutcome> {
+    const fetchImpl = this.options.fetch ?? fetch;
+    const confidence = this.options.confidence ?? DEFAULT_CONFIDENCE;
+    const text = textOf(page);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+    let response: Response;
+    try {
+      response = await fetchImpl(`${(this.options.endpoint ?? CONTENT_ANALYSIS_ENDPOINT).replace(/\/$/, "")}/analyze/text`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Key ${this.options.apiKey}` },
+        body: JSON.stringify({ text, confidence: Math.min(confidence, 0.5), labels: [...ENTITY_LABELS] }),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      throw new Error(error instanceof Error && error.name === "AbortError" ? "Content analysis did not answer in time" : "Content analysis could not be reached");
+    } finally {
+      clearTimeout(timer);
+    }
+    // The service's error body may quote the text it was sent; only the status travels on.
+    if (!response.ok) throw new Error(`Content analysis refused the page (HTTP ${response.status})`);
+    const payload = (await response.json().catch(() => null)) as AnalysisResponse | null;
+    const found = Array.isArray(payload?.entities) ? (payload.entities as AnalysedEntity[]) : [];
+
+    const issues: string[] = [];
+    const nodes = nodesFrom(found, confidence, this.options.linkConfidence ?? DEFAULT_LINK_CONFIDENCE, issues);
+    const entities = entitiesFromJsonLd(domainNodes(nodes, issues), page.url);
+    // The service meters nothing and runs on WordLift's own infrastructure: the count is what is
+    // known. Characters in, entities out, and no list price to multiply.
+    const usage: MarkupUsage = { inputTokens: text.length, outputTokens: entities.length, estimatedUsd: 0 };
+    this.#totals.pages += 1;
+    this.#totals.inputTokens += usage.inputTokens;
+    this.#totals.outputTokens += usage.outputTokens;
+    return { entities, issues, usage, model: typeof payload?.pipeline_version === "string" ? `content-analysis-v3/${payload.pipeline_version}` : this.model };
+  }
+
+  totals(): MarkupTotals {
+    return { ...this.#totals };
+  }
+}
+
+function textOf(page: MarkupPageInput): string {
+  return [page.title, page.description, ...page.headings.slice(0, 40), page.text]
+    .filter((part) => typeof part === "string" && part.trim().length > 0)
+    .join("\n")
+    .slice(0, MAX_TEXT_CHARACTERS);
+}
+
+/** What the service found, as nodes the markup path already knows how to filter and merge. */
+export function nodesFrom(found: AnalysedEntity[], confidence: number, linkConfidence: number, issues: string[]): JsonLdNode[] {
+  const nodes = new Map<string, JsonLdNode>();
+  let belowFloor = 0;
+  let notNames = 0;
+  for (const entity of found) {
+    const name = typeof entity.text === "string" ? entity.text.trim() : "";
+    const label = typeof entity.label === "string" ? entity.label : "";
+    const score = typeof entity.score === "number" ? entity.score : 0;
+    if (!name || !label) continue;
+    if (score < confidence) {
+      belowFloor += 1;
+      continue;
+    }
+    // A name has a capital somewhere; a generic phrase or a role noun is not a thing the business is.
+    if (NOT_A_NAME.test(name) || !/\p{Lu}/u.test(name)) {
+      notNames += 1;
+      continue;
+    }
+    const type = SCHEMA_TYPES[label] ?? label;
+    const key = `${type}|${name.toLowerCase()}`;
+    if (nodes.has(key)) continue;
+
+    const linked = typeof entity.entity_id === "string" && /^Q\d+$/.test(entity.entity_id) && typeof entity.disambiguation_score === "number" && entity.disambiguation_score >= linkConfidence;
+    const canonical = linked && typeof entity.entity_label === "string" ? entity.entity_label.trim() : "";
+    nodes.set(key, {
+      types: [type],
+      name,
+      alternateNames: canonical && canonical.toLowerCase() !== name.toLowerCase() ? [canonical] : [],
+      ...(linked && typeof entity.entity_description === "string" && entity.entity_description.trim() ? { description: entity.entity_description.trim() } : {}),
+      sameAs: linked ? [`https://www.wikidata.org/wiki/${entity.entity_id as string}`] : [],
+      offers: [],
+    });
+    if (nodes.size >= MAX_ENTITIES) break;
+  }
+  if (belowFloor > 0) issues.push(`${belowFloor} ${belowFloor === 1 ? "entity" : "entities"} below the confidence floor`);
+  if (notNames > 0) issues.push(`${notNames} ${notNames === 1 ? "mention" : "mentions"} skipped as not a name`);
+  return [...nodes.values()];
+}

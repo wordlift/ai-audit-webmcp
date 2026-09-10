@@ -142,8 +142,7 @@ export function HomeRoute() {
         <div className="eyebrow"><Sparkles size={16} /> Free · no account · public websites</div>
         <h1 id="hero-title">Can AI agents understand <span>and use your business?</span></h1>
         <p className="hero-copy">
-          Paste a URL. In about a minute you get what an agent can do on your site today, what it
-          cannot, and what to do next. Audit it. Fix it. Activate it.
+          Paste a URL. See what AI agents can do with your business today, what stops them, and what to fix.
         </p>
         <form className="audit-form" onSubmit={submit}>
           <label htmlFor="site-url">Website URL</label>

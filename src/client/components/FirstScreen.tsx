@@ -1,16 +1,18 @@
-import { Bot } from "lucide-react";
+import { ArrowRight, Bot, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { CapabilityResult, ReportRecord } from "../../shared/types/index.js";
 import { getVisits, startReport, type ReportVisits } from "../api/client";
 import { ActionDetailDialog } from "./ActionDetailDialog";
+import { AgentDiary } from "./AgentDiary";
 import { DeepScanOffer } from "./DeepScanOffer";
 
 /**
- * The first screen of a report, written for a person: the site, one sentence, the three actions
- * that matter for this kind of business, and one next step each in plain words. Every plain word
- * maps onto exactly one precise state, never two; the precise vocabulary lives one click below,
- * in the full audit, and in every file an agent reads.
+ * The first screen of a report is an action screen. It answers, in under a minute, what agents
+ * can do with this business and what to do next: the three actions that matter for this kind of
+ * site, each with one plain word and one next step. Every plain word maps onto exactly one precise
+ * state, never two; the precise vocabulary lives one click below, in the full audit, and in every
+ * file an agent reads. The score is evidence; the gap is the product.
  */
 export type PlainWord = "works" | "fix" | "talk";
 
@@ -35,13 +37,13 @@ export function plainWord(capability: CapabilityResult): PlainWord | null {
 export function nextStep(capability: CapabilityResult): string {
   switch (capability.state) {
     case "agent-ready":
-      return capability.via === "sidecar" ? "Our agent did this on your site. Run by WordLift." : "Our agent did this on your site.";
+      return capability.via === "sidecar" ? "Our agent successfully used this. Run by WordLift." : "Our agent successfully used this.";
     case "unverified":
-      return "The site says an agent can do this, but when ours tried, nothing answered.";
+      return "Your site says agents can do this, but our agent could not complete it.";
     case "human-only":
-      return "A person can do this here. An agent has no way in yet.";
+      return "People can do this, but an AI agent has no direct way in.";
     case "missing":
-      return "Nothing here lets a person or an agent do this. We can run it for you.";
+      return "There is no agent-accessible interface yet.";
     default:
       return "";
   }
@@ -67,13 +69,22 @@ export function actionsThatMatter(capabilities: CapabilityResult[], count = 3): 
     .slice(0, count);
 }
 
-/** The sentence a report opens with: the things that matter for this kind of site, and how many work today. */
-export function openingSentence(capabilities: CapabilityResult[], kind = "general"): string {
+/** The headline: what agents can do with this business, counted on the things that matter. */
+export function headline(capabilities: CapabilityResult[], host: string): string {
   const three = actionsThatMatter(capabilities);
-  if (three.length === 0) return "No agent capabilities are expected for this kind of site yet.";
+  if (three.length === 0) return `No agent capabilities are expected for ${host} yet.`;
   const works = three.filter((capability) => capability.state === "agent-ready").length;
-  const site = kind === "general" ? "a site like this" : `a ${kind} site`;
-  return `Of the ${three.length} ${three.length === 1 ? "thing" : "things"} an AI agent should be able to do on ${site}, ${works} ${works === 1 ? "works" : "work"} today.`;
+  return `AI agents can do ${works} of the ${three.length} ${three.length === 1 ? "thing" : "things"} that matter on ${host}.`;
+}
+
+/** The line under the headline: the size of the gap, or the good news. */
+export function gapLine(capabilities: CapabilityResult[]): string | null {
+  const three = actionsThatMatter(capabilities);
+  if (three.length === 0) return null;
+  const rest = three.filter((capability) => capability.state !== "agent-ready").length;
+  if (rest === 0) return "Everything that matters works.";
+  if (rest === three.length) return rest === 1 ? "Fix it." : `Fix all ${rest}.`;
+  return `Fix the other ${rest === 1 ? "one" : rest}.`;
 }
 
 /** How many expected actions the full audit covers beyond the three on the first screen. */
@@ -143,14 +154,15 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   }, [report.id]);
   const readers = readersLine(visits);
 
+  const host = hostOf(report.canonicalUrl ?? report.requestedUrl);
   const capabilities = report.capabilities ?? [];
   const three = actionsThatMatter(capabilities);
-  const working = three.filter((capability) => capability.state === "agent-ready").length;
   const beyond = beyondTheThree(capabilities);
   const primary = report.classification?.primaryArchetype;
   const archetype = !primary || primary === "other" ? "general" : primary.replaceAll("-", " / ");
   const score = report.score?.value;
   const ago = readAgo(report.collectedAt, now());
+  const gap = gapLine(capabilities);
 
   async function runAgain() {
     setRerunning(true);
@@ -167,24 +179,19 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   return (
     <section className="first-screen" aria-labelledby="first-screen-title">
       <div className="first-screen-head">
-        <p className="section-kicker"><Bot size={16} /> What an AI agent can do here</p>
-        <h1 id="first-screen-title">{hostOf(report.canonicalUrl ?? report.requestedUrl)}</h1>
-        <p className="first-sentence">
-          {openingSentence(capabilities, archetype)}
-          {three.length > 0 && (working < three.length ? " Here is what stops the others." : " Here is how.")}
-        </p>
+        <p className="section-kicker"><Bot size={16} /> What AI agents can do with {host}</p>
+        <h1 id="first-screen-title">{headline(capabilities, host)}</h1>
+        {gap && <p className="first-sentence">{gap}</p>}
         <p className="first-meta">
-          <span className="chip-arche">{archetype}</span>
+          {ago && <span className="read-when">{ago}</span>}
           {score !== undefined && (
-            <span className="first-score"><b>{score}</b> of 100 agent-ready</span>
+            <span className="first-score">Agent readiness <b>{score}</b>/100</span>
           )}
+          <span className="chip-arche">{archetype}</span>
           {ago && (
-            <span className="read-when">
-              {ago} ·{" "}
-              <button type="button" onClick={() => void runAgain()} disabled={rerunning}>
-                {rerunning ? "Reading again…" : "Run again"}
-              </button>
-            </span>
+            <button type="button" className="run-again" onClick={() => void runAgain()} disabled={rerunning}>
+              {rerunning ? "Reading again…" : "Run again"}
+            </button>
           )}
         </p>
       </div>
@@ -197,7 +204,10 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
               <li key={capability.actionId}>
                 <button type="button" className={`three-action three-action-${word}`} onClick={() => setSelected(capability)}>
                   <span className="three-action-name">{capability.label}</span>
-                  <span className={`plain-word plain-word-${word}`}>{WORD_LABEL[word]}</span>
+                  <span className={`plain-word plain-word-${word}`}>
+                    {WORD_LABEL[word]}
+                    {word === "works" ? <Check size={12} aria-hidden="true" /> : <ArrowRight size={12} aria-hidden="true" />}
+                  </span>
                   <span className="three-action-why">{nextStep(capability)}</span>
                 </button>
               </li>
@@ -218,6 +228,9 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         <p className="discovery-line">Agents can find this site's capabilities: it publishes a catalog.</p>
       )}
       {readers && <p className="discovery-line readers-line">{readers}</p>}
+
+      {/* The proof behind the words, one click away: what the audit's agent actually did. */}
+      <AgentDiary report={report} />
 
       {/* The deeper read, asked for where the person already is: one line that opens in place. */}
       <DeepScanOffer report={report} />

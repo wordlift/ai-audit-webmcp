@@ -12,20 +12,21 @@ import { actionsThatMatter } from "./FirstScreen";
  * `actionDecisions` alone, and land in an immutable child report. Nothing here moves readiness:
  * a decision says who is responsible; only an interface that answers says it works.
  */
-export type OwnAnswer = Exclude<ActionBoundary, "not-applicable">;
+export type OwnAnswer = ActionBoundary;
 
 /** The plain words for who runs an action. The precise boundary stays in the full audit and in every file an agent reads. */
 export const OWN_WORDS: Record<ActionBoundary, string> = {
   owned: "Ours",
   "partner-handoff": "A partner runs it",
   "informational-only": "Described only",
-  "not-applicable": "Not ours",
+  "not-applicable": "Not relevant",
 };
 
 const OPTIONS: ReadonlyArray<{ value: OwnAnswer; label: string; means: string }> = [
   { value: "owned", label: "We do", means: "Published as your action, with its entry point once one answers." },
   { value: "partner-handoff", label: "A partner does", means: "Published with the partner named as the provider." },
   { value: "informational-only", label: "We only describe it", means: "Published as information: the entity, no action." },
+  { value: "not-applicable", label: "Not relevant", means: "Nothing is published for it, and agents are told not to try." },
 ];
 
 export interface OwnAnswers {
@@ -58,9 +59,7 @@ function initialAnswers(capabilities: CapabilityResult[]): OwnAnswers {
     capabilities.map((capability) => [
       capability.actionId,
       {
-        ...(capability.boundarySource === "human-provided" && capability.boundary && capability.boundary !== "not-applicable"
-          ? { boundary: capability.boundary }
-          : {}),
+        ...(capability.boundarySource === "human-provided" && capability.boundary ? { boundary: capability.boundary } : {}),
         partnerName: capability.boundaryPartner?.name ?? "",
         partnerUrl: capability.boundaryPartner?.url ?? "",
       },
@@ -107,9 +106,12 @@ export function OwnIt({ report }: { report: ReportRecord }) {
 
   return (
     <section className="own-it" id="own-it" aria-labelledby="own-it-title">
-      <p className="section-kicker"><UserRoundCheck size={16} /> Own it</p>
-      <h2 id="own-it-title">Three questions only you can answer</h2>
-      <p className="own-it-lead">Who runs each of these? Your answer shapes what the site publishes. It never changes the score; only an interface that answers does.</p>
+      <p className="section-kicker"><UserRoundCheck size={16} /> Before publishing</p>
+      <h2 id="own-it-title">Who actually performs these actions?</h2>
+      <p className="own-it-lead">
+        These answers determine what your site tells AI agents they can do. They do not change the readiness score; only working
+        interfaces do.
+      </p>
 
       {!editing ? (
         <>
@@ -184,8 +186,8 @@ export function OwnIt({ report }: { report: ReportRecord }) {
       )}
       <div className="own-it-alt">
         <p>
-          Prefer to talk it through? ChatGPT can interview you about the business, its vocabulary and who runs each action, and file the
-          answers here. Copy the prompt and paste it into ChatGPT.
+          <b>Need a more precise review?</b> Let ChatGPT interview your team about your business, its terminology, its entities and who
+          owns each action. The answers land here, in the same model. Copy the prompt and paste it into ChatGPT.
         </p>
         <button type="button" className="review-cta" onClick={() => void copyReview()}>
           <Copy size={15} aria-hidden="true" /> {copied ? "Prompt copied. Paste it into ChatGPT" : "Review with ChatGPT"}

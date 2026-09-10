@@ -21,7 +21,7 @@
 # response marked noindex. The WordLift API and ScrapingBee keys are the same accounts; the audits
 # a preview runs cost what production's do. Production's service, domain and Firestore are untouched.
 #
-#   PREVIEW=1 SCRAPE_PROVIDER=scrapingbee MARKUP_PROVIDER=gemini scripts/deploy-cloud-run.sh "$PROJECT" us-west1
+#   PREVIEW=1 SCRAPE_PROVIDER=scrapingbee MARKUP_PROVIDER=content-analysis scripts/deploy-cloud-run.sh "$PROJECT" us-west1
 set -euo pipefail
 
 PROJECT="${1:-${GOOGLE_CLOUD_PROJECT:-ai-audit-wordlift}}"
@@ -55,12 +55,17 @@ if [ "$SCRAPE" = "scrapingbee" ]; then
   SECRETS="$SECRETS,SCRAPINGBEE_API_KEY=SCRAPINGBEE_API_KEY:latest"
 fi
 
-# Generated markup — the Fix preview — runs on Gemini 2.5 Flash through the Gemini API until
-# WordLift's own service replaces it. Enable it with MARKUP_PROVIDER=gemini; the GEMINI_API_KEY
-# secret already exists in this project. /api/health reports what it has cost.
+# The entities behind Fix. MARKUP_PROVIDER=content-analysis is WordLift's own Content Analysis
+# v3, authenticated with the WordLift key already mounted; MARKUP_PROVIDER=gemini is the stand-in
+# it replaced, through the Gemini API and the GEMINI_API_KEY secret. /api/health reports totals.
 MARKUP="${MARKUP_PROVIDER:-none}"
 MARKUP_ENV=""
-if [ "$MARKUP" = "gemini" ]; then
+if [ "$MARKUP" = "content-analysis" ]; then
+  MARKUP_ENV="##MARKUP_PROVIDER=content-analysis##MARKUP_ON_BASIC=${MARKUP_ON_BASIC:-thin}"
+  if [ -n "${CONTENT_ANALYSIS_URL:-}" ]; then
+    MARKUP_ENV="${MARKUP_ENV}##CONTENT_ANALYSIS_URL=${CONTENT_ANALYSIS_URL}"
+  fi
+elif [ "$MARKUP" = "gemini" ]; then
   SECRETS="$SECRETS,GEMINI_API_KEY=GEMINI_API_KEY:latest"
   MARKUP_ENV="##MARKUP_PROVIDER=gemini##GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}##MARKUP_ON_BASIC=${MARKUP_ON_BASIC:-thin}"
 fi

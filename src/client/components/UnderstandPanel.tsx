@@ -1,13 +1,13 @@
-import { ArrowUpRight, Braces, Copy, Eye } from "lucide-react";
+import { ArrowUpRight, Braces, Copy } from "lucide-react";
 import { useState } from "react";
 import type { DomainEntity, ReportRecord } from "../../shared/types/index.js";
 import { publishUrl, sampleJsonLd } from "./FixPanel";
 
 /**
- * Understand, then Fix, on one screen: every entity the audit read on the site's pages, named
- * plainly, with where it was found and whether an agent can already read it as structured data.
- * The ones that exist only in the text are the finding; publishing them is the button. One entity's
- * markup is shown as a sample behind a fold; the full set is generated on the account side.
+ * Fix what agents cannot understand. Every entity the audit read on the site's pages, counted:
+ * what is already machine-readable, and what exists only in the text. The second group is the
+ * finding, and publishing it is the button. What agents currently understand, entity by entity,
+ * waits one click below as the evidence explaining the fix; one entity's markup waits behind it.
  */
 const MAX_PER_GROUP = 12;
 
@@ -33,7 +33,7 @@ export function whereFound(entity: DomainEntity): string {
 export interface EntityGroups {
   /** Declared in the pages' markup: agents already read these. */
   published: DomainEntity[];
-  /** Read from the text by the markup provider: agents cannot see these yet. */
+  /** Read from the text by the entity extractor: agents cannot see these yet. */
   textOnly: DomainEntity[];
 }
 
@@ -97,66 +97,71 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
     window.setTimeout(() => setCopied(false), 1_500);
   }
 
-  const lead =
-    textOnly.length === 0
-      ? `${plural(total, "thing")} on your pages, all described in a form agents read.`
-      : published.length === 0
-        ? `${plural(total, "thing")} on your pages, and agents can read none of them yet: they exist only in your text.`
-        : `${plural(total, "thing")} on your pages. ${published.length} ${published.length === 1 ? "is" : "are"} described in a form agents read; ${textOnly.length} ${textOnly.length === 1 ? "exists" : "exist"} only in your text.`;
-
+  const fixable = textOnly.length > 0;
   return (
-    <section className="understand" aria-labelledby="understand-title">
-      <p className="section-kicker"><Eye size={16} /> Understand</p>
-      <h2 id="understand-title">What an agent understands about your business</h2>
-      <p className="understand-lead">{lead}</p>
+    <section className={`understand ${fixable ? "understand-fixable" : ""}`} aria-labelledby="understand-title">
+      <p className="section-kicker"><Braces size={16} /> Fix</p>
+      <h2 id="understand-title">{fixable ? "Fix what agents cannot understand" : "Agents understand your business"}</h2>
+      <p className="understand-lead">
+        Agents found {plural(total, "important thing")} on these pages.
+        {" "}
+        {fixable ? (
+          <>
+            {published.length === 0 ? "None" : published.length} {published.length === 1 ? "is" : "are"} already machine-readable. {textOnly.length} {textOnly.length === 1 ? "exists" : "exist"} only in the text.
+          </>
+        ) : (
+          <>All of {total === 1 ? "it is" : "them are"} already machine-readable.</>
+        )}
+      </p>
 
-      <div className="entity-groups">
-        <div className="entity-group">
-          <h3>
-            <span className="plain-word plain-word-works">Agents read these</span>
-            <span className="entity-count">{published.length}</span>
-          </h3>
-          {published.length > 0 ? (
-            <EntityList entities={published} tone="published" />
-          ) : (
-            <p className="entity-empty">Nothing on these pages is described in a form agents read yet.</p>
-          )}
-        </div>
-        <div className="entity-group">
-          <h3>
-            <span className="plain-word plain-word-fix">Only in your text</span>
-            <span className="entity-count">{textOnly.length}</span>
-          </h3>
-          {textOnly.length > 0 ? (
-            <EntityList entities={textOnly} tone="text" />
-          ) : (
-            <p className="entity-empty">Everything the pages describe is already published for agents.</p>
-          )}
-        </div>
-      </div>
-
-      {textOnly.length > 0 && (
-        <>
-          <p className="fix-cta">
-            <a className="fix-publish" href={publishUrl(report.id)} target="_blank" rel="noreferrer">
-              <Braces size={15} aria-hidden="true" /> Publish {textOnly.length === 1 ? "it" : `these ${textOnly.length}`} with WordLift <ArrowUpRight size={15} aria-hidden="true" />
-            </a>
-            <span>The markup is written for every page and kept in sync as the site changes. The report id travels with you.</span>
-          </p>
-          {sample && sampleText && (
-            <details className="fix-sample-fold">
-              <summary>See the markup for one of them</summary>
-              <figure className="fix-sample">
-                <figcaption>
-                  <span>Sample · {sample.name} · from {whereFound(sample) || "the site"}</span>
-                  <button type="button" onClick={() => void copy()}><Copy size={13} /> {copied ? "Copied" : "Copy"}</button>
-                </figcaption>
-                <pre>{sampleText}</pre>
-              </figure>
-            </details>
-          )}
-        </>
+      {fixable && (
+        <p className="fix-cta">
+          <a className="fix-publish" href={publishUrl(report.id, { intent: "fix" })} target="_blank" rel="noreferrer">
+            Publish the missing {textOnly.length} with WordLift <ArrowUpRight size={15} aria-hidden="true" />
+          </a>
+          <span>WordLift writes the machine-readable form for every page and keeps it in sync as the site changes.</span>
+        </p>
       )}
+
+      <details className="understand-detail">
+        <summary>See what agents currently understand</summary>
+        <div className="entity-groups">
+          <div className="entity-group">
+            <h3>
+              <span className="plain-word plain-word-works">Agents read these</span>
+              <span className="entity-count">{published.length}</span>
+            </h3>
+            {published.length > 0 ? (
+              <EntityList entities={published} tone="published" />
+            ) : (
+              <p className="entity-empty">Nothing on these pages is machine-readable yet.</p>
+            )}
+          </div>
+          <div className="entity-group">
+            <h3>
+              <span className="plain-word plain-word-fix">Only in your text</span>
+              <span className="entity-count">{textOnly.length}</span>
+            </h3>
+            {textOnly.length > 0 ? (
+              <EntityList entities={textOnly} tone="text" />
+            ) : (
+              <p className="entity-empty">Everything the pages describe is already machine-readable.</p>
+            )}
+          </div>
+        </div>
+        {sample && sampleText && (
+          <details className="fix-sample-fold">
+            <summary>See the markup for one of them</summary>
+            <figure className="fix-sample">
+              <figcaption>
+                <span>Sample · {sample.name} · from {whereFound(sample) || "the site"}</span>
+                <button type="button" onClick={() => void copy()}><Copy size={13} /> {copied ? "Copied" : "Copy"}</button>
+              </figcaption>
+              <pre>{sampleText}</pre>
+            </figure>
+          </details>
+        )}
+      </details>
     </section>
   );
 }

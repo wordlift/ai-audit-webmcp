@@ -7,7 +7,7 @@ test("landing page asks one question and takes a URL", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /can ai agents understand and use your business/i })).toBeVisible();
   await expect(page.getByLabel("Website URL")).toBeVisible();
-  await expect(page.getByText(/audit it\. fix it\. activate it\./i)).toBeVisible();
+  await expect(page.getByText(/what stops them, and what to fix/i)).toBeVisible();
 });
 
 test("a report opens with three words and keeps the full audit one click away", async ({ page }) => {
@@ -17,16 +17,17 @@ test("a report opens with three words and keeps the full audit one click away", 
   await expect(page).toHaveURL(/\/reports\//);
 
   // The first screen: one sentence, three actions, plain words, nothing precise.
-  await expect(page.getByText(/of the \d+ things? an AI agent should be able to do on/i)).toBeVisible();
+  await expect(page.getByText(/AI agents can do \d+ of the \d+ things? that matter on/i)).toBeVisible();
   const three = page.getByRole("list", { name: /the actions that matter/i });
   await expect(three.getByRole("listitem")).toHaveCount(3);
   await expect(three).toContainText(/works|fix this|talk to us/i);
   // Understand follows: every entity the audit read, named plainly, with where it was found.
-  await expect(page.getByRole("heading", { name: /what an agent understands about your business/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /fix what agents cannot understand|agents understand your business/i })).toBeVisible();
+  await page.getByText(/see what agents currently understand/i).click();
   await expect(page.locator(".entity-row").filter({ hasText: "Trail Jacket" })).toBeVisible();
   await expect(page.locator(".entity-row").filter({ hasText: "Trail Jacket" })).toContainText("Product");
-  // The full audit explains itself before it opens, and the precise names stay behind it.
-  await expect(page.getByText(/the precise version of this page/i)).toBeVisible();
+  // The full audit says what it is before it opens, and the precise names stay behind it.
+  await expect(page.getByText(/Evidence, entities, terminology, actions, governance/i)).toBeVisible();
   await expect(page.getByRole("heading", { name: /commerce \/ retail/i })).toBeHidden();
 
   // One click below, the model with its exact names.

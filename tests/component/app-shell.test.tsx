@@ -9,7 +9,7 @@ describe("application shell", () => {
 
     expect(screen.getByRole("heading", { name: /can ai agents understand and use your business/i })).toBeVisible();
     expect(screen.getByLabelText(/website url/i)).toBeVisible();
-    expect(screen.getByText(/audit it\. fix it\. activate it\./i)).toBeVisible();
+    expect(screen.getByText(/what stops them, and what to fix/i)).toBeVisible();
     expect(screen.getByRole("button", { name: /audit my site/i })).toBeVisible();
   });
 });

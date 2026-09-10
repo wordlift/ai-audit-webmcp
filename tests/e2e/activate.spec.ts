@@ -11,9 +11,9 @@ test("the Activate screen shows what the page carries, the three documents, and 
   await expect(page).toHaveURL(/\/reports\//);
   const reportId = page.url().split("/reports/")[1]!;
 
-  await page.getByRole("link", { name: /see what the site publishes/i }).click();
+  await page.getByRole("link", { name: /^activate$/i }).click();
   await expect(page).toHaveURL(new RegExp(`/reports/${reportId}/activate$`));
-  await expect(page.getByRole("heading", { name: "alpina.travel", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /make alpina\.travel usable by ai agents/i, level: 1 })).toBeVisible();
   // Other specs audit the same fixture, so the store may hold one reading or several: either the
   // movement or the promise of one, never a bare number.
   await expect(page.locator(".activate-score")).toContainText(/of 100 agent-ready(\. The next reading shows how it moved\.| since |, unchanged since )/);

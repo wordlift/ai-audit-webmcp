@@ -38,7 +38,9 @@ inputs differ.
 | `PLATFORM_EGRESS_RANGES` | — | Extra hosted-assistant egress ranges, `platform=cidr` entries separated by commas. Anthropic's range and a snapshot of OpenAI's are built in |
 | `PLATFORM_EGRESS_REFRESH_MINUTES` | `360` | How often OpenAI's published connector ranges are re-read at runtime. `0` keeps the built-in snapshot |
 | `AUDIT_DAILY_BUDGET` | `2000` | Audits the whole service runs in a day, whoever asks; past it audits answer "at capacity" until tomorrow and reads go on. `0` removes the ceiling. Per instance, like the other limits |
-| `MARKUP_PROVIDER` | `none` | `gemini` infers the markup a page should have, from its text, through the Gemini API. The stand-in until WordLift's own service replaces it |
+| `MARKUP_PROVIDER` | `none` | `content-analysis` extracts the entities a page is about with WordLift's Content Analysis v3, authenticated with `WORDLIFT_API_KEY`; `gemini` is the stand-in it replaced |
+| `CONTENT_ANALYSIS_URL` | the Modal deployment | Where Content Analysis v3 answers |
+| `CONTENT_ANALYSIS_CONFIDENCE` | `0.6` | The floor an extracted entity must reach to be kept; a Wikidata link needs a disambiguation score of 0.7 |
 | `GEMINI_API_KEY` | — | Secret Manager in production; required when the provider is `gemini` |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | The model behind the stand-in |
 | `MARKUP_ON_BASIC` | `thin` | Which pages of a basic scan are sent: `thin` (those that declare no entities), `all`, or `none`. A deep scan sends every page |
@@ -200,7 +202,21 @@ gcloud billing budgets create --billing-account=<BILLING_ACCOUNT_ID> \
   --threshold-rule=percent=0.5 --threshold-rule=percent=0.9 --threshold-rule=percent=1.0
 ```
 
-## Generated markup, the Fix preview, and what it costs
+## The entities behind Fix: Content Analysis v3
+
+With `MARKUP_PROVIDER=content-analysis`, each page a scan qualifies is sent as readable text to
+WordLift's Content Analysis v3 (`POST /analyze/text`, `Authorization: Key <WordLift key>`), a
+multilingual named-entity recogniser with Wikidata linking on WordLift's own infrastructure. It is
+asked for the things a business is made of by name, with a label set (organisation, person, place,
+product, service, offer, apartment, hotel, attraction, event, brand), and what it finds enters the
+page's entities marked `inferred`, by the same rules as the Gemini stand-in: never evidence, never
+readiness. An entity below the confidence floor, a role noun ("Guests") or a generic phrase is left
+aside and counted in the issues; a Wikidata link is kept only when the linker's own score reaches
+0.7, because at the floor it links a village in Lungau to an Italian comune. A call takes about
+fourteen seconds and pages run in parallel; the service meters nothing, so `/api/health` counts
+characters in and entities out and no cost.
+
+## Generated markup, the Gemini stand-in, and what it costs
 
 With `MARKUP_PROVIDER=gemini`, each page a scan qualifies is sent to Gemini 2.5 Flash as readable
 text — title, description, headings and the bounded body the collector already keeps, never raw

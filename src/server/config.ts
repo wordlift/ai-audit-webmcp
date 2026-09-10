@@ -46,7 +46,10 @@ const environmentSchema = z
      * Where the markup a page should have comes from. `gemini` is the stand-in — Gemini 2.5 Flash
      * through the Gemini API — until WordLift's own service replaces it behind the same interface.
      */
-    MARKUP_PROVIDER: z.enum(["none", "gemini"]).default("none"),
+    MARKUP_PROVIDER: z.enum(["none", "gemini", "content-analysis"]).default("none"),
+    /** WordLift's Content Analysis v3, the entity extraction behind Fix; authenticates with the WordLift key. */
+    CONTENT_ANALYSIS_URL: z.string().url().default("https://wordlift-lab--content-analysis-v3-web-app.modal.run"),
+    CONTENT_ANALYSIS_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.6),
     GEMINI_API_KEY: z.string().min(1).optional(),
     GEMINI_MODEL: z.string().min(1).max(80).default("gemini-2.5-flash"),
     /** List price used for the estimate, USD per million tokens. Change when Google does. */
@@ -96,6 +99,9 @@ const environmentSchema = z
     if (environment.MARKUP_PROVIDER === "gemini" && !environment.GEMINI_API_KEY) {
       context.addIssue({ code: "custom", path: ["GEMINI_API_KEY"], message: "Required for the Gemini markup provider" });
     }
+    if (environment.MARKUP_PROVIDER === "content-analysis" && !environment.WORDLIFT_API_KEY) {
+      context.addIssue({ code: "custom", path: ["WORDLIFT_API_KEY"], message: "Required for the Content Analysis provider" });
+    }
   });
 
 export type AppConfig = z.infer<typeof environmentSchema>;
@@ -125,6 +131,8 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     PLATFORM_EGRESS_REFRESH_MINUTES: environment.PLATFORM_EGRESS_REFRESH_MINUTES,
     AUDIT_DAILY_BUDGET: environment.AUDIT_DAILY_BUDGET,
     MARKUP_PROVIDER: environment.MARKUP_PROVIDER,
+    CONTENT_ANALYSIS_URL: environment.CONTENT_ANALYSIS_URL,
+    CONTENT_ANALYSIS_CONFIDENCE: environment.CONTENT_ANALYSIS_CONFIDENCE,
     GEMINI_API_KEY: environment.GEMINI_API_KEY,
     GEMINI_MODEL: environment.GEMINI_MODEL,
     GEMINI_INPUT_USD_PER_MILLION: environment.GEMINI_INPUT_USD_PER_MILLION,

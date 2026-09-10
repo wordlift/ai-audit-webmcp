@@ -81,7 +81,8 @@ describe("the agent's diary", () => {
 
   it("renders as a short list, and not at all when there is nothing to tell", () => {
     render(<AgentDiary report={report} />);
-    expect(screen.getByRole("heading", { name: /what our agent managed on your site/i })).toBeVisible();
+    expect(screen.getByText(/what our agent actually did on your site/i)).toBeVisible();
+    expect(screen.getByText(/what our agent actually did on your site/i).closest("details")).not.toHaveAttribute("open");
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
     const { container } = render(<AgentDiary report={{ ...report, capabilities: [] }} />);
     expect(container).toBeEmptyDOMElement();

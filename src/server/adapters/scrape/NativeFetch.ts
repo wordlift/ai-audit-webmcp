@@ -804,6 +804,22 @@ export const DOMAIN_ENTITY_TYPES: ReadonlySet<string> = new Set([
   "InsuranceAgency",
   "Event",
   "Place",
+  // Where a business is, what it is near and what it sells under: the types an entity extractor
+  // finds by name on a travel, retail or service site, and that a declared page may carry too.
+  "City",
+  "Country",
+  "AdministrativeArea",
+  "TouristAttraction",
+  "TouristDestination",
+  "Brand",
+  "Offer",
+  "Restaurant",
+  "Store",
+  "CreativeWork",
+  "Book",
+  "Movie",
+  "MusicRecording",
+  "SportsTeam",
 ]);
 
 function collectEntities(node: unknown, entities: ExtractedEntity[], base: URL, depth: number): void {

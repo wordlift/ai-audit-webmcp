@@ -74,7 +74,9 @@ describe("own it, lightly", () => {
       expect(within(group).getByLabelText("We do")).toBeVisible();
       expect(within(group).getByLabelText("A partner does")).toBeVisible();
       expect(within(group).getByLabelText("We only describe it")).toBeVisible();
+      expect(within(group).getByLabelText("Not relevant")).toBeVisible();
     }
+    expect(screen.getByRole("heading", { name: /who actually performs these actions/i })).toBeVisible();
     expect(screen.getByRole("button", { name: /save my answers/i })).toBeDisabled();
     // The precise vocabulary stays one click below.
     expect(screen.queryByText(/partner-handoff|informational-only/)).toBeNull();
@@ -178,11 +180,13 @@ describe("what the answers amount to", () => {
         "a.two": { partnerName: "", partnerUrl: "" },
         "a.three": { boundary: "partner-handoff", partnerName: "  Partner Co ", partnerUrl: "partner.example/book" },
         "a.four": { boundary: "partner-handoff", partnerName: "", partnerUrl: "" },
+        "a.five": { boundary: "not-applicable", partnerName: "", partnerUrl: "" },
       }),
     ).toEqual([
       { actionId: "a.one", decision: "confirm", boundary: "owned" },
       { actionId: "a.three", decision: "confirm", boundary: "partner-handoff", partner: { name: "Partner Co", url: "https://partner.example/book" } },
       { actionId: "a.four", decision: "confirm", boundary: "partner-handoff" },
+      { actionId: "a.five", decision: "confirm", boundary: "not-applicable" },
     ]);
   });
 });

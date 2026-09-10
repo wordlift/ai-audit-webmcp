@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { FirstScreen, actionsThatMatter, openingSentence, readAgo, readersLine } from "../../src/client/components/FirstScreen";
+import { FirstScreen, actionsThatMatter, gapLine, headline, readAgo, readersLine } from "../../src/client/components/FirstScreen";
 import type { CapabilityResult, ReportRecord } from "../../src/shared/types/index.js";
 
 function capability(overrides: Partial<CapabilityResult> & Pick<CapabilityResult, "actionId" | "label" | "state">): CapabilityResult {
@@ -67,10 +67,11 @@ function renderScreen(record: ReportRecord = report) {
 describe("the first screen", () => {
   it("opens with one sentence a person can act on", () => {
     renderScreen();
-    expect(screen.getByText(/Of the 3 things an AI agent should be able to do on a travel \/ hospitality site, 1 works today\. Here is what stops the others\./)).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1, name: "AI agents can do 1 of the 3 things that matter on alpina.travel." })).toBeVisible();
+    expect(screen.getByText("Fix the other 2.")).toBeVisible();
+    expect(screen.getByText(/Agent readiness/)).toHaveTextContent("Agent readiness 62/100");
     // The other expected action is one click below, and the link says how many there are in all.
     expect(screen.getByRole("link", { name: /All 4 actions a travel \/ hospitality site should offer are in the full audit/ })).toHaveAttribute("href", "#full-audit");
-    expect(screen.getByRole("heading", { name: "alpina.travel" })).toBeVisible();
     expect(screen.getByText("62")).toBeVisible();
   });
 
@@ -86,7 +87,7 @@ describe("the first screen", () => {
     expect(list).toHaveTextContent("Talk to us");
     // The precise vocabulary stays one click below.
     expect(list).not.toHaveTextContent(/agent-ready|unverified|human-only/);
-    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+    expect(within(list).getAllByRole("listitem")).toHaveLength(3);
   });
 
   it("says when the site was read, and offers to read it again", () => {
@@ -115,10 +116,10 @@ describe("the first screen", () => {
   it("says what the agent did in a person's words, never in ours", () => {
     renderScreen();
     const list = screen.getByRole("list", { name: /the actions that matter/i });
-    expect(list).toHaveTextContent("The site says an agent can do this, but when ours tried, nothing answered.");
-    expect(list).toHaveTextContent("Our agent did this on your site. Run by WordLift.");
-    expect(list).toHaveTextContent("Nothing here lets a person or an agent do this. We can run it for you.");
-    expect(list).not.toHaveTextContent(/interface|verified|invocation/i);
+    expect(list).toHaveTextContent("Your site says agents can do this, but our agent could not complete it.");
+    expect(list).toHaveTextContent("Our agent successfully used this. Run by WordLift.");
+    expect(list).toHaveTextContent("There is no agent-accessible interface yet.");
+    expect(list).not.toHaveTextContent(/invocation|unverified|agent-ready|declared/i);
   });
 });
 
@@ -128,14 +129,14 @@ describe("which actions matter", () => {
     expect(three.map((item) => item.actionId)).toEqual(["booking.reserve", "availability.check", "property.search"]);
   });
 
-  it("writes an honest sentence when nothing is expected", () => {
-    expect(openingSentence([])).toMatch(/No agent capabilities are expected/);
-    expect(openingSentence([capability({ actionId: "a", label: "A", state: "agent-ready" })])).toBe(
-      "Of the 1 thing an AI agent should be able to do on a site like this, 1 works today.",
-    );
-    expect(openingSentence(report.capabilities ?? [], "travel / hospitality")).toBe(
-      "Of the 3 things an AI agent should be able to do on a travel / hospitality site, 1 works today.",
-    );
+  it("writes the headline and the gap, and stays honest when nothing is expected", () => {
+    expect(headline([], "alpina.travel")).toMatch(/No agent capabilities are expected/);
+    expect(gapLine([])).toBeNull();
+    expect(headline([capability({ actionId: "a", label: "A", state: "agent-ready" })], "shop.example")).toBe("AI agents can do 1 of the 1 thing that matter on shop.example.");
+    expect(gapLine([capability({ actionId: "a", label: "A", state: "agent-ready" })])).toBe("Everything that matters works.");
+    expect(gapLine([capability({ actionId: "a", label: "A", state: "missing" })])).toBe("Fix it.");
+    expect(headline(report.capabilities ?? [], "alpina.travel")).toBe("AI agents can do 1 of the 3 things that matter on alpina.travel.");
+    expect(gapLine(report.capabilities ?? [])).toBe("Fix the other 2.");
   });
 
   it("rounds the reading time the way a person would", () => {

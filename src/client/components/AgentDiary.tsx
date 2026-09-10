@@ -6,7 +6,8 @@ import { actionsThatMatter } from "./FirstScreen";
  * What the audit's agent actually did on the site, told as a person would tell it: searched for
  * this and got results, called that and nothing answered, looked for a way to book and found none.
  * Every line is one piece of invocation evidence, or one of the three actions that matter with
- * nothing to call. Nothing here is inferred; it is the audit's own diary.
+ * nothing to call. Nothing here is inferred; it is the audit's own diary, folded under the three
+ * words as the proof behind them.
  */
 export interface DiaryLine {
   text: string;
@@ -85,14 +86,16 @@ export function AgentDiary({ report }: { report: ReportRecord }) {
   const lines = agentDiary(report);
   if (lines.length === 0) return null;
   return (
-    <section className="agent-diary" aria-labelledby="agent-diary-title">
-      <p className="section-kicker"><Footprints size={16} /> Verified by calling</p>
-      <h2 id="agent-diary-title">What our agent managed on your site</h2>
-      <ul className="diary-lines">
+    <details className="agent-diary">
+      <summary>
+        <Footprints size={15} aria-hidden="true" /> What our agent actually did on your site
+        <span className="diary-count">{lines.length} {lines.length === 1 ? "step" : "steps"}</span>
+      </summary>
+      <ul className="diary-lines" aria-label="What the agent did">
         {lines.map((line) => (
           <li key={line.text} className={`diary-${line.tone}`}>{line.text}</li>
         ))}
       </ul>
-    </section>
+    </details>
   );
 }

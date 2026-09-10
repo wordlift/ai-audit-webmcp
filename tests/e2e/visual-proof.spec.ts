@@ -5,7 +5,7 @@ async function openTravelReport(page: Page) {
   await page.getByLabel("Website URL").fill("https://alpina.travel");
   await page.getByRole("button", { name: /audit my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
-  await expect(page.getByText(/of the \d+ things? an AI agent should be able to do on/i)).toBeVisible();
+  await expect(page.getByText(/AI agents can do \d+ of the \d+ things? that matter on/i)).toBeVisible();
   await page.locator("summary", { hasText: "Full audit" }).click();
   await expect(page.getByRole("heading", { name: "What an agent should be able to do" })).toBeVisible();
 }
@@ -28,6 +28,6 @@ test("visual proof captures the desktop capability map", async ({ page }, testIn
 test("visual proof captures the mobile capability map", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openTravelReport(page);
-  await expect(page.getByText(/of the \d+ things? an AI agent should be able to do on/i)).toBeVisible();
+  await expect(page.getByText(/AI agents can do \d+ of the \d+ things? that matter on/i)).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("travel-report-mobile.png"), fullPage: true });
 });

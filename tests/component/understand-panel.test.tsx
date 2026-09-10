@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { actionsWithoutInterface, publishUrl, sampleJsonLd } from "../../src/client/components/FixPanel";
+import { actionsWithoutInterface, publishUrl, sampleJsonLd, talkToUsUrl } from "../../src/client/components/FixPanel";
 import { UnderstandPanel, entityTypeLabel, groupEntities, whereFound } from "../../src/client/components/UnderstandPanel";
 import type { CapabilityResult, DomainEntity, ReportRecord } from "../../src/shared/types/index.js";
 
@@ -58,10 +58,14 @@ const base: ReportRecord = {
 };
 
 describe("what an agent understands", () => {
-  it("names every entity plainly, says where it was found, and splits what agents read from what is only in the text", () => {
+  it("leads with the fix, and keeps what agents currently understand one click below", () => {
     render(<UnderstandPanel report={base} />);
-    expect(screen.getByRole("heading", { name: /what an agent understands about your business/i })).toBeVisible();
-    expect(screen.getByText("3 things on your pages. 1 is described in a form agents read; 2 exist only in your text.")).toBeVisible();
+    expect(screen.getByRole("heading", { name: /fix what agents cannot understand/i })).toBeVisible();
+    expect(screen.getByText(/Agents found 3 important things on these pages\./)).toHaveTextContent("1 is already machine-readable. 2 exist only in the text.");
+    const detail = screen.getByText(/see what agents currently understand/i).closest("details")!;
+    expect(detail).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText(/see what agents currently understand/i));
+    expect(detail).toHaveAttribute("open");
 
     const [reads, textOnly] = screen.getAllByRole("list");
     expect(within(reads!).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["AlpiNestLodging businesshome page"]);
@@ -78,9 +82,10 @@ describe("what an agent understands", () => {
 
   it("publishes the text-only ones with one button carrying the report id, and keeps the markup behind a fold", () => {
     render(<UnderstandPanel report={base} />);
-    const link = screen.getByRole("link", { name: /publish these 2 with wordlift/i });
-    expect(link).toHaveAttribute("href", "https://my.wordlift.io/?source=ai-audit&report=4a8a04c0-e247-4bec-a440-d9f3506f9212");
+    const link = screen.getByRole("link", { name: /publish the missing 2 with wordlift/i });
+    expect(link).toHaveAttribute("href", "https://my.wordlift.io/?source=ai-audit&report=4a8a04c0-e247-4bec-a440-d9f3506f9212&intent=fix");
 
+    fireEvent.click(screen.getByText(/see what agents currently understand/i));
     const fold = screen.getByText(/see the markup for one of them/i).closest("details")!;
     expect(fold).not.toHaveAttribute("open");
     fireEvent.click(screen.getByText(/see the markup for one of them/i));
@@ -93,8 +98,10 @@ describe("what an agent understands", () => {
 
   it("says so when everything is already published, and offers nothing to publish", () => {
     render(<UnderstandPanel report={{ ...base, contextGraph: { ...base.contextGraph!, entities: [declared] } }} />);
-    expect(screen.getByText("1 thing on your pages, all described in a form agents read.")).toBeVisible();
-    expect(screen.getByText(/Everything the pages describe is already published for agents/)).toBeVisible();
+    expect(screen.getByRole("heading", { name: /agents understand your business/i })).toBeVisible();
+    expect(screen.getByText(/Agents found 1 important thing on these pages\./)).toHaveTextContent("All of it is already machine-readable.");
+    fireEvent.click(screen.getByText(/see what agents currently understand/i));
+    expect(screen.getByText(/Everything the pages describe is already machine-readable/)).toBeVisible();
     expect(screen.queryByRole("link", { name: /publish/i })).toBeNull();
   });
 
@@ -127,5 +134,7 @@ describe("the Fix helpers the pitch and Activate share", () => {
     expect(actionsWithoutInterface(base.capabilities!).map((capability) => capability.actionId)).toEqual(["booking.reserve", "property.search"]);
     expect(sampleJsonLd(declared)).toMatchObject({ "@context": "https://schema.org", "@type": "LodgingBusiness", "@id": "https://alpina.travel/#property" });
     expect(publishUrl("abc")).toBe("https://my.wordlift.io/?source=ai-audit&report=abc");
+    expect(publishUrl("abc", { action: "availability.check", intent: "agent-ready" })).toBe("https://my.wordlift.io/?source=ai-audit&report=abc&action=availability.check&intent=agent-ready");
+    expect(talkToUsUrl("abc", "checkout.create")).toBe("https://wordlift.io/book%20a%20demo/?source=ai-audit&report=abc&action=checkout.create");
   });
 });
