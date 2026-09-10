@@ -49,7 +49,7 @@ const environmentSchema = z
     MARKUP_PROVIDER: z.enum(["none", "gemini", "content-analysis"]).default("none"),
     /** WordLift's Content Analysis v3, the entity extraction behind Fix; authenticates with the WordLift key. */
     CONTENT_ANALYSIS_URL: z.string().url().default("https://wordlift-lab--content-analysis-v3-web-app.modal.run"),
-    CONTENT_ANALYSIS_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.6),
+    CONTENT_ANALYSIS_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.55),
     GEMINI_API_KEY: z.string().min(1).optional(),
     GEMINI_MODEL: z.string().min(1).max(80).default("gemini-2.5-flash"),
     /** List price used for the estimate, USD per million tokens. Change when Google does. */

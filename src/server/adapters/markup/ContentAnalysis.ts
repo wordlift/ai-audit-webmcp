@@ -27,7 +27,8 @@ export interface ContentAnalysisOptions {
 }
 
 export const CONTENT_ANALYSIS_ENDPOINT = "https://wordlift-lab--content-analysis-v3-web-app.modal.run";
-const DEFAULT_CONFIDENCE = 0.6;
+/** Above the noise at 0.51 ("Breakfast", "two-bedroom family apartment"), below a real product at 0.56 ("Wordlift Agent"). */
+const DEFAULT_CONFIDENCE = 0.55;
 const DEFAULT_LINK_CONFIDENCE = 0.7;
 const DEFAULT_TIMEOUT_MS = 60_000;
 const MAX_TEXT_CHARACTERS = 12_000;

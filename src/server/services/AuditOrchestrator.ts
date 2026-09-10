@@ -763,6 +763,8 @@ export class AuditOrchestrator {
         return;
       }
       generated += 1;
+      // What the extractor left aside, by kind and count: no name, no text, only the reasons.
+      if (outcome.value.issues.length > 0) console.log("markup_issues", page.url, outcome.value.issues.slice(0, 8).join("; "));
       inputTokens += outcome.value.usage.inputTokens;
       outputTokens += outcome.value.usage.outputTokens;
       estimatedUsd += outcome.value.usage.estimatedUsd;

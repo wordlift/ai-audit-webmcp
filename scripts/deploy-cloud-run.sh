@@ -61,7 +61,9 @@ fi
 MARKUP="${MARKUP_PROVIDER:-none}"
 MARKUP_ENV=""
 if [ "$MARKUP" = "content-analysis" ]; then
-  MARKUP_ENV="##MARKUP_PROVIDER=content-analysis##MARKUP_ON_BASIC=${MARKUP_ON_BASIC:-thin}"
+  # Every page of a basic scan: the service costs nothing per call, and a page that declares
+  # some entities is exactly where the ones it does not declare are.
+  MARKUP_ENV="##MARKUP_PROVIDER=content-analysis##MARKUP_ON_BASIC=${MARKUP_ON_BASIC:-all}"
   if [ -n "${CONTENT_ANALYSIS_URL:-}" ]; then
     MARKUP_ENV="${MARKUP_ENV}##CONTENT_ANALYSIS_URL=${CONTENT_ANALYSIS_URL}"
   fi
