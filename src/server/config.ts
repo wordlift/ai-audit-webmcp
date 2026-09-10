@@ -50,6 +50,8 @@ const environmentSchema = z
     /** WordLift's Content Analysis v3, the entity extraction behind Fix; authenticates with the WordLift key. */
     CONTENT_ANALYSIS_URL: z.string().url().default("https://wordlift-lab--content-analysis-v3-web-app.modal.run"),
     CONTENT_ANALYSIS_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.45),
+    /** A second extractor behind the first, for names only, used when the first does not answer. */
+    MARKUP_FALLBACK: z.enum(["none", "gemini"]).default("none"),
     GEMINI_API_KEY: z.string().min(1).optional(),
     GEMINI_MODEL: z.string().min(1).max(80).default("gemini-2.5-flash"),
     /** List price used for the estimate, USD per million tokens. Change when Google does. */
@@ -102,6 +104,9 @@ const environmentSchema = z
     if (environment.MARKUP_PROVIDER === "content-analysis" && !environment.WORDLIFT_API_KEY) {
       context.addIssue({ code: "custom", path: ["WORDLIFT_API_KEY"], message: "Required for the Content Analysis provider" });
     }
+    if (environment.MARKUP_FALLBACK === "gemini" && !environment.GEMINI_API_KEY) {
+      context.addIssue({ code: "custom", path: ["GEMINI_API_KEY"], message: "Required for the Gemini fallback" });
+    }
   });
 
 export type AppConfig = z.infer<typeof environmentSchema>;
@@ -133,6 +138,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     MARKUP_PROVIDER: environment.MARKUP_PROVIDER,
     CONTENT_ANALYSIS_URL: environment.CONTENT_ANALYSIS_URL,
     CONTENT_ANALYSIS_CONFIDENCE: environment.CONTENT_ANALYSIS_CONFIDENCE,
+    MARKUP_FALLBACK: environment.MARKUP_FALLBACK,
     GEMINI_API_KEY: environment.GEMINI_API_KEY,
     GEMINI_MODEL: environment.GEMINI_MODEL,
     GEMINI_INPUT_USD_PER_MILLION: environment.GEMINI_INPUT_USD_PER_MILLION,

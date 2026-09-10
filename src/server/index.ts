@@ -9,6 +9,7 @@ import { createScrapingBeeCollector } from "./adapters/scrape/ScrapingBee.js";
 import { FirestoreClaimStore, MemoryClaimStore } from "./adapters/claims/index.js";
 import { FirestoreLeadStore, HubSpotLeadDelivery, MemoryLeadStore } from "./adapters/leads/index.js";
 import { ContentAnalysisProvider } from "./adapters/markup/ContentAnalysis.js";
+import { FallbackMarkupProvider } from "./adapters/markup/FallbackMarkup.js";
 import { GeminiMarkupProvider } from "./adapters/markup/GeminiMarkup.js";
 import { FirestoreVisitStore } from "./adapters/visits/FirestoreVisitStore.js";
 import { MemoryVisitStore } from "./adapters/visits/MemoryVisitStore.js";
@@ -58,16 +59,20 @@ const leadDelivery = config.HUBSPOT_PORTAL_ID && config.HUBSPOT_FORM_GUID
 
 // The entities a page is about: WordLift's own Content Analysis, or the Gemini stand-in it
 // replaced, behind one interface. Nothing else in the audit knows which.
-const markup =
+const gemini = () =>
+  new GeminiMarkupProvider({
+    apiKey: config.GEMINI_API_KEY as string,
+    model: config.GEMINI_MODEL,
+    pricing: { inputUsdPerMillion: config.GEMINI_INPUT_USD_PER_MILLION, outputUsdPerMillion: config.GEMINI_OUTPUT_USD_PER_MILLION },
+  });
+const primaryMarkup =
   config.MARKUP_PROVIDER === "content-analysis"
     ? new ContentAnalysisProvider({ apiKey: config.WORDLIFT_API_KEY as string, endpoint: config.CONTENT_ANALYSIS_URL, confidence: config.CONTENT_ANALYSIS_CONFIDENCE })
     : config.MARKUP_PROVIDER === "gemini"
-      ? new GeminiMarkupProvider({
-          apiKey: config.GEMINI_API_KEY as string,
-          model: config.GEMINI_MODEL,
-          pricing: { inputUsdPerMillion: config.GEMINI_INPUT_USD_PER_MILLION, outputUsdPerMillion: config.GEMINI_OUTPUT_USD_PER_MILLION },
-        })
+      ? gemini()
       : undefined;
+// The fallback steps in for a page only when the first extractor does not answer, and for names only.
+const markup = primaryMarkup && config.MARKUP_FALLBACK === "gemini" && config.MARKUP_PROVIDER !== "gemini" ? new FallbackMarkupProvider(primaryMarkup, gemini()) : primaryMarkup;
 
 const mode: OrchestratorOptions["mode"] = config.AUDIT_PROVIDER === "wordlift" ? "live" : "demo";
 const providers: OrchestratorOptions["providers"] = mode === "live"

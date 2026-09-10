@@ -35,6 +35,18 @@ export function whereFound(entity: DomainEntity): string {
 export interface EntityLinks {
   actions: Array<{ actionId: string; label: string; word: PlainWord | null }>;
   terms: string[];
+  /** The Wikidata link the entity carries, when it carries one. */
+  wikidata: { url: string; id: string } | null;
+}
+
+const WIKIDATA = /^https?:\/\/(?:www\.)?wikidata\.org\/(?:wiki|entity)\/(Q\d+)/i;
+
+export function wikidataLink(entity: DomainEntity): EntityLinks["wikidata"] {
+  for (const url of entity.sameAs) {
+    const match = WIKIDATA.exec(url);
+    if (match) return { url, id: match[1]! };
+  }
+  return null;
 }
 
 export function linksFor(entity: DomainEntity, report: ReportRecord, limit = 3): EntityLinks {
@@ -47,7 +59,7 @@ export function linksFor(entity: DomainEntity, report: ReportRecord, limit = 3):
     .filter((term) => term.entityIds.includes(entity.id) && term.label.toLowerCase() !== entity.name.toLowerCase())
     .slice(0, limit)
     .map((term) => term.label);
-  return { actions, terms };
+  return { actions, terms, wikidata: wikidataLink(entity) };
 }
 
 function openFullMap() {
@@ -94,8 +106,13 @@ function EntityList({ entities, tone, report }: { entities: DomainEntity[]; tone
               <span className="entity-name">{entity.name}</span>
               <span className="entity-type">{entityTypeLabel(entity.types[0])}</span>
               {whereFound(entity) && <span className="entity-where">{whereFound(entity)}</span>}
-              {(links.actions.length > 0 || links.terms.length > 0) && (
+              {(links.actions.length > 0 || links.terms.length > 0 || links.wikidata) && (
                 <span className="entity-links" aria-label={`What the map links to ${entity.name}`}>
+                  {links.wikidata && (
+                    <a className="entity-link entity-link-wikidata" href={links.wikidata.url} target="_blank" rel="noreferrer">
+                      Wikidata {links.wikidata.id}
+                    </a>
+                  )}
                   {links.actions.map((action) => (
                     <span key={action.actionId} className={`entity-link entity-link-${action.word ?? "none"}`}>{action.label}</span>
                   ))}

@@ -67,6 +67,11 @@ if [ "$MARKUP" = "content-analysis" ]; then
   if [ -n "${CONTENT_ANALYSIS_URL:-}" ]; then
     MARKUP_ENV="${MARKUP_ENV}##CONTENT_ANALYSIS_URL=${CONTENT_ANALYSIS_URL}"
   fi
+  # Gemini behind it, for names only, when Content Analysis does not answer: MARKUP_FALLBACK=gemini.
+  if [ "${MARKUP_FALLBACK:-none}" = "gemini" ]; then
+    SECRETS="$SECRETS,GEMINI_API_KEY=GEMINI_API_KEY:latest"
+    MARKUP_ENV="${MARKUP_ENV}##MARKUP_FALLBACK=gemini##GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}"
+  fi
 elif [ "$MARKUP" = "gemini" ]; then
   SECRETS="$SECRETS,GEMINI_API_KEY=GEMINI_API_KEY:latest"
   MARKUP_ENV="##MARKUP_PROVIDER=gemini##GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}##MARKUP_ON_BASIC=${MARKUP_ON_BASIC:-thin}"

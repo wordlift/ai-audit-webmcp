@@ -324,7 +324,10 @@ function skillMarkdown(report: ReportRecord, entities: DomainEntity[], actions: 
     "## Entities",
     "",
     ...(entities.length > 0
-      ? entities.map((entity) => `- ${entity.name} (${entity.types.join(", ")}) — \`${entity.id}\`${entity.humanPriority === "primary" ? ", primary" : ""}`)
+      ? entities.map((entity) => {
+          const wikidata = entity.sameAs.find((url) => /wikidata\.org/i.test(url));
+          return `- ${entity.name} (${entity.types.join(", ")}) — \`${entity.id}\`${entity.humanPriority === "primary" ? ", primary" : ""}${wikidata ? `, same as ${wikidata}` : ""}`;
+        })
       : ["- None published yet."]),
     "",
   ];

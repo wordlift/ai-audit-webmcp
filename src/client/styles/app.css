@@ -1036,6 +1036,7 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .entity-link-fix { border-color: color-mix(in srgb, var(--state-unverified) 60%, white); color: var(--ink); }
 .entity-link-talk { border-color: color-mix(in srgb, var(--state-missing) 40%, white); color: var(--ink); }
 .entity-link-term { font-style: italic; }
+.entity-link-wikidata { color: var(--brand); text-decoration: none; border-color: color-mix(in srgb, var(--brand) 40%, white); }
 .entity-more, .entity-empty { margin: 0; color: var(--muted); font-size: 0.88rem; }
 .fix-sample-fold { min-width: 0; max-width: 100%; }
 .fix-sample-fold .fix-sample { max-width: 100%; }

@@ -41,6 +41,7 @@ inputs differ.
 | `MARKUP_PROVIDER` | `none` | `content-analysis` extracts the entities a page is about with WordLift's Content Analysis v3, authenticated with `WORDLIFT_API_KEY`; `gemini` is the stand-in it replaced |
 | `CONTENT_ANALYSIS_URL` | the Modal deployment | Where Content Analysis v3 answers |
 | `CONTENT_ANALYSIS_CONFIDENCE` | `0.45` | The floor an extracted entity must reach to be kept, set low for reach; the name rules keep the noise out. A Wikidata link needs a disambiguation score of 0.7 |
+| `MARKUP_FALLBACK` | `none` | `gemini` steps in for a page only when Content Analysis fails or does not answer in time, and for names only: a candidate is kept solely when its exact name is in the page's text, with no description, link or offer. Needs `GEMINI_API_KEY` |
 | `GEMINI_API_KEY` | — | Secret Manager in production; required when the provider is `gemini` |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | The model behind the stand-in |
 | `MARKUP_ON_BASIC` | `thin` | Which pages of a basic scan are sent: `thin` (those that declare no entities), `all`, or `none`. A deep scan sends every page. The deploy script passes `all` with Content Analysis, which costs nothing per call |

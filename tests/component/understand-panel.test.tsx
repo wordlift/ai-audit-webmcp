@@ -35,7 +35,7 @@ const inferred: DomainEntity = {
 };
 const declared: DomainEntity = { ...inferred, id: "https://alpina.travel/#property", types: ["LodgingBusiness"], name: "AlpiNest", offers: [], confidence: 0.95, origin: undefined, sourceUrls: ["https://alpina.travel/"] };
 const demoted: DomainEntity = { ...declared, id: "https://alpina.travel/#footer", name: "Footer menu", types: ["SiteNavigationElement"], humanPriority: "demoted" };
-const promoted: DomainEntity = { ...inferred, id: "https://alpina.travel/#inferred-place-lungau", name: "Lungau", types: ["Place"], offers: [], humanPriority: "primary", confidence: 0.4 };
+const promoted: DomainEntity = { ...inferred, id: "https://alpina.travel/#inferred-place-lungau", name: "Lungau", types: ["Place"], offers: [], humanPriority: "primary", confidence: 0.4, sameAs: ["https://www.wikidata.org/wiki/Q696371"] };
 
 const base: ReportRecord = {
   id: "4a8a04c0-e247-4bec-a440-d9f3506f9212",
@@ -78,7 +78,7 @@ describe("what an agent understands", () => {
     expect(within(reads!).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["AlpiNestLodging businesshome pageCheck availability“Alpine stays”"]);
     // The owner's primary entity leads the text-only group, whatever its confidence.
     expect(within(textOnly!).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
-      "LungauPlace/lungau/apartments/samspitze-4-mariapfarr",
+      "LungauPlace/lungau/apartments/samspitze-4-mariapfarrWikidata Q696371",
       "Samspitze 4Apartment/lungau/apartments/samspitze-4-mariapfarr",
     ]);
     // A demoted entity is not on the first screen at all.
@@ -111,7 +111,10 @@ describe("what an agent understands", () => {
     // The entity's own name is not a word the site uses for it.
     expect(links).not.toHaveTextContent("“AlpiNest”");
     expect(screen.getByRole("link", { name: /open the full map/i })).toHaveAttribute("href", "#full-audit");
-    expect(linksFor(inferred, base)).toEqual({ actions: [], terms: [] });
+    expect(linksFor(inferred, base)).toEqual({ actions: [], terms: [], wikidata: null });
+    // A Wikidata link the extractor was sure of is shown, and only when it exists.
+    expect(screen.getByRole("link", { name: "Wikidata Q696371" })).toHaveAttribute("href", "https://www.wikidata.org/wiki/Q696371");
+    expect(screen.queryByText(/suggested/i)).toBeNull();
   });
 
   it("says so when everything is already published, and offers nothing to publish", () => {
