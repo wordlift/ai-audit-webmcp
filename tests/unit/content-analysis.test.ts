@@ -26,6 +26,8 @@ const answer = {
     { text: "Breakfast", label: "Event", start: 160, end: 169, score: 0.51 },
     { text: "Rome", label: "City", start: 170, end: 174, score: 0.77, entity_id: "Q220", entity_label: "Rome", entity_description: "capital of Italy", disambiguation_score: 0.73 },
     { text: "Tuesday", label: "Date", start: 180, end: 187, score: 0.9 },
+    { text: "Samspitze 4Enter", label: "Apartment", start: 190, end: 206, score: 0.8 },
+    { text: "Lungau", label: "City", start: 210, end: 216, score: 0.9 },
   ],
 };
 
@@ -57,24 +59,24 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
     const provider = new ContentAnalysisProvider({ apiKey: "wl-key", fetch: impl });
     const outcome = await provider.generate(page);
 
+    // One Lungau, whatever the recogniser labelled it the second time; no country; no name with a button glued on.
     expect(outcome.entities.map((entity) => [entity.types[0], entity.name, entity.origin])).toEqual([
       ["Apartment", "Samspitze 4", "inferred"],
       ["City", "Mariapfarr", "inferred"],
       ["Place", "Lungau", "inferred"],
-      ["Country", "Austria", "inferred"],
       ["Organization", "Mountain Nests Rentals", "inferred"],
       ["City", "Rome", "inferred"],
     ]);
     const byName = Object.fromEntries(outcome.entities.map((entity) => [entity.name, entity]));
-    // Sure: Austria at 0.73 carries its link and description. Guessed: Samspitze 4 at 0.5 carries nothing of "Klimmspitze".
-    expect(byName["Austria"]).toMatchObject({ sameAs: ["https://www.wikidata.org/wiki/Q40"], description: "country in Central Europe" });
+    // Sure: Rome at 0.73 carries its link and description. Guessed: Samspitze 4 at 0.5 carries nothing of "Klimmspitze".
+    expect(byName["Rome"]).toMatchObject({ sameAs: ["https://www.wikidata.org/wiki/Q220"], description: "capital of Italy" });
     expect(byName["Samspitze 4"]).toMatchObject({ sameAs: [], alternateNames: [] });
     expect(byName["Samspitze 4"]?.description).toBeUndefined();
     expect(byName["Samspitze 4"]?.id).toBe("https://alpina.travel/#inferred-apartment-samspitze-4");
-    expect(outcome.issues).toEqual(["2 entities below the confidence floor", "1 mention skipped as not a name", "1 entity skipped as not domain entities: Date"]);
+    expect(outcome.issues).toEqual(["2 entities below the confidence floor", "3 mentions skipped as not a name", "1 entity skipped as not domain entities: Date"]);
     expect(outcome.model).toBe("content-analysis-v3/0.1.0");
-    expect(outcome.usage).toEqual({ inputTokens: expect.any(Number), outputTokens: 6, estimatedUsd: 0 });
-    expect(provider.totals()).toMatchObject({ pages: 1, outputTokens: 6, estimatedUsd: 0 });
+    expect(outcome.usage).toEqual({ inputTokens: expect.any(Number), outputTokens: 5, estimatedUsd: 0 });
+    expect(provider.totals()).toMatchObject({ pages: 1, outputTokens: 5, estimatedUsd: 0 });
   });
 
   it("says only the status when the service refuses, never what it was sent", async () => {

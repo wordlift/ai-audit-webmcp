@@ -47,7 +47,7 @@ export const ENTITY_LABELS = [
   "Brand",
 ] as const;
 
-/** The service's labels as schema.org types, the vocabulary the rest of the map speaks. */
+/** The service's labels as schema.org types, the vocabulary the rest of the map speaks. A country is where a business is, not what it is. */
 const SCHEMA_TYPES: Record<string, string> = {
   Organization: "Organization",
   Company: "Organization",
@@ -56,7 +56,6 @@ const SCHEMA_TYPES: Record<string, string> = {
   Location: "Place",
   City: "City",
   Region: "AdministrativeArea",
-  Country: "Country",
   Product: "Product",
   Service: "Service",
   Offer: "Offer",
@@ -167,8 +166,13 @@ export function nodesFrom(found: AnalysedEntity[], confidence: number, linkConfi
       notNames += 1;
       continue;
     }
+    if (label === "Country") {
+      notNames += 1;
+      continue;
+    }
     const type = SCHEMA_TYPES[label] ?? label;
-    const key = `${type}|${name.toLowerCase()}`;
+    // One name is one thing: the recogniser labelling "Lungau" a city here and a place there is one Lungau.
+    const key = name.toLowerCase();
     if (nodes.has(key)) continue;
 
     const linked = typeof entity.entity_id === "string" && /^Q\d+$/.test(entity.entity_id) && typeof entity.disambiguation_score === "number" && entity.disambiguation_score >= linkConfidence;
@@ -183,7 +187,10 @@ export function nodesFrom(found: AnalysedEntity[], confidence: number, linkConfi
     });
     if (nodes.size >= MAX_ENTITIES) break;
   }
+  // "Samspitze 4Enter" is "Samspitze 4" with a button label glued on by the page's text: the shorter name is the thing.
+  const kept = [...nodes.values()];
+  const glued = kept.filter((node) => kept.some((other) => other !== node && node.name.length > other.name.length && node.name.startsWith(other.name) && !/^[\s,.;:()-]/.test(node.name.slice(other.name.length))));
   if (belowFloor > 0) issues.push(`${belowFloor} ${belowFloor === 1 ? "entity" : "entities"} below the confidence floor`);
-  if (notNames > 0) issues.push(`${notNames} ${notNames === 1 ? "mention" : "mentions"} skipped as not a name`);
-  return [...nodes.values()];
+  if (notNames + glued.length > 0) issues.push(`${notNames + glued.length} ${notNames + glued.length === 1 ? "mention" : "mentions"} skipped as not a name`);
+  return kept.filter((node) => !glued.includes(node));
 }
