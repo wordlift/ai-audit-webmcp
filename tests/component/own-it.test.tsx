@@ -156,6 +156,20 @@ describe("own it, lightly", () => {
   });
 });
 
+describe("the other door", () => {
+  it("offers the ChatGPT interview beside the three questions, and copies the same prompt the full audit uses", async () => {
+    const writeText = vi.fn(async (_text: string) => undefined);
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    renderPanel();
+    fireEvent.click(screen.getByRole("button", { name: /review with chatgpt/i }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    expect(String(writeText.mock.calls[0]?.[0])).toContain(`/reports/${report.id}`);
+    expect(String(writeText.mock.calls[0]?.[0])).toContain("refine-terms-of-action");
+    expect(await screen.findByRole("button", { name: /prompt copied/i })).toBeVisible();
+    vi.unstubAllGlobals();
+  });
+});
+
 describe("what the answers amount to", () => {
   it("leaves an unanswered action alone, and names the partner only for a handoff", () => {
     expect(

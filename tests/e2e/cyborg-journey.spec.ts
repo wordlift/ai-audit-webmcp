@@ -18,7 +18,8 @@ test("a human refinement turns the machine draft into refined Terms of Action", 
   // WebMCP, so the self-test badge must say exactly which browser the reader needs.
   await page.locator("summary", { hasText: "Full audit" }).click();
   await expect(page.getByText("Machine-generated Terms of Action")).toBeVisible();
-  await expect(page.getByRole("button", { name: /review with chatgpt/i })).toBeVisible();
+  // The review is offered beside the three questions and again in the full audit: the same prompt from either door.
+  await expect(page.getByRole("button", { name: /review with chatgpt/i })).toHaveCount(2);
   await expect(page.getByText(/site tools require a webmcp-enabled browser/i)).toBeVisible();
 
   // 3. Refinement: the decisions ChatGPT would submit through refine-terms-of-action.
@@ -90,8 +91,11 @@ test("the report offers the deeper read in exchange for an address", async ({ pa
   await page.getByRole("button", { name: /audit my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
 
-  const offer = page.getByRole("region", { name: /read 4 representative pages/i });
-  await expect(offer).toBeVisible();
+  // One line on the first screen, opening in place: nobody is sent to the bottom of the page.
+  const offer = page.getByRole("region", { name: /read up to 12 pages instead of 4/i });
+  await expect(offer.getByLabel(/email address/i)).toBeHidden();
+  await offer.getByRole("button", { name: /read up to 12 pages/i }).click();
+  await expect(offer.getByText(/read 4 representative pages/i)).toBeVisible();
   await expect(offer.getByText(/up to 12 of them/i)).toBeVisible();
 
   await offer.getByLabel(/email address/i).fill("reviewer@example.com");

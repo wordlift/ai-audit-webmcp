@@ -1,8 +1,9 @@
-import { UserRoundCheck } from "lucide-react";
+import { Copy, UserRoundCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ActionBoundary, CapabilityResult, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
 import { refineReport } from "../api/client";
+import { reviewPrompt } from "./reviewPrompt";
 import { actionsThatMatter } from "./FirstScreen";
 
 /**
@@ -75,7 +76,15 @@ export function OwnIt({ report }: { report: ReportRecord }) {
   const [answers, setAnswers] = useState<OwnAnswers>(() => initialAnswers(three));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   if (three.length === 0) return null;
+
+  // The other door: the same questions, and more, asked by ChatGPT in a conversation, filed here.
+  async function copyReview() {
+    await navigator.clipboard.writeText(reviewPrompt(report.id));
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2_000);
+  }
   const decisions = decisionsFrom(answers);
 
   const answer = (actionId: string, patch: Partial<OwnAnswers[string]>) =>
@@ -173,6 +182,15 @@ export function OwnIt({ report }: { report: ReportRecord }) {
           {error && <p role="alert" className="own-it-error">{error}</p>}
         </form>
       )}
+      <div className="own-it-alt">
+        <p>
+          Prefer to talk it through? ChatGPT can interview you about the business, its vocabulary and who runs each action, and file the
+          answers here. Copy the prompt and paste it into ChatGPT.
+        </p>
+        <button type="button" className="review-cta" onClick={() => void copyReview()}>
+          <Copy size={15} aria-hidden="true" /> {copied ? "Prompt copied. Paste it into ChatGPT" : "Review with ChatGPT"}
+        </button>
+      </div>
     </section>
   );
 }

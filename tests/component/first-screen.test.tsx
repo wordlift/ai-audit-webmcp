@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { FirstScreen, actionsThatMatter, openingSentence, readAgo, readersLine } from "../../src/client/components/FirstScreen";
 import type { CapabilityResult, ReportRecord } from "../../src/shared/types/index.js";
@@ -100,11 +100,25 @@ describe("the first screen", () => {
     expect(screen.getByText(/Agents have no way to find this site's capabilities yet: it publishes no catalog\./)).toBeVisible();
   });
 
-  it("points at the deeper read from the top, and not on a deep scan", () => {
+  it("offers the deeper read on the first screen, opening in place, and not on a deep scan", () => {
     renderScreen();
-    expect(screen.getByRole("link", { name: /Read up to 12 pages/ })).toHaveAttribute("href", "#deep-scan");
+    const strip = screen.getByRole("button", { name: /Read up to 12 pages instead of 4/ });
+    expect(strip).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText(/email address/i)).toBeNull();
+    fireEvent.click(strip);
+    expect(screen.getByLabelText(/email address/i)).toBeVisible();
+    expect(screen.getByRole("button", { name: /send me the deep scan/i })).toBeDisabled();
     renderScreen({ ...report, id: "5b8a04c0-e247-4bec-a440-d9f3506f9213", scanDepth: "deep" });
-    expect(screen.getAllByRole("link", { name: /Read up to 12 pages/ })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /Read up to 12 pages/ })).toHaveLength(1);
+  });
+
+  it("says what the agent did in a person's words, never in ours", () => {
+    renderScreen();
+    const list = screen.getByRole("list", { name: /the actions that matter/i });
+    expect(list).toHaveTextContent("The site says an agent can do this, but when ours tried, nothing answered.");
+    expect(list).toHaveTextContent("Our agent did this on your site. Run by WordLift.");
+    expect(list).toHaveTextContent("Nothing here lets a person or an agent do this. We can run it for you.");
+    expect(list).not.toHaveTextContent(/interface|verified|invocation/i);
   });
 });
 

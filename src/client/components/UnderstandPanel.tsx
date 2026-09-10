@@ -99,10 +99,10 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
 
   const lead =
     textOnly.length === 0
-      ? `${plural(total, "thing")} on your pages, all published as structured data agents can read.`
+      ? `${plural(total, "thing")} on your pages, all described in a form agents read.`
       : published.length === 0
         ? `${plural(total, "thing")} on your pages, and agents can read none of them yet: they exist only in your text.`
-        : `${plural(total, "thing")} on your pages. ${published.length} ${published.length === 1 ? "is" : "are"} published as structured data agents can read; ${textOnly.length} ${textOnly.length === 1 ? "exists" : "exist"} only in your text.`;
+        : `${plural(total, "thing")} on your pages. ${published.length} ${published.length === 1 ? "is" : "are"} described in a form agents read; ${textOnly.length} ${textOnly.length === 1 ? "exists" : "exist"} only in your text.`;
 
   return (
     <section className="understand" aria-labelledby="understand-title">
@@ -119,7 +119,7 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
           {published.length > 0 ? (
             <EntityList entities={published} tone="published" />
           ) : (
-            <p className="entity-empty">Nothing on these pages is published as structured data yet.</p>
+            <p className="entity-empty">Nothing on these pages is described in a form agents read yet.</p>
           )}
         </div>
         <div className="entity-group">

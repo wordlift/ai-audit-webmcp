@@ -61,7 +61,7 @@ describe("what an agent understands", () => {
   it("names every entity plainly, says where it was found, and splits what agents read from what is only in the text", () => {
     render(<UnderstandPanel report={base} />);
     expect(screen.getByRole("heading", { name: /what an agent understands about your business/i })).toBeVisible();
-    expect(screen.getByText("3 things on your pages. 1 is published as structured data agents can read; 2 exist only in your text.")).toBeVisible();
+    expect(screen.getByText("3 things on your pages. 1 is described in a form agents read; 2 exist only in your text.")).toBeVisible();
 
     const [reads, textOnly] = screen.getAllByRole("list");
     expect(within(reads!).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["AlpiNestLodging businesshome page"]);
@@ -93,7 +93,7 @@ describe("what an agent understands", () => {
 
   it("says so when everything is already published, and offers nothing to publish", () => {
     render(<UnderstandPanel report={{ ...base, contextGraph: { ...base.contextGraph!, entities: [declared] } }} />);
-    expect(screen.getByText("1 thing on your pages, all published as structured data agents can read.")).toBeVisible();
+    expect(screen.getByText("1 thing on your pages, all described in a form agents read.")).toBeVisible();
     expect(screen.getByText(/Everything the pages describe is already published for agents/)).toBeVisible();
     expect(screen.queryByRole("link", { name: /publish/i })).toBeNull();
   });

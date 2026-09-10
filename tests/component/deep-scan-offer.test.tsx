@@ -19,12 +19,16 @@ const report = {
   contextGraph: { pages: [{}, {}, {}, {}], entities: [], interfaces: [], lexicon: [] },
 } as unknown as ReportRecord;
 
+/** Renders the offer and opens it, as a person does from the one line on the first screen. */
 function renderOffer(overrides: Partial<ReportRecord> = {}) {
-  return render(
+  const rendered = render(
     <MemoryRouter>
       <DeepScanOffer report={{ ...report, ...overrides } as ReportRecord} />
     </MemoryRouter>,
   );
+  const strip = screen.queryByRole("button", { name: /read up to 12 pages/i });
+  if (strip) fireEvent.click(strip);
+  return rendered;
 }
 
 describe("DeepScanOffer", () => {

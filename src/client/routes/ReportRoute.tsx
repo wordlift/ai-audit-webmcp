@@ -5,10 +5,10 @@ import { explainReportError, failureTitle, visibleErrors } from "../../shared/fo
 import type { Archetype, ReportRecord } from "../../shared/types/index.js";
 import { ApiError, getReport, recompileReport } from "../api/client";
 import { ActionJourney } from "../components/ActionJourney";
+import { AgentDiary } from "../components/AgentDiary";
 import { AlpinaSidecarPanel } from "../components/AlpinaSidecarPanel";
 import { ClassificationCard } from "../components/ClassificationCard";
 import { ContextEngineMap, heroEntityId } from "../components/ContextEngineMap";
-import { DeepScanOffer } from "../components/DeepScanOffer";
 import { ExecutiveSummary } from "../components/ExecutiveSummary";
 import { FirstScreen } from "../components/FirstScreen";
 import { FoundationAuditDetails } from "../components/FoundationAuditDetails";
@@ -131,6 +131,8 @@ export function ReportRoute() {
       )}
       {/* The first screen speaks three plain words. Everything precise is one click below. */}
       <FirstScreen report={report} />
+      {/* The proof, told plainly: what the audit's agent actually did on the site. */}
+      <AgentDiary report={report} />
       {/* Understand, then Fix: every entity the audit read, and the button that publishes the ones agents cannot see. */}
       <UnderstandPanel report={report} />
       {/* Own it: who runs each of the three actions, answered in a minute. Readiness never moves on a word. */}
@@ -140,8 +142,8 @@ export function ReportRoute() {
         <p className="section-kicker"><Rocket size={16} /> Activate</p>
         <h2 id="activate-strip-title">Publish what works, and watch who reads it</h2>
         <p>
-          Three documents from this report: markup for your pages, instructions an agent loads, the catalog registries crawl. Then who read
-          them: crawlers, Google, agents, and every activation with its outcome.
+          Three documents from this report: what to add to your pages, the instructions agents read, and the listing directories crawl. Then
+          who read them: crawlers, Google, agents, and every time an agent acted, with the outcome.
         </p>
         <Link className="activate-link" to={`/reports/${report.id}/activate`}>
           See what the site publishes <ArrowRight size={15} aria-hidden="true" />
@@ -193,8 +195,6 @@ export function ReportRoute() {
           )}
         </div>
       </details>
-      {/* The deeper read is offered from the top of the page and still here at the end. */}
-      <DeepScanOffer report={report} />
     </div>
   );
 }

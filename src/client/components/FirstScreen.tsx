@@ -1,10 +1,10 @@
-import { ArrowRight, Bot, ScanSearch } from "lucide-react";
+import { Bot } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { DEEP_SCAN_PAGES } from "../../shared/format/deepScan.js";
 import type { CapabilityResult, ReportRecord } from "../../shared/types/index.js";
 import { getVisits, startReport, type ReportVisits } from "../api/client";
 import { ActionDetailDialog } from "./ActionDetailDialog";
+import { DeepScanOffer } from "./DeepScanOffer";
 
 /**
  * The first screen of a report, written for a person: the site, one sentence, the three actions
@@ -35,13 +35,13 @@ export function plainWord(capability: CapabilityResult): PlainWord | null {
 export function nextStep(capability: CapabilityResult): string {
   switch (capability.state) {
     case "agent-ready":
-      return capability.via === "sidecar" ? "Verified by calling it. Run by WordLift." : "Verified by calling it.";
+      return capability.via === "sidecar" ? "Our agent did this on your site. Run by WordLift." : "Our agent did this on your site.";
     case "unverified":
-      return "An interface is declared, but no agent call has been verified. Make it answer.";
+      return "The site says an agent can do this, but when ours tried, nothing answered.";
     case "human-only":
-      return "People can do this here and agents cannot. Expose it as an interface an agent can call.";
+      return "A person can do this here. An agent has no way in yet.";
     case "missing":
-      return "Nothing an agent or a person can use was found. We can run this for you.";
+      return "Nothing here lets a person or an agent do this. We can run it for you.";
     default:
       return "";
   }
@@ -219,12 +219,8 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
       )}
       {readers && <p className="discovery-line readers-line">{readers}</p>}
 
-      {report.scanDepth !== "deep" && (
-        <a className="deep-scan-strip" href="#deep-scan">
-          <ScanSearch size={16} aria-hidden="true" /> Read up to {DEEP_SCAN_PAGES} pages instead of {report.contextGraph?.pages.length ?? 4} and get the report by email
-          <ArrowRight size={14} aria-hidden="true" />
-        </a>
-      )}
+      {/* The deeper read, asked for where the person already is: one line that opens in place. */}
+      <DeepScanOffer report={report} />
 
       <ActionDetailDialog
         reportId={report.id}

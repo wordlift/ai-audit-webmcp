@@ -806,6 +806,27 @@ button:disabled { opacity: 0.6; cursor: wait; }
   text-decoration: none;
 }
 .deep-scan-strip:hover { background: color-mix(in srgb, var(--brand) 14%, white); }
+.deep-scan-inline { display: grid; gap: 12px; padding: 0; background: none; border: 0; }
+.deep-scan-inline .deep-scan-strip { border: 0; font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
+.deep-scan-inline .deep-scan-strip svg.is-open { transform: rotate(90deg); }
+.deep-scan-form { display: grid; gap: 10px; padding: 16px 18px; border: 1px solid var(--line-subtle); border-radius: 12px; background: color-mix(in srgb, var(--brand) 4%, var(--surface)); }
+.deep-scan-form > p { margin: 0; color: var(--muted); max-width: 62ch; }
+.deep-scan-form .input-row { max-width: 520px; }
+.deep-scan-form .input-row button { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.deep-scan-form small { color: var(--muted); font-size: 0.78rem; }
+
+/* The agent's diary: what it actually did on the site, in a person's words. */
+.agent-diary { display: grid; gap: 12px; padding: clamp(22px, 4vw, 36px); background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 18px; }
+.agent-diary h2 { margin: 0; font-size: 1.35rem; }
+.diary-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.diary-lines li { position: relative; padding: 10px 14px 10px 36px; border-radius: 10px; background: var(--wl-neutral-100); line-height: 1.45; }
+.diary-lines li::before { content: ""; position: absolute; left: 14px; top: 16px; width: 10px; height: 10px; border-radius: 50%; }
+.diary-did::before { background: var(--state-agent-ready); }
+.diary-failed::before { background: var(--state-missing); }
+.diary-looked::before { background: var(--state-unverified); }
+.own-it-alt { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line-subtle); }
+.own-it-alt p { margin: 0; color: var(--muted); max-width: 66ch; }
+.own-it-alt .review-cta { justify-self: start; }
 
 /* ---------- Fix: the markup the site should have ---------- */
 .fix-panel { display: grid; gap: 14px; padding: clamp(22px, 4vw, 36px); background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 18px; }
@@ -955,6 +976,9 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .entity-type { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; align-self: center; }
 .entity-where { grid-column: 1 / -1; color: var(--muted); font-size: 0.8rem; overflow-wrap: anywhere; }
 .entity-more, .entity-empty { margin: 0; color: var(--muted); font-size: 0.88rem; }
+.fix-sample-fold { min-width: 0; max-width: 100%; }
+.fix-sample-fold .fix-sample { max-width: 100%; }
+.fix-sample-fold .fix-sample pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .fix-sample-fold > summary { cursor: pointer; color: var(--brand); font-weight: 600; font-size: 0.92rem; }
 .fix-sample-fold[open] > summary { margin-bottom: 10px; }
 .full-audit[open] > summary { border-bottom: 1px solid var(--line-subtle); }
