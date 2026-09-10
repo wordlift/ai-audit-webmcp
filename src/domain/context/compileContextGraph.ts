@@ -154,18 +154,22 @@ function compileBindings(
 function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, businessTypes: Set<string> = new Set()): DomainEntity[] {
   const byId = new Map<string, DomainEntity>();
   // The same real-world thing often carries a different @id on each page that embeds it — and
-  // often a different type set too: Organization here, Organization+Brand there. A sighting
-  // merges into an earlier entity when the names match and at least one type is shared; only a
-  // genuine namesake of a different kind stays separate.
+  // often a different type set too: Organization here, Organization+Brand there. A declared
+  // sighting merges into an earlier entity when the names match and at least one type is shared;
+  // only a genuine namesake of a different kind stays separate. An inferred sighting yields to any
+  // namesake: what a model read into the text never stands beside what a page declares, nor beside
+  // what the model already read under another label, as a second entity of the same name.
   const idsByName = new Map<string, string[]>();
   for (const page of pages) {
     for (const extracted of page.entities) {
       const name = extracted.name.trim().toLowerCase();
+      const inferred = extracted.origin === "inferred";
       let id = extracted.id;
       if (!byId.has(id)) {
-        const match = (idsByName.get(name) ?? []).find((candidateId) =>
-          byId.get(candidateId)?.types.some((type) => extracted.types.includes(type)),
-        );
+        const candidates = idsByName.get(name) ?? [];
+        const match = inferred
+          ? candidates[0]
+          : candidates.find((candidateId) => byId.get(candidateId)?.types.some((type) => extracted.types.includes(type)));
         if (match) id = match;
       }
       const known = idsByName.get(name) ?? [];
@@ -175,15 +179,18 @@ function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, business
       // stays inferred, at lower confidence, as a candidate rather than a fact.
       const origin: DomainEntity["origin"] =
         existing?.origin === "markup" || (existing && !existing.origin) || extracted.origin !== "inferred" ? "markup" : "inferred";
+      // An inferred sighting of a known entity adds only where it was seen: no type, no link, no
+      // description and no offer a model read into the text ever joins what a page declared.
+      const addsFacts = !inferred || !existing;
       const next: DomainEntity = {
         id,
-        types: unique([...(existing?.types ?? []), ...extracted.types]).slice(0, 12),
+        types: unique([...(existing?.types ?? []), ...(addsFacts ? extracted.types : [])]).slice(0, 12),
         name: existing?.name ?? extracted.name,
-        alternateNames: unique([...(existing?.alternateNames ?? []), ...extracted.alternateNames]).slice(0, 20),
-        description: existing?.description ?? extracted.description,
+        alternateNames: unique([...(existing?.alternateNames ?? []), ...(addsFacts ? extracted.alternateNames : [])]).slice(0, 20),
+        description: existing?.description ?? (addsFacts ? extracted.description : undefined),
         sourceUrls: unique([...(existing?.sourceUrls ?? []), extracted.sourceUrl]).slice(0, 12),
-        sameAs: unique([...(existing?.sameAs ?? []), ...extracted.sameAs]).slice(0, 12),
-        offers: [...(existing?.offers ?? []), ...extracted.offers].slice(0, 12),
+        sameAs: unique([...(existing?.sameAs ?? []), ...(addsFacts ? extracted.sameAs : [])]).slice(0, 12),
+        offers: [...(existing?.offers ?? []), ...(addsFacts ? extracted.offers : [])].slice(0, 12),
         confidence: origin === "inferred" ? 0.6 : 0.95,
         ...(origin === "inferred" ? { origin } : {}),
       };

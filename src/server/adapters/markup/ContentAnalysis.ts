@@ -205,8 +205,8 @@ export function nodesFrom(found: AnalysedEntity[], confidence: number, linkConfi
       belowFloor += 1;
       continue;
     }
-    // A name has a capital somewhere; a generic phrase or a role noun is not a thing the business is.
-    if (NOT_A_NAME.test(name) || !/\p{Lu}/u.test(name)) {
+    // A name begins with a capital or a digit; "cutting-edge AI platforms" and a role noun are not things the business is.
+    if (NOT_A_NAME.test(name) || !/^[\p{Lu}\d]/u.test(name)) {
       notNames += 1;
       continue;
     }

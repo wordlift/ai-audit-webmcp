@@ -79,7 +79,8 @@ function fakeMarkup(options: { fail?: boolean; withOffer?: boolean } = {}) {
         issues: [],
         usage: { inputTokens: 100, outputTokens: 50, estimatedUsd: 0.0001 },
         entities: [
-          { id: `${page.url}#inferred-lodgingbusiness-samspitze-4`, types: ["LodgingBusiness"], name: "Samspitze 4", alternateNames: [], sourceUrl: page.url, sameAs: [], offers: [], origin: "inferred" },
+          // A namesake of the declared LodgingBusiness under another label, with a link and a description of its own.
+          { id: `${page.url}#inferred-organization-samspitze-4`, types: ["Organization"], name: "Samspitze 4", alternateNames: ["Samspitze IV"], description: "A guess.", sourceUrl: page.url, sameAs: ["https://www.wikidata.org/wiki/Q1"], offers: [], origin: "inferred" },
           {
             id: "https://alpina.travel/#inferred-place-lungau-valley",
             types: ["Place"],
@@ -136,6 +137,11 @@ describe("the markup a page should have", () => {
     const valley = entities.find((entity) => entity.name === "Lungau Valley");
     expect(samspitze?.origin).toBeUndefined();
     expect(samspitze?.confidence).toBe(0.95);
+    // The declared entity keeps its own facts: the inferred namesake brought no type, link, alias or description into it.
+    expect(samspitze?.types).toEqual(["LodgingBusiness"]);
+    expect(samspitze?.sameAs).toEqual([]);
+    expect(samspitze?.alternateNames).toEqual([]);
+    expect(samspitze?.description).toBeUndefined();
     expect(valley?.origin).toBe("inferred");
     expect(valley?.confidence).toBe(0.6);
     expect(report.markup).toEqual({ provider: "fake", model: "fake-1", pagesGenerated: 1, pagesFailed: 0, inferredEntities: 1, declaredEntities: entities.length - 1 });

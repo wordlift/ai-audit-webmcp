@@ -28,6 +28,7 @@ const answer = {
     { text: "Tuesday", label: "Date", start: 180, end: 187, score: 0.9 },
     { text: "Samspitze 4Enter", label: "Apartment", start: 190, end: 206, score: 0.8 },
     { text: "Lungau", label: "City", start: 210, end: 216, score: 0.9 },
+    { text: "cutting-edge AI platforms", label: "Platform", start: 220, end: 245, score: 0.8 },
     // Not in the text at all: whatever produced it, it never becomes an entity of this page.
     { text: "Grand Hotel Lungau", label: "Hotel", start: 0, end: 0, score: 0.95 },
   ],
@@ -82,7 +83,7 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
     expect(byName["Samspitze 4"]?.description).toBeUndefined();
     expect(byName["Samspitze 4"]?.id).toBe("https://alpina.travel/#inferred-apartment-samspitze-4");
     // Nothing is below the floor any more; the phrase and the meal are kept out by the name rules instead.
-    expect(outcome.issues).toEqual(["5 mentions skipped as not a name", "1 name dropped as not on the page", "1 entity skipped as not domain entities: Date"]);
+    expect(outcome.issues).toEqual(["6 mentions skipped as not a name", "1 name dropped as not on the page", "1 entity skipped as not domain entities: Date"]);
     expect(outcome.model).toBe("content-analysis-v3/0.1.0");
     expect(outcome.usage).toEqual({ inputTokens: expect.any(Number), outputTokens: 5, estimatedUsd: 0 });
     expect(provider.totals()).toMatchObject({ pages: 1, outputTokens: 5, estimatedUsd: 0 });
