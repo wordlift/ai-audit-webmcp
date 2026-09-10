@@ -5,7 +5,7 @@ const page = {
   title: "Apartments in Lungau",
   description: "Family apartments in Mariapfarr.",
   headings: ["Samspitze 4"],
-  text: "Samspitze 4 is a two-bedroom family apartment in Mariapfarr, Lungau, Austria, run by AlpiNest and bookable through Mountain Nests Rentals.",
+  text: "Samspitze 4 is a two-bedroom family apartment in Mariapfarr, Lungau, Austria, run by AlpiNest and bookable through Mountain Nests Rentals, an agency from Rome. Guests get breakfast on Tuesday. Book Samspitze 4Enter",
 };
 
 /** What the service answered on a text like this one, scores included: the linker sure of Austria, guessing about Lungau. */
@@ -28,6 +28,8 @@ const answer = {
     { text: "Tuesday", label: "Date", start: 180, end: 187, score: 0.9 },
     { text: "Samspitze 4Enter", label: "Apartment", start: 190, end: 206, score: 0.8 },
     { text: "Lungau", label: "City", start: 210, end: 216, score: 0.9 },
+    // Not in the text at all: whatever produced it, it never becomes an entity of this page.
+    { text: "Grand Hotel Lungau", label: "Hotel", start: 0, end: 0, score: 0.95 },
   ],
 };
 
@@ -73,7 +75,7 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
     expect(byName["Samspitze 4"]).toMatchObject({ sameAs: [], alternateNames: [] });
     expect(byName["Samspitze 4"]?.description).toBeUndefined();
     expect(byName["Samspitze 4"]?.id).toBe("https://alpina.travel/#inferred-apartment-samspitze-4");
-    expect(outcome.issues).toEqual(["2 entities below the confidence floor", "3 mentions skipped as not a name", "1 entity skipped as not domain entities: Date"]);
+    expect(outcome.issues).toEqual(["2 entities below the confidence floor", "3 mentions skipped as not a name", "1 name dropped as not on the page", "1 entity skipped as not domain entities: Date"]);
     expect(outcome.model).toBe("content-analysis-v3/0.1.0");
     expect(outcome.usage).toEqual({ inputTokens: expect.any(Number), outputTokens: 5, estimatedUsd: 0 });
     expect(provider.totals()).toMatchObject({ pages: 1, outputTokens: 5, estimatedUsd: 0 });
@@ -83,6 +85,11 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
     const { impl } = fakeFetch({ detail: "Invalid key for text 'Samspitze 4 is…'" }, 401);
     const provider = new ContentAnalysisProvider({ apiKey: "wl-key", fetch: impl });
     await expect(provider.generate(page)).rejects.toThrow("Content analysis refused the page (HTTP 401)");
+  });
+
+  it("never lets a name the page does not contain through, whatever the service says", () => {
+    const nodes = nodesFrom([{ text: "Samspitze 4", label: "Apartment", score: 0.9 }, { text: "Hotel Invented", label: "Hotel", score: 0.99 }], 0.6, 0.7, [], "Welcome to Samspitze 4 in Lungau.");
+    expect(nodes.map((node) => node.name)).toEqual(["Samspitze 4"]);
   });
 
   it("maps the service's labels onto schema.org types the map already speaks", () => {

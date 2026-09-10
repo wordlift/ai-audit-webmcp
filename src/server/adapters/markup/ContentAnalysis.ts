@@ -8,6 +8,11 @@ import type { MarkupOutcome, MarkupPageInput, MarkupProvider, MarkupTotals, Mark
  * that says so; what it finds becomes inferred entities, never evidence, never readiness. A
  * Wikidata link travels only when the linker is sure of it: a place in Lungau linked to an
  * Italian comune at the floor score is a guess, and a guess is worse than no link.
+ *
+ * Nothing here can be invented. The recogniser returns spans of the text it was sent, and every
+ * name is checked against that text before it becomes an entity; a name that is not on the page
+ * is dropped, whatever the service says. Descriptions and links come only from Wikidata, only
+ * when the linker is sure, and offers and prices are never generated at all.
  */
 export interface ContentAnalysisOptions {
   /** The WordLift API key: the service authenticates as `Key <key>`. */
@@ -124,7 +129,7 @@ export class ContentAnalysisProvider implements MarkupProvider {
     const found = Array.isArray(payload?.entities) ? (payload.entities as AnalysedEntity[]) : [];
 
     const issues: string[] = [];
-    const nodes = nodesFrom(found, confidence, this.options.linkConfidence ?? DEFAULT_LINK_CONFIDENCE, issues);
+    const nodes = nodesFrom(found, confidence, this.options.linkConfidence ?? DEFAULT_LINK_CONFIDENCE, issues, text);
     const entities = entitiesFromJsonLd(domainNodes(nodes, issues), page.url);
     // The service meters nothing and runs on WordLift's own infrastructure: the count is what is
     // known. Characters in, entities out, and no list price to multiply.
@@ -148,10 +153,12 @@ function textOf(page: MarkupPageInput): string {
 }
 
 /** What the service found, as nodes the markup path already knows how to filter and merge. */
-export function nodesFrom(found: AnalysedEntity[], confidence: number, linkConfidence: number, issues: string[]): JsonLdNode[] {
+export function nodesFrom(found: AnalysedEntity[], confidence: number, linkConfidence: number, issues: string[], text?: string): JsonLdNode[] {
   const nodes = new Map<string, JsonLdNode>();
+  const haystack = text?.toLowerCase();
   let belowFloor = 0;
   let notNames = 0;
+  let notOnPage = 0;
   for (const entity of found) {
     const name = typeof entity.text === "string" ? entity.text.trim() : "";
     const label = typeof entity.label === "string" ? entity.label : "";
@@ -168,6 +175,11 @@ export function nodesFrom(found: AnalysedEntity[], confidence: number, linkConfi
     }
     if (label === "Country") {
       notNames += 1;
+      continue;
+    }
+    // A name the page does not contain is not the page's: whatever produced it, it does not enter.
+    if (haystack !== undefined && !haystack.includes(name.toLowerCase())) {
+      notOnPage += 1;
       continue;
     }
     const type = SCHEMA_TYPES[label] ?? label;
@@ -192,5 +204,6 @@ export function nodesFrom(found: AnalysedEntity[], confidence: number, linkConfi
   const glued = kept.filter((node) => kept.some((other) => other !== node && node.name.length > other.name.length && node.name.startsWith(other.name) && !/^[\s,.;:()-]/.test(node.name.slice(other.name.length))));
   if (belowFloor > 0) issues.push(`${belowFloor} ${belowFloor === 1 ? "entity" : "entities"} below the confidence floor`);
   if (notNames + glued.length > 0) issues.push(`${notNames + glued.length} ${notNames + glued.length === 1 ? "mention" : "mentions"} skipped as not a name`);
+  if (notOnPage > 0) issues.push(`${notOnPage} ${notOnPage === 1 ? "name" : "names"} dropped as not on the page`);
   return kept.filter((node) => !glued.includes(node));
 }
