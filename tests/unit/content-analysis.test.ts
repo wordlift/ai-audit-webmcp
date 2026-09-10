@@ -59,7 +59,7 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
     expect(travel.labels).toEqual(expect.arrayContaining(["Apartment", "Hotel", "Tour", "Pass", "Attraction", "Restaurant"]));
     expect(travel.labels).not.toContain("Integration");
     expect(body.text.startsWith("Apartments in Lungau\nFamily apartments in Mariapfarr.\nSamspitze 4\n")).toBe(true);
-    expect(body.confidence).toBeLessThanOrEqual(0.5);
+    expect(body.confidence).toBe(0.45);
   });
 
   it("keeps names above the floor, links only what the linker is sure of, and leaves role nouns, phrases and dates aside", async () => {
@@ -81,7 +81,8 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
     expect(byName["Samspitze 4"]).toMatchObject({ sameAs: [], alternateNames: [] });
     expect(byName["Samspitze 4"]?.description).toBeUndefined();
     expect(byName["Samspitze 4"]?.id).toBe("https://alpina.travel/#inferred-apartment-samspitze-4");
-    expect(outcome.issues).toEqual(["2 entities below the confidence floor", "3 mentions skipped as not a name", "1 name dropped as not on the page", "1 entity skipped as not domain entities: Date"]);
+    // Nothing is below the floor any more; the phrase and the meal are kept out by the name rules instead.
+    expect(outcome.issues).toEqual(["5 mentions skipped as not a name", "1 name dropped as not on the page", "1 entity skipped as not domain entities: Date"]);
     expect(outcome.model).toBe("content-analysis-v3/0.1.0");
     expect(outcome.usage).toEqual({ inputTokens: expect.any(Number), outputTokens: 5, estimatedUsd: 0 });
     expect(provider.totals()).toMatchObject({ pages: 1, outputTokens: 5, estimatedUsd: 0 });

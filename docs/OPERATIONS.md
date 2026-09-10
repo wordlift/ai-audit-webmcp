@@ -40,7 +40,7 @@ inputs differ.
 | `AUDIT_DAILY_BUDGET` | `2000` | Audits the whole service runs in a day, whoever asks; past it audits answer "at capacity" until tomorrow and reads go on. `0` removes the ceiling. Per instance, like the other limits |
 | `MARKUP_PROVIDER` | `none` | `content-analysis` extracts the entities a page is about with WordLift's Content Analysis v3, authenticated with `WORDLIFT_API_KEY`; `gemini` is the stand-in it replaced |
 | `CONTENT_ANALYSIS_URL` | the Modal deployment | Where Content Analysis v3 answers |
-| `CONTENT_ANALYSIS_CONFIDENCE` | `0.55` | The floor an extracted entity must reach to be kept; a Wikidata link needs a disambiguation score of 0.7 |
+| `CONTENT_ANALYSIS_CONFIDENCE` | `0.45` | The floor an extracted entity must reach to be kept, set low for reach; the name rules keep the noise out. A Wikidata link needs a disambiguation score of 0.7 |
 | `GEMINI_API_KEY` | — | Secret Manager in production; required when the provider is `gemini` |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | The model behind the stand-in |
 | `MARKUP_ON_BASIC` | `thin` | Which pages of a basic scan are sent: `thin` (those that declare no entities), `all`, or `none`. A deep scan sends every page. The deploy script passes `all` with Content Analysis, which costs nothing per call |

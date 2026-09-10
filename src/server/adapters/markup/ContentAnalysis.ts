@@ -27,8 +27,8 @@ export interface ContentAnalysisOptions {
 }
 
 export const CONTENT_ANALYSIS_ENDPOINT = "https://wordlift-lab--content-analysis-v3-web-app.modal.run";
-/** Above the noise at 0.51 ("Breakfast", "two-bedroom family apartment"), below a real product at 0.56 ("Wordlift Agent"). */
-const DEFAULT_CONFIDENCE = 0.55;
+/** Low, for reach: the name rules, not the score, keep "Breakfast" and "two-bedroom family apartment" out. */
+const DEFAULT_CONFIDENCE = 0.45;
 const DEFAULT_LINK_CONFIDENCE = 0.7;
 const DEFAULT_TIMEOUT_MS = 60_000;
 const MAX_TEXT_CHARACTERS = 12_000;
@@ -152,7 +152,7 @@ export class ContentAnalysisProvider implements MarkupProvider {
       response = await fetchImpl(`${(this.options.endpoint ?? CONTENT_ANALYSIS_ENDPOINT).replace(/\/$/, "")}/analyze/text`, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Key ${this.options.apiKey}` },
-        body: JSON.stringify({ text, confidence: Math.min(confidence, 0.5), labels: labelsFor(page.siteType) }),
+        body: JSON.stringify({ text, confidence, labels: labelsFor(page.siteType) }),
         signal: controller.signal,
       });
     } catch (error) {
