@@ -112,11 +112,6 @@ function EntityList({ entities, tone, report }: { entities: DomainEntity[]; tone
               {whereFound(entity) && <span className="entity-where">{whereFound(entity)}</span>}
               {(links.actions.length > 0 || links.terms.length > 0 || links.wikidata) && (
                 <span className="entity-links" aria-label={`What the map links to ${entity.name}`}>
-                  {links.wikidata && (
-                    <a className="entity-link entity-link-wikidata" href={links.wikidata.url} target="_blank" rel="noreferrer">
-                      Wikidata {links.wikidata.id}
-                    </a>
-                  )}
                   {links.actions.length > 0 && <small className="entity-links-label">Answers for</small>}
                   {links.actions.map((action) => (
                     <span key={action.actionId} className={`entity-link entity-link-${action.word ?? "none"}`} title={`${action.label}: ${PLAIN_WORDS[action.word ?? "none"]}`}>{action.label}</span>
@@ -125,6 +120,12 @@ function EntityList({ entities, tone, report }: { entities: DomainEntity[]; tone
                   {links.terms.map((term) => (
                     <span key={term} className="entity-link entity-link-term">“{term}”</span>
                   ))}
+                  {/* The link to the world's record of the thing closes the row: it is about the entity, not an action. */}
+                  {links.wikidata && (
+                    <a className="entity-link entity-link-wikidata" href={links.wikidata.url} target="_blank" rel="noreferrer">
+                      Wikidata {links.wikidata.id}
+                    </a>
+                  )}
                 </span>
               )}
             </li>
