@@ -422,8 +422,9 @@ button:disabled { opacity: 0.6; cursor: wait; }
 }
 
 .report-toolbar a:hover, .report-toolbar button:hover { color: var(--brand); }
-/* A filled button in the toolbar keeps its own ink: the toolbar's link colour must not paint it blue on blue. */
-.report-toolbar a.fix-publish, .report-toolbar a.fix-publish:hover { color: var(--wl-neutral-0); }
+/* A filled button in the toolbar keeps its own fill and ink: the toolbar's bare-link rule is more specific than .fix-publish and would otherwise strip both. */
+.report-toolbar a.fix-publish { background: var(--brand); color: var(--wl-neutral-0); }
+.report-toolbar a.fix-publish:hover { background: var(--brand-hover); color: var(--wl-neutral-0); }
 
 .partial-banner {
   padding: 12px 16px;
