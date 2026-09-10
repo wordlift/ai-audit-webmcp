@@ -89,6 +89,23 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
     expect(provider.totals()).toMatchObject({ pages: 1, outputTokens: 5, estimatedUsd: 0 });
   });
 
+  it("asks once more when the service does not answer in time, and gives up the second time", async () => {
+    let calls = 0;
+    const slowOnce = (async () => {
+      calls += 1;
+      if (calls === 1) throw Object.assign(new Error("aborted"), { name: "AbortError" });
+      return new Response(JSON.stringify(answer), { status: 200, headers: { "content-type": "application/json" } });
+    }) as unknown as typeof fetch;
+    const provider = new ContentAnalysisProvider({ apiKey: "wl-key", fetch: slowOnce });
+    expect((await provider.generate(page)).entities.length).toBeGreaterThan(0);
+    expect(calls).toBe(2);
+
+    const neverAnswers = (async () => {
+      throw Object.assign(new Error("aborted"), { name: "AbortError" });
+    }) as unknown as typeof fetch;
+    await expect(new ContentAnalysisProvider({ apiKey: "wl-key", fetch: neverAnswers }).generate(page)).rejects.toThrow("did not answer in time");
+  });
+
   it("says only the status when the service refuses, never what it was sent", async () => {
     const { impl } = fakeFetch({ detail: "Invalid key for text 'Samspitze 4 is…'" }, 401);
     const provider = new ContentAnalysisProvider({ apiKey: "wl-key", fetch: impl });

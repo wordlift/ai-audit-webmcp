@@ -1,6 +1,7 @@
 import { ArrowUpRight, Braces, Copy } from "lucide-react";
 import { useState } from "react";
 import type { DomainEntity, ReportRecord } from "../../shared/types/index.js";
+import { plainWord, type PlainWord } from "./FirstScreen";
 import { publishUrl, sampleJsonLd } from "./FixPanel";
 
 /**
@@ -30,6 +31,31 @@ export function whereFound(entity: DomainEntity): string {
   }
 }
 
+/** What the map knows about one entity, as detail on its row: the actions it answers for, and the words the site uses for it. */
+export interface EntityLinks {
+  actions: Array<{ actionId: string; label: string; word: PlainWord | null }>;
+  terms: string[];
+}
+
+export function linksFor(entity: DomainEntity, report: ReportRecord, limit = 3): EntityLinks {
+  const actions = (report.capabilities ?? [])
+    .filter((capability) => capability.expected && capability.appliesTo.some((subject) => subject.id === entity.id))
+    .sort((left, right) => right.importance - left.importance)
+    .slice(0, limit)
+    .map((capability) => ({ actionId: capability.actionId, label: capability.label, word: plainWord(capability) }));
+  const terms = (report.contextGraph?.lexicalEntries ?? [])
+    .filter((term) => term.entityIds.includes(entity.id) && term.label.toLowerCase() !== entity.name.toLowerCase())
+    .slice(0, limit)
+    .map((term) => term.label);
+  return { actions, terms };
+}
+
+function openFullMap() {
+  const fold = document.getElementById("full-audit") as HTMLDetailsElement | null;
+  if (fold) fold.open = true;
+  document.querySelector(".context-engine")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 export interface EntityGroups {
   /** Declared in the pages' markup: agents already read these. */
   published: DomainEntity[];
@@ -55,19 +81,32 @@ function openFullAudit() {
   if (fold) fold.open = true;
 }
 
-function EntityList({ entities, tone }: { entities: DomainEntity[]; tone: "published" | "text" }) {
+function EntityList({ entities, tone, report }: { entities: DomainEntity[]; tone: "published" | "text"; report: ReportRecord }) {
   const shown = entities.slice(0, MAX_PER_GROUP);
   const more = entities.length - shown.length;
   return (
     <>
       <ul className="entity-list">
-        {shown.map((entity) => (
-          <li key={entity.id} className={`entity-row entity-row-${tone}`}>
-            <span className="entity-name">{entity.name}</span>
-            <span className="entity-type">{entityTypeLabel(entity.types[0])}</span>
-            {whereFound(entity) && <span className="entity-where">{whereFound(entity)}</span>}
-          </li>
-        ))}
+        {shown.map((entity) => {
+          const links = linksFor(entity, report);
+          return (
+            <li key={entity.id} className={`entity-row entity-row-${tone}`}>
+              <span className="entity-name">{entity.name}</span>
+              <span className="entity-type">{entityTypeLabel(entity.types[0])}</span>
+              {whereFound(entity) && <span className="entity-where">{whereFound(entity)}</span>}
+              {(links.actions.length > 0 || links.terms.length > 0) && (
+                <span className="entity-links" aria-label={`What the map links to ${entity.name}`}>
+                  {links.actions.map((action) => (
+                    <span key={action.actionId} className={`entity-link entity-link-${action.word ?? "none"}`}>{action.label}</span>
+                  ))}
+                  {links.terms.map((term) => (
+                    <span key={term} className="entity-link entity-link-term">“{term}”</span>
+                  ))}
+                </span>
+              )}
+            </li>
+          );
+        })}
       </ul>
       {more > 0 && (
         <p className="entity-more">
@@ -133,7 +172,7 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
               <span className="entity-count">{published.length}</span>
             </h3>
             {published.length > 0 ? (
-              <EntityList entities={published} tone="published" />
+              <EntityList entities={published} tone="published" report={report} />
             ) : (
               <p className="entity-empty">Nothing on these pages is machine-readable yet.</p>
             )}
@@ -144,12 +183,16 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
               <span className="entity-count">{textOnly.length}</span>
             </h3>
             {textOnly.length > 0 ? (
-              <EntityList entities={textOnly} tone="text" />
+              <EntityList entities={textOnly} tone="text" report={report} />
             ) : (
               <p className="entity-empty">Everything the pages describe is already machine-readable.</p>
             )}
           </div>
         </div>
+        <p className="entity-more">
+          Each row shows the actions the entity answers for and the words the site uses for it.{" "}
+          <a href="#full-audit" onClick={openFullMap}>Open the full map</a>, where entities, terms and actions are drawn together.
+        </p>
         {sample && sampleText && (
           <details className="fix-sample-fold">
             <summary>See the markup for one of them</summary>

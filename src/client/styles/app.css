@@ -1030,6 +1030,12 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .entity-name { font-weight: 600; overflow-wrap: anywhere; }
 .entity-type { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; align-self: center; }
 .entity-where { grid-column: 1 / -1; color: var(--muted); font-size: 0.8rem; overflow-wrap: anywhere; }
+.entity-links { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.entity-link { padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; line-height: 1.5; background: var(--surface); border: 1px solid var(--line-subtle); color: var(--muted); }
+.entity-link-works { border-color: color-mix(in srgb, var(--state-agent-ready) 50%, white); color: var(--ink); }
+.entity-link-fix { border-color: color-mix(in srgb, var(--state-unverified) 60%, white); color: var(--ink); }
+.entity-link-talk { border-color: color-mix(in srgb, var(--state-missing) 40%, white); color: var(--ink); }
+.entity-link-term { font-style: italic; }
 .entity-more, .entity-empty { margin: 0; color: var(--muted); font-size: 0.88rem; }
 .fix-sample-fold { min-width: 0; max-width: 100%; }
 .fix-sample-fold .fix-sample { max-width: 100%; }

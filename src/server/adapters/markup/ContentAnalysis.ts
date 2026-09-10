@@ -30,7 +30,9 @@ export const CONTENT_ANALYSIS_ENDPOINT = "https://wordlift-lab--content-analysis
 /** Low, for reach: the name rules, not the score, keep "Breakfast" and "two-bedroom family apartment" out. */
 const DEFAULT_CONFIDENCE = 0.45;
 const DEFAULT_LINK_CONFIDENCE = 0.7;
-const DEFAULT_TIMEOUT_MS = 60_000;
+/** Four pages go out at once and the service works through them; the last of four can take a while. One retry on a timeout. */
+const DEFAULT_TIMEOUT_MS = 120_000;
+const ATTEMPTS = 2;
 const MAX_TEXT_CHARACTERS = 12_000;
 const MAX_ENTITIES = 20;
 
@@ -145,21 +147,28 @@ export class ContentAnalysisProvider implements MarkupProvider {
     const fetchImpl = this.options.fetch ?? fetch;
     const confidence = this.options.confidence ?? DEFAULT_CONFIDENCE;
     const text = textOf(page);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
-    let response: Response;
-    try {
-      response = await fetchImpl(`${(this.options.endpoint ?? CONTENT_ANALYSIS_ENDPOINT).replace(/\/$/, "")}/analyze/text`, {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: `Key ${this.options.apiKey}` },
-        body: JSON.stringify({ text, confidence, labels: labelsFor(page.siteType) }),
-        signal: controller.signal,
-      });
-    } catch (error) {
-      throw new Error(error instanceof Error && error.name === "AbortError" ? "Content analysis did not answer in time" : "Content analysis could not be reached");
-    } finally {
-      clearTimeout(timer);
+    const endpoint = `${(this.options.endpoint ?? CONTENT_ANALYSIS_ENDPOINT).replace(/\/$/, "")}/analyze/text`;
+    const body = JSON.stringify({ text, confidence, labels: labelsFor(page.siteType) });
+    let response: Response | null = null;
+    for (let attempt = 1; attempt <= ATTEMPTS && !response; attempt += 1) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+      try {
+        response = await fetchImpl(endpoint, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Key ${this.options.apiKey}` },
+          body,
+          signal: controller.signal,
+        });
+      } catch (error) {
+        const timedOut = error instanceof Error && error.name === "AbortError";
+        if (timedOut && attempt < ATTEMPTS) continue;
+        throw new Error(timedOut ? "Content analysis did not answer in time" : "Content analysis could not be reached");
+      } finally {
+        clearTimeout(timer);
+      }
     }
+    if (!response) throw new Error("Content analysis did not answer in time");
     // The service's error body may quote the text it was sent; only the status travels on.
     if (!response.ok) throw new Error(`Content analysis refused the page (HTTP ${response.status})`);
     const payload = (await response.json().catch(() => null)) as AnalysisResponse | null;

@@ -2,7 +2,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { actionsWithoutInterface, publishUrl, sampleJsonLd, talkToUsUrl } from "../../src/client/components/FixPanel";
-import { UnderstandPanel, entityTypeLabel, groupEntities, whereFound } from "../../src/client/components/UnderstandPanel";
+import { UnderstandPanel, entityTypeLabel, groupEntities, linksFor, whereFound } from "../../src/client/components/UnderstandPanel";
 import type { CapabilityResult, DomainEntity, ReportRecord } from "../../src/shared/types/index.js";
 
 function capability(overrides: Partial<CapabilityResult> & Pick<CapabilityResult, "actionId" | "label" | "state">): CapabilityResult {
@@ -48,9 +48,18 @@ const base: ReportRecord = {
   actionModelVersion: "0.1.0",
   errors: [],
   evidenceTruncated: false,
-  contextGraph: { pages: [{ url: "https://alpina.travel/", title: "Alpina", role: "entry", headings: [], entityIds: [] }], entities: [declared, inferred, demoted, promoted], lexicalEntries: [], interfaces: [], bindings: [] },
+  contextGraph: {
+    pages: [{ url: "https://alpina.travel/", title: "Alpina", role: "entry", headings: [], entityIds: [] }],
+    entities: [declared, inferred, demoted, promoted],
+    lexicalEntries: [
+      { id: "term:stays", label: "Alpine stays", aliases: [], kind: "topic", entityIds: [declared.id], sourceUrls: ["https://alpina.travel/"], confidence: 0.8 },
+      { id: "term:alpinest", label: "AlpiNest", aliases: [], kind: "entity-name", entityIds: [declared.id], sourceUrls: ["https://alpina.travel/"], confidence: 0.9 },
+    ],
+    interfaces: [],
+    bindings: [],
+  },
   capabilities: [
-    capability({ actionId: "availability.check", label: "Check availability", state: "agent-ready" }),
+    capability({ actionId: "availability.check", label: "Check availability", state: "agent-ready", appliesTo: [{ id: declared.id, name: declared.name, types: declared.types }] }),
     capability({ actionId: "booking.reserve", label: "Book a stay", state: "human-only" }),
     capability({ actionId: "property.search", label: "Find a property", state: "missing" }),
     capability({ actionId: "checkout.pay", label: "Pay", state: "missing", expected: false }),
@@ -66,7 +75,7 @@ describe("what an agent understands", () => {
     expect(detail).toHaveAttribute("open");
 
     const [reads, textOnly] = screen.getAllByRole("list");
-    expect(within(reads!).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["AlpiNestLodging businesshome page"]);
+    expect(within(reads!).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["AlpiNestLodging businesshome pageCheck availability“Alpine stays”"]);
     // The owner's primary entity leads the text-only group, whatever its confidence.
     expect(within(textOnly!).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
       "LungauPlace/lungau/apartments/samspitze-4-mariapfarr",
@@ -91,6 +100,18 @@ describe("what an agent understands", () => {
     // The richest text-only entity is the sample: the one with offers.
     expect(sample).toMatchObject({ "@context": "https://schema.org", "@type": "Apartment", name: "Samspitze 4" });
     expect(sample.offers[0]).toEqual({ "@type": "Offer", price: "128", priceCurrency: "EUR", availability: "https://schema.org/InStock" });
+  });
+
+  it("shows on each row what the map links to the entity: its actions and the site's words for it", () => {
+    render(<UnderstandPanel report={base} />);
+    const row = screen.getByText("AlpiNest").closest("li")!;
+    const links = within(row).getByLabelText(/what the map links to alpinest/i);
+    expect(links).toHaveTextContent("Check availability");
+    expect(links).toHaveTextContent("“Alpine stays”");
+    // The entity's own name is not a word the site uses for it.
+    expect(links).not.toHaveTextContent("“AlpiNest”");
+    expect(screen.getByRole("link", { name: /open the full map/i })).toHaveAttribute("href", "#full-audit");
+    expect(linksFor(inferred, base)).toEqual({ actions: [], terms: [] });
   });
 
   it("says so when everything is already published, and offers nothing to publish", () => {
