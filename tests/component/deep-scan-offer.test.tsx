@@ -20,10 +20,10 @@ const report = {
 } as unknown as ReportRecord;
 
 /** Renders the offer and opens it, as a person does from the one line on the first screen. */
-function renderOffer(overrides: Partial<ReportRecord> = {}) {
+function renderOffer(overrides: Partial<ReportRecord> = {}, graceMs?: number) {
   const rendered = render(
     <MemoryRouter>
-      <DeepScanOffer report={{ ...report, ...overrides } as ReportRecord} />
+      <DeepScanOffer report={{ ...report, ...overrides } as ReportRecord} {...(graceMs === undefined ? {} : { graceMs })} />
     </MemoryRouter>,
   );
   const strip = screen.queryByRole("button", { name: /read up to 12 pages/i });
@@ -87,6 +87,22 @@ describe("DeepScanOffer", () => {
     expect(await screen.findByText("re******@example.com")).toBeVisible();
     expect(screen.queryByText(/reviewer@example\.com/)).toBeNull();
     expect(screen.getByRole("link", { name: /follow it live/i })).toHaveAttribute("href", expect.stringContaining("/reports/"));
+  });
+
+  it("announces the scan as running after a moment while the server is still reading, and takes it back if the server then refuses", async () => {
+    // A live deep scan answers only when it is done; a refusal that arrives late still lands.
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => setTimeout(() => resolve(
+      new Response(JSON.stringify({ error: "rate_limited", message: "Too many audits from this address." }), { status: 429, headers: { "content-type": "application/json" } }),
+    ), 150))));
+
+    renderOffer({}, 30);
+    fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "reviewer@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /send me the deep scan/i }));
+    expect(await screen.findByText(/reading the whole site now/i)).toBeVisible();
+    expect(screen.getByRole("link", { name: /follow it live/i })).toBeVisible();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/too many audits/i);
+    expect(screen.queryByText(/reading the whole site now/i)).toBeNull();
   });
 
   it("says what went wrong instead of pretending the scan started", async () => {

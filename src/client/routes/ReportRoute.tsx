@@ -1,6 +1,6 @@
 import { ArrowLeft, ArrowRight, Rocket, Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { explainReportError, failureTitle, visibleErrors } from "../../shared/format/explainError.js";
 import type { Archetype, ReportRecord } from "../../shared/types/index.js";
 import { ApiError, getReport, recompileReport } from "../api/client";
@@ -38,6 +38,8 @@ function sidecarApplies(report: ReportRecord): boolean {
 export function ReportRoute() {
   const { reportId = "" } = useParams();
   const navigate = useNavigate();
+  // A page reached from "Audit my site" may ask for the record before the audit has filed it.
+  const justStarted = Boolean((useLocation().state as { started?: boolean } | null)?.started);
   const [report, setReport] = useState<ReportRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -63,13 +65,20 @@ export function ReportRoute() {
         if (record.status === "running") timer = window.setTimeout(load, 1_500);
       } catch (caught) {
         if (cancelled) return;
-        // Right after starting an audit the record may not exist yet; give it a moment.
-        if (caught instanceof ApiError && caught.status === 404 && notFoundRetries < 12) {
+        // Right after starting an audit the record may not exist yet; give it a moment. A link
+        // opened cold gets one retry, then the truth.
+        if (caught instanceof ApiError && caught.status === 404 && notFoundRetries < (justStarted ? 12 : 1)) {
           notFoundRetries += 1;
           timer = window.setTimeout(load, 700);
           return;
         }
-        setError(caught instanceof Error ? caught.message : "Report unavailable");
+        setError(
+          caught instanceof ApiError && caught.status === 404
+            ? "This report has expired or never existed. Reports stay for 30 days at their link; audit the site again for a new one."
+            : caught instanceof Error
+              ? caught.message
+              : "Report unavailable",
+        );
       }
     };
 
@@ -78,7 +87,7 @@ export function ReportRoute() {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
     };
-  }, [reportId]);
+  }, [reportId, justStarted]);
 
   async function override(archetype: Archetype) {
     if (!report) return;
@@ -130,13 +139,13 @@ export function ReportRoute() {
         <div className="partial-banner" role="status">Partial report: {visibleErrors(report.errors).map(explainReportError).join(" ")}</div>
       )}
       {/* The first screen speaks three plain words. Everything precise is one click below. */}
-      <FirstScreen report={report} />
+      <FirstScreen key={`first-${report.id}`} report={report} />
       {/* The proof, told plainly: what the audit's agent actually did on the site. */}
       <AgentDiary report={report} />
       {/* Understand, then Fix: every entity the audit read, and the button that publishes the ones agents cannot see. */}
       <UnderstandPanel report={report} />
       {/* Own it: who runs each of the three actions, answered in a minute. Readiness never moves on a word. */}
-      <OwnIt key={report.id} report={report} />
+      <OwnIt key={`own-${report.id}`} report={report} />
       {/* Activate: one screen away, so the report stays three words and their fixes. */}
       <section className="activate-strip" aria-labelledby="activate-strip-title">
         <p className="section-kicker"><Rocket size={16} /> Activate</p>

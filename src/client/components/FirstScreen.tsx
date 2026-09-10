@@ -158,7 +158,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
       // The explicit re-verify: the site is read again even though a day-old crawl would have served.
       const started = startReport(report.requestedUrl, { fresh: true, surface: "web", depth: report.scanDepth });
       await started.accepted;
-      navigate(`/reports/${started.reportId}`);
+      navigate(`/reports/${started.reportId}`, { state: { started: true } });
     } catch {
       setRerunning(false);
     }

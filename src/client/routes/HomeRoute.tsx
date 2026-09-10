@@ -120,7 +120,7 @@ export function HomeRoute() {
       // progress from there. A request refused outright still surfaces here.
       await Promise.race([ready, waitUntilVisible(reportId)]);
       ready.catch(() => undefined);
-      navigate(`/reports/${reportId}`);
+      navigate(`/reports/${reportId}`, { state: { started: true } });
     } catch (caught) {
       setPhaseIndex(null);
       setError(caught instanceof Error ? caught.message : "The audit could not be completed");

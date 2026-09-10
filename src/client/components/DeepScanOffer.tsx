@@ -17,7 +17,10 @@ import { ApiError, startReport } from "../api/client";
  * confirmation shows it masked, because a shared report link must not carry the address of whoever
  * asked for it.
  */
-export function DeepScanOffer({ report }: { report: ReportRecord }) {
+/** How long a refusal gets to arrive before the scan is announced as running. A live audit answers only when it is done. */
+const ACCEPT_GRACE_MS = 2_500;
+
+export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS }: { report: ReportRecord; graceMs?: number }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
@@ -38,13 +41,22 @@ export function DeepScanOffer({ report }: { report: ReportRecord }) {
     setError(null);
     try {
       const audit = startReport(target, { depth: "deep", email: address, surface: "web" });
-      // Wait for the service to accept it — a refused address or a rate limit must not be
-      // announced as a scan in progress — but not for the audit, which takes about a minute.
+      // A refused address or a rate limit comes back at once and must not be announced as a scan
+      // in progress. A live audit answers only when it is done, a minute or more later, so after a
+      // moment without a refusal the scan is running, and the report page follows it live.
       audit.ready.catch(() => undefined);
-      await audit.accepted;
+      const accepted = audit.accepted.then(() => "accepted" as const);
+      const outcome = await Promise.race([accepted, new Promise<"running">((resolve) => setTimeout(() => resolve("running"), graceMs))]);
       setStarted({ reportId: audit.reportId, masked: maskEmail(address) });
       setEmail("");
       setState("sent");
+      if (outcome === "running") {
+        accepted.catch((caught) => {
+          setStarted(null);
+          setState("idle");
+          setError(caught instanceof ApiError ? caught.message : "The deep scan could not be started. Try again in a moment.");
+        });
+      }
     } catch (caught) {
       setState("idle");
       setError(
@@ -64,7 +76,7 @@ export function DeepScanOffer({ report }: { report: ReportRecord }) {
           We are reading up to {DEEP_SCAN_PAGES} pages of {hostOf(target)}. The finished report goes to{" "}
           <strong>{started.masked}</strong>, and lives at its own link — public and free, like this one.
         </p>
-        <Link className="deep-scan-follow" to={`/reports/${started.reportId}`}>
+        <Link className="deep-scan-follow" to={`/reports/${started.reportId}`} state={{ started: true }}>
           Follow it live →
         </Link>
       </section>
