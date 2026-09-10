@@ -479,6 +479,15 @@ visible enough and the words were still ours. The three actions speak the same w
 screenshotted with two live competitors and needed nothing. Still to judge by eye: the Activate
 documents' previews, lighter now.
 
+A full walk of the preview on 2026-09-10, every click on two screen sizes, found and fixed:
+a deep scan that showed "Starting…" for the whole minute a live audit takes (now announced as
+running after a moment, a late refusal still lands); deep-scan state following a person into the
+child report (the first screen is keyed by report, with a key of its own); a missing report that
+showed "Loading…" for eight seconds (now says at once that it expired or never existed); and the
+Activate table cramped on a phone (cards now). Everything else answered: the well-known documents,
+the three publish documents with their content types, the ChatGPT prompt on the clipboard, share,
+the child report, Activate from it, the diary on live evidence.
+
 Two load-sensitive tests, tracked and not understood: an "audit then read" case, and the sidecar's
 upstream-failure case timing out at five seconds, each roughly one full parallel run in four,
 never alone and never twice running.
