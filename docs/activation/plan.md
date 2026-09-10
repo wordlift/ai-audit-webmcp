@@ -468,9 +468,20 @@ Seen on the preview, fixed on the branch, all one click or less from the first s
   left aside on the way in, because "Bedroom 1" on the first screen is the kind of thing an
   investor remembers.
 
-Still to judge by eye on the next preview: the Activate documents' previews are heavy; the pitch
-result page has not been screenshotted with three live sites; the deep-scan strip and offer say
-the same thing twice on a page.
+Second round, 2026-09-10, from Andrea's own testing of the branch: the markup sample no longer
+breaks the layout (it wraps inside its fold); the deeper read is asked for where the person is, one
+line on the first screen that opens into the form, and the second copy at the bottom is gone; the
+ChatGPT review is back one click from the top, beside the three questions, with the same prompt
+the full audit uses; and the report now tells, in a person's words, what the audit's agent
+actually did on the site ("Searched the site for 'family apartment' and got results", "Followed
+the declared way to check availability: it did not answer"), because the value was still not
+visible enough and the words were still ours. The three actions speak the same way. The pitch was
+screenshotted with two live competitors and needed nothing. Still to judge by eye: the Activate
+documents' previews, lighter now.
+
+Two load-sensitive tests, tracked and not understood: an "audit then read" case, and the sidecar's
+upstream-failure case timing out at five seconds, each roughly one full parallel run in four,
+never alone and never twice running.
 
 ## Review pauses
 
