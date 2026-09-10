@@ -147,6 +147,48 @@ describe("the markup a page should have", () => {
     expect(report.markup).toEqual({ provider: "fake", model: "fake-1", pagesGenerated: 1, pagesFailed: 0, inferredEntities: 1, declaredEntities: entities.length - 1 });
   });
 
+  it("keeps the Wikidata link one page earned for an inferred entity another page left bare, and still adds nothing to a declared one", async () => {
+    let calls = 0;
+    const provider: MarkupProvider = {
+      name: "fake",
+      model: "fake-1",
+      async generate(page) {
+        calls += 1;
+        // The first page's mention the linker was unsure of; the second page's it was sure of.
+        const linked = calls > 1;
+        return {
+          model: "fake-1",
+          issues: [],
+          usage: { inputTokens: 100, outputTokens: 50, estimatedUsd: 0.0001 },
+          entities: [
+            { id: `${page.url}#inferred-organization-samspitze-4`, types: ["Organization"], name: "Samspitze 4", alternateNames: [], sourceUrl: page.url, sameAs: ["https://www.wikidata.org/wiki/Q1"], offers: [], origin: "inferred" },
+            {
+              id: `${page.url}#inferred-place-lungau-valley`,
+              types: [linked ? "City" : "Place"],
+              name: "Lungau Valley",
+              alternateNames: linked ? ["Lungau"] : [],
+              ...(linked ? { description: "region in Salzburg, Austria" } : {}),
+              sourceUrl: page.url,
+              sameAs: linked ? ["https://www.wikidata.org/wiki/Q4255352"] : [],
+              offers: [],
+              origin: "inferred",
+            },
+          ],
+        };
+      },
+      totals: () => ({ pages: calls, inputTokens: 0, outputTokens: 0, estimatedUsd: 0 }),
+    };
+    const report = await audit(orchestrator(provider), "deep");
+
+    const entities = report.contextGraph?.entities ?? [];
+    const valley = entities.filter((entity) => entity.name === "Lungau Valley");
+    expect(valley).toHaveLength(1);
+    expect(valley[0]).toMatchObject({ origin: "inferred", types: ["Place"], sameAs: ["https://www.wikidata.org/wiki/Q4255352"], alternateNames: ["Lungau"], description: "region in Salzburg, Austria" });
+    const samspitze = entities.find((entity) => entity.name === "Samspitze 4");
+    expect(samspitze?.sameAs).toEqual([]);
+    expect(samspitze?.types).toEqual(["LodgingBusiness"]);
+  });
+
   it("sends only the pages that declare nothing on a basic scan, and every page on a deep one", async () => {
     const basic = fakeMarkup();
     await audit(orchestrator(basic.provider), "basic");

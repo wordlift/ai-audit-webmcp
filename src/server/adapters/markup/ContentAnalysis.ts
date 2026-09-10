@@ -245,10 +245,6 @@ export function nodesFrom(found: AnalysedEntity[], confidence: number, linkConfi
       continue;
     }
     const type = SCHEMA_TYPES[label] ?? label;
-    // One name is one thing: the recogniser labelling "Lungau" a city here and a place there is one Lungau.
-    const key = name.toLowerCase();
-    if (nodes.has(key)) continue;
-
     const canonical = typeof entity.entity_label === "string" ? entity.entity_label.trim() : "";
     const linked =
       typeof entity.entity_id === "string" &&
@@ -256,14 +252,21 @@ export function nodesFrom(found: AnalysedEntity[], confidence: number, linkConfi
       typeof entity.disambiguation_score === "number" &&
       entity.disambiguation_score >= linkConfidence &&
       labelMatches(name, canonical);
-    nodes.set(key, {
-      types: [type],
-      name,
+    const link = {
       alternateNames: linked && canonical && canonical.toLowerCase() !== name.toLowerCase() ? [canonical] : [],
       ...(linked && typeof entity.entity_description === "string" && entity.entity_description.trim() ? { description: entity.entity_description.trim() } : {}),
       sameAs: linked ? [`https://www.wikidata.org/wiki/${entity.entity_id as string}`] : [],
-      offers: [],
-    });
+    };
+    // One name is one thing: the recogniser labelling "Lungau" a city here and a place there is one
+    // Lungau. The linker scores each mention on its own, so a later mention it was sure of lends its
+    // link to a name the first mention left bare; the name and the type stay as first read.
+    const key = name.toLowerCase();
+    const seen = nodes.get(key);
+    if (seen) {
+      if (linked && seen.sameAs.length === 0) nodes.set(key, { ...seen, ...link });
+      continue;
+    }
+    nodes.set(key, { types: [type], name, ...link, offers: [] });
     if (nodes.size >= MAX_ENTITIES) break;
   }
   // "Samspitze 4Enter" is "Samspitze 4" with a button label glued on by the page's text: the shorter name is the thing.

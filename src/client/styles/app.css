@@ -841,7 +841,8 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .diary-did::before { background: var(--state-agent-ready); }
 .diary-failed::before { background: var(--state-missing); }
 .diary-looked::before { background: var(--state-unverified); }
-.own-it-alt { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line-subtle); }
+/* The ChatGPT review sits beside its sentence, the button on the right, and only stacks when the row cannot hold both. */
+.own-it-alt { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 28px; padding-top: 14px; border-top: 1px solid var(--line-subtle); }
 .first-meta .run-again { background: none; border: 0; padding: 0; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
 .first-meta .run-again:disabled { color: var(--faint); cursor: default; }
 .plain-word { display: inline-flex; align-items: center; gap: 5px; }
@@ -889,8 +890,8 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .outcome p { margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.45; }
 .activate-head .fix-publish { justify-self: start; margin-top: 6px; }
 .activate-page .activate-head { display: grid; }
-.own-it-alt p { margin: 0; color: var(--muted); max-width: 66ch; }
-.own-it-alt .review-cta { justify-self: start; }
+.own-it-alt p { margin: 0; color: var(--muted); max-width: 66ch; flex: 1 1 36ch; }
+.own-it-alt .review-cta { flex: 0 0 auto; white-space: nowrap; }
 
 /* ---------- Fix: the markup the site should have ---------- */
 .fix-panel { display: grid; gap: 14px; padding: clamp(22px, 4vw, 36px); background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 18px; }

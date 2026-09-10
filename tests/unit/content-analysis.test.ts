@@ -118,6 +118,22 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
     expect(nodes.map((node) => node.name)).toEqual(["Samspitze 4"]);
   });
 
+  it("lets a later mention the linker was sure of lend its link to a name the first mention left bare", () => {
+    const nodes = nodesFrom(
+      [
+        { text: "Lungau", label: "Place", score: 0.56, entity_id: "Q47621", entity_label: "Longone al Segrino", disambiguation_score: 0.71 },
+        { text: "Lungau", label: "City", score: 0.49, entity_id: "Q4255352", entity_label: "Lungau", entity_description: "region in Salzburg, Austria", disambiguation_score: 0.73 },
+        { text: "Lungau", label: "Place", score: 0.47, entity_id: "Q4255352", entity_label: "Lungau", disambiguation_score: 0.72 },
+      ],
+      0.45,
+      0.7,
+      [],
+      "Holidays in Lungau, Lungau apartments, the Lungau card.",
+    );
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0]).toMatchObject({ name: "Lungau", types: ["Place"], sameAs: ["https://www.wikidata.org/wiki/Q4255352"], description: "region in Salzburg, Austria" });
+  });
+
   it("asks each kind of site for what it is made of, on top of what every site is asked for", () => {
     expect(labelsFor(undefined)).toEqual([...ENTITY_LABELS]);
     expect(labelsFor("commerce-retail")).toEqual(expect.arrayContaining(["Product", "Brand", "Collection", "Store"]));

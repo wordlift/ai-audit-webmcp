@@ -182,14 +182,18 @@ function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, business
       // An inferred sighting of a known entity adds only where it was seen: no type, no link, no
       // description and no offer a model read into the text ever joins what a page declared.
       const addsFacts = !inferred || !existing;
+      // Between two inferred sightings, what the linker said of the name travels: the Wikidata link
+      // one page's mention earned is the entity's, whichever page came first. Types and offers stay
+      // as first read: one name, one thing.
+      const addsLinks = addsFacts || existing?.origin === "inferred";
       const next: DomainEntity = {
         id,
         types: unique([...(existing?.types ?? []), ...(addsFacts ? extracted.types : [])]).slice(0, 12),
         name: existing?.name ?? extracted.name,
-        alternateNames: unique([...(existing?.alternateNames ?? []), ...(addsFacts ? extracted.alternateNames : [])]).slice(0, 20),
-        description: existing?.description ?? (addsFacts ? extracted.description : undefined),
+        alternateNames: unique([...(existing?.alternateNames ?? []), ...(addsLinks ? extracted.alternateNames : [])]).slice(0, 20),
+        description: existing?.description ?? (addsLinks ? extracted.description : undefined),
         sourceUrls: unique([...(existing?.sourceUrls ?? []), extracted.sourceUrl]).slice(0, 12),
-        sameAs: unique([...(existing?.sameAs ?? []), ...(addsFacts ? extracted.sameAs : [])]).slice(0, 12),
+        sameAs: unique([...(existing?.sameAs ?? []), ...(addsLinks ? extracted.sameAs : [])]).slice(0, 12),
         offers: [...(existing?.offers ?? []), ...(addsFacts ? extracted.offers : [])].slice(0, 12),
         confidence: origin === "inferred" ? 0.6 : 0.95,
         ...(origin === "inferred" ? { origin } : {}),

@@ -542,7 +542,11 @@ Scheduler job calls behind a token (`POST /api/observe/tick`, recipe in OPERATIO
 weekly re-read no longer depends on an instance being awake; the enterprise test as a browser
 spec, the brief's eight questions each proven two clicks from the report; the full audit in the
 brief's seven sections with a nav, and a business-boundaries table it never had; the toolbar's
-Activate button given its own ink.
+Activate button given its own fill and ink. Andrea saw no Wikidata links on the preview: the linker
+scores each mention on its own, and both the page's first mention and the merge's first page could
+leave an entity bare that a later mention or page had linked. Now a later mention lends its link on
+the page, and between two inferred sightings the link travels in the merge; a declared entity still
+takes nothing from an inferred namesake. The ChatGPT review sits beside its sentence, button right.
 
 Next (P1): Gemini as a recall lever in parallel, page-confirmed, if the lists stay short; usage on the action card
 from the ledger; the enterprise test as a browser spec proving each of the eight questions is two
