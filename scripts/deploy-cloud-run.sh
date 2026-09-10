@@ -77,6 +77,14 @@ elif [ "$MARKUP" = "gemini" ]; then
   MARKUP_ENV="##MARKUP_PROVIDER=gemini##GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}##MARKUP_ON_BASIC=${MARKUP_ON_BASIC:-thin}"
 fi
 
+# Observe's daily tick comes from Cloud Scheduler behind a token held in Secret Manager. Export
+# OBSERVE_TICK_TOKEN_SECRET=<secret name> to mount it; see OPERATIONS.md for the job.
+OBSERVE_ENV=""
+if [ -n "${OBSERVE_TICK_TOKEN_SECRET:-}" ]; then
+  SECRETS="$SECRETS,OBSERVE_TICK_TOKEN=${OBSERVE_TICK_TOKEN_SECRET}:latest"
+  OBSERVE_ENV="##OBSERVE_TICK_MINUTES=${OBSERVE_TICK_MINUTES:-0}"
+fi
+
 # The app directory verifies this domain by fetching a token from /.well-known. Export
 # OPENAI_APPS_CHALLENGE before deploying to serve it; without it the path simply 404s.
 CHALLENGE_ENV=""
@@ -113,7 +121,7 @@ gcloud run deploy "$SERVICE" \
   --cpu 1 \
   --max-instances "$MAX_INSTANCES" \
   --concurrency 20 \
-  --set-env-vars "^##^NODE_ENV=production##AUDIT_PROVIDER=wordlift##AI_AUDIT_BASE_URL=https://api.wordlift.io##SCRAPE_PROVIDER=${SCRAPE}##CLASSIFIER_PROVIDER=google-nlp##REPORT_STORE=${STORE}##GOOGLE_CLOUD_PROJECT=${PROJECT}##PUBLIC_APP_URL=${PUBLIC_URL}##REPORT_TTL_DAYS=30##BUILD_SHA=${RELEASE_SHA}${CHALLENGE_ENV}${HUBSPOT_ENV}${MARKUP_ENV}${PREVIEW_ENV}" \
+  --set-env-vars "^##^NODE_ENV=production##AUDIT_PROVIDER=wordlift##AI_AUDIT_BASE_URL=https://api.wordlift.io##SCRAPE_PROVIDER=${SCRAPE}##CLASSIFIER_PROVIDER=google-nlp##REPORT_STORE=${STORE}##GOOGLE_CLOUD_PROJECT=${PROJECT}##PUBLIC_APP_URL=${PUBLIC_URL}##REPORT_TTL_DAYS=30##BUILD_SHA=${RELEASE_SHA}${CHALLENGE_ENV}${HUBSPOT_ENV}${MARKUP_ENV}${OBSERVE_ENV}${PREVIEW_ENV}" \
   --set-secrets "$SECRETS"
 
 echo

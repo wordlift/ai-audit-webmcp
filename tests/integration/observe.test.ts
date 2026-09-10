@@ -241,6 +241,31 @@ describe("the one link that stops it", () => {
     expect((await h.orchestrator.get(lead.reportId))?.status).toBe("completed");
   });
 
+  it("runs a tick for the scheduler that holds the token, and for nobody else", async () => {
+    const h = harness();
+    const lead = await deliveredLead(h);
+    const app = createApp({
+      orchestrator: h.orchestrator,
+      leads: h.leads,
+      leadDelivery: h.delivery,
+      rateLimits: { enabled: false },
+      observe: { intervalDays: 7, tickMinutes: 0, perTick: 5, tickToken: "scheduler-token-0123456789" },
+    });
+
+    await request(app).post("/api/observe/tick").expect(401);
+    await request(app).post("/api/observe/tick").set("x-observe-token", "not-the-token-0123456789").expect(401);
+    expect((await h.leads.get(lead.reportId))?.watchedAt).toBeUndefined();
+
+    const ran = await request(app).post("/api/observe/tick").set("x-observe-token", "scheduler-token-0123456789").expect(200);
+    expect(ran.body).toMatchObject({ ran: 1, outcomes: ["unchanged"], scheduled: true, tickMinutes: 0, watched: 1 });
+    expect((await h.leads.get(lead.reportId))?.watchedAt).toBeDefined();
+
+    // Without Observe there is nothing to tick; without a token nobody may.
+    await request(createApp({ orchestrator: h.orchestrator, leads: h.leads, rateLimits: { enabled: false } })).post("/api/observe/tick").expect(404);
+    const untokened = createApp({ orchestrator: h.orchestrator, leads: h.leads, leadDelivery: h.delivery, rateLimits: { enabled: false }, observe: { intervalDays: 7, perTick: 5 } });
+    await request(untokened).post("/api/observe/tick").set("x-observe-token", "anything-at-all-0123456789").expect(401);
+  });
+
   it("is reported on health, and absent when Observe is not configured", async () => {
     const h = harness();
     const quiet = await request(createApp({ orchestrator: h.orchestrator, leads: h.leads, leadDelivery: h.delivery, rateLimits: { enabled: false } })).get("/api/health").expect(200);

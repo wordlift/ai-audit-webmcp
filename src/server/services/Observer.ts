@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import type { ActivationCount, DayVisits } from "../adapters/visits/VisitStore.js";
 import type { DeepScanLead, LeadDelivery, LeadStore } from "../adapters/leads/index.js";
 import type { CapabilityResult, ReportRecord } from "../../shared/types/index.js";
@@ -15,8 +15,10 @@ import type { VisitLedger } from "./VisitLedger.js";
 export interface ObserveOptions {
   /** Days between two reads of the same site. Zero disables the cadence entirely. */
   intervalDays: number;
-  /** How often the due list is checked. */
+  /** How often the due list is checked from inside the process. Zero leaves it to a scheduler calling the tick endpoint. */
   tickMinutes?: number;
+  /** The token a scheduler presents to call the tick endpoint. Absent, the endpoint refuses everyone. */
+  tickToken?: string;
   /** How many sites one check may re-read: the bound on cost per tick. */
   perTick?: number;
 }
@@ -152,10 +154,16 @@ export class Observer {
     return this.deps.intervalDays > 0;
   }
 
-  /** Begins the cadence. Idempotent; the timer never keeps a process alive on its own. */
+  /**
+   * Begins the in-process cadence. Idempotent; the timer never keeps a process alive on its own,
+   * and on a platform that sleeps between requests it fires only while something else keeps the
+   * instance awake, which is why a scheduler calling the tick endpoint is the reliable form.
+   */
   start(): void {
     if (!this.enabled || this.#timer) return;
-    const every = (this.deps.tickMinutes ?? 60) * 60_000;
+    const minutes = this.deps.tickMinutes ?? 60;
+    if (minutes <= 0) return;
+    const every = minutes * 60_000;
     this.#timer = setInterval(() => void this.tick(), every);
     this.#timer.unref();
   }
@@ -166,7 +174,23 @@ export class Observer {
   }
 
   summary() {
-    return { enabled: this.enabled, intervalDays: this.deps.intervalDays, watched: this.#watched, sent: this.#sent, lastTickAt: this.#lastTickAt };
+    return {
+      enabled: this.enabled,
+      intervalDays: this.deps.intervalDays,
+      tickMinutes: this.deps.tickMinutes ?? 60,
+      scheduled: Boolean(this.deps.tickToken),
+      watched: this.#watched,
+      sent: this.#sent,
+      lastTickAt: this.#lastTickAt,
+    };
+  }
+
+  /** Whether a caller may run a tick: the token the scheduler presents, compared without leaking its length. */
+  mayTick(token: string | undefined): boolean {
+    const expected = this.deps.tickToken;
+    if (!expected || !token) return false;
+    const [left, right] = [Buffer.from(expected), Buffer.from(token)];
+    return left.length === right.length && timingSafeEqual(left, right);
   }
 
   /** Re-reads the sites due, at most `perTick` of them, and sends a note for each that moved. */

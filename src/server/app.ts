@@ -121,7 +121,7 @@ export function createApp(options: AppOptions = {}): Express {
         })
       : null;
   observer?.start();
-  if (options.leads) app.use("/api/observe", createObserveRouter(options.leads));
+  if (options.leads) app.use("/api/observe", createObserveRouter(options.leads, undefined, observer));
 
   app.get("/api/health", (_request, response) => {
     response.status(200).json({

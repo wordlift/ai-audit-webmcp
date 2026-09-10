@@ -1,14 +1,29 @@
 import { Router } from "express";
 import type { LeadStore } from "../adapters/leads/index.js";
-import { unsubscribeKey } from "../services/Observer.js";
+import { unsubscribeKey, type Observer } from "../services/Observer.js";
 
 /**
- * The one link in every note that stops them. It stops the re-reads too, and leaves the report
- * exactly where it is. The key is bound to the address, so the report's public link alone cannot
- * silence the person who asked for the notes.
+ * Two doors for Observe. The one link in every note that stops them: it stops the re-reads too,
+ * and leaves the report exactly where it is; the key is bound to the address, so the report's
+ * public link alone cannot silence the person who asked for the notes. And the tick a scheduler
+ * calls once a day, behind a token, so the weekly re-read happens whether or not an instance was
+ * awake to remember it.
  */
-export function createObserveRouter(leads: LeadStore, now: () => Date = () => new Date()): Router {
+export function createObserveRouter(leads: LeadStore, now: () => Date = () => new Date(), observer: Observer | null = null): Router {
   const router = Router();
+
+  router.post("/tick", async (request, response) => {
+    if (!observer) {
+      response.status(404).json({ error: "observe_not_configured", message: "Observe is not configured here." });
+      return;
+    }
+    if (!observer.mayTick(request.get("x-observe-token"))) {
+      response.status(401).json({ error: "observe_tick_refused", message: "The tick needs the token the scheduler holds." });
+      return;
+    }
+    const outcomes = await observer.tick();
+    response.json({ at: now().toISOString(), ran: outcomes.length, outcomes, ...observer.summary() });
+  });
 
   router.get("/unsubscribe/:reportId/:key", async (request, response) => {
     const reportId = String(request.params.reportId ?? "");

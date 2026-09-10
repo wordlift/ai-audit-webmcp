@@ -49,6 +49,7 @@ inputs differ.
 | `OBSERVE_INTERVAL_DAYS` | `7` | How often a site whose owner gave a deep-scan address is read again. `0` never re-reads and never writes |
 | `OBSERVE_TICK_MINUTES` | `60` | How often the due list is checked |
 | `OBSERVE_PER_TICK` | `5` | How many sites one check may re-read: with the interval, the ceiling on what Observe can cost |
+| `OBSERVE_TICK_TOKEN` | — | The token Cloud Scheduler presents at `POST /api/observe/tick`. Secret Manager in production; absent, the endpoint refuses everyone. With a scheduler, set `OBSERVE_TICK_MINUTES=0` so the in-process timer stands down |
 | `PUBLIC_INDEXABLE` | `true` | `false` on a preview: robots are told to stay out and every response carries `X-Robots-Tag: noindex, nofollow` |
 
 Live mode fails fast at startup if a required credential is missing.
@@ -171,8 +172,30 @@ so a report's public link alone cannot silence its owner. Clicking it sets `unsu
 lead: no further re-read, no further note; the report stays where it is. HubSpot's own unsubscribe
 governs HubSpot's sending as before; this link governs what this service does.
 
-`GET /api/health` reports `observe` with the interval, and how many sites this instance re-read
-and how many notes it sent since it started.
+`GET /api/health` reports `observe` with the interval, whether a scheduler token is set, and how
+many sites this instance re-read and how many notes it sent since it started.
+
+#### Scheduling the tick
+
+Cloud Run scales to zero and throttles the CPU between requests, so the in-process timer fires
+only while something else keeps an instance awake. The reliable form is a Cloud Scheduler job
+calling `POST /api/observe/tick` once a day with the token, which runs one tick: at most
+`OBSERVE_PER_TICK` sites due by `OBSERVE_INTERVAL_DAYS`, the notes for those that moved, and the
+tick's outcomes in the answer. Create the token once, mount it on deploy, and create the job:
+
+```bash
+openssl rand -hex 24 | gcloud secrets create OBSERVE_TICK_TOKEN --data-file=- --project ai-audit-wordlift
+OBSERVE_TICK_TOKEN_SECRET=OBSERVE_TICK_TOKEN scripts/deploy-cloud-run.sh ai-audit-wordlift us-west1   # with the usual variables
+gcloud scheduler jobs create http ai-audit-observe-tick --project ai-audit-wordlift --location us-west1 \
+  --schedule "17 6 * * *" --time-zone "Europe/Rome" --http-method POST \
+  --uri "https://beta.audit.wordlift.io/api/observe/tick" \
+  --headers "x-observe-token=$(gcloud secrets versions access latest --secret OBSERVE_TICK_TOKEN --project ai-audit-wordlift)" \
+  --attempt-deadline 600s
+```
+
+A daily job with a weekly interval per site spreads the re-reads over the week, five a day at most.
+The token is compared in constant time; a wrong or missing token answers 401, a deployment without
+Observe answers 404. The job's request is counted by nothing and rate limited by nothing.
 
 ## One crawl per site per day, and the bill
 

@@ -150,7 +150,14 @@ const app = createApp({
   indexable: config.PUBLIC_INDEXABLE,
   ...(config.NODE_ENV === "test"
     ? {}
-    : { observe: { intervalDays: config.OBSERVE_INTERVAL_DAYS, tickMinutes: config.OBSERVE_TICK_MINUTES, perTick: config.OBSERVE_PER_TICK } }),
+    : {
+        observe: {
+          intervalDays: config.OBSERVE_INTERVAL_DAYS,
+          tickMinutes: config.OBSERVE_TICK_MINUTES,
+          perTick: config.OBSERVE_PER_TICK,
+          ...(config.OBSERVE_TICK_TOKEN ? { tickToken: config.OBSERVE_TICK_TOKEN } : {}),
+        },
+      }),
 });
 
 const server = app.listen(config.PORT, () => {
