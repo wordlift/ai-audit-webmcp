@@ -1057,9 +1057,10 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 /* A chip names an action the reader has not met yet: a label says what the chips are, before the chips. */
 .entity-links-label { align-self: center; margin-right: 2px; font-size: 0.72rem; color: var(--muted); }
 .entity-links-label:not(:first-child) { margin-left: 6px; }
-.understand-footnote { margin-top: 16px; }
 .entity-link-wikidata { color: var(--brand); text-decoration: none; border-color: color-mix(in srgb, var(--brand) 40%, white); }
 .entity-more, .entity-empty { margin: 0; color: var(--muted); font-size: 0.88rem; }
+/* The footnote under the two columns stands off them; it is written after the rule above because that rule zeroes every margin. */
+.entity-more.understand-footnote { margin-top: 20px; }
 .fix-sample-fold { min-width: 0; max-width: 100%; }
 .fix-sample-fold .fix-sample { max-width: 100%; }
 .fix-sample-fold .fix-sample pre { white-space: pre-wrap; overflow-wrap: anywhere; }
