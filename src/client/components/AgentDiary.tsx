@@ -63,6 +63,12 @@ export function agentDiary(report: ReportRecord, limit = 5): DiaryLine[] {
       (line.tone === "did" ? did : failed).push(line);
     }
   }
+  // A site with two addresses for one MCP server is one server that answered: the second address
+  // that did not is not a failure worth a line, and the same sentence is never said twice.
+  const opened = did.some((line) => line.text.startsWith("Opened the site's MCP server"));
+  const distinct = (lines: DiaryLine[]) => lines.filter((line, index) => lines.findIndex((other) => other.text === line.text) === index);
+  const answered = distinct(did);
+  const unanswered = distinct(failed).filter((line) => !(opened && line.text === "Tried the site's MCP server: it did not answer."));
   const looked: DiaryLine[] = [];
   if (pageTools.size > 0) {
     const names = [...pageTools].slice(0, 3).map((name) => `“${name}”`).join(", ");
@@ -72,7 +78,7 @@ export function agentDiary(report: ReportRecord, limit = 5): DiaryLine[] {
     if (capability.state === "missing") looked.push({ tone: "looked", text: `Looked for a way to ${lower(capability.label)}: found nothing an agent can call.` });
     if (capability.state === "human-only") looked.push({ tone: "looked", text: `Looked for a way to ${lower(capability.label)}: found one for people, none for agents.` });
   }
-  return [...did, ...failed, ...looked].slice(0, limit);
+  return [...answered, ...unanswered, ...looked].slice(0, limit);
 }
 
 export function AgentDiary({ report }: { report: ReportRecord }) {

@@ -68,10 +68,15 @@ describe("the agent's diary", () => {
     expect(agentDiary(report, 8).slice(5).map((line) => line.text)).toEqual(["Looked for a way to book a stay: found one for people, none for agents."]);
   });
 
-  it("never repeats one piece of evidence attached to two actions", () => {
+  it("never repeats one piece of evidence attached to two actions, nor one sentence for two addresses of one server", () => {
     const shared = evidence("mcp-endpoint-https://alpina.travel/mcp", "An agent opened an MCP session here", "invoked", "discovery");
     const twice: ReportRecord = { ...report, capabilities: [capability("site.search", "Search", "agent-ready", [shared]), capability("site.browse", "Browse", "agent-ready", [shared])] };
     expect(agentDiary(twice).map((line) => line.text)).toEqual(["Opened the site's MCP server and listed its tools."]);
+
+    const secondAddress = evidence("mcp-endpoint-https://alpina.travel/mcp/sse", "An agent opened an MCP session here", "invoked", "discovery");
+    const deadAddress = evidence("mcp-endpoint-failed-https://alpina.travel/mcp/old", "The site's MCP server did not answer", "failed", "discovery");
+    const many: ReportRecord = { ...report, capabilities: [capability("site.search", "Search", "agent-ready", [shared, secondAddress, deadAddress])] };
+    expect(agentDiary(many).map((line) => line.text)).toEqual(["Opened the site's MCP server and listed its tools."]);
   });
 
   it("renders as a short list, and not at all when there is nothing to tell", () => {
