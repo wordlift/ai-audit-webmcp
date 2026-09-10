@@ -518,7 +518,19 @@ Built (P0, 2026-09-10):
 - Content Analysis v3 as the provider (`ContentAnalysis.ts`): asked for the things a business is
   made of by name, one name one thing, no country, no glued labels, Wikidata links only when sure.
 
-Next (P1): the full audit reorganised into the brief's seven sections; usage on the action card
+The extractor, tuned on live sites the same day: labels per site type (the travel site asked for
+its stays, tours and passes, the shop for its brands and collections, the software company for
+its plans and integrations); the floor at 0.45 for reach, with the name rules doing the filtering
+(a name begins with a capital or a digit, role nouns and meals are not names); every page of a
+basic scan sent, since the service costs nothing per call; every geographic label a Place, so one
+Lungau is one Lungau across pages; an inferred namesake yields to any declared entity and adds no
+fact to it; every name checked against the page's text; evidence read before anything is
+inferred, which closed a Gemini-era hole where a generated offer could become "for people"
+evidence. On wordlift.io the list went from nothing to the products and services the site names
+without declaring; on alpina.travel it is the apartment, the operator and the region's places.
+
+Next (P1): the second recall lever if wanted, Gemini proposing candidates that the page's text
+must confirm; the full audit reorganised into the brief's seven sections; usage on the action card
 from the ledger; the enterprise test as a browser spec proving each of the eight questions is two
 clicks away; labels per site type for the extractor. P2: recurring proof beyond the ledger; the
 enterprise review path the model already supports.
