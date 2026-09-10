@@ -6,6 +6,7 @@ import type { Archetype, ReportRecord } from "../../shared/types/index.js";
 import { ApiError, getReport, recompileReport } from "../api/client";
 import { ActionJourney } from "../components/ActionJourney";
 import { AgentSurfaces } from "../components/AgentSurfaces";
+import { BoundariesTable } from "../components/BoundariesTable";
 import { AlpinaSidecarPanel } from "../components/AlpinaSidecarPanel";
 import { ClassificationCard } from "../components/ClassificationCard";
 import { ContextEngineMap, heroEntityId } from "../components/ContextEngineMap";
@@ -163,26 +164,75 @@ export function ReportRoute() {
         </summary>
         <div className="full-audit-body">
           <div className="full-audit-tools"><SiteToolsBadge /></div>
-          <ServiceMapProvenance report={report} />
+          {/* The seven sections of the enterprise layer, in the order a business model reads: what the
+              organisation is and offers, the words it uses, what it should let agents do, who performs
+              each action, the contract agents load, why each state was given, and what agents are handed. */}
+          <nav className="full-audit-nav" aria-label="Full audit sections">
+            <a href="#audit-entities">Entities</a>
+            <a href="#audit-terminology">Terminology</a>
+            <a href="#audit-actions">Actions</a>
+            <a href="#audit-boundaries">Business boundaries</a>
+            <a href="#audit-terms">Terms of Action</a>
+            <a href="#audit-evidence">Evidence &amp; provenance</a>
+            <a href="#audit-surfaces">Agent-facing surfaces</a>
+          </nav>
           <ExecutiveSummary report={report} />
           {/* Keyed by report so a recompile that lands on the child report hands back a fresh form. */}
           {report.classification && <ClassificationCard key={report.id} classification={report.classification} onOverride={override} />}
-          {report.contextGraph && report.classification && (
-            <ContextEngineMap
-              context={report.contextGraph}
-              classification={report.classification}
+
+          <section className="audit-section" id="audit-entities" aria-labelledby="audit-entities-title">
+            <h2 id="audit-entities-title" className="audit-section-title">Entities <span>what the organisation is, offers, owns and refers to</span></h2>
+            <p className="audit-section-lead" id="audit-terminology">
+              With the terminology beside them: the words this organisation uses, and what it means by them. The map below draws entities,
+              terms and actions together, declared in blue and inferred marked as such.
+            </p>
+            {report.contextGraph && report.classification && (
+              <ContextEngineMap
+                context={report.contextGraph}
+                classification={report.classification}
+                capabilities={report.capabilities ?? []}
+                selectedEntityId={selectedEntityId}
+                onSelectEntity={setSelectedEntityId}
+              />
+            )}
+          </section>
+
+          <section className="audit-section" id="audit-actions" aria-labelledby="audit-actions-title">
+            <h2 id="audit-actions-title" className="audit-section-title">Actions <span>every expected action, its state, its interface and its evidence</span></h2>
+            <ActionJourney
+              reportId={report.id}
               capabilities={report.capabilities ?? []}
               selectedEntityId={selectedEntityId}
-              onSelectEntity={setSelectedEntityId}
             />
-          )}
-          <ActionJourney
-            reportId={report.id}
-            capabilities={report.capabilities ?? []}
-            selectedEntityId={selectedEntityId}
-          />
-          {report.foundationAudit && <FoundationAuditDetails audit={report.foundationAudit} />}
-          <AgentSurfaces report={report} />
+          </section>
+
+          <section className="audit-section" id="audit-boundaries">
+            <BoundariesTable report={report} />
+          </section>
+
+          <section className="audit-section" id="audit-terms" aria-labelledby="audit-terms-title">
+            <h2 id="audit-terms-title" className="audit-section-title">Terms of Action <span>the consolidated contract agents load</span></h2>
+            <p className="audit-section-lead">
+              Machine-drafted from the evidence, refined by the decisions above, and rendered as{" "}
+              <a href={`/api/reports/${report.id}/publish/skill.md`} target="_blank" rel="noreferrer">the file an agent reads before acting</a>. It states
+              boundaries and cites this report for readiness; it never claims an action works.
+            </p>
+            <ServiceMapProvenance report={report} />
+          </section>
+
+          <section className="audit-section" id="audit-evidence" aria-labelledby="audit-evidence-title">
+            <h2 id="audit-evidence-title" className="audit-section-title">Evidence &amp; provenance <span>why each readiness state was given</span></h2>
+            <p className="audit-section-lead">
+              Every action above opens on its evidence: what was observed, declared, invoked or failed, with the source, the time and the
+              provenance of each claim. Readiness moves only on a verified invocation. The foundation audit below is the technical ground.
+            </p>
+            {report.foundationAudit && <FoundationAuditDetails audit={report.foundationAudit} />}
+          </section>
+
+          <section className="audit-section" id="audit-surfaces">
+            <AgentSurfaces report={report} />
+          </section>
+
           {/* Labs: a contained technical proof, deliberately out of the product's primary story. */}
           {sidecarApplies(report) && (
             <details className="labs-fold">

@@ -59,4 +59,11 @@ test("the eight enterprise questions are each two clicks from the report", async
   await page.locator("summary", { hasText: "Full audit" }).click();
   await expect(page.getByRole("heading", { name: /what agents are given to read/i })).toBeVisible();
   await expect(page.getByText(/terms of action, the skill agents load/i)).toBeVisible();
+
+  // 8, again, for the whole business at once: the boundaries table, one click below, one row per action.
+  const boundaries = page.getByRole("row", { name: /check availability/i }).filter({ hasText: /partner handoff/i });
+  await expect(boundaries).toContainText("Lungau Lodging");
+  await expect(boundaries).toContainText("Partners own the inventory.");
+  await expect(boundaries).toContainText("Human-provided");
+  await expect(page.getByRole("navigation", { name: /full audit sections/i }).getByRole("link")).toHaveCount(7);
 });
