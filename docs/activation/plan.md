@@ -529,8 +529,16 @@ inferred, which closed a Gemini-era hole where a generated offer could become "f
 evidence. On wordlift.io the list went from nothing to the products and services the site names
 without declaring; on alpina.travel it is the apartment, the operator and the region's places.
 
-Next (P1): the second recall lever if wanted, Gemini proposing candidates that the page's text
-must confirm; the full audit reorganised into the brief's seven sections; usage on the action card
+Then, the same afternoon: Gemini behind Content Analysis as a fallback for names only, used for a
+page when the first extractor fails or times out, each candidate confirmed by the page's text and
+stripped of everything a model wrote around it; the Wikidata links Content Analysis is sure of
+shown on the rows and carried into the skill, only when they exist; the map's links on every
+entity row, the actions it answers for and the words the site uses for it, with the full map one
+click away. Andrea's rule for the list: the same name is one entity, no suggestions, only links
+that exist, because that list is the business card.
+
+Next (P1): Gemini as a recall lever in parallel, page-confirmed, if the lists stay short; the full
+audit reorganised into the brief's seven sections; usage on the action card
 from the ledger; the enterprise test as a browser spec proving each of the eight questions is two
 clicks away; labels per site type for the extractor. P2: recurring proof beyond the ledger; the
 enterprise review path the model already supports.
