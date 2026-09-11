@@ -569,6 +569,58 @@ here, agents can read the business, against what the score measures, whether age
 Andrea's framing: WordLift's existing impact is readability; the actions are where we take clients
 next.
 
+## The second brief, 2026-09-11: the Starter Knowledge Graph is the product proof
+
+Andrea's second brief keeps the first (simple words in front, the enterprise model one click
+below, Fix as the product) and adds one idea that changes the centre of gravity: from a few pages
+the audit builds a first, evidence-backed model of the business, shows it as the "it understood my
+business" moment, lets an agent use it at once, and sells Fix and Activate as turning that
+provisional model into infrastructure. Audit → Model → Fix → Activate → Prove inside; still
+Audit → Fix → Activate on screen.
+
+What the branch already had before the brief, read against it:
+
+- The report-scoped graph exists (`contextGraph`: pages, entities with declared/inferred/human
+  provenance, terminology, interfaces, entity↔action bindings) and is what every screen reads.
+  Missing: entity↔entity relationships ("offers", "located in").
+- The Understand panel is §11 and §12: what agents read against what only the text holds, the
+  delta, "Publish the missing N". The Own it questions are §13's lightweight governance for actions
+  and terms; entity priority (primary/demoted) exists in the model but has no simple question yet.
+- Fix this as a door, the capability object, the seven-section fold with provenance: §10, §21,
+  §14, the enterprise test.
+- In-page WebMCP tools read the Terms of Action and one capability; none read the business model.
+
+Built tonight, 2026-09-11, on the branch (the night was mine to test and improve):
+
+- §3/§4/§23, the moment: "From 4 pages, WordLift found 1 business · 2 apartments · 3 places ·
+  1 person · 10 expected actions. See what we understood →" on the first screen, in the site's
+  own nouns, before the score. Nothing is said when nothing was read.
+- §7/§8, the model usable at once: `inspect-business-model` and `explain-entity`, read-only,
+  in the page and on the remote server, every entity marked declared, inferred or human-confirmed,
+  every action with whether an agent can perform it today, the boundaries stated in the answer.
+- §9, the obvious agent interaction: "Try the model with an AI agent" under Understand, one
+  button that copies a prompt any agent with a browser can follow.
+- Andrea's two asks of the night: the Activate documents open in place, formatted, with the raw
+  file one click away; and the preview keeps its reports across deploys (Firestore, `preview_`
+  collections), which is what ChatGPT ran into ("Report not found or expired": the report it was
+  reviewing died with deploy #28).
+
+Still to do from the brief, in the order the brief gives:
+
+- P0 relationships in the graph: "offers", "located in", "provided by", read from the site's own
+  markup first (address, containedInPlace, makesOffer, provider, brand), inferred never without a
+  label saying so; then the §4 summary "Alpina → offers Samspitze 4 → located in Mariapfarr".
+- P0 the graph difference as a number on the first screen (§12): "12 important things exist only
+  in your content. Fix the missing 12 →". The Understand panel has the count; the first screen
+  should carry it as the third block.
+- P1 §13 entity questions in Own it: "Is this your main business?", "Is this entity important?",
+  writing `humanPriority`.
+- P1 §21 graph context on the capability card ("Property → offered by Alpina → …") once
+  relationships exist.
+- P2 §22 model health in Prove: entity changes and unresolved inferred entities between reads.
+- §26 the agent test as a browser spec: an agent through WebMCP answers the four questions with
+  provenance intact. The tools exist; the spec is next.
+
 Next (P1): Gemini as a recall lever in parallel, page-confirmed, if the lists stay short; usage on the action card
 from the ledger; the enterprise test as a browser spec proving each of the eight questions is two
 clicks away; labels per site type for the extractor. P2: recurring proof beyond the ledger; the

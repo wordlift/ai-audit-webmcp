@@ -162,7 +162,7 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
 
   const fixable = textOnly.length > 0;
   return (
-    <section className={`understand ${fixable ? "understand-fixable" : ""}`} aria-labelledby="understand-title">
+    <section id="understand" className={`understand ${fixable ? "understand-fixable" : ""}`} aria-labelledby="understand-title">
       <p className="section-kicker"><Braces size={16} /> Fix</p>
       <h2 id="understand-title">{fixable ? "Fix what agents cannot understand" : "Agents understand your business"}</h2>
       <p className="understand-lead">

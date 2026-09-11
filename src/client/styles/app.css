@@ -786,6 +786,18 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .chip-runs-on { text-decoration: none; background: color-mix(in srgb, var(--brand) 10%, white); color: var(--brand); }
 .chip-runs-on:hover { background: color-mix(in srgb, var(--brand) 18%, white); }
 .runs-on-note { margin: 0; color: var(--muted); max-width: 72ch; }
+/* What the audit found, counted in the site's own nouns, before the score. */
+.first-found { margin: 0; color: var(--muted); font-size: 1rem; line-height: 1.5; }
+.first-found b { color: var(--ink); font-weight: 600; }
+.first-found-dot { color: var(--faint); }
+.first-found a { color: var(--brand); font-weight: 600; }
+
+/* Try the model with an AI agent: the second aha, one button. */
+.ask-agent { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 28px; padding: 18px 22px; border: 1px solid var(--line-subtle); border-radius: 16px; background: var(--surface); }
+.ask-agent > div { display: grid; gap: 6px; flex: 1 1 36ch; }
+.ask-agent p { margin: 0; color: var(--muted); max-width: 66ch; }
+.ask-agent .section-kicker { margin: 0; }
+.ask-agent .review-cta { flex: 0 0 auto; white-space: nowrap; }
 .first-score b { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; margin-right: 4px; }
 .read-when button { background: none; border: 0; padding: 0; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
 .read-when button:disabled { color: var(--faint); cursor: default; }

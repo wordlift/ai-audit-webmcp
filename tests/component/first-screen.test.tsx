@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { FirstScreen, actionsThatMatter, gapLine, headline, readAgo, readersLine, runsOnLine } from "../../src/client/components/FirstScreen";
+import { FirstScreen, actionsThatMatter, foundLine, gapLine, headline, readAgo, readersLine, runsOnLine } from "../../src/client/components/FirstScreen";
 import type { CapabilityResult, ReportRecord } from "../../src/shared/types/index.js";
 
 function capability(overrides: Partial<CapabilityResult> & Pick<CapabilityResult, "actionId" | "label" | "state">): CapabilityResult {
@@ -192,5 +192,34 @@ describe("the readers line", () => {
     const withGraph = { ...onWordLift, contextGraph: { entities: [entity("AlpiNest"), entity("Samspitze 4"), entity("Lungau", "inferred")] } } as unknown as ReportRecord;
     expect(runsOnLine(withGraph)).toBe("WordLift already makes this business readable to agents: 2 of the 3 things that matter here are machine-readable. The score measures whether agents can act, which is the next step.");
     expect(runsOnLine(onWordLift)).toBe("WordLift already makes this business readable to agents. The score measures whether agents can act, which is the next step.");
+  });
+
+  it("counts what it found in the site's own nouns, before the score, and points at the understanding", () => {
+    const entity = (id: string, name: string, type: string, extra: Record<string, unknown> = {}) => ({ id, types: [type], name, alternateNames: [], sourceUrls: ["https://www.alpina.travel/"], sameAs: [], offers: [], confidence: 0.9, ...extra });
+    const withGraph = {
+      ...report,
+      contextGraph: {
+        pages: [{ url: "https://www.alpina.travel/", title: "Alpina", role: "entry", headings: [], entityIds: [] }, { url: "https://www.alpina.travel/lungau/", title: "Lungau", role: "detail", headings: [], entityIds: [] }],
+        entities: [
+          entity("org", "AlpiNest Feriendorf Lungau", "LodgingBusiness"),
+          entity("a1", "Samspitze 4", "Apartment", { origin: "inferred" }),
+          entity("a2", "Samspitze 5", "Apartment"),
+          entity("p1", "Lungau", "Place", { origin: "inferred" }),
+          entity("p2", "Mariapfarr", "Place", { origin: "inferred" }),
+          entity("who", "Andrea Volpini", "Person"),
+          entity("site", "Alpina.travel", "WebSite"),
+          entity("old", "Old brochure", "Product", { humanPriority: "demoted" }),
+        ],
+        lexicalEntries: [],
+        interfaces: [],
+        bindings: [],
+      },
+    } as unknown as ReportRecord;
+    expect(foundLine(withGraph)).toEqual({ pages: 2, parts: ["1 business", "2 apartments", "2 places", "1 person", "4 expected actions"] });
+    renderScreen(withGraph);
+    expect(screen.getByText(/From 2 pages, WordLift found/)).toHaveTextContent("1 business · 2 apartments · 2 places · 1 person · 4 expected actions");
+    expect(screen.getByRole("link", { name: "See what we understood" })).toHaveAttribute("href", "#understand");
+    // Without a graph there is nothing to count, and nothing is said.
+    expect(foundLine(report)).toBeNull();
   });
 });

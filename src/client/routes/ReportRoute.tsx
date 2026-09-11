@@ -17,6 +17,7 @@ import { OwnIt } from "../components/OwnIt";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { ReportProgress } from "../components/ReportProgress";
 import { ServiceMapProvenance } from "../components/ServiceMapProvenance";
+import { AskAgentStrip } from "../components/AskAgentStrip";
 import { UnderstandPanel } from "../components/UnderstandPanel";
 import { SiteToolsBadge } from "../components/SiteToolsBadge";
 import { AlpinaAvailabilityTool } from "../webmcp/AlpinaAvailabilityTool";
@@ -147,6 +148,8 @@ export function ReportRoute() {
       <FirstScreen key={`first-${report.id}`} report={report} />
       {/* Understand, then Fix: every entity the audit read, and the button that publishes the ones agents cannot see. */}
       <UnderstandPanel report={report} />
+      {/* The model is usable now: an agent reads it through the page's own tools. */}
+      <AskAgentStrip reportId={report.id} />
       {/* Own it: who runs each of the three actions, answered in a minute. Readiness never moves on a word. */}
       <OwnIt key={`own-${report.id}`} report={report} />
       {/* Activate: one screen away, so the report stays three words and their fixes. */}

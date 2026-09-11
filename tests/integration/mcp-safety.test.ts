@@ -70,7 +70,7 @@ describe("what the remote endpoint refuses", () => {
       .set(MCP_HEADERS)
       .send({ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} })
       .expect(200);
-    expect(listed.body.result.tools).toHaveLength(6);
+    expect(listed.body.result.tools).toHaveLength(8);
   });
 
   it("counts an audit hidden inside a batch", async () => {

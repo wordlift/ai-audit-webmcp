@@ -7,7 +7,8 @@ import { ActionDetailDialog } from "./ActionDetailDialog";
 import { AgentDiary } from "./AgentDiary";
 import { DeepScanOffer } from "./DeepScanOffer";
 import { publishUrl } from "./FixPanel";
-import { groupEntities } from "./UnderstandPanel";
+import { entityRole } from "../../shared/format/businessModel.js";
+import { entityTypeLabel, groupEntities } from "./UnderstandPanel";
 
 /**
  * The first screen of a report is an action screen. It answers, in under a minute, what agents
@@ -141,6 +142,46 @@ export function readersLine(visits: ReportVisits | null): string | null {
  * delivers: agents can read the business. The two are different things, and a reader who sees
  * "Runs on WordLift" beside a low score deserves to be told which one WordLift is responsible for.
  */
+/** "2 apartments", "3 places": the nouns a business uses, never a type name. */
+function pluralNoun(count: number, label: string): string {
+  const noun = label.toLowerCase();
+  const plural = /(s|x|z|ch|sh)$/.test(noun) ? `${noun}es` : /[^aeiou]y$/.test(noun) ? `${noun.slice(0, -1)}ies` : `${noun}s`;
+  return `${count} ${count === 1 ? noun : plural}`;
+}
+
+/**
+ * What the audit found, before any score: the business, what it offers, where, who, counted in
+ * the nouns the site uses. The moment the brief asks for is "it understood the shape of my
+ * business", and a count of the right things says it faster than a score.
+ */
+export function foundLine(report: ReportRecord): { pages: number; parts: string[] } | null {
+  const pages = report.contextGraph?.pages.length ?? 0;
+  const entities = (report.contextGraph?.entities ?? []).filter((entity) => entity.humanPriority !== "demoted");
+  if (pages === 0 || entities.length === 0) return null;
+  const offerings = new Map<string, number>();
+  let businesses = 0;
+  let places = 0;
+  let people = 0;
+  for (const entity of entities) {
+    const role = entityRole(entity);
+    if (role === "business") businesses += 1;
+    else if (role === "place") places += 1;
+    else if (role === "person") people += 1;
+    else if (role === "offering") {
+      const label = entityTypeLabel(entity.types[0]);
+      offerings.set(label, (offerings.get(label) ?? 0) + 1);
+    }
+  }
+  const parts: string[] = [];
+  if (businesses > 0) parts.push(pluralNoun(businesses, "business"));
+  for (const [label, count] of [...offerings.entries()].sort((left, right) => right[1] - left[1]).slice(0, 3)) parts.push(pluralNoun(count, label));
+  if (places > 0) parts.push(pluralNoun(places, "place"));
+  if (people > 0) parts.push(people === 1 ? "1 person" : `${people} people`);
+  const expected = (report.capabilities ?? []).filter((capability) => capability.expected).length;
+  if (expected > 0) parts.push(`${expected} expected ${expected === 1 ? "action" : "actions"}`);
+  return parts.length > 0 ? { pages, parts } : null;
+}
+
 export function runsOnLine(report: ReportRecord): string {
   const name = report.publishedWith?.name ?? "WordLift";
   const { published, textOnly } = groupEntities(report.contextGraph?.entities ?? []);
@@ -174,6 +215,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   const three = actionsThatMatter(capabilities);
   const beyond = beyondTheThree(capabilities);
   const primary = report.classification?.primaryArchetype;
+  const found = foundLine(report);
   const archetype = !primary || primary === "other" ? "general" : primary.replaceAll("-", " / ");
   const score = report.score?.value;
   const ago = readAgo(report.collectedAt, now());
@@ -197,6 +239,18 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         <p className="section-kicker"><Bot size={16} /> What AI agents can do with {host}</p>
         <h1 id="first-screen-title">{headline(capabilities, host)}</h1>
         {gap && <p className="first-sentence">{gap}</p>}
+        {found && (
+          <p className="first-found">
+            From {found.pages} {found.pages === 1 ? "page" : "pages"}, WordLift found{" "}
+            {found.parts.map((part, index) => (
+              <span key={part}>
+                {index > 0 && <span className="first-found-dot" aria-hidden="true"> · </span>}
+                <b>{part}</b>
+              </span>
+            ))}
+            . <a href="#understand">See what we understood</a>
+          </p>
+        )}
         <p className="first-meta">
           {ago && <span className="read-when">{ago}</span>}
           {score !== undefined && (
