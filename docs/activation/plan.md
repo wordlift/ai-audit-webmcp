@@ -630,6 +630,10 @@ Still to do from the brief, in the order the brief gives:
   "For your engineers" fold with the table and the surfaces, and the door again at the close;
   "expected actions" said as "things agents should be able to do here". Tools for Fix's
   publication and Prove's ledger set aside for later at Andrea's word.
+- Activate, redesigned the same day at Andrea's "the activate is still to be improved": one door in
+  the head with Talk to us beside it, the three outcomes and their files as one list read in place
+  (no dark glimpses), Prove one sentence until there is proof, the engineers' fold, the door again
+  at the close, no kicker (the step bar says where you are). Two doors at the top became one.
 - Load-sensitive tests under the full parallel run, each passing alone: the alpina sidecar
   upstream failure, "audit then read", the observe tick, the rate-limit pool, and the 404 error
   paths (a 5 s budget). One fails per full run, a different one each time; a serial run of the
