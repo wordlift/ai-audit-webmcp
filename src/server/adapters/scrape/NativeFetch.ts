@@ -17,6 +17,8 @@ import type {
   CollectOptions,
   DiscoveryDocument,
   ExtractedEntity,
+  ExtractedRelation,
+  RelationKind,
   McpEndpointProbe,
   PageAgentTool,
   ScrapeProvider,
@@ -715,6 +717,7 @@ function extractPage(
     forms: collectForms(document, base),
     jsonLdTypes: jsonLd.types,
     entities: jsonLd.entities,
+    ...(jsonLd.relations.length > 0 ? { relations: jsonLd.relations } : {}),
     pageTools,
     entryPoints: findEntryPoints(document, base, base.toString()),
     truncated,
@@ -743,9 +746,10 @@ function collectForms(document: Document, base: URL): SiteForm[] {
   });
 }
 
-function collectJsonLd(document: Document, base: URL): { types: string[]; entities: ExtractedEntity[] } {
+function collectJsonLd(document: Document, base: URL): { types: string[]; entities: ExtractedEntity[]; relations: ExtractedRelation[] } {
   const types = new Set<string>();
   const entities: ExtractedEntity[] = [];
+  const relations: ExtractedRelation[] = [];
 
   for (const script of [...document.querySelectorAll('script[type="application/ld+json"]')].slice(0, 25)) {
     let parsed: unknown;
@@ -755,10 +759,79 @@ function collectJsonLd(document: Document, base: URL): { types: string[]; entiti
       continue;
     }
     collectTypes(parsed, types, 0);
-    collectEntities(parsed, entities, base, 0);
+    collectEntities(parsed, entities, base, 0, relations);
   }
 
-  return { types: [...types].sort().slice(0, 80), entities: dedupeEntities(entities).slice(0, 60) };
+  return { types: [...types].sort().slice(0, 80), entities: dedupeEntities(entities).slice(0, 60), relations: dedupeRelations(relations).slice(0, 80) };
+}
+
+function dedupeRelations(relations: ExtractedRelation[]): ExtractedRelation[] {
+  const seen = new Set<string>();
+  return relations.filter((relation) => {
+    const key = `${relation.from}|${relation.kind}|${relation.to}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * The properties that say how two things relate, as schema.org names them, and the relation each
+ * declares from the entity that carries the property. An Offer is looked through to what it offers.
+ */
+const RELATION_PROPERTIES: ReadonlyArray<[property: string, kind: RelationKind]> = [
+  ["makesOffer", "offers"],
+  ["offers", "offers"],
+  ["containedInPlace", "located-in"],
+  ["location", "located-in"],
+  ["provider", "provided-by"],
+  ["parentOrganization", "part-of"],
+  ["isPartOf", "part-of"],
+  ["memberOf", "part-of"],
+  ["areaServed", "serves"],
+  ["brand", "brand"],
+];
+
+function records(value: unknown): Record<string, unknown>[] {
+  const entries = Array.isArray(value) ? value : [value];
+  return entries.filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object");
+}
+
+/** A place the markup names only as text, an address locality or an area served, as the entity it stands for. */
+function placeFromText(name: string, base: URL): ExtractedEntity {
+  return { id: `urn:wordlift:entity:place:${slug(name)}`.slice(0, 500), types: ["Place"], name: name.slice(0, 300), alternateNames: [], sourceUrl: base.toString(), sameAs: [], offers: [] };
+}
+
+function collectRelations(record: Record<string, unknown>, fromId: string, entities: ExtractedEntity[], relations: ExtractedRelation[], base: URL): void {
+  const sourceUrl = base.toString();
+  const relate = (to: string, kind: RelationKind) => {
+    if (to !== fromId) relations.push({ from: fromId, to, kind, sourceUrl });
+  };
+  for (const [property, kind] of RELATION_PROPERTIES) {
+    const value = record[property];
+    if (value === undefined || value === null) continue;
+    // "areaServed": "Austria" names a place as text; so does an address locality below.
+    if (typeof value === "string" && property === "areaServed" && value.trim()) {
+      const place = placeFromText(value.trim(), base);
+      entities.push(place);
+      relate(place.id, kind);
+      continue;
+    }
+    const targets = kind === "offers" ? records(value).flatMap((offer) => records(offer.itemOffered)) : records(value);
+    for (const target of targets) {
+      const types = stringList(target["@type"]).map((type) => type.replace(/^https?:\/\/schema\.org\//, ""));
+      const name = firstString(target.name, target.headline);
+      if (!name || !types.some((type) => DOMAIN_ENTITY_TYPES.has(type)) || !isNamedEntity(name, types)) continue;
+      relate(entityId(target, types[0] ?? "Thing", name, base), kind);
+    }
+  }
+  for (const address of records(record.address)) {
+    const locality = firstString(address.addressLocality);
+    if (!locality) continue;
+    const place = placeFromText(locality, base);
+    entities.push(place);
+    relate(place.id, "located-in");
+  }
 }
 
 function collectTypes(node: unknown, types: Set<string>, depth: number): void {
@@ -835,10 +908,10 @@ export function isNamedEntity(name: string, types: readonly string[]): boolean {
   return words.length >= 2;
 }
 
-function collectEntities(node: unknown, entities: ExtractedEntity[], base: URL, depth: number): void {
+function collectEntities(node: unknown, entities: ExtractedEntity[], base: URL, depth: number, relations: ExtractedRelation[] = []): void {
   if (depth > 8 || !node) return;
   if (Array.isArray(node)) {
-    for (const entry of node) collectEntities(entry, entities, base, depth + 1);
+    for (const entry of node) collectEntities(entry, entities, base, depth + 1, relations);
     return;
   }
   if (typeof node !== "object") return;
@@ -856,8 +929,9 @@ function collectEntities(node: unknown, entities: ExtractedEntity[], base: URL, 
       sameAs: stringList(record.sameAs).map((value) => resolve(value, base)).filter((value): value is string => Boolean(value)).slice(0, 12),
       offers: extractOffers(record.offers, base),
     });
+    collectRelations(record, entityId(record, types[0] ?? "Thing", name, base), entities, relations, base);
   }
-  for (const value of Object.values(record)) collectEntities(value, entities, base, depth + 1);
+  for (const value of Object.values(record)) collectEntities(value, entities, base, depth + 1, relations);
 }
 
 function entityId(record: Record<string, unknown>, type: string, name: string, base: URL): string {

@@ -30,6 +30,16 @@ export interface ExtractedEntity {
   origin?: "markup" | "inferred";
 }
 
+export type RelationKind = "offers" | "located-in" | "provided-by" | "part-of" | "serves" | "brand";
+
+/** A relation the page's own markup declares between two of its entities, by their ids. */
+export interface ExtractedRelation {
+  from: string;
+  to: string;
+  kind: RelationKind;
+  sourceUrl: string;
+}
+
 export interface SitePageSnapshot {
   url: string;
   title: string;
@@ -42,6 +52,8 @@ export interface SitePageSnapshot {
   forms: SiteForm[];
   jsonLdTypes: string[];
   entities: ExtractedEntity[];
+  /** What the page's markup says about how its entities relate; absent when it says nothing. */
+  relations?: ExtractedRelation[];
   pageTools: PageAgentTool[];
   /** The entry points this page declares; collector-only, never stored in a report. */
   entryPoints?: DeclaredEntryPoint[];

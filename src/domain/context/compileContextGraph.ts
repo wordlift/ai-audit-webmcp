@@ -6,6 +6,7 @@ import type {
   ContentCategory,
   ContextGraph,
   DomainEntity,
+  EntityRelation,
 } from "../../shared/types/index.js";
 import { DEEP_SCAN_PAGES } from "../../shared/format/deepScan.js";
 
@@ -52,7 +53,8 @@ export function compileContextGraph(
   canonicalUrl: string,
   archetype?: keyof typeof BUSINESS_TYPES,
 ): ContextGraph {
-  const entities = mergeEntities(pages, canonicalUrl, new Set(BUSINESS_TYPES[archetype ?? "other"] ?? []));
+  const { entities, idMap } = mergeEntities(pages, canonicalUrl, new Set(BUSINESS_TYPES[archetype ?? "other"] ?? []));
+  const relations = compileRelations(pages, entities, idMap);
   const actionIdsByEntity = actionMapForEntities(entities, capabilities);
   const interfaces = capabilities.flatMap((capability) =>
     capability.evidence.map((evidence) => interfaceFrom(evidence, capability, entities, actionIdsByEntity)),
@@ -73,7 +75,32 @@ export function compileContextGraph(
     lexicalEntries: compileLexicalEntries(auditedPages, categories, entities),
     interfaces: dedupeInterfaces(interfaces),
     bindings: bindings.slice(0, 240),
+    ...(relations.length > 0 ? { relations } : {}),
   };
+}
+
+/**
+ * The relations the pages declared, on the entities the merge kept: an id the merge folded into a
+ * namesake follows it, an end the graph does not hold drops the relation, and a relation stated on
+ * two pages is one relation.
+ */
+function compileRelations(pages: SitePageSnapshot[], entities: DomainEntity[], idMap: Map<string, string>): EntityRelation[] {
+  const known = new Set(entities.map((entity) => entity.id));
+  const seen = new Set<string>();
+  const relations: EntityRelation[] = [];
+  for (const page of pages) {
+    for (const relation of page.relations ?? []) {
+      const from = idMap.get(relation.from) ?? relation.from;
+      const to = idMap.get(relation.to) ?? relation.to;
+      if (from === to || !known.has(from) || !known.has(to)) continue;
+      const key = `${from}|${relation.kind}|${to}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      relations.push({ from, to, kind: relation.kind, provenance: "declared", sourceUrl: relation.sourceUrl });
+      if (relations.length >= 200) return relations;
+    }
+  }
+  return relations;
 }
 
 export function appliesToForAction(context: ContextGraph, actionId: string) {
@@ -151,8 +178,10 @@ function compileBindings(
   ).slice(0, 240);
 }
 
-function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, businessTypes: Set<string> = new Set()): DomainEntity[] {
+function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, businessTypes: Set<string> = new Set()): { entities: DomainEntity[]; idMap: Map<string, string> } {
   const byId = new Map<string, DomainEntity>();
+  // Where each sighting's id ended up, so what the pages say about an id follows it into the merge.
+  const idMap = new Map<string, string>();
   // The same real-world thing often carries a different @id on each page that embeds it — and
   // often a different type set too: Organization here, Organization+Brand there. A declared
   // sighting merges into an earlier entity when the names match and at least one type is shared;
@@ -172,6 +201,7 @@ function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, business
           : candidates.find((candidateId) => byId.get(candidateId)?.types.some((type) => extracted.types.includes(type)));
         if (match) id = match;
       }
+      idMap.set(extracted.id, id);
       const known = idsByName.get(name) ?? [];
       if (!known.includes(id)) idsByName.set(name, [...known, id]);
       const existing = byId.get(id);
@@ -216,9 +246,10 @@ function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, business
       confidence: pages.length > 0 ? 0.8 : 0.6,
     });
   }
-  return [...byId.values()]
+  const entities = [...byId.values()]
     .sort((left, right) => entityRank(left, businessTypes) - entityRank(right, businessTypes) || left.name.localeCompare(right.name))
     .slice(0, 80);
+  return { entities, idMap };
 }
 
 function compileLexicalEntries(

@@ -14,6 +14,7 @@ import type {
   contextGraphSchema,
   createReportRequestSchema,
   domainEntitySchema,
+  entityRelationSchema,
   entityActionBindingSchema,
   foundationAuditSummarySchema,
   humanAssertionSchema,
@@ -35,6 +36,7 @@ export type AuditedPage = z.infer<typeof auditedPageSchema>;
 export type ContentCategory = z.infer<typeof contentCategorySchema>;
 export type ContextGraph = z.infer<typeof contextGraphSchema>;
 export type DomainEntity = z.infer<typeof domainEntitySchema>;
+export type EntityRelation = z.infer<typeof entityRelationSchema>;
 export type EntityActionBinding = z.infer<typeof entityActionBindingSchema>;
 export type FoundationAuditSummary = z.infer<typeof foundationAuditSummarySchema>;
 export type LexicalEntry = z.infer<typeof lexicalEntrySchema>;

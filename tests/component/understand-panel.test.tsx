@@ -162,4 +162,20 @@ describe("the Fix helpers the pitch and Activate share", () => {
     expect(publishUrl("abc", { action: "availability.check", intent: "agent-ready" })).toBe("https://my.wordlift.io/?source=ai-audit&report=abc&action=availability.check&intent=agent-ready");
     expect(talkToUsUrl("abc", "checkout.create")).toBe("https://wordlift.io/book%20a%20demo/?source=ai-audit&report=abc&action=checkout.create");
   });
+
+  it("says what the site's markup relates an entity to, in a few words on its row", () => {
+    const related = {
+      ...base,
+      contextGraph: {
+        ...base.contextGraph!,
+        relations: [
+          { from: declared.id, to: inferred.id, kind: "offers" as const, provenance: "declared" as const, sourceUrl: "https://alpina.travel/" },
+          { from: inferred.id, to: promoted.id, kind: "located-in" as const, provenance: "declared" as const, sourceUrl: "https://alpina.travel/" },
+        ],
+      },
+    };
+    render(<UnderstandPanel report={related} />);
+    expect(screen.getByText("offers Samspitze 4")).toHaveClass("entity-relations");
+    expect(screen.getByText("offered by AlpiNest · in Lungau")).toHaveClass("entity-relations");
+  });
 });

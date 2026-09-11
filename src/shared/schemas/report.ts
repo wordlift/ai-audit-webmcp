@@ -153,6 +153,21 @@ export const entityActionBindingSchema = z
   })
   .strict();
 
+/**
+ * How two entities relate, as the site's own markup declares it: an organisation offers an
+ * apartment, an apartment is in a place, a service is provided by a partner. Nothing here is
+ * inferred; a relation the text merely suggests never enters the graph.
+ */
+export const entityRelationSchema = z
+  .object({
+    from: z.string().min(1).max(500),
+    to: z.string().min(1).max(500),
+    kind: z.enum(["offers", "located-in", "provided-by", "part-of", "serves", "brand"]),
+    provenance: z.literal("declared"),
+    sourceUrl: z.string().url().max(2_048),
+  })
+  .strict();
+
 export const contextGraphSchema = z
   .object({
     // The ceiling a deep scan can reach, not the four a basic scan reads: a report that read more
@@ -162,6 +177,8 @@ export const contextGraphSchema = z
     lexicalEntries: z.array(lexicalEntrySchema).max(100),
     interfaces: z.array(actionInterfaceSchema).max(120),
     bindings: z.array(entityActionBindingSchema).max(240),
+    /** Absent on reports compiled before relations were read; never guessed in afterwards. */
+    relations: z.array(entityRelationSchema).max(200).optional(),
   })
   .strict();
 

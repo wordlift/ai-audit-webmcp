@@ -1,4 +1,4 @@
-import type { CapabilityResult, DomainEntity, ReportRecord } from "../types/index.js";
+import type { CapabilityResult, DomainEntity, EntityRelation, ReportRecord } from "../types/index.js";
 
 /**
  * The business as the audit modelled it from a few pages, for an agent that asks: what does this
@@ -33,6 +33,33 @@ export interface ModelledEntity {
   terms: string[];
 }
 
+/** How two entities relate, as the site's markup declared it, with the names an agent can say. */
+export interface ModelledRelation {
+  from: string;
+  fromName: string;
+  kind: EntityRelation["kind"];
+  to: string;
+  toName: string;
+  provenance: "declared";
+}
+
+export const RELATION_PHRASES: Record<EntityRelation["kind"], string> = {
+  offers: "offers",
+  "located-in": "is in",
+  "provided-by": "is provided by",
+  "part-of": "is part of",
+  serves: "serves",
+  brand: "carries the brand",
+};
+
+/** The relations that hold between entities the model kept, named at both ends. */
+export function modelRelations(report: ReportRecord, entities: ModelledEntity[]): ModelledRelation[] {
+  const names = new Map(entities.map((entity) => [entity.id, entity.name]));
+  return (report.contextGraph?.relations ?? [])
+    .filter((relation) => names.has(relation.from) && names.has(relation.to))
+    .map((relation) => ({ from: relation.from, fromName: names.get(relation.from)!, kind: relation.kind, to: relation.to, toName: names.get(relation.to)!, provenance: "declared" as const }));
+}
+
 export interface BusinessModelResult {
   reportId: string;
   reportUrl: string;
@@ -41,6 +68,7 @@ export interface BusinessModelResult {
   counts: { entities: number; declared: number; inferred: number; humanConfirmed: number; capabilities: number; agentReady: number };
   business: ModelledEntity | null;
   entities: ModelledEntity[];
+  relationships: ModelledRelation[];
   capabilities: Array<ModelledAction & { expected: boolean; appliesTo: string[] }>;
   terminology: Array<{ term: string; meaning?: string; entityIds: string[]; source: "human-provided" | "machine-inferred" }>;
   boundaries: string;
@@ -135,6 +163,7 @@ export function businessModel(report: ReportRecord, reportUrl: string): Business
     },
     business,
     entities: ordered.slice(0, MAX_ENTITIES),
+    relationships: modelRelations(report, ordered.slice(0, MAX_ENTITIES)),
     capabilities,
     // The site's vocabulary: its categories and the short topics its headings use, once each; never "Other", never a headline.
     terminology: dedupeTerms(
@@ -167,6 +196,9 @@ export function businessModelText(model: BusinessModelResult): string {
     if (group.length === 0) continue;
     lines.push("", `${ROLE_HEADINGS[role]}:`, ...group.map(entityLine));
   }
+  if (model.relationships.length > 0) {
+    lines.push("", "How it fits together, as the site's markup declares it:", ...model.relationships.slice(0, 24).map((relation) => `- ${relation.fromName} ${RELATION_PHRASES[relation.kind]} ${relation.toName}`));
+  }
   const expected = model.capabilities.filter((capability) => capability.expected);
   const works = expected.filter((capability) => capability.agentReady).map((capability) => capability.label);
   const fix = expected.filter((capability) => capability.state === "unverified" || capability.state === "human-only").map((capability) => capability.label);
@@ -182,6 +214,8 @@ export function businessModelText(model: BusinessModelResult): string {
 export interface EntityDetailResult extends ModelledEntity {
   reportId: string;
   reportUrl: string;
+  /** What the markup says this entity relates to, and what relates to it. */
+  relations: ModelledRelation[];
   alternateNames: string[];
   offers: DomainEntity["offers"];
   pages: Array<{ url: string; title: string }>;
@@ -210,10 +244,12 @@ export function entityDetail(entity: DomainEntity, report: ReportRecord, reportU
     .filter((capability) => capability.appliesTo.some((subject) => subject.id === entity.id))
     .flatMap((capability) => capability.evidence.slice(0, 4).map((item) => ({ actionId: capability.actionId, claim: item.claim, verification: item.verification, sourceUrl: item.sourceUrl })))
     .slice(0, 24);
+  const all = (report.contextGraph?.entities ?? []).map((candidate) => modelEntity(candidate, report));
   return {
     ...modelled,
     reportId: report.id,
     reportUrl,
+    relations: modelRelations(report, all).filter((relation) => relation.from === entity.id || relation.to === entity.id),
     alternateNames: entity.alternateNames,
     offers: entity.offers,
     pages: (report.contextGraph?.pages ?? []).filter((page) => page.entityIds.includes(entity.id)).map((page) => ({ url: page.url, title: page.title })),
@@ -230,6 +266,7 @@ export function entityDetailText(detail: EntityDetailResult): string {
   if (detail.sameAs.length > 0) lines.push(`Same as: ${detail.sameAs.join(", ")}.`);
   if (detail.offers.length > 0) lines.push(`Offers: ${detail.offers.map((offer) => [offer.name, offer.price !== undefined ? `${offer.price} ${offer.priceCurrency ?? ""}`.trim() : null, offer.availability].filter(Boolean).join(", ")).join("; ")}.`);
   lines.push(`Seen on: ${detail.pages.length > 0 ? detail.pages.map((page) => page.url).join(", ") : detail.sources.join(", ")}.`);
+  if (detail.relations.length > 0) lines.push(`Relations the markup declares: ${detail.relations.map((relation) => `${relation.fromName} ${RELATION_PHRASES[relation.kind]} ${relation.toName}`).join("; ")}.`);
   if (detail.answersFor.length > 0) lines.push(`Answers for: ${detail.answersFor.map((action) => `${action.label} [${STATE_WORDS[action.state] ?? action.state}]`).join(", ")}.`);
   if (detail.terms.length > 0) lines.push(`The site's words for it: ${detail.terms.map((term) => `"${term}"`).join(", ")}.`);
   if (detail.evidence.length > 0) lines.push("", "Evidence:", ...detail.evidence.map((item) => `- ${item.actionId}: ${item.claim} (${item.verification}, ${item.sourceUrl})`));

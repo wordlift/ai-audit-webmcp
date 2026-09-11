@@ -790,6 +790,10 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .first-found { margin: 0; color: var(--muted); font-size: 1rem; line-height: 1.5; }
 .first-found b { color: var(--ink); font-weight: 600; }
 .first-found-dot { color: var(--faint); }
+/* The shape of the business in one line, as its markup declares it. */
+.first-chain { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.first-chain-head { color: var(--ink); font-weight: 600; }
+.first-chain-arrow { color: var(--brand); }
 .first-found a { color: var(--brand); font-weight: 600; }
 
 /* Try the model with an AI agent: the second aha, one button. */
@@ -988,7 +992,7 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .doc-glimpse:hover pre { outline: 2px solid color-mix(in srgb, var(--brand) 40%, white); }
 
 /* ---------- One published document, read in full ---------- */
-.doc-dialog { width: min(940px, 94vw); max-height: 88vh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 14px; padding: 22px 24px; }
+.dialog-content.doc-dialog { width: min(940px, 94vw); max-height: 88vh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 14px; padding: 22px 24px; }
 .doc-dialog-head { display: grid; gap: 4px; padding-right: 36px; }
 .doc-dialog-head h2 { margin: 0; font-size: 1.3rem; }
 .doc-dialog-head p { margin: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.45; max-width: 70ch; }
@@ -1110,6 +1114,8 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .entity-name { font-weight: 600; overflow-wrap: anywhere; }
 .entity-type { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; align-self: center; }
 .entity-where { grid-column: 1 / -1; color: var(--muted); font-size: 0.8rem; overflow-wrap: anywhere; }
+/* What the site's markup says the entity relates to, in four words or fewer each. */
+.entity-relations { grid-column: 1 / -1; color: var(--ink); font-size: 0.86rem; }
 .entity-links { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .entity-link { padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; line-height: 1.5; background: var(--surface); border: 1px solid var(--line-subtle); color: var(--muted); }
 .entity-link-works { border-color: color-mix(in srgb, var(--state-agent-ready) 50%, white); color: var(--ink); }

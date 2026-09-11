@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { FirstScreen, actionsThatMatter, foundLine, gapLine, headline, readAgo, readersLine, runsOnLine } from "../../src/client/components/FirstScreen";
+import { FirstScreen, actionsThatMatter, foundLine, gapLine, headline, readAgo, readersLine, relationChain, runsOnLine } from "../../src/client/components/FirstScreen";
 import type { CapabilityResult, ReportRecord } from "../../src/shared/types/index.js";
 
 function capability(overrides: Partial<CapabilityResult> & Pick<CapabilityResult, "actionId" | "label" | "state">): CapabilityResult {
@@ -221,5 +221,27 @@ describe("the readers line", () => {
     expect(screen.getByRole("link", { name: "See what we understood" })).toHaveAttribute("href", "#understand");
     // Without a graph there is nothing to count, and nothing is said.
     expect(foundLine(report)).toBeNull();
+  });
+
+  it("says the shape of the business in one line from what its markup declares, and nothing when it declares no relation", () => {
+    const entity = (id: string, name: string, type: string, extra: Record<string, unknown> = {}) => ({ id, types: [type], name, alternateNames: [], sourceUrls: ["https://www.alpina.travel/"], sameAs: [], offers: [], confidence: 0.9, ...extra });
+    const graph = {
+      pages: [{ url: "https://www.alpina.travel/", title: "Alpina", role: "entry", headings: [], entityIds: [] }],
+      entities: [entity("org", "AlpiNest Feriendorf Lungau", "LodgingBusiness"), entity("apt", "Samspitze 4", "Apartment"), entity("town", "Mariapfarr", "Place"), entity("lungau", "Lungau", "Place", { origin: "inferred" })],
+      lexicalEntries: [],
+      interfaces: [],
+      bindings: [],
+    };
+    const declared = { ...report, contextGraph: { ...graph, relations: [
+      { from: "org", to: "apt", kind: "offers", provenance: "declared", sourceUrl: "https://www.alpina.travel/" },
+      { from: "apt", to: "town", kind: "located-in", provenance: "declared", sourceUrl: "https://www.alpina.travel/" },
+    ] } } as unknown as ReportRecord;
+    expect(relationChain(declared)).toEqual(["AlpiNest Feriendorf Lungau", "offers Samspitze 4", "in Mariapfarr"]);
+    renderScreen(declared);
+    expect(screen.getByLabelText(/How the business fits together/)).toHaveTextContent("AlpiNest Feriendorf Lungau → offers Samspitze 4 → in Mariapfarr");
+    // Only the business's own place when the offering has none.
+    const orgPlace = { ...declared, contextGraph: { ...graph, relations: [{ from: "org", to: "town", kind: "located-in", provenance: "declared", sourceUrl: "https://www.alpina.travel/" }] } } as unknown as ReportRecord;
+    expect(relationChain(orgPlace)).toEqual(["AlpiNest Feriendorf Lungau", "in Mariapfarr"]);
+    expect(relationChain({ ...report, contextGraph: graph } as unknown as ReportRecord)).toBeNull();
   });
 });

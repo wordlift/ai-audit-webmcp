@@ -49,6 +49,19 @@ export function wikidataLink(entity: DomainEntity): EntityLinks["wikidata"] {
   return null;
 }
 
+const RELATION_WORDS: Record<string, string> = { offers: "offers", "located-in": "in", "provided-by": "by", "part-of": "part of", serves: "serves", brand: "brand" };
+
+/** What the site's own markup says this entity relates to: "offers Samspitze 4", "in Mariapfarr", "offered by AlpiNest". */
+export function relationPhrases(entity: DomainEntity, report: ReportRecord, limit = 4): string[] {
+  const names = new Map((report.contextGraph?.entities ?? []).map((candidate) => [candidate.id, candidate.name]));
+  const phrases: string[] = [];
+  for (const relation of report.contextGraph?.relations ?? []) {
+    if (relation.from === entity.id && names.has(relation.to)) phrases.push(`${RELATION_WORDS[relation.kind] ?? relation.kind} ${names.get(relation.to)}`);
+    else if (relation.to === entity.id && relation.kind === "offers" && names.has(relation.from)) phrases.push(`offered by ${names.get(relation.from)}`);
+  }
+  return [...new Set(phrases)].slice(0, limit);
+}
+
 export function linksFor(entity: DomainEntity, report: ReportRecord, limit = 3): EntityLinks {
   const actions = (report.capabilities ?? [])
     .filter((capability) => capability.expected && capability.appliesTo.some((subject) => subject.id === entity.id))
@@ -110,6 +123,11 @@ function EntityList({ entities, tone, report }: { entities: DomainEntity[]; tone
               <span className="entity-name">{entity.name}</span>
               <span className="entity-type">{entityTypeLabel(entity.types[0])}</span>
               {whereFound(entity) && <span className="entity-where">{whereFound(entity)}</span>}
+              {relationPhrases(entity, report).length > 0 && (
+                <span className="entity-relations" aria-label={`What the site's markup says ${entity.name} relates to`}>
+                  {relationPhrases(entity, report).join(" · ")}
+                </span>
+              )}
               {(links.actions.length > 0 || links.terms.length > 0 || links.wikidata) && (
                 <span className="entity-links" aria-label={`What the map links to ${entity.name}`}>
                   {links.actions.length > 0 && <small className="entity-links-label">Answers for</small>}

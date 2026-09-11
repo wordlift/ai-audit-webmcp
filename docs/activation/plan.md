@@ -607,12 +607,20 @@ Built tonight, 2026-09-11, on the branch (the night was mine to test and improve
 
 Still to do from the brief, in the order the brief gives:
 
-- P0 relationships in the graph: "offers", "located in", "provided by", read from the site's own
-  markup first (address, containedInPlace, makesOffer, provider, brand), inferred never without a
-  label saying so; then the §4 summary "Alpina → offers Samspitze 4 → located in Mariapfarr".
-- P0 the graph difference as a number on the first screen (§12): "12 important things exist only
-  in your content. Fix the missing 12 →". The Understand panel has the count; the first screen
-  should carry it as the third block.
+- P0 relationships, first half built the same night: the graph carries `relations` read from the
+  site's own markup (makesOffer/offers through itemOffered, containedInPlace, location, provider,
+  parentOrganization, isPartOf, memberOf, areaServed, brand, and an address locality as the place
+  it names), each marked declared, folded with the entity merge, never inferred. The Understand
+  rows say "offers Samspitze 4", "in Mariapfarr", "offered by AlpiNest"; the business-model tool
+  lists "How it fits together"; the first screen says the shape in one line, "AlpiNest → offers
+  Samspitze 4 → in Mariapfarr", only from what the markup declares. Still to come: inferred
+  relations only if a label can say so.
+- A third load-sensitive test: the observe tick spec fails under the full parallel run and passes
+  alone, like the two tracked before.
+- §12, the graph difference, is the Understand panel itself, which follows the three actions as
+  the brief's §23 orders it: "Agents found N important things. K are already machine-readable. M
+  exist only in the text. Publish the missing M with WordLift." The found line on the first screen
+  now links to it. Not a separate block.
 - P1 §13 entity questions in Own it: "Is this your main business?", "Is this entity important?",
   writing `humanPriority`.
 - P1 §21 graph context on the capability card ("Property → offered by Alpina → …") once

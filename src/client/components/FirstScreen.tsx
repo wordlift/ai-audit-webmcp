@@ -182,6 +182,34 @@ export function foundLine(report: ReportRecord): { pages: number; parts: string[
   return parts.length > 0 ? { pages, parts } : null;
 }
 
+/**
+ * The shape of the business in one line, from what its markup declares: the business, one thing
+ * it offers, where that is. "AlpiNest → offers Samspitze 4 → in Mariapfarr". Nothing inferred
+ * joins it, and a site whose markup declares no relation gets no line.
+ */
+export function relationChain(report: ReportRecord): string[] | null {
+  const relations = report.contextGraph?.relations ?? [];
+  const entities = (report.contextGraph?.entities ?? []).filter((entity) => entity.humanPriority !== "demoted");
+  if (relations.length === 0 || entities.length === 0) return null;
+  const byId = new Map(entities.map((entity) => [entity.id, entity]));
+  const outgoing = (id: string, kind: string) => relations.filter((relation) => relation.from === id && relation.kind === kind && byId.has(relation.to));
+  const businesses = entities
+    .filter((entity) => entityRole(entity) === "business")
+    .sort((left, right) => Number(right.humanPriority === "primary") - Number(left.humanPriority === "primary") || outgoing(right.id, "offers").length - outgoing(left.id, "offers").length || Number(left.origin === "inferred") - Number(right.origin === "inferred"));
+  const business = businesses[0];
+  if (!business) return null;
+  const steps = [business.name];
+  const offered = outgoing(business.id, "offers")[0];
+  let last = business.id;
+  if (offered) {
+    steps.push(`offers ${byId.get(offered.to)!.name}`);
+    last = offered.to;
+  }
+  const where = outgoing(last, "located-in")[0] ?? (last !== business.id ? outgoing(business.id, "located-in")[0] : undefined);
+  if (where) steps.push(`in ${byId.get(where.to)!.name}`);
+  return steps.length >= 2 ? steps : null;
+}
+
 export function runsOnLine(report: ReportRecord): string {
   const name = report.publishedWith?.name ?? "WordLift";
   const { published, textOnly } = groupEntities(report.contextGraph?.entities ?? []);
@@ -216,6 +244,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   const beyond = beyondTheThree(capabilities);
   const primary = report.classification?.primaryArchetype;
   const found = foundLine(report);
+  const chain = relationChain(report);
   const archetype = !primary || primary === "other" ? "general" : primary.replaceAll("-", " / ");
   const score = report.score?.value;
   const ago = readAgo(report.collectedAt, now());
@@ -249,6 +278,16 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
               </span>
             ))}
             . <a href="#understand">See what we understood</a>
+          </p>
+        )}
+        {chain && (
+          <p className="first-chain" aria-label="How the business fits together, as its markup declares it">
+            {chain.map((step, index) => (
+              <span key={step}>
+                {index > 0 && <span className="first-chain-arrow" aria-hidden="true"> → </span>}
+                <span className={index === 0 ? "first-chain-head" : undefined}>{step}</span>
+              </span>
+            ))}
           </p>
         )}
         <p className="first-meta">

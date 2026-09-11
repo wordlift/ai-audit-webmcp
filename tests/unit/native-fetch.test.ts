@@ -65,6 +65,40 @@ describe("declared people", () => {
   });
 });
 
+describe("declared relations", () => {
+  it("reads how the markup says its entities relate, looks through an Offer to what it offers, and names the places an address or an area names as text", async () => {
+    const filler = `<p>${"Alpine holiday apartments in Lungau, made to be booked. ".repeat(30)}</p>`;
+    const page = `<html><head><title>AlpiNest</title></head><body><main><h1>AlpiNest</h1>${filler}</main>
+      <script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+        {"@type":"LodgingBusiness","@id":"https://site.example/#org","name":"AlpiNest Feriendorf Lungau",
+         "address":{"@type":"PostalAddress","addressLocality":"Mariapfarr","addressCountry":"AT"},
+         "areaServed":"Austria",
+         "brand":{"@type":"Brand","name":"AlpiNest"},
+         "makesOffer":[{"@type":"Offer","itemOffered":{"@type":"Apartment","@id":"https://site.example/#samspitze-4","name":"Samspitze 4","containedInPlace":{"@type":"Place","name":"Lungau"}}}]},
+        {"@type":"Service","@id":"https://site.example/#transfer","name":"Airport transfer","provider":{"@type":"Organization","@id":"https://site.example/#partner","name":"Lungau Taxi"}},
+        {"@type":"Service","name":"Nameless","provider":{"@type":"Person","name":"mauro"}}
+      ]}</script></body></html>`;
+    const fetcher = async (url: URL) => ({ finalUrl: url.toString(), body: page, truncated: false, status: 200 });
+    const snapshot = await new NativeFetchCollector({}, fetcher).collect(new URL("https://site.example/"));
+    const first = snapshot.pages[0]!;
+    const relation = (from: string, kind: string, to: string) => ({ from, kind, to, sourceUrl: "https://site.example/" });
+
+    expect(first.relations).toEqual(expect.arrayContaining([
+      relation("https://site.example/#org", "offers", "https://site.example/#samspitze-4"),
+      relation("https://site.example/#org", "located-in", "urn:wordlift:entity:place:mariapfarr"),
+      relation("https://site.example/#org", "serves", "urn:wordlift:entity:place:austria"),
+      relation("https://site.example/#org", "brand", "urn:wordlift:entity:brand:alpinest"),
+      relation("https://site.example/#samspitze-4", "located-in", "urn:wordlift:entity:place:lungau"),
+      relation("https://site.example/#transfer", "provided-by", "https://site.example/#partner"),
+    ]));
+    // A place named only as text is an entity of the page, so the relation has somewhere to point.
+    const names = first.entities.map((entity) => entity.name);
+    expect(names).toEqual(expect.arrayContaining(["Mariapfarr", "Austria", "Lungau", "Samspitze 4", "Lungau Taxi"]));
+    // A person without a surname is nobody to relate to.
+    expect(first.relations?.some((item) => item.kind === "provided-by" && item.from.includes("nameless"))).toBe(false);
+  });
+});
+
 describe("the catalog second hop", () => {
   const filler = `<p>${"Fine jewellery for every day, made to be worn. ".repeat(30)}</p>`;
   const site: Record<string, string> = {
