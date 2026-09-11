@@ -615,8 +615,9 @@ Still to do from the brief, in the order the brief gives:
   lists "How it fits together"; the first screen says the shape in one line, "AlpiNest → offers
   Samspitze 4 → in Mariapfarr", only from what the markup declares. Still to come: inferred
   relations only if a label can say so.
-- A third load-sensitive test: the observe tick spec fails under the full parallel run and passes
-  alone, like the two tracked before.
+- Load-sensitive tests under the full parallel run, each passing alone: the alpina sidecar
+  upstream failure, "audit then read", the observe tick, and the rate-limit pool. One fails per
+  full run, a different one each time; a serial run of the integration folder would settle it.
 - §12, the graph difference, is the Understand panel itself, which follows the three actions as
   the brief's §23 orders it: "Agents found N important things. K are already machine-readable. M
   exist only in the text. Publish the missing M with WordLift." The found line on the first screen
