@@ -409,6 +409,54 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .report-page { display: grid; gap: 22px; }
 .report-toolbar { display: flex; justify-content: space-between; }
 
+/* ---------- Steps: Audit, Fix, Activate, the current one lit, on both pages ---------- */
+.step-bar { position: sticky; top: 0; z-index: 6; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; margin: 0 -4px; padding: 10px 4px; background: color-mix(in srgb, var(--page) 92%, transparent); backdrop-filter: blur(6px); }
+.step-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.step-link { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border: 1px solid var(--line-subtle); border-radius: 999px; background: var(--surface); color: var(--ink); font-weight: 600; font-size: 0.92rem; text-decoration: none; }
+.step-link:hover { border-color: var(--brand); }
+.step-index { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: var(--wl-neutral-100); color: var(--muted); font-family: var(--font-mono); font-size: 0.7rem; }
+.step-link.is-current { background: var(--brand); border-color: var(--brand); color: var(--wl-neutral-0); }
+.step-link.is-current .step-index { background: color-mix(in srgb, var(--wl-neutral-0) 22%, transparent); color: var(--wl-neutral-0); }
+.step-aside { margin-left: 6px; }
+.step-link-quiet { padding: 6px 12px; border-color: transparent; background: none; color: var(--muted); font-weight: 500; }
+.step-link-quiet:hover { color: var(--brand); border-color: transparent; }
+.step-bar-actions { display: flex; align-items: center; gap: 14px; }
+.step-bar-actions a, .step-bar-actions button:not(.fix-publish) { display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; color: var(--muted); font: inherit; text-decoration: none; cursor: pointer; }
+.step-bar-actions a:not(.fix-publish):hover, .step-bar-actions button:not(.fix-publish):hover { color: var(--brand); }
+@media (max-width: 640px) { .step-bar { top: auto; bottom: 0; padding: 8px 4px; border-top: 1px solid var(--line-subtle); } .step-bar-actions { display: none; } }
+
+/* The Fix step: two blocks under one heading, and the agent doors once. */
+.step-fix { display: grid; gap: 18px; }
+.step-head { display: grid; gap: 4px; }
+.step-head .section-kicker { margin: 0; }
+.step-subtitle { margin: 0; color: var(--muted); max-width: 66ch; }
+.agent-doors { border: 1px solid var(--line-subtle); border-radius: 16px; background: var(--surface); padding: 14px 20px; }
+.agent-doors > summary { cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--brand); }
+.agent-doors-body { display: grid; gap: 14px; padding-top: 14px; }
+.agent-door { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; }
+.agent-door p { margin: 0; color: var(--muted); max-width: 62ch; flex: 1 1 34ch; }
+.agent-door .review-cta { flex: 0 0 auto; white-space: nowrap; }
+
+/* The deeper read as one line beside the counts. */
+.deep-scan-inline-link { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
+.deep-scan-inline-link .is-open { transform: rotate(90deg); }
+.deep-scan-inline .deep-scan-form { margin-top: 10px; }
+
+/* Own it: the entity questions one fold below the three. */
+.own-it-more { border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 16px; }
+.own-it-more > summary { cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.own-it-more[open] > summary { margin-bottom: 10px; }
+.own-it-more .own-it-question { border: 0; padding: 0; }
+
+/* Activate: the engineers' fold and the closing door. */
+.engineers-fold { border: 1px solid var(--line-subtle); border-radius: 16px; background: var(--surface); padding: 14px 22px; }
+.engineers-fold > summary { cursor: pointer; font-weight: 600; color: var(--brand); }
+.engineers-fold > summary span { margin-left: 10px; color: var(--muted); font-weight: 500; font-size: 0.9rem; }
+.engineers-body { display: grid; gap: 22px; padding-top: 16px; }
+.engineers-body .activate-section { padding: 0; border: 0; background: none; }
+.activate-close { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin: 0; }
+.activate-close span { color: var(--muted); }
+
 .report-toolbar a,
 .report-toolbar button {
   display: flex;

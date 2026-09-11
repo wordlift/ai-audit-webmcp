@@ -1,4 +1,4 @@
-import { ArrowUpRight, Braces, Copy } from "lucide-react";
+import { ArrowUpRight, Copy } from "lucide-react";
 import { useState } from "react";
 import type { DomainEntity, ReportRecord } from "../../shared/types/index.js";
 import { plainWord, type PlainWord } from "./FirstScreen";
@@ -10,7 +10,8 @@ import { publishUrl, sampleJsonLd } from "./FixPanel";
  * finding, and publishing it is the button. What agents currently understand, entity by entity,
  * is the evidence explaining the fix, open on the page; one entity's markup waits behind a fold.
  */
-const MAX_PER_GROUP = 12;
+/** Five per column keeps the sell above the fold; the rest is one click away in the full audit. */
+const MAX_PER_GROUP = 5;
 
 /** "LodgingBusiness" → "Lodging business": the schema.org type in words a person reads. */
 export function entityTypeLabel(type: string | undefined): string {
@@ -181,7 +182,6 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
   const fixable = textOnly.length > 0;
   return (
     <section id="understand" className={`understand ${fixable ? "understand-fixable" : ""}`} aria-labelledby="understand-title">
-      <p className="section-kicker"><Braces size={16} /> Fix</p>
       <h2 id="understand-title">{fixable ? "Fix what agents cannot understand" : "Agents understand your business"}</h2>
       <p className="understand-lead">
         Agents found {plural(total, "important thing")} on these pages.

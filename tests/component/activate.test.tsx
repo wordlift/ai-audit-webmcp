@@ -156,8 +156,14 @@ describe("the Activate screen", () => {
     expect(screen.getAllByRole("link", { name: /^raw/i })).toHaveLength(3);
     // What agents are given to read lives here, with the artifacts, not three clicks down in the full audit.
     expect(screen.getByRole("heading", { name: "What agents are given to read" })).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: /^activate/i })[0]).toHaveAttribute("href", expect.stringContaining(`report=${REPORT_ID}`));
-    expect(screen.getAllByRole("link", { name: /^activate/i })[0]).toHaveAttribute("href", expect.stringContaining("intent=activate"));
+    // The door to WordLift, at the top and at the close, carries the report and the intent; the step bar's "Activate" is the page itself.
+    const doors = screen.getAllByRole("link", { name: /activate with wordlift/i });
+    expect(doors.length).toBeGreaterThanOrEqual(2);
+    for (const door of doors) {
+      expect(door).toHaveAttribute("href", expect.stringContaining(`report=${REPORT_ID}`));
+      expect(door).toHaveAttribute("href", expect.stringContaining("intent=activate"));
+    }
+    expect(within(screen.getByRole("navigation", { name: "Steps" })).getByRole("link", { name: "Activate" })).toHaveAttribute("aria-current", "step");
 
     const crawlers = screen.getByRole("article", { name: /crawlers/i });
     expect(crawlers).toHaveTextContent("Googlebot3");

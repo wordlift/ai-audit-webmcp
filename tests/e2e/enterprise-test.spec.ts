@@ -54,6 +54,7 @@ test("the eight enterprise questions are each two clicks from the report", async
   await page.getByRole("link", { name: /^activate$/i }).click();
   await expect(page).toHaveURL(/\/activate$/);
   for (const title of ["On your pages", "For agents", "For registries"]) await expect(page.getByRole("article", { name: title })).toBeVisible();
+  await page.locator("summary", { hasText: "For your engineers" }).click();
   await expect(page.getByRole("heading", { name: /what agents are given to read/i })).toBeVisible();
   await expect(page.getByText(/terms of action, the skill agents load/i)).toBeVisible();
 

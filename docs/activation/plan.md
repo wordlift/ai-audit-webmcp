@@ -618,9 +618,22 @@ Still to do from the brief, in the order the brief gives:
 - Andrea, 2026-09-11: "Review the agent surfaces" is helpful but belongs to Activate, not the full
   audit where it was hard to find. Moved: it sits on Activate between the artifacts and Prove; the
   fold has six sections now. A partial report no longer quotes the upstream status code.
+- The flow as a user, 2026-09-11 (Andrea: "the data is good; make navigation among sections and
+  steps more natural", Own folded into Fix). Measured first: the report page 3,915 px in seven
+  blocks with ten doors of six kinds, Activate 3,019 px with both doors in its first 270 px. Then:
+  a step bar on both pages, Audit · Fix · Activate, the current step lit, sticky, the full audit a
+  quieter entry; the head cut to headline, facts and the found line, the readability sentence on
+  the chip's hover; one door per step, the two ChatGPT prompts in one "Work with an agent" fold
+  under Fix, the deeper read as a link beside the counts; Fix in two parts under one heading,
+  what agents cannot read and who runs what, the entity questions one fold below the three,
+  capped at five; five rows per Understand column; Activate reordered, outcome, Prove, artifacts,
+  "For your engineers" fold with the table and the surfaces, and the door again at the close;
+  "expected actions" said as "things agents should be able to do here". Tools for Fix's
+  publication and Prove's ledger set aside for later at Andrea's word.
 - Load-sensitive tests under the full parallel run, each passing alone: the alpina sidecar
-  upstream failure, "audit then read", the observe tick, and the rate-limit pool. One fails per
-  full run, a different one each time; a serial run of the integration folder would settle it.
+  upstream failure, "audit then read", the observe tick, the rate-limit pool, and the 404 error
+  paths (a 5 s budget). One fails per full run, a different one each time; a serial run of the
+  integration folder would settle it.
 - §12, the graph difference, is the Understand panel itself, which follows the three actions as
   the brief's §23 orders it: "Agents found N important things. K are already machine-readable. M
   exist only in the text. Publish the missing M with WordLift." The found line on the first screen

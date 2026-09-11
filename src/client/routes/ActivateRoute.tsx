@@ -1,10 +1,11 @@
-import { ArrowLeft, ArrowUpRight, BookOpen, Copy, Radar, Rocket } from "lucide-react";
+import { ArrowUpRight, BookOpen, Copy, Radar, Rocket } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { Publication, PublishedAction, ScoreReading } from "../../shared/types/activate.js";
 import type { ReportRecord } from "../../shared/types/index.js";
 import { getPublication, getReport, getVisits, type ReportVisits } from "../api/client";
 import { AgentSurfaces } from "../components/AgentSurfaces";
+import { StepBar } from "../components/StepBar";
 import { DocDialog, type PublishedDoc } from "../components/DocDialog";
 import { publishUrl } from "../components/FixPanel";
 import { OWN_WORDS } from "../components/OwnIt";
@@ -255,12 +256,11 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
   return (
     <div className="activate-page">
       <DocDialog doc={openDoc} onOpenChange={(open) => { if (!open) setOpenDoc(null); }} />
-      <nav className="report-toolbar" aria-label="Activate actions">
-        <Link to={`/reports/${report.id}`}><ArrowLeft size={17} /> Back to the report</Link>
+      <StepBar reportId={report.id} page="activate">
         <a className="fix-publish" href={activate} target="_blank" rel="noreferrer">
-          Activate <ArrowUpRight size={15} aria-hidden="true" />
+          Activate with WordLift <ArrowUpRight size={15} aria-hidden="true" />
         </a>
-      </nav>
+      </StepBar>
 
       <header className="activate-head">
         <p className="section-kicker"><Rocket size={16} /> Activate</p>
@@ -293,84 +293,6 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
             : "The three questions are unanswered, so this publishes what the audit verified, no less. "}
           Nothing is declared that the audit could not call.
         </p>
-      </section>
-
-      <section className="activate-section" aria-labelledby="carries-title">
-        <h2 id="carries-title">What the page carries</h2>
-        {publication.decided === 0 && (
-          <p className="activate-lead">
-            Answer <Link to={`/reports/${report.id}#own-it`}>the three questions</Link> on the report and the page says who runs each action.
-          </p>
-        )}
-        <div className="table-scroll">
-          <table className="pitch-table activate-table">
-            <thead>
-              <tr>
-                <th scope="col">Action</th>
-                <th scope="col">You said</th>
-                <th scope="col">The page carries</th>
-              </tr>
-            </thead>
-            <tbody>
-              {publishedRows.map((action) => (
-                <tr key={action.actionId}>
-                  <th scope="row">{action.label}</th>
-                  <td>{saidWord(action)}</td>
-                  <td>
-                    <span className={`carries carries-${action.publishedAs}`}>{carries(action)}</span>
-                    <span className="carries-why">{action.because}</span>
-                  </td>
-                </tr>
-              ))}
-              {publishedRows.length === 0 && (
-                <tr>
-                  <th scope="row">No action yet</th>
-                  <td>–</td>
-                  <td><span className="carries carries-nothing">Nothing an agent can call has answered, so no action is published.</span></td>
-                </tr>
-              )}
-              {entityOnly.length > 0 && (
-                <tr className="activate-group">
-                  <th scope="row">{entityOnly.length === 1 ? entityOnly[0]!.label : `${entityOnly.length} more actions`}</th>
-                  <td>{entityOnly.every((action) => !action.boundary) ? "Undecided" : entityOnly.some((action) => !action.boundary) ? "Mixed" : "Answered"}</td>
-                  <td>
-                    <span className="carries carries-entity">The entity, no action</span>
-                    <span className="carries-why">
-                      {entityOnly.length > 1 && <>{names(entityOnly)}. </>}
-                      Nothing is declared that an agent could not call; each becomes an action the day an entry point answers.
-                    </span>
-                  </td>
-                </tr>
-              )}
-              {nothing.length > 0 && (
-                <tr className="activate-group">
-                  <th scope="row">{nothing.length === 1 ? nothing[0]!.label : `${nothing.length} actions`}</th>
-                  <td>Not relevant</td>
-                  <td>
-                    <span className="carries carries-nothing">Nothing</span>
-                    <span className="carries-why">{nothing.length > 1 ? `${names(nothing)}. ` : ""}You said these are not relevant, so nothing is published for them.</span>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="activate-section" aria-labelledby="documents-title">
-        <h2 id="documents-title">The exact artifacts</h2>
-        <p className="activate-lead">One model, three documents, each readable now. The plugin puts all three on your site and keeps them current.</p>
-        <div className="doc-cards">
-          {docs.map((doc) => <DocCard key={doc.title} doc={doc} onOpen={setOpenDoc} />)}
-        </div>
-        <p className="activate-lead">
-          The evidence behind every line is in the report's <Link to={`/reports/${report.id}#full-audit`}>full audit</Link>.
-        </p>
-      </section>
-
-      {/* What agents are given to read, today and from this report: the surfaces Activate publishes, and the ones the site already has. */}
-      <section className="activate-section activate-surfaces">
-        <AgentSurfaces report={report} />
       </section>
 
       <section className="observe" aria-labelledby="observe-title">
@@ -460,6 +382,97 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
           schedule and writes only when something moves.
         </p>
       </section>
+      <section className="activate-section" aria-labelledby="documents-title">
+        <h2 id="documents-title">The exact artifacts</h2>
+        <p className="activate-lead">One model, three documents, each readable now. The plugin puts all three on your site and keeps them current.</p>
+        <div className="doc-cards">
+          {docs.map((doc) => <DocCard key={doc.title} doc={doc} onOpen={setOpenDoc} />)}
+        </div>
+        <p className="activate-lead">
+          The evidence behind every line is in the report's <Link to={`/reports/${report.id}#full-audit`}>full audit</Link>.
+        </p>
+      </section>
+
+      {/* For the engineers: the exact rows the page carries, and every surface agents are given, one fold below the outcome. */}
+      <details className="engineers-fold">
+        <summary>For your engineers <span>What the page carries · Agent-facing surfaces</span></summary>
+        <div className="engineers-body">
+      <section className="activate-section" aria-labelledby="carries-title">
+        <h2 id="carries-title">What the page carries</h2>
+        {publication.decided === 0 && (
+          <p className="activate-lead">
+            Answer <Link to={`/reports/${report.id}#own-it`}>the three questions</Link> on the report and the page says who runs each action.
+          </p>
+        )}
+        <div className="table-scroll">
+          <table className="pitch-table activate-table">
+            <thead>
+              <tr>
+                <th scope="col">Action</th>
+                <th scope="col">You said</th>
+                <th scope="col">The page carries</th>
+              </tr>
+            </thead>
+            <tbody>
+              {publishedRows.map((action) => (
+                <tr key={action.actionId}>
+                  <th scope="row">{action.label}</th>
+                  <td>{saidWord(action)}</td>
+                  <td>
+                    <span className={`carries carries-${action.publishedAs}`}>{carries(action)}</span>
+                    <span className="carries-why">{action.because}</span>
+                  </td>
+                </tr>
+              ))}
+              {publishedRows.length === 0 && (
+                <tr>
+                  <th scope="row">No action yet</th>
+                  <td>–</td>
+                  <td><span className="carries carries-nothing">Nothing an agent can call has answered, so no action is published.</span></td>
+                </tr>
+              )}
+              {entityOnly.length > 0 && (
+                <tr className="activate-group">
+                  <th scope="row">{entityOnly.length === 1 ? entityOnly[0]!.label : `${entityOnly.length} more actions`}</th>
+                  <td>{entityOnly.every((action) => !action.boundary) ? "Undecided" : entityOnly.some((action) => !action.boundary) ? "Mixed" : "Answered"}</td>
+                  <td>
+                    <span className="carries carries-entity">The entity, no action</span>
+                    <span className="carries-why">
+                      {entityOnly.length > 1 && <>{names(entityOnly)}. </>}
+                      Nothing is declared that an agent could not call; each becomes an action the day an entry point answers.
+                    </span>
+                  </td>
+                </tr>
+              )}
+              {nothing.length > 0 && (
+                <tr className="activate-group">
+                  <th scope="row">{nothing.length === 1 ? nothing[0]!.label : `${nothing.length} actions`}</th>
+                  <td>Not relevant</td>
+                  <td>
+                    <span className="carries carries-nothing">Nothing</span>
+                    <span className="carries-why">{nothing.length > 1 ? `${names(nothing)}. ` : ""}You said these are not relevant, so nothing is published for them.</span>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* What agents are given to read, today and from this report: the surfaces Activate publishes, and the ones the site already has. */}
+      <section className="activate-section activate-surfaces">
+        <AgentSurfaces report={report} />
+      </section>
+
+        </div>
+      </details>
+
+      <p className="activate-close">
+        <a className="fix-publish" href={activate} target="_blank" rel="noreferrer">
+          Activate with WordLift <ArrowUpRight size={15} aria-hidden="true" />
+        </a>
+        <span>Publishes the three documents on your site and keeps them agent-ready.</span>
+      </p>
     </div>
   );
 }

@@ -20,7 +20,7 @@ import { ApiError, startReport } from "../api/client";
 /** How long a refusal gets to arrive before the scan is announced as running. A live audit answers only when it is done. */
 const ACCEPT_GRACE_MS = 2_500;
 
-export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS }: { report: ReportRecord; graceMs?: number }) {
+export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS, variant = "strip" }: { report: ReportRecord; graceMs?: number; variant?: "strip" | "inline" }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
@@ -84,9 +84,9 @@ export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS }: { report: R
   }
 
   return (
-    <section className="deep-scan-offer deep-scan-inline" id="deep-scan" aria-label={`Read up to ${DEEP_SCAN_PAGES} pages instead of ${pagesRead}`}>
-      <button type="button" className="deep-scan-strip" aria-expanded={open} onClick={() => setOpen((current) => !current)}>
-        <ScanSearch size={16} aria-hidden="true" /> Read up to {DEEP_SCAN_PAGES} pages instead of {pagesRead} and get the report by email
+    <section className={`deep-scan-offer deep-scan-inline deep-scan-${variant}`} id="deep-scan" aria-label={`Read up to ${DEEP_SCAN_PAGES} pages instead of ${pagesRead}`}>
+      <button type="button" className={variant === "inline" ? "deep-scan-inline-link" : "deep-scan-strip"} aria-expanded={open} onClick={() => setOpen((current) => !current)}>
+        {variant === "strip" && <ScanSearch size={16} aria-hidden="true" />} Read up to {DEEP_SCAN_PAGES} pages instead of {pagesRead}{variant === "strip" ? " and get the report by email" : ""}
         <ArrowRight size={14} aria-hidden="true" className={open ? "is-open" : ""} />
       </button>
       {open && (

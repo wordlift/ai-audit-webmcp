@@ -1,10 +1,8 @@
-import { Copy, UserRoundCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import type { DomainEntity, ActionBoundary, CapabilityResult, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
 import { entityRole } from "../../shared/format/businessModel.js";
 import { refineReport } from "../api/client";
-import { reviewPrompt } from "./reviewPrompt";
 import { actionsThatMatter } from "./FirstScreen";
 
 /**
@@ -94,22 +92,15 @@ export function OwnIt({ report }: { report: ReportRecord }) {
   const navigate = useNavigate();
   const three = actionsThatMatter(report.capabilities ?? []);
   const said = answeredAlready(three);
-  const choices = entityChoices(report);
+  const choices = entityChoices(report, 5);
   const owned = (report.contextGraph?.entities ?? []).filter((entity) => entity.humanPriority);
   const [editing, setEditing] = useState(said.length === 0 && owned.length === 0);
   const [answers, setAnswers] = useState<OwnAnswers>(() => initialAnswers(three));
   const [entityAnswers, setEntityAnswers] = useState<Record<string, EntityAnswer>>(() => Object.fromEntries(choices.map((entity) => [entity.id, entity.humanPriority === "primary" ? "primary" : ""])));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   if (three.length === 0) return null;
 
-  // The other door: the same questions, and more, asked by ChatGPT in a conversation, filed here.
-  async function copyReview() {
-    await navigator.clipboard.writeText(reviewPrompt(report.id));
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 2_000);
-  }
   const decisions = decisionsFrom(answers);
   // Only what changed: an entity the report already lists as primary is not said again.
   const primaryEntityIds = choices.filter((entity) => entityAnswers[entity.id] === "primary" && entity.humanPriority !== "primary").map((entity) => entity.id);
@@ -140,7 +131,6 @@ export function OwnIt({ report }: { report: ReportRecord }) {
 
   return (
     <section className="own-it" id="own-it" aria-labelledby="own-it-title">
-      <p className="section-kicker"><UserRoundCheck size={16} /> Before publishing</p>
       <h2 id="own-it-title">Who actually performs these actions?</h2>
       <p className="own-it-lead">
         These answers determine what your site tells AI agents they can do. They do not change the readiness score; only working
@@ -217,9 +207,11 @@ export function OwnIt({ report }: { report: ReportRecord }) {
             );
           })}
           {choices.length > 0 && (
+            <details className="own-it-more">
+            <summary>Also tell us what matters <span className="entity-count">{choices.length}</span></summary>
             <fieldset className="own-it-question own-it-entities">
               <legend>What we found. Is it yours?</legend>
-              <p className="own-it-means">Mark what matters most, and what is not yours. What you leave stays as read. Nothing here moves readiness.</p>
+              <p className="own-it-means">Mark what matters most, and what is not yours. What you leave stays as read; the rest of what we found is in the full audit. Nothing here moves readiness.</p>
               <ul className="own-it-entity-list">
                 {choices.map((entity) => (
                   <li key={entity.id}>
@@ -245,6 +237,7 @@ export function OwnIt({ report }: { report: ReportRecord }) {
                 ))}
               </ul>
             </fieldset>
+            </details>
           )}
           <div className="own-it-actions">
             <button type="submit" disabled={saving || !anything}>{saving ? "Saving…" : "Save my answers"}</button>
@@ -254,15 +247,6 @@ export function OwnIt({ report }: { report: ReportRecord }) {
           {error && <p role="alert" className="own-it-error">{error}</p>}
         </form>
       )}
-      <div className="own-it-alt">
-        <p>
-          <b>Need a more precise review?</b> Let ChatGPT interview your team about your business, its terminology, its entities and who
-          owns each action. The answers land here, in the same model. Copy the prompt and paste it into ChatGPT.
-        </p>
-        <button type="button" className="review-cta" onClick={() => void copyReview()}>
-          <Copy size={15} aria-hidden="true" /> {copied ? "Prompt copied. Paste it into ChatGPT" : "Review with ChatGPT"}
-        </button>
-      </div>
     </section>
   );
 }

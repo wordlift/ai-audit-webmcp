@@ -12,7 +12,7 @@ test("a site owner says who runs each action, and the score stays where the evid
   const parentUrl = page.url();
   const score = await page.locator(".first-score b").textContent();
 
-  const questions = page.locator(".own-it-question");
+  const questions = page.locator(".own-it-question:not(.own-it-entities)");
   await expect(questions).toHaveCount(3);
   await questions.nth(0).getByLabel("We do", { exact: true }).check();
   await questions.nth(1).getByLabel("A partner does", { exact: true }).check();

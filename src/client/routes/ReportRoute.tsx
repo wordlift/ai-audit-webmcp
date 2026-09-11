@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Rocket, Share2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Rocket, Share2 , Wrench } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { explainReportError, failureTitle, visibleErrors } from "../../shared/format/explainError.js";
@@ -16,7 +16,8 @@ import { OwnIt } from "../components/OwnIt";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { ReportProgress } from "../components/ReportProgress";
 import { ServiceMapProvenance } from "../components/ServiceMapProvenance";
-import { AskAgentStrip } from "../components/AskAgentStrip";
+import { AgentDoors } from "../components/AgentDoors";
+import { StepBar } from "../components/StepBar";
 import { UnderstandPanel } from "../components/UnderstandPanel";
 import { SiteToolsBadge } from "../components/SiteToolsBadge";
 import { AlpinaAvailabilityTool } from "../webmcp/AlpinaAvailabilityTool";
@@ -136,28 +137,34 @@ export function ReportRoute() {
     <div className="report-page">
       {tools}
       <AlpinaAvailabilityTool reportId={report.id} enabled={sidecarApplies(report)} />
-      <nav className="report-toolbar" aria-label="Report actions">
+      {/* Three steps, the current one lit, on both pages; the toolbar's two actions ride on its right. */}
+      <StepBar reportId={report.id} page="report">
         <Link to="/"><ArrowLeft size={17} /> New audit</Link>
         <button type="button" onClick={share}><Share2 size={17} /> {copied ? "Copied" : "Share report"}</button>
-      </nav>
+      </StepBar>
       {report.status === "partial" && (
         <div className="partial-banner" role="status">Partial report: {visibleErrors(report.errors).map(explainReportError).join(" ")}</div>
       )}
       {/* The first screen speaks three plain words. Everything precise is one click below. */}
       <FirstScreen key={`first-${report.id}`} report={report} />
-      {/* Understand, then Fix: every entity the audit read, and the button that publishes the ones agents cannot see. */}
-      <UnderstandPanel report={report} />
-      {/* The model is usable now: an agent reads it through the page's own tools. */}
-      <AskAgentStrip reportId={report.id} />
-      {/* Own it: who runs each of the three actions, answered in a minute. Readiness never moves on a word. */}
-      <OwnIt key={`own-${report.id}`} report={report} />
+      {/* Fix, in two parts: publish what agents cannot read, then say who runs what. Both shape what
+          Activate publishes; neither moves readiness. The agent doors sit here, once. */}
+      <section className="step-fix" id="step-fix" aria-labelledby="step-fix-title">
+        <header className="step-head">
+          <p className="section-kicker" id="step-fix-title"><Wrench size={16} /> Fix</p>
+          <p className="step-subtitle">What agents cannot read yet, and who runs what. Nothing here moves the score; publishing does.</p>
+        </header>
+        <UnderstandPanel report={report} />
+        <OwnIt key={`own-${report.id}`} report={report} />
+        <AgentDoors reportId={report.id} />
+      </section>
       {/* Activate: one screen away, so the report stays three words and their fixes. */}
-      <section className="activate-strip" aria-labelledby="activate-strip-title">
+      <section className="activate-strip" id="step-activate" aria-labelledby="activate-strip-title">
         <p className="section-kicker"><Rocket size={16} /> Activate</p>
         <h2 id="activate-strip-title">Activate your business for agents</h2>
         <p>Publish what agents need to discover, understand and use your business, and see who reads it.</p>
         <Link className="activate-link" to={`/reports/${report.id}/activate`}>
-          Activate <ArrowRight size={15} aria-hidden="true" />
+          Go to Activate <ArrowRight size={15} aria-hidden="true" />
         </Link>
       </section>
       <details className="full-audit" id="full-audit">

@@ -18,6 +18,8 @@ test("the Activate screen shows what the page carries, the three documents, and 
   // movement or the promise of one, never a bare number.
   await expect(page.locator(".activate-score")).toContainText(/of 100 agent-ready(\. The next reading shows how it moved\.| since |, unchanged since )/);
 
+  // The rows the page carries sit one fold below the outcome, for the engineers.
+  await page.locator("summary", { hasText: "For your engineers" }).click();
   const search = page.getByRole("row", { name: /search the site/i });
   await expect(search).toContainText("Undecided");
   await expect(search).toContainText("The action, with its entry point");
@@ -45,6 +47,6 @@ test("the Activate screen shows what the page carries, the three documents, and 
   await expect(page.getByText("No crawler yet. Expect the first within days of publishing.")).toBeVisible();
   await expect(page.getByText(/No agent has activated a capability yet/)).toBeVisible();
 
-  await page.getByRole("link", { name: /back to the report/i }).click();
-  await expect(page).toHaveURL(new RegExp(`/reports/${reportId}$`));
+  await page.getByRole("navigation", { name: "Steps" }).getByRole("link", { name: "Audit", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/reports/${reportId}(#step-audit)?$`));
 });

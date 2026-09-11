@@ -178,7 +178,7 @@ export function foundLine(report: ReportRecord): { pages: number; parts: string[
   if (places > 0) parts.push(pluralNoun(places, "place"));
   if (people > 0) parts.push(people === 1 ? "1 person" : `${people} people`);
   const expected = (report.capabilities ?? []).filter((capability) => capability.expected).length;
-  if (expected > 0) parts.push(`${expected} expected ${expected === 1 ? "action" : "actions"}`);
+  if (expected > 0) parts.push(`${expected} ${expected === 1 ? "thing" : "things"} agents should be able to do here`);
   return parts.length > 0 ? { pages, parts } : null;
 }
 
@@ -263,11 +263,28 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   }
 
   return (
-    <section className="first-screen" aria-labelledby="first-screen-title">
+    <section className="first-screen" id="step-audit" aria-labelledby="first-screen-title">
       <div className="first-screen-head">
-        <p className="section-kicker"><Bot size={16} /> What AI agents can do with {host}</p>
+        <p className="section-kicker"><Bot size={16} /> Audit</p>
         <h1 id="first-screen-title">{headline(capabilities, host)}</h1>
         {gap && <p className="first-sentence">{gap}</p>}
+        <p className="first-meta">
+          {ago && <span className="read-when">{ago}</span>}
+          {score !== undefined && (
+            <span className="first-score">Agent readiness <b>{score}</b>/100</span>
+          )}
+          <span className="chip-arche">{archetype}</span>
+          {report.publishedWith && (
+            <a className="chip-arche chip-runs-on" href={publishUrl(report.id)} target="_blank" rel="noreferrer" title={`${runsOnLine(report)} ${report.publishedWith.evidence}. Own this site? Open your WordLift dashboard.`}>
+              Runs on {report.publishedWith.name}
+            </a>
+          )}
+          {ago && (
+            <button type="button" className="run-again" onClick={() => void runAgain()} disabled={rerunning}>
+              {rerunning ? "Reading again…" : "Run again"}
+            </button>
+          )}
+        </p>
         {found && (
           <p className="first-found">
             From {found.pages} {found.pages === 1 ? "page" : "pages"}, WordLift found{" "}
@@ -290,24 +307,8 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
             ))}
           </p>
         )}
-        <p className="first-meta">
-          {ago && <span className="read-when">{ago}</span>}
-          {score !== undefined && (
-            <span className="first-score">Agent readiness <b>{score}</b>/100</span>
-          )}
-          <span className="chip-arche">{archetype}</span>
-          {report.publishedWith && (
-            <a className="chip-arche chip-runs-on" href={publishUrl(report.id)} target="_blank" rel="noreferrer" title={`${report.publishedWith.evidence}. Own this site? Open your WordLift dashboard.`}>
-              Runs on {report.publishedWith.name}
-            </a>
-          )}
-          {ago && (
-            <button type="button" className="run-again" onClick={() => void runAgain()} disabled={rerunning}>
-              {rerunning ? "Reading again…" : "Run again"}
-            </button>
-          )}
-        </p>
-        {report.publishedWith && <p className="runs-on-note">{runsOnLine(report)}</p>}
+        {/* The deeper read, asked for where the counts are: one line that opens in place. */}
+        <DeepScanOffer report={report} variant="inline" />
       </div>
 
       {three.length > 0 && (
@@ -345,9 +346,6 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
 
       {/* The proof behind the words, one click away: what the audit's agent actually did. */}
       <AgentDiary report={report} />
-
-      {/* The deeper read, asked for where the person already is: one line that opens in place. */}
-      <DeepScanOffer report={report} />
 
       <ActionDetailDialog
         reportId={report.id}

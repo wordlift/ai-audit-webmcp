@@ -178,13 +178,15 @@ describe("the readers line", () => {
     expect(chip).toHaveAttribute("href", expect.stringContaining("my.wordlift.io"));
     expect(chip).toHaveAttribute("href", expect.stringContaining(report.id));
     expect(chip).toHaveAttribute("title", expect.stringContaining("Entity ids on data.wordlift.io"));
-    expect(screen.getByText(/WordLift already makes this business readable to agents/)).toHaveTextContent(/The score measures whether agents can act, which is the next step/);
+    // What WordLift already delivers, and what the score measures instead, on the chip's hover: the head stays three lines.
+    expect(chip).toHaveAttribute("title", expect.stringContaining("WordLift already makes this business readable to agents"));
+    expect(chip).toHaveAttribute("title", expect.stringContaining("The score measures whether agents can act, which is the next step"));
   });
 
   it("says nothing about a platform when the site's data names none", () => {
     renderScreen();
     expect(screen.queryByText(/Runs on/)).toBeNull();
-    expect(screen.queryByText(/readable to agents/)).toBeNull();
+    expect(document.querySelector(".chip-runs-on")).toBeNull();
   });
 
   it("counts what the platform published against what only the text holds", () => {
@@ -215,9 +217,9 @@ describe("the readers line", () => {
         bindings: [],
       },
     } as unknown as ReportRecord;
-    expect(foundLine(withGraph)).toEqual({ pages: 2, parts: ["1 business", "2 apartments", "2 places", "1 person", "4 expected actions"] });
+    expect(foundLine(withGraph)).toEqual({ pages: 2, parts: ["1 business", "2 apartments", "2 places", "1 person", "4 things agents should be able to do here"] });
     renderScreen(withGraph);
-    expect(screen.getByText(/From 2 pages, WordLift found/)).toHaveTextContent("1 business · 2 apartments · 2 places · 1 person · 4 expected actions");
+    expect(screen.getByText(/From 2 pages, WordLift found/)).toHaveTextContent("1 business · 2 apartments · 2 places · 1 person · 4 things agents should be able to do here");
     expect(screen.getByRole("link", { name: "See what we understood" })).toHaveAttribute("href", "#understand");
     // Without a graph there is nothing to count, and nothing is said.
     expect(foundLine(report)).toBeNull();

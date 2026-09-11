@@ -18,7 +18,8 @@ test("a human refinement turns the machine draft into refined Terms of Action", 
   // WebMCP, so the self-test badge must say exactly which browser the reader needs.
   await page.locator("summary", { hasText: "Full audit" }).click();
   await expect(page.getByText("Machine-generated Terms of Action")).toBeVisible();
-  // The review is offered beside the three questions and again in the full audit: the same prompt from either door.
+  // The review is offered under Fix, behind "Work with an agent", and again in the full audit: the same prompt from either door.
+  await page.locator("summary", { hasText: "Work with an agent" }).click();
   await expect(page.getByRole("button", { name: /review with chatgpt/i })).toHaveCount(2);
   await expect(page.getByText(/site tools require a webmcp-enabled browser/i)).toBeVisible();
 
