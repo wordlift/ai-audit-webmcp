@@ -68,8 +68,8 @@ export function linksFor(entity: DomainEntity, report: ReportRecord, limit = 3):
     .sort((left, right) => right.importance - left.importance)
     .slice(0, limit)
     .map((capability) => ({ actionId: capability.actionId, label: capability.label, word: plainWord(capability) }));
-  // A word the site uses for this entity, not a headline the page uses for everything on it.
-  const terms = (report.contextGraph?.lexicalEntries ?? [])
+  // A word the site uses for this entity, not a headline the page uses for everything on it; a site or a page has none of its own.
+  const terms = (entity.types.includes("WebSite") || entity.types.includes("WebPage") ? [] : report.contextGraph?.lexicalEntries ?? [])
     .filter((term) => term.entityIds.includes(entity.id) && term.entityIds.length <= 2 && term.label.length <= 40 && term.label.toLowerCase() !== entity.name.toLowerCase())
     .slice(0, limit)
     .map((term) => term.label);

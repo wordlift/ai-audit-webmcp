@@ -106,8 +106,8 @@ export function modelEntity(entity: DomainEntity, report: ReportRecord): Modelle
     .filter((capability) => capability.expected && capability.appliesTo.some((subject) => subject.id === entity.id))
     .sort((left, right) => right.importance - left.importance)
     .map(modelledAction);
-  // A word the site uses for this entity, not a headline the page uses for everything on it.
-  const terms = unique(
+  // A word the site uses for this entity, not a headline the page uses for everything on it; a site or a page has no words of its own, only headlines.
+  const terms = entityRole(entity) === "content" ? [] : unique(
     (report.contextGraph?.lexicalEntries ?? [])
       .filter((term) => term.kind !== "entity-name" && term.entityIds.includes(entity.id) && term.entityIds.length <= 2 && term.label.length <= 40 && term.label.toLowerCase() !== entity.name.toLowerCase())
       .map((term) => term.label),
