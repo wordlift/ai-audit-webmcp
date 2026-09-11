@@ -621,8 +621,10 @@ Still to do from the brief, in the order the brief gives:
   the brief's §23 orders it: "Agents found N important things. K are already machine-readable. M
   exist only in the text. Publish the missing M with WordLift." The found line on the first screen
   now links to it. Not a separate block.
-- P1 §13 entity questions in Own it: "Is this your main business?", "Is this entity important?",
-  writing `humanPriority`.
+- P1 §13 entity questions, built the same night: Own it asks "What we found. Is it yours?" of
+  the business, what it offers and where (never a page, never a person), three words each,
+  Matters / Not ours / As read, and sends only what changed as `primaryEntityIds` and
+  `demotedEntityIds` through the same refine call. A refined report says what was said.
 - P1 §21 graph context on the capability card ("Property → offered by Alpina → …") once
   relationships exist.
 - P2 §22 model health in Prove: entity changes and unresolved inferred entities between reads.

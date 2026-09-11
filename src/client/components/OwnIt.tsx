@@ -1,7 +1,8 @@
 import { Copy, UserRoundCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import type { ActionBoundary, CapabilityResult, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
+import type { DomainEntity, ActionBoundary, CapabilityResult, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
+import { entityRole } from "../../shared/format/businessModel.js";
 import { refineReport } from "../api/client";
 import { reviewPrompt } from "./reviewPrompt";
 import { actionsThatMatter } from "./FirstScreen";
@@ -67,12 +68,37 @@ function initialAnswers(capabilities: CapabilityResult[]): OwnAnswers {
   );
 }
 
+/** The things WordLift read that a person can own or disown: the business, what it offers, where. Never a page, never a person. */
+export function entityChoices(report: ReportRecord, limit = 8): DomainEntity[] {
+  const order: Record<string, number> = { business: 0, offering: 1, place: 2 };
+  return (report.contextGraph?.entities ?? [])
+    .filter((entity) => entity.humanPriority !== "demoted" && entityRole(entity) in order)
+    .sort((left, right) => order[entityRole(left)]! - order[entityRole(right)]! || Number(left.origin === "inferred") - Number(right.origin === "inferred") || right.confidence - left.confidence)
+    .slice(0, limit);
+}
+
+type EntityAnswer = "primary" | "demoted" | "";
+const ENTITY_OPTIONS: ReadonlyArray<{ value: EntityAnswer; label: string }> = [
+  { value: "primary", label: "Matters" },
+  { value: "demoted", label: "Not ours" },
+  { value: "", label: "As read" },
+];
+
+/** The type in a person's words: "Lodging business", "Apartment", "Place". */
+function typeWord(type: string | undefined): string {
+  if (!type) return "Thing";
+  return type.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, (first) => first.toUpperCase());
+}
+
 export function OwnIt({ report }: { report: ReportRecord }) {
   const navigate = useNavigate();
   const three = actionsThatMatter(report.capabilities ?? []);
   const said = answeredAlready(three);
-  const [editing, setEditing] = useState(said.length === 0);
+  const choices = entityChoices(report);
+  const owned = (report.contextGraph?.entities ?? []).filter((entity) => entity.humanPriority);
+  const [editing, setEditing] = useState(said.length === 0 && owned.length === 0);
   const [answers, setAnswers] = useState<OwnAnswers>(() => initialAnswers(three));
+  const [entityAnswers, setEntityAnswers] = useState<Record<string, EntityAnswer>>(() => Object.fromEntries(choices.map((entity) => [entity.id, entity.humanPriority === "primary" ? "primary" : ""])));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -85,18 +111,26 @@ export function OwnIt({ report }: { report: ReportRecord }) {
     window.setTimeout(() => setCopied(false), 2_000);
   }
   const decisions = decisionsFrom(answers);
+  // Only what changed: an entity the report already lists as primary is not said again.
+  const primaryEntityIds = choices.filter((entity) => entityAnswers[entity.id] === "primary" && entity.humanPriority !== "primary").map((entity) => entity.id);
+  const demotedEntityIds = choices.filter((entity) => entityAnswers[entity.id] === "demoted").map((entity) => entity.id);
+  const anything = decisions.length > 0 || primaryEntityIds.length > 0 || demotedEntityIds.length > 0;
 
   const answer = (actionId: string, patch: Partial<OwnAnswers[string]>) =>
     setAnswers((current) => ({ ...current, [actionId]: { ...current[actionId]!, ...patch } }));
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (decisions.length === 0) return;
+    if (!anything) return;
     setSaving(true);
     setError(null);
     try {
-      // The same call the interview ends with; here it carries the action decisions alone.
-      const child = await refineReport(report.id, { actionDecisions: decisions });
+      // The same call the interview ends with; here it carries the decisions made on this page alone.
+      const child = await refineReport(report.id, {
+        ...(decisions.length > 0 ? { actionDecisions: decisions } : {}),
+        ...(primaryEntityIds.length > 0 ? { primaryEntityIds } : {}),
+        ...(demotedEntityIds.length > 0 ? { demotedEntityIds } : {}),
+      });
       navigate(`/reports/${child.id}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Your answers could not be saved.");
@@ -129,6 +163,12 @@ export function OwnIt({ report }: { report: ReportRecord }) {
               );
             })}
           </ul>
+          {owned.length > 0 && (
+            <p className="own-it-owned" aria-label="What you said about the things we found">
+              {owned.some((entity) => entity.humanPriority === "primary") && <span><small>Matters</small> {owned.filter((entity) => entity.humanPriority === "primary").map((entity) => entity.name).join(", ")}</span>}
+              {owned.some((entity) => entity.humanPriority === "demoted") && <span><small>Not yours</small> {owned.filter((entity) => entity.humanPriority === "demoted").map((entity) => entity.name).join(", ")}</span>}
+            </p>
+          )}
           <button type="button" className="own-it-change" onClick={() => setEditing(true)}>Change my answers</button>
         </>
       ) : (
@@ -176,8 +216,38 @@ export function OwnIt({ report }: { report: ReportRecord }) {
               </fieldset>
             );
           })}
+          {choices.length > 0 && (
+            <fieldset className="own-it-question own-it-entities">
+              <legend>What we found. Is it yours?</legend>
+              <p className="own-it-means">Mark what matters most, and what is not yours. What you leave stays as read. Nothing here moves readiness.</p>
+              <ul className="own-it-entity-list">
+                {choices.map((entity) => (
+                  <li key={entity.id}>
+                    <span className="own-it-entity">
+                      <b>{entity.name}</b>
+                      <small>{typeWord(entity.types[0])}{entity.origin === "inferred" ? " · read from the text" : ""}</small>
+                    </span>
+                    <span className="own-it-options" role="radiogroup" aria-label={`Is ${entity.name} yours?`}>
+                      {ENTITY_OPTIONS.map((option) => {
+                        const id = `own-entity-${entity.id}-${option.value || "as-read"}`;
+                        const chosen = (entityAnswers[entity.id] ?? "") === option.value;
+                        return (
+                          <div key={option.value} className={`own-it-option${chosen ? " is-chosen" : ""}`}>
+                            <label htmlFor={id}>
+                              <input id={id} type="radio" name={`own-entity-${entity.id}`} value={option.value} checked={chosen} onChange={() => setEntityAnswers((current) => ({ ...current, [entity.id]: option.value }))} />
+                              {option.label}
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
+          )}
           <div className="own-it-actions">
-            <button type="submit" disabled={saving || decisions.length === 0}>{saving ? "Saving…" : "Save my answers"}</button>
+            <button type="submit" disabled={saving || !anything}>{saving ? "Saving…" : "Save my answers"}</button>
             {said.length > 0 && <button type="button" onClick={() => setEditing(false)}>Keep what I said</button>}
             <span>Your answers create a new version of this report. The score stays where the evidence put it.</span>
           </div>

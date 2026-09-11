@@ -189,4 +189,50 @@ describe("what the answers amount to", () => {
       { actionId: "a.five", decision: "confirm", boundary: "not-applicable" },
     ]);
   });
+
+  it("asks whether the things we found are yours, and sends what changed as primary and demoted ids", async () => {
+    const entity = (id: string, name: string, type: string, extra: Record<string, unknown> = {}) => ({ id, types: [type], name, alternateNames: [], sourceUrls: ["https://www.alpina.travel/"], sameAs: [], offers: [], confidence: 0.9, ...extra });
+    const withGraph = {
+      ...report,
+      contextGraph: {
+        pages: [{ url: "https://www.alpina.travel/", title: "Alpina", role: "entry", headings: [], entityIds: [] }],
+        entities: [entity("org", "AlpiNest Feriendorf Lungau", "LodgingBusiness"), entity("apt", "Samspitze 4", "Apartment", { origin: "inferred" }), entity("town", "Mariapfarr", "Place", { origin: "inferred" }), entity("who", "Andrea Volpini", "Person"), entity("site", "Alpina.travel", "WebSite")],
+        lexicalEntries: [],
+        interfaces: [],
+        bindings: [],
+      },
+    } as unknown as ReportRecord;
+    const calls: Array<{ url: string; body: unknown }> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+        return new Response(JSON.stringify({ ...withGraph, id: CHILD_ID, parentReportId: report.id }), { status: 200, headers: { "content-type": "application/json" } });
+      }),
+    );
+    renderPanel(withGraph);
+    // The business, what it offers and where; never the site or a person.
+    const found = screen.getByRole("group", { name: /What we found/ });
+    expect(within(found).getAllByRole("radiogroup").map((group) => group.getAttribute("aria-label"))).toEqual(["Is AlpiNest Feriendorf Lungau yours?", "Is Samspitze 4 yours?", "Is Mariapfarr yours?"]);
+    expect(within(found).getAllByText("read from the text", { exact: false })).toHaveLength(2);
+    fireEvent.click(within(within(found).getByRole("radiogroup", { name: "Is AlpiNest Feriendorf Lungau yours?" })).getByLabelText("Matters"));
+    fireEvent.click(within(within(found).getByRole("radiogroup", { name: "Is Mariapfarr yours?" })).getByLabelText("Not ours"));
+    fireEvent.click(screen.getByRole("button", { name: /save my answers/i }));
+
+    await waitFor(() => expect(screen.getByText(`opened ${CHILD_ID}`)).toBeVisible());
+    expect(calls[0]!.body).toEqual({ primaryEntityIds: ["org"], demotedEntityIds: ["town"] });
+  });
+
+  it("says what was said about the things we found, on a refined report", () => {
+    const entity = (id: string, name: string, type: string, extra: Record<string, unknown> = {}) => ({ id, types: [type], name, alternateNames: [], sourceUrls: ["https://www.alpina.travel/"], sameAs: [], offers: [], confidence: 0.9, ...extra });
+    const refined = {
+      ...report,
+      contextGraph: { pages: [{ url: "https://www.alpina.travel/", title: "Alpina", role: "entry", headings: [], entityIds: [] }], entities: [entity("org", "AlpiNest Feriendorf Lungau", "LodgingBusiness", { humanPriority: "primary" }), entity("town", "Mariapfarr", "Place", { humanPriority: "demoted" })], lexicalEntries: [], interfaces: [], bindings: [] },
+    } as unknown as ReportRecord;
+    renderPanel(refined);
+    const said = screen.getByLabelText("What you said about the things we found");
+    expect(said).toHaveTextContent("Matters AlpiNest Feriendorf Lungau");
+    expect(said).toHaveTextContent("Not yours Mariapfarr");
+    expect(screen.getByRole("button", { name: /change my answers/i })).toBeInTheDocument();
+  });
 });
