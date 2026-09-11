@@ -642,7 +642,10 @@ Still to do from the brief, in the order the brief gives:
   answer as it came, and evidence only on "Save as evidence", as a new version of the report,
   readiness moving the way the evidence says. On alpina.travel the availability check runs through
   the approved sidecar from the same panel. In-page WebMCP tools stay declared: no server can reach
-  them.
+  them. First live call found a bug the audit had too: a tool's answer was read up to the 128 KB
+  bound meant for a handshake, and alpina's product card is 130 KB, so the call read as "no
+  JSON-RPC message". A tool call now reads up to 1 MB; the audit's own calls too, so search_products
+  on alpina.travel may verify from the next audit on.
 - Load-sensitive tests under the full parallel run, each passing alone: the alpina sidecar
   upstream failure, "audit then read", the observe tick, the rate-limit pool, and the 404 error
   paths (a 5 s budget). One fails per full run, a different one each time; a serial run of the

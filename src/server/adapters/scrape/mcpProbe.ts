@@ -14,6 +14,8 @@ import {
 import type { McpEndpointProbe, McpToolProbe } from "./ScrapeProvider.js";
 
 const MAX_STREAM_BYTES = 128_000;
+/** A tool's answer can be a whole product card: a call reads further than a handshake before it gives up. */
+const TOOL_CALL_BYTES = 1_000_000;
 const MAX_TOOLS = 40;
 const PROTOCOL_VERSION = "2025-06-18";
 const CLIENT_INFO = { name: "wordlift-ai-audit", version: "0.1" };
@@ -135,7 +137,7 @@ export async function callMcpTool(
   name: string,
   args: Record<string, unknown>,
 ): Promise<McpCallOutcome> {
-  const reply = await postRpc(target, controller, options, session, { id: TOOLS_LIST_ID + 1, method: "tools/call", params: { name, arguments: args } });
+  const reply = await postRpc(target, controller, options, session, { id: TOOLS_LIST_ID + 1, method: "tools/call", params: { name, arguments: args } }, TOOL_CALL_BYTES);
   const message = firstJsonRpc(reply.body);
   if (!message) return { ok: false, error: reply.status >= 200 && reply.status < 300 ? "the server answered without a JSON-RPC message" : `the server answered HTTP ${reply.status}` };
   if (message.error) return { ok: false, error: text(message.error.message, 300) || "the call was rejected" };
@@ -233,7 +235,7 @@ async function callSafeTools(
       id: nextId,
       method: "tools/call",
       params: { name: tool.name, arguments: args },
-    });
+    }, TOOL_CALL_BYTES);
     const message = firstJsonRpc(reply.body);
     const outcome = message?.result as { isError?: unknown } | undefined;
     const reported = outcome ? resultError(outcome) : undefined;
@@ -297,6 +299,7 @@ async function postRpc(
   options: UrlPolicyOptions,
   sessionId: string | null,
   payload: Record<string, unknown>,
+  maxBytes = MAX_STREAM_BYTES,
 ): Promise<RpcReply> {
   try {
     const response = await fetch(target, {
@@ -314,7 +317,7 @@ async function postRpc(
 
     return {
       status: response.status,
-      body: await boundedText(response),
+      body: await boundedText(response, maxBytes),
       sessionId: response.headers.get("mcp-session-id"),
     };
   } catch {
@@ -323,13 +326,13 @@ async function postRpc(
 }
 
 /** Reads a bounded reply body, whether it arrives as JSON or as a one-shot SSE stream. */
-async function boundedText(response: Response): Promise<string> {
+async function boundedText(response: Response, maxBytes = MAX_STREAM_BYTES): Promise<string> {
   if (!response.body) return "";
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let out = "";
   try {
-    while (out.length < MAX_STREAM_BYTES) {
+    while (out.length < maxBytes) {
       const chunk = await reader.read();
       if (chunk.done) break;
       out += decoder.decode(chunk.value, { stream: true });
