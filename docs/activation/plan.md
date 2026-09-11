@@ -615,6 +615,9 @@ Still to do from the brief, in the order the brief gives:
   lists "How it fits together"; the first screen says the shape in one line, "AlpiNest → offers
   Samspitze 4 → in Mariapfarr", only from what the markup declares. Still to come: inferred
   relations only if a label can say so.
+- Andrea, 2026-09-11: "Review the agent surfaces" is helpful but belongs to Activate, not the full
+  audit where it was hard to find. Moved: it sits on Activate between the artifacts and Prove; the
+  fold has six sections now. A partial report no longer quotes the upstream status code.
 - Load-sensitive tests under the full parallel run, each passing alone: the alpina sidecar
   upstream failure, "audit then read", the observe tick, and the rate-limit pool. One fails per
   full run, a different one each time; a serial run of the integration folder would settle it.

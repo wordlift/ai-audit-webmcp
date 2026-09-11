@@ -5,7 +5,6 @@ import { explainReportError, failureTitle, visibleErrors } from "../../shared/fo
 import type { Archetype, ReportRecord } from "../../shared/types/index.js";
 import { ApiError, getReport, recompileReport } from "../api/client";
 import { ActionJourney } from "../components/ActionJourney";
-import { AgentSurfaces } from "../components/AgentSurfaces";
 import { BoundariesTable } from "../components/BoundariesTable";
 import { AlpinaSidecarPanel } from "../components/AlpinaSidecarPanel";
 import { ClassificationCard } from "../components/ClassificationCard";
@@ -181,7 +180,6 @@ export function ReportRoute() {
             <a href="#audit-boundaries">Business boundaries</a>
             <a href="#audit-terms">Terms of Action</a>
             <a href="#audit-evidence">Evidence &amp; provenance</a>
-            <a href="#audit-surfaces">Agent-facing surfaces</a>
           </nav>
           <ExecutiveSummary report={report} />
           {/* Keyed by report so a recompile that lands on the child report hands back a fresh form. */}
@@ -234,10 +232,6 @@ export function ReportRoute() {
               provenance of each claim. Readiness moves only on a verified invocation. The foundation audit below is the technical ground.
             </p>
             {report.foundationAudit && <FoundationAuditDetails audit={report.foundationAudit} />}
-          </section>
-
-          <section className="audit-section" id="audit-surfaces">
-            <AgentSurfaces report={report} />
           </section>
 
           {/* Labs: a contained technical proof, deliberately out of the product's primary story. */}

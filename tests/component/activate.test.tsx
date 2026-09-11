@@ -154,6 +154,8 @@ describe("the Activate screen", () => {
     // Each document opens in place, formatted, and the raw file stays one click away.
     expect(screen.getAllByRole("button", { name: /read the whole file/i })).toHaveLength(3);
     expect(screen.getAllByRole("link", { name: /^raw/i })).toHaveLength(3);
+    // What agents are given to read lives here, with the artifacts, not three clicks down in the full audit.
+    expect(screen.getByRole("heading", { name: "What agents are given to read" })).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /^activate/i })[0]).toHaveAttribute("href", expect.stringContaining(`report=${REPORT_ID}`));
     expect(screen.getAllByRole("link", { name: /^activate/i })[0]).toHaveAttribute("href", expect.stringContaining("intent=activate"));
 

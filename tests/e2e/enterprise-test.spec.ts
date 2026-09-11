@@ -49,21 +49,23 @@ test("the eight enterprise questions are each two clicks from the report", async
   await expect(page.getByRole("dialog").getByText(/verified (just now|\d+ (minutes?|hours?|days?) ago)/i)).toBeVisible();
   await page.keyboard.press("Escape");
 
-  // 6. What is published to agents? One click to Activate, where the three documents are readable.
+  // 6. What is published to agents? One click to Activate, where the three documents are readable
+  // and, beneath them, the agent-facing surfaces list every document and interface, today and from this report.
   await page.getByRole("link", { name: /^activate$/i }).click();
   await expect(page).toHaveURL(/\/activate$/);
   for (const title of ["On your pages", "For agents", "For registries"]) await expect(page.getByRole("article", { name: title })).toBeVisible();
-
-  // And from the report, one click opens the full audit, where the agent-facing surfaces list every document and interface.
-  await page.goto(`/reports/${childId}`);
-  await page.locator("summary", { hasText: "Full audit" }).click();
   await expect(page.getByRole("heading", { name: /what agents are given to read/i })).toBeVisible();
   await expect(page.getByText(/terms of action, the skill agents load/i)).toBeVisible();
+
+  // Back on the report, one click opens the full audit for the rest.
+  await page.goto(`/reports/${childId}`);
+  await page.locator("summary", { hasText: "Full audit" }).click();
 
   // 8, again, for the whole business at once: the boundaries table, one click below, one row per action.
   const boundaries = page.getByRole("row", { name: /check availability/i }).filter({ hasText: /partner handoff/i });
   await expect(boundaries).toContainText("Lungau Lodging");
   await expect(boundaries).toContainText("Partners own the inventory.");
   await expect(boundaries).toContainText("Human-provided");
-  await expect(page.getByRole("navigation", { name: /full audit sections/i }).getByRole("link")).toHaveCount(7);
+  // Six sections in the fold; the agent-facing surfaces moved to Activate, where publishing lives.
+  await expect(page.getByRole("navigation", { name: /full audit sections/i }).getByRole("link")).toHaveCount(6);
 });

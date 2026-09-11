@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import type { Publication, PublishedAction, ScoreReading } from "../../shared/types/activate.js";
 import type { ReportRecord } from "../../shared/types/index.js";
 import { getPublication, getReport, getVisits, type ReportVisits } from "../api/client";
+import { AgentSurfaces } from "../components/AgentSurfaces";
 import { DocDialog, type PublishedDoc } from "../components/DocDialog";
 import { publishUrl } from "../components/FixPanel";
 import { OWN_WORDS } from "../components/OwnIt";
@@ -365,6 +366,11 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
         <p className="activate-lead">
           The evidence behind every line is in the report's <Link to={`/reports/${report.id}#full-audit`}>full audit</Link>.
         </p>
+      </section>
+
+      {/* What agents are given to read, today and from this report: the surfaces Activate publishes, and the ones the site already has. */}
+      <section className="activate-section activate-surfaces">
+        <AgentSurfaces report={report} />
       </section>
 
       <section className="observe" aria-labelledby="observe-title">
