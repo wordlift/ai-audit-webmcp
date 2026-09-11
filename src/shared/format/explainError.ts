@@ -11,11 +11,22 @@ const AUDIT_CODES = new Set([
   "audit_unauthorized",
 ]);
 
-/** What a stored error means for the reader, in one sentence, without the provider's vocabulary. */
+/**
+ * What a stored error means for the reader, in one sentence, without the provider's vocabulary.
+ * A partial report says what is missing and why in a person's terms; a status code or an upstream
+ * name is for the log, never for the page.
+ */
 export function explainReportError(error: ReportError): string {
   if (AUDIT_CODES.has(error.code)) {
-    const reason = error.message.replace(/\.$/, "").replace(/^The audit service/, "the audit service");
-    return `The WordLift foundation audit did not complete (${reason}), so there is no foundation score.`;
+    const because =
+      error.code === "audit_timeout"
+        ? "it took too long"
+        : error.code === "audit_rate_limited"
+          ? "the service was busy"
+          : error.code === "audit_unreachable"
+            ? "the service could not be reached"
+            : "the service did not answer";
+    return `The WordLift foundation audit did not complete because ${because}, so there is no foundation score this time. Run again to try it once more.`;
   }
   switch (error.code) {
     case "collection_timeout":
