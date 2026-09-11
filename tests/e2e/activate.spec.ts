@@ -25,9 +25,19 @@ test("the Activate screen shows what the page carries, the three documents, and 
   for (const title of ["On your pages", "For agents", "For registries"]) {
     await expect(page.getByRole("article", { name: title })).toBeVisible();
   }
-  const skillLink = page.getByRole("article", { name: "For agents" }).getByRole("link", { name: /open the document/i });
+  // The document opens in place, as the page it is; the raw file stays one click away.
+  await page.getByRole("article", { name: "For agents" }).getByRole("button", { name: /read the whole file/i }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { name: "For agents" })).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "Entities" })).toBeVisible();
+  await expect(dialog.getByText(/lines ·/)).toBeVisible();
+  const rawUrl = await dialog.getByRole("link", { name: /open the raw file/i }).getAttribute("href");
+  expect(rawUrl).toMatch(/\/publish\/skill\.md$/);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  const skillLink = page.getByRole("article", { name: "For agents" }).getByRole("link", { name: /^raw/i });
   const skillUrl = await skillLink.getAttribute("href");
-  expect(skillUrl).toMatch(/\/publish\/skill\.md$/);
+  expect(skillUrl).toBe(rawUrl);
   const skill = await request.get(skillUrl!);
   expect(skill.ok()).toBeTruthy();
   expect(await skill.text()).toMatch(/^---\nname: alpina\.travel Terms of Action/);

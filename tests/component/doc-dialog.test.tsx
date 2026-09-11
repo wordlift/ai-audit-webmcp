@@ -32,6 +32,13 @@ describe("one published document, read in full", () => {
     expect(jsonTokens(jsonDoc.text).map((token) => token.text).join("")).toBe(jsonDoc.text);
   });
 
+  it("shows a front matter as the file's metadata, key by key, and never as prose", () => {
+    const blocks = markdownBlocks("---\nname: alpina.travel Terms of Action\nversion: 1\n---\n# Title\n\nA line.");
+    expect(blocks[0]).toEqual({ type: "meta", entries: [["name", "alpina.travel Terms of Action"], ["version", "1"]] });
+    expect(blocks[1]).toEqual({ type: "heading", level: 1, text: "Title" });
+    expect(blocks[2]).toEqual({ type: "paragraph", text: "A line." });
+  });
+
   it("reads the generated markdown as headings, lists and paragraphs", () => {
     const blocks = markdownBlocks(skillDoc.text);
     expect(blocks[0]).toEqual({ type: "heading", level: 1, text: "alpina.travel: Terms of Action" });

@@ -46,6 +46,7 @@ export function jsonTokens(text: string): Array<{ kind: JsonTokenKind; text: str
 }
 
 export type MarkdownBlock =
+  | { type: "meta"; entries: Array<[string, string]> }
   | { type: "heading"; level: 1 | 2 | 3; text: string }
   | { type: "list"; items: string[] }
   | { type: "paragraph"; text: string };
@@ -55,6 +56,13 @@ export function markdownBlocks(text: string): MarkdownBlock[] {
   const blocks: MarkdownBlock[] = [];
   let paragraph: string[] = [];
   let list: string[] = [];
+  // A leading front matter is the file's own metadata: shown as what it is, key by key, not as prose.
+  const front = /^---\n([\s\S]*?)\n---\n?/.exec(text);
+  if (front) {
+    const entries = front[1]!.split("\n").map((line) => /^([A-Za-z_][\w-]*):\s*(.*)$/.exec(line)).filter((match): match is RegExpExecArray => Boolean(match)).map((match) => [match[1]!, match[2]!] as [string, string]);
+    if (entries.length > 0) blocks.push({ type: "meta", entries });
+    text = text.slice(front[0].length);
+  }
   const flush = () => {
     if (paragraph.length > 0) blocks.push({ type: "paragraph", text: paragraph.join(" ") });
     if (list.length > 0) blocks.push({ type: "list", items: list });
@@ -101,6 +109,13 @@ export function Markdown({ text }: { text: string }) {
   return (
     <div className="doc-markdown">
       {markdownBlocks(text).map((block, index) => {
+        if (block.type === "meta") {
+          return (
+            <dl key={index} className="doc-meta">
+              {block.entries.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}
+            </dl>
+          );
+        }
         if (block.type === "heading") {
           const Tag = (["h2", "h3", "h4"] as const)[block.level - 1];
           return <Tag key={index}><Inline text={block.text} /></Tag>;
