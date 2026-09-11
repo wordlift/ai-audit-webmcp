@@ -38,6 +38,8 @@ No demo credentials are needed to review the server.
 | `inspect-terms-of-action` | Read the Terms of Action | true | false | false | The full Terms of Action for review |
 | `explain-capability` | Explain one action | true | false | false | Evidence, gap and contract for one action |
 | `explain-foundation-audit` | Explain the foundation audit | true | false | false | Technical foundation findings |
+| `inspect-business-model` | Read the business model | true | false | false | The business as modelled from the pages read, each entity with its provenance |
+| `explain-entity` | Explain one entity | true | false | false | One entity in full: provenance, pages, offers, actions, evidence |
 | `refine-terms-of-action` | Refine the Terms of Action | false | false | false | Records a human's confirmed judgment as a new child report |
 
 Nothing deletes or overwrites anything: a refinement always creates a new immutable report and

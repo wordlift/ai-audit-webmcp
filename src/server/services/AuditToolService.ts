@@ -1,4 +1,13 @@
-import type { ZodType } from "zod";
+import {
+  businessModel,
+  businessModelText,
+  entityDetail,
+  entityDetailText,
+  findEntity,
+  type BusinessModelResult,
+  type EntityDetailResult,
+} from "../../shared/format/businessModel.js";
+import { z, ZodType } from "zod";
 import {
   auditRunningText,
   auditSummaryText,
@@ -142,6 +151,26 @@ export class AuditToolService {
   }
 
   /** The read half of the refinement loop: everything a reviewer is about to be interviewed on. */
+  async inspectBusinessModel(input: unknown): Promise<ToolAnswer<BusinessModelResult>> {
+    const report = await this.readable(input);
+    if (!report.contextGraph) throw new ToolCallError("This report carries no business model yet.", "no_business_model", 409);
+    const structured = businessModel(report, this.orchestrator.reportUrl(report.id));
+    return { text: businessModelText(structured), structured };
+  }
+
+  async explainEntity(input: unknown): Promise<ToolAnswer<EntityDetailResult>> {
+    const { reportId, entityId, name } = parse(explainEntityInputSchema, input);
+    const report = await this.readable({ reportId });
+    if (!report.contextGraph) throw new ToolCallError("This report carries no business model yet.", "no_business_model", 409);
+    const entity = findEntity(report, { ...(entityId ? { entityId } : {}), ...(name ? { name } : {}) });
+    if (!entity) {
+      const known = report.contextGraph.entities.slice(0, 20).map((candidate) => candidate.name).join(", ");
+      throw new ToolCallError(`Report ${report.id} has no entity "${entityId ?? name}". Known entities: ${known}.`, "entity_not_found", 404);
+    }
+    const structured = entityDetail(entity, report, this.orchestrator.reportUrl(report.id));
+    return { text: entityDetailText(structured), structured };
+  }
+
   async inspectTermsOfAction(input: unknown): Promise<ToolAnswer<InspectServiceMapResult>> {
     const report = await this.readable(input);
     if (!report.capabilities || !report.contextGraph) {
@@ -301,6 +330,13 @@ export class AuditToolService {
     ).toString();
   }
 }
+
+const explainEntityInputSchema = reportScopedInputSchema
+  .extend({
+    entityId: z.string().min(1).max(500).optional(),
+    name: z.string().min(1).max(300).optional(),
+  })
+  .refine((value) => Boolean(value.entityId || value.name), { message: "give an entityId or a name" });
 
 function parse<T>(schema: ZodType<T>, input: unknown): T {
   const parsed = schema.safeParse(input);

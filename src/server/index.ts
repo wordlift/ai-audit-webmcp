@@ -30,20 +30,20 @@ import { AuditOrchestrator, type OrchestratorOptions } from "./services/AuditOrc
 
 const config = loadConfig();
 const store = config.REPORT_STORE === "firestore"
-  ? FirestoreReportStore.fromProject(config.GOOGLE_CLOUD_PROJECT, config.MAX_REPORT_BYTES)
+  ? FirestoreReportStore.fromProject(config.GOOGLE_CLOUD_PROJECT, config.MAX_REPORT_BYTES, config.FIRESTORE_COLLECTION_PREFIX)
   : new MemoryReportStore(config.MAX_REPORT_BYTES);
 
 const leads = config.REPORT_STORE === "firestore"
-  ? FirestoreLeadStore.fromProject(config.GOOGLE_CLOUD_PROJECT)
+  ? FirestoreLeadStore.fromProject(config.GOOGLE_CLOUD_PROJECT, config.FIRESTORE_COLLECTION_PREFIX)
   : new MemoryLeadStore();
 
 const claims = config.REPORT_STORE === "firestore"
-  ? FirestoreClaimStore.fromProject(config.GOOGLE_CLOUD_PROJECT)
+  ? FirestoreClaimStore.fromProject(config.GOOGLE_CLOUD_PROJECT, config.FIRESTORE_COLLECTION_PREFIX)
   : new MemoryClaimStore();
 
 // The sites that publish through us, for the entry source registries read.
 const published = config.REPORT_STORE === "firestore"
-  ? FirestorePublishedSiteStore.fromProject(config.GOOGLE_CLOUD_PROJECT)
+  ? FirestorePublishedSiteStore.fromProject(config.GOOGLE_CLOUD_PROJECT, config.FIRESTORE_COLLECTION_PREFIX)
   : new MemoryPublishedSiteStore();
 
 // Without a form configured, a deep scan still runs and still records what it owes; nothing is
@@ -127,7 +127,7 @@ if (config.NODE_ENV !== "test") {
   }
 }
 const visits = new VisitLedger({
-  store: config.REPORT_STORE === "firestore" ? FirestoreVisitStore.fromProject(config.GOOGLE_CLOUD_PROJECT) : new MemoryVisitStore(),
+  store: config.REPORT_STORE === "firestore" ? FirestoreVisitStore.fromProject(config.GOOGLE_CLOUD_PROJECT, config.FIRESTORE_COLLECTION_PREFIX) : new MemoryVisitStore(),
   classifier: new VisitorClassifier({ platforms: platformEgress, crawlers: crawlerRanges }),
   ttlDays: config.REPORT_TTL_DAYS,
   log: (event, ...details) => console.error(event, ...details),

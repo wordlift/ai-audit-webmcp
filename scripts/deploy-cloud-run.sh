@@ -16,7 +16,7 @@
 # Usage: scripts/deploy-cloud-run.sh [project-id] [region]
 #
 # Preview: PREVIEW=1 deploys the checked-out branch to a separate service on its own run.app URL,
-# with nothing shared with production: reports in memory (one instance, gone on restart), no
+# with nothing shared with production: reports in "preview_" Firestore collections of their own, no
 # HubSpot form, no directory challenge, no weekly re-reads, robots told to stay out and every
 # response marked noindex. The WordLift API and ScrapingBee keys are the same accounts; the audits
 # a preview runs cost what production's do. Production's service, domain and Firestore are untouched.
@@ -29,9 +29,11 @@ REGION="${2:-us-west1}"
 PREVIEW="${PREVIEW:-}"
 if [ -n "$PREVIEW" ]; then
   SERVICE="${SERVICE:-ai-audit-webmcp-preview}"
-  STORE="memory"
+  # Reports persist across preview deploys in Firestore collections of their own, "preview_" in
+  # front of every name, so a report someone is reviewing with an agent survives the next push.
+  STORE="firestore"
   MAX_INSTANCES=1
-  PREVIEW_ENV="##PUBLIC_INDEXABLE=false##OBSERVE_INTERVAL_DAYS=0"
+  PREVIEW_ENV="##PUBLIC_INDEXABLE=false##OBSERVE_INTERVAL_DAYS=0##FIRESTORE_COLLECTION_PREFIX=preview_"
   # A preview never writes to HubSpot or serves the directory's token, whatever the shell has exported.
   unset HUBSPOT_PORTAL_ID HUBSPOT_FORM_GUID OPENAI_APPS_CHALLENGE
   if [ -n "${PUBLIC_APP_URL:-}" ]; then
@@ -108,7 +110,7 @@ PROJECT_NUMBER="$(gcloud projects describe "$PROJECT" --format='value(projectNum
 # Share links are baked into stored reports, so a custom domain must survive a redeploy.
 PUBLIC_URL="${PUBLIC_APP_URL:-https://${SERVICE}-${PROJECT_NUMBER}.${REGION}.run.app}"
 
-echo "Deploying ${SERVICE} to ${PROJECT} (${REGION})${PREVIEW:+ as a preview: memory store, noindex, nothing sent}"
+echo "Deploying ${SERVICE} to ${PROJECT} (${REGION})${PREVIEW:+ as a preview: preview_ collections, noindex, nothing sent}"
 echo "Public URL will be ${PUBLIC_URL}"
 
 gcloud run deploy "$SERVICE" \

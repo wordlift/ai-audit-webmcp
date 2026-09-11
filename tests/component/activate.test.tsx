@@ -151,7 +151,9 @@ describe("the Activate screen", () => {
     expect(rows[3]).toContain("Nothing");
 
     for (const title of ["On your pages", "For agents", "For registries"]) expect(screen.getByRole("article", { name: title })).toBeVisible();
-    expect(screen.getAllByRole("link", { name: /open the document/i })).toHaveLength(3);
+    // Each document opens in place, formatted, and the raw file stays one click away.
+    expect(screen.getAllByRole("button", { name: /read the whole file/i })).toHaveLength(3);
+    expect(screen.getAllByRole("link", { name: /^raw/i })).toHaveLength(3);
     expect(screen.getAllByRole("link", { name: /^activate/i })[0]).toHaveAttribute("href", expect.stringContaining(`report=${REPORT_ID}`));
     expect(screen.getAllByRole("link", { name: /^activate/i })[0]).toHaveAttribute("href", expect.stringContaining("intent=activate"));
 

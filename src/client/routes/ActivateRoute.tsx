@@ -1,9 +1,10 @@
-import { ArrowLeft, ArrowUpRight, Copy, Radar, Rocket } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, BookOpen, Copy, Radar, Rocket } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { Publication, PublishedAction, ScoreReading } from "../../shared/types/activate.js";
 import type { ReportRecord } from "../../shared/types/index.js";
 import { getPublication, getReport, getVisits, type ReportVisits } from "../api/client";
+import { DocDialog, type PublishedDoc } from "../components/DocDialog";
 import { publishUrl } from "../components/FixPanel";
 import { OWN_WORDS } from "../components/OwnIt";
 import { ReportErrorState } from "../components/ReportErrorState";
@@ -15,7 +16,7 @@ import { ReportErrorState } from "../components/ReportErrorState";
  * agent-ready, the score and how it moved, and the numbers since publication, every one equal to
  * the ledger. An empty ledger says what to expect, never a row of zeros.
  */
-const PREVIEW_LINES = 16;
+const PREVIEW_LINES = 8;
 
 function hostOf(url: string): string {
   try {
@@ -166,24 +167,30 @@ function preview(text: string): string {
   return lines.length > PREVIEW_LINES ? `${lines.slice(0, PREVIEW_LINES).join("\n")}\n…` : text;
 }
 
-function DocCard({ kind, title, note, text, href }: { kind: string; title: string; note: string; text: string; href: string }) {
+function DocCard({ doc, onOpen }: { doc: PublishedDoc; onOpen: (doc: PublishedDoc) => void }) {
   const [copied, setCopied] = useState(false);
   async function copy() {
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(doc.text);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1_500);
   }
   return (
-    <article className="doc-card" aria-label={title}>
+    <article className="doc-card" aria-label={doc.title}>
       <header>
-        <span className="doc-kind">{kind}</span>
-        <h3>{title}</h3>
+        <span className="doc-kind">{doc.kind}</span>
+        <h3>{doc.title}</h3>
       </header>
-      <p>{note}</p>
-      <pre>{preview(text)}</pre>
+      <p>{doc.note}</p>
+      {/* The first lines, as a glimpse; the whole document opens in place, formatted, on "Read". */}
+      <button type="button" className="doc-glimpse" onClick={() => onOpen(doc)} aria-label={`Read ${doc.title}`}>
+        <pre>{preview(doc.text)}</pre>
+      </button>
       <footer>
-        <button type="button" onClick={() => void copy()}><Copy size={13} /> {copied ? "Copied" : "Copy"}</button>
-        <a href={href} target="_blank" rel="noreferrer">Open the document <ArrowUpRight size={13} aria-hidden="true" /></a>
+        <button type="button" className="doc-read" onClick={() => onOpen(doc)}><BookOpen size={13} aria-hidden="true" /> Read the whole file</button>
+        <span>
+          <button type="button" onClick={() => void copy()}><Copy size={13} aria-hidden="true" /> {copied ? "Copied" : "Copy"}</button>
+          <a href={doc.href} target="_blank" rel="noreferrer">Raw <ArrowUpRight size={13} aria-hidden="true" /></a>
+        </span>
       </footer>
     </article>
   );
@@ -216,9 +223,37 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
   const activations = activationSummary(visits);
   const hasInterface = publication.actions.some((action) => action.publishedAs === "action");
   const activate = publishUrl(report.id, { intent: "activate" });
+  const [openDoc, setOpenDoc] = useState<PublishedDoc | null>(null);
+  const docs: PublishedDoc[] = [
+    {
+      kind: "Business data",
+      title: "On your pages",
+      note: "JSON-LD for the site's pages: the entities, and the actions agents may take, each with its entry point or its provider.",
+      text: JSON.stringify(publication.jsonLd, null, 2),
+      href: publication.documents.pageJsonLd,
+      format: "json",
+    },
+    {
+      kind: "Agent instructions",
+      title: "For agents",
+      note: "The Terms of Action as a file an agent loads before acting. It states boundaries and cites the report; it never claims an action works.",
+      text: publication.skill,
+      href: publication.documents.skill,
+      format: "markdown",
+    },
+    {
+      kind: "Discovery",
+      title: "For registries",
+      note: `The catalog registries crawl, served from ${publication.catalogPath} on the site.`,
+      text: JSON.stringify(publication.catalog, null, 2),
+      href: publication.documents.catalog,
+      format: "json",
+    },
+  ];
 
   return (
     <div className="activate-page">
+      <DocDialog doc={openDoc} onOpenChange={(open) => { if (!open) setOpenDoc(null); }} />
       <nav className="report-toolbar" aria-label="Activate actions">
         <Link to={`/reports/${report.id}`}><ArrowLeft size={17} /> Back to the report</Link>
         <a className="fix-publish" href={activate} target="_blank" rel="noreferrer">
@@ -325,27 +360,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
         <h2 id="documents-title">The exact artifacts</h2>
         <p className="activate-lead">One model, three documents, each readable now. The plugin puts all three on your site and keeps them current.</p>
         <div className="doc-cards">
-          <DocCard
-            kind="Business data"
-            title="On your pages"
-            note="JSON-LD for the site's pages: the entities, and the actions agents may take, each with its entry point or its provider."
-            text={JSON.stringify(publication.jsonLd, null, 2)}
-            href={publication.documents.pageJsonLd}
-          />
-          <DocCard
-            kind="Agent instructions"
-            title="For agents"
-            note="The Terms of Action as a file an agent loads before acting. It states boundaries and cites the report; it never claims an action works."
-            text={publication.skill}
-            href={publication.documents.skill}
-          />
-          <DocCard
-            kind="Discovery"
-            title="For registries"
-            note={`The catalog registries crawl, served from ${publication.catalogPath} on the site.`}
-            text={JSON.stringify(publication.catalog, null, 2)}
-            href={publication.documents.catalog}
-          />
+          {docs.map((doc) => <DocCard key={doc.title} doc={doc} onOpen={setOpenDoc} />)}
         </div>
         <p className="activate-lead">
           The evidence behind every line is in the report's <Link to={`/reports/${report.id}#full-audit`}>full audit</Link>.

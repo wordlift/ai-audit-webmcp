@@ -8,24 +8,27 @@ export class FirestoreReportStore implements ReportStore {
     private readonly firestore: Firestore,
     private readonly maximumBytes = 900_000,
     private readonly now = () => new Date(),
+    private readonly prefix = "",
   ) {}
 
-  static fromProject(projectId?: string, maximumBytes?: number) {
+  static fromProject(projectId?: string, maximumBytes?: number, prefix = "") {
     // Optional report fields are absent rather than null, so undefined must not be a write error.
     return new FirestoreReportStore(
       new Firestore({ ignoreUndefinedProperties: true, ...(projectId ? { projectId } : {}) }),
       maximumBytes,
+      undefined,
+      prefix,
     );
   }
 
   async put(input: ReportRecord): Promise<ReportRecord> {
     const report = parseStoredReport(input, this.maximumBytes);
-    await this.firestore.collection("reports").doc(report.id).create(report);
+    await this.firestore.collection(`${this.prefix}reports`).doc(report.id).create(report);
     return report;
   }
 
   async get(id: string): Promise<ReportRecord | null> {
-    const snapshot = await this.firestore.collection("reports").doc(id).get();
+    const snapshot = await this.firestore.collection(`${this.prefix}reports`).doc(id).get();
     if (!snapshot.exists) {
       return null;
     }
@@ -43,7 +46,7 @@ export class FirestoreReportStore implements ReportStore {
    */
   async findRecent(requestedUrl: string, since: Date, limit = 10): Promise<ReportRecord[]> {
     const snapshot = await this.firestore
-      .collection("reports")
+      .collection(`${this.prefix}reports`)
       .where("requestedUrl", "==", requestedUrl)
       .where("createdAt", ">=", since.toISOString())
       .orderBy("createdAt", "desc")
@@ -58,7 +61,7 @@ export class FirestoreReportStore implements ReportStore {
   async update(input: ReportRecord): Promise<ReportRecord> {
     const report = parseStoredReport(input, this.maximumBytes);
     if (report.status !== "running") throw new Error("A progress update must stay running");
-    const reference = this.firestore.collection("reports").doc(report.id);
+    const reference = this.firestore.collection(`${this.prefix}reports`).doc(report.id);
     await this.firestore.runTransaction(async (transaction: Transaction) => {
       const snapshot = await transaction.get(reference);
       if (!snapshot.exists || parseStoredReport(snapshot.data(), this.maximumBytes).status !== "running") {
@@ -72,7 +75,7 @@ export class FirestoreReportStore implements ReportStore {
   async finalize(input: ReportRecord): Promise<ReportRecord> {
     const report = parseStoredReport(input, this.maximumBytes);
     if (report.status === "running") throw new Error("Final report must have a terminal status");
-    const reference = this.firestore.collection("reports").doc(report.id);
+    const reference = this.firestore.collection(`${this.prefix}reports`).doc(report.id);
     await this.firestore.runTransaction(async (transaction: Transaction) => {
       const snapshot = await transaction.get(reference);
       if (!snapshot.exists || parseStoredReport(snapshot.data(), this.maximumBytes).status !== "running") {
@@ -89,7 +92,7 @@ export class FirestoreReportStore implements ReportStore {
       throw new Error("Child report must name the immutable parent report");
     }
 
-    const reports = this.firestore.collection("reports");
+    const reports = this.firestore.collection(`${this.prefix}reports`);
     await this.firestore.runTransaction(async (transaction: Transaction) => {
       const parent = await transaction.get(reports.doc(parentReportId));
       if (!parent.exists) {

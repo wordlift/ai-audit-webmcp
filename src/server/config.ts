@@ -6,6 +6,8 @@ const environmentSchema = z
     PORT: z.coerce.number().int().min(1).max(65_535).default(3_000),
     AUDIT_PROVIDER: z.enum(["fixtures", "wordlift"]).default("fixtures"),
     REPORT_STORE: z.enum(["memory", "firestore"]).default("memory"),
+    /** A prefix on every Firestore collection name, so a preview keeps its own reports beside production's, in the same project, sharing nothing. */
+    FIRESTORE_COLLECTION_PREFIX: z.string().regex(/^[a-z0-9_]*$/).max(40).default(""),
     SCRAPE_PROVIDER: z.enum(["fixtures", "native-fetch", "scrapingbee"]).default("fixtures"),
     CLASSIFIER_PROVIDER: z.enum(["fixtures", "google-nlp"]).default("fixtures"),
     PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
@@ -119,6 +121,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     PORT: environment.PORT,
     AUDIT_PROVIDER: environment.AUDIT_PROVIDER,
     REPORT_STORE: environment.REPORT_STORE,
+    FIRESTORE_COLLECTION_PREFIX: environment.FIRESTORE_COLLECTION_PREFIX,
     SCRAPE_PROVIDER: environment.SCRAPE_PROVIDER,
     CLASSIFIER_PROVIDER: environment.CLASSIFIER_PROVIDER,
     PUBLIC_APP_URL: environment.PUBLIC_APP_URL,

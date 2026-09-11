@@ -967,6 +967,48 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .doc-card footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 0.88rem; }
 .doc-card footer button { display: inline-flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--line); border-radius: 6px; padding: 4px 9px; font: inherit; font-size: 0.85rem; cursor: pointer; color: var(--ink); }
 .doc-card footer a { display: inline-flex; align-items: center; gap: 4px; color: var(--brand); font-weight: 600; text-decoration: none; }
+.doc-card footer > span { display: inline-flex; align-items: center; gap: 10px; }
+.doc-card footer .doc-read { border-color: var(--brand); color: var(--brand); font-weight: 600; }
+.doc-card footer .doc-read:hover { background: color-mix(in srgb, var(--brand) 8%, white); }
+/* The glimpse is a button: the first lines open the whole document, formatted, in place. */
+.doc-glimpse { display: block; width: 100%; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; font: inherit; }
+.doc-glimpse pre { max-height: 150px; }
+.doc-glimpse:hover pre { outline: 2px solid color-mix(in srgb, var(--brand) 40%, white); }
+
+/* ---------- One published document, read in full ---------- */
+.doc-dialog { width: min(940px, 94vw); max-height: 88vh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 14px; padding: 22px 24px; }
+.doc-dialog-head { display: grid; gap: 4px; padding-right: 36px; }
+.doc-dialog-head h2 { margin: 0; font-size: 1.3rem; }
+.doc-dialog-head p { margin: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.45; max-width: 70ch; }
+.doc-dialog-head small { color: var(--faint); font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.04em; }
+.doc-dialog-body { overflow: auto; border: 1px solid var(--line-subtle); border-radius: 12px; background: var(--surface); }
+.doc-dialog-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 0.9rem; }
+.doc-dialog-foot button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: none; font: inherit; font-weight: 600; cursor: pointer; color: var(--ink); }
+.doc-dialog-foot button:hover { background: var(--wl-neutral-100); }
+.doc-dialog-foot a { display: inline-flex; align-items: center; gap: 4px; color: var(--brand); font-weight: 600; text-decoration: none; }
+
+/* JSON as tokens: the eye finds a key, a value and a structure without reading. */
+.doc-json { margin: 0; padding: 18px 20px; font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); tab-size: 2; }
+.doc-json .tok-key { color: #1d4ed8; }
+.doc-json .tok-string { color: #047857; }
+.doc-json .tok-number { color: #b45309; }
+.doc-json .tok-literal { color: #7c3aed; }
+.doc-json .tok-punct { color: var(--faint); }
+
+/* The Terms of Action as the page it is. */
+.doc-markdown { padding: 22px 26px; max-width: 78ch; line-height: 1.55; }
+.doc-markdown h2 { margin: 0 0 12px; font-size: 1.35rem; }
+.doc-markdown h3 { margin: 22px 0 8px; font-size: 1.05rem; padding-bottom: 4px; border-bottom: 1px solid var(--line-subtle); }
+.doc-markdown h4 { margin: 16px 0 6px; font-size: 0.95rem; }
+.doc-markdown p { margin: 0 0 10px; }
+.doc-markdown ul { margin: 0 0 12px; padding-left: 20px; }
+.doc-markdown li { margin: 3px 0; }
+.doc-markdown code { padding: 1px 5px; border-radius: 4px; background: var(--wl-neutral-100); font-family: var(--font-mono); font-size: 0.8em; }
+.doc-markdown a { color: var(--brand); }
+@media (max-width: 640px) {
+  .doc-dialog { width: 100vw; max-height: 100vh; border-radius: 0; padding: 16px; }
+  .doc-dialog-foot { flex-wrap: wrap; }
+}
 .observe { display: grid; gap: 14px; padding: clamp(22px, 4vw, 36px); background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 18px; }
 .observe h2 { margin: 0; font-size: 1.35rem; }
 .observe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }

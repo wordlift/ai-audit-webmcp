@@ -1,8 +1,10 @@
 import {
   AUDIT_WEBSITE_TOOL,
   EXPLAIN_CAPABILITY_TOOL,
+  EXPLAIN_ENTITY_TOOL,
   EXPLAIN_FOUNDATION_AUDIT_TOOL,
   GET_AUDIT_REPORT_TOOL,
+  INSPECT_BUSINESS_MODEL_TOOL,
   INSPECT_SERVICE_MAP_TOOL,
   REFINE_SERVICE_MAP_TOOL,
   withClaimToken,
@@ -32,6 +34,14 @@ export const REMOTE_TOOLS: readonly RemoteTool[] = [
   {
     definition: withRequiredReportId(GET_AUDIT_REPORT_TOOL),
     call: (service, args) => service.getAuditReport(args),
+  },
+  {
+    definition: withRequiredReportId(INSPECT_BUSINESS_MODEL_TOOL),
+    call: (service, args) => service.inspectBusinessModel(args),
+  },
+  {
+    definition: withRequiredReportId(EXPLAIN_ENTITY_TOOL),
+    call: (service, args) => service.explainEntity(args),
   },
   {
     definition: withRequiredReportId(INSPECT_SERVICE_MAP_TOOL),

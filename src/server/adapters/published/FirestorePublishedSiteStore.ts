@@ -7,14 +7,14 @@ import type { PublishedSite, PublishedSiteStore } from "./PublishedSiteStore.js"
  * every audit that sees it, so only a site nobody audits for a month falls out.
  */
 export class FirestorePublishedSiteStore implements PublishedSiteStore {
-  constructor(private readonly firestore: Firestore, private readonly now = () => new Date()) {}
+  constructor(private readonly firestore: Firestore, private readonly now = () => new Date(), private readonly prefix = "") {}
 
-  static fromProject(projectId?: string) {
-    return new FirestorePublishedSiteStore(new Firestore({ ignoreUndefinedProperties: true, ...(projectId ? { projectId } : {}) }));
+  static fromProject(projectId?: string, prefix = "") {
+    return new FirestorePublishedSiteStore(new Firestore({ ignoreUndefinedProperties: true, ...(projectId ? { projectId } : {}) }), undefined, prefix);
   }
 
   private get collection() {
-    return this.firestore.collection("publishedSites");
+    return this.firestore.collection(`${this.prefix}publishedSites`);
   }
 
   async put(site: PublishedSite): Promise<void> {

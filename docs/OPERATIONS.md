@@ -405,8 +405,10 @@ PREVIEW=1 SCRAPE_PROVIDER=scrapingbee MARKUP_PROVIDER=gemini scripts/deploy-clou
 ```
 
 `PREVIEW=1` deploys to `ai-audit-webmcp-preview` on its own `run.app` URL (`SERVICE` overrides
-the name) and refuses the production shape: reports live in memory on a single instance and are
-gone on restart, so nothing is written to the production Firestore; no HubSpot form and no
+the name) and refuses the production shape: reports, visits, claims, leads and published sites
+are written to Firestore collections of their own, `preview_` in front of every name
+(`FIRESTORE_COLLECTION_PREFIX`), so a report someone is reviewing with an agent survives the next
+deploy and nothing touches the production collections; no HubSpot form and no
 directory token are passed even when the shell has them exported, so no contact is created and no
 email is sent; `OBSERVE_INTERVAL_DAYS=0`, so no site is re-read on anyone's behalf;
 `PUBLIC_INDEXABLE=false`, so robots are told to stay out and every response carries noindex; and
@@ -417,8 +419,20 @@ domain mapping and its data are untouched, and the preview is deleted with
 What a preview does share is the WordLift API key, the ScrapingBee key and, with
 `MARKUP_PROVIDER=gemini`, the Gemini key: each audit it runs costs what a production audit costs,
 and `/api/health` on the preview shows the Gemini running total. Rate limits and the daily budget
-apply per instance as on production. A deep scan on a preview records the address in memory and
-sends nothing.
+apply per instance as on production. A deep scan on a preview records the address in
+`preview_deepScanLeads` and sends nothing.
+
+The `preview_` collections need the same TTL policy as production's, once per project, or they
+outlive the preview:
+
+```bash
+for c in preview_reports preview_deepScanLeads preview_publishedSites; do
+  gcloud firestore fields ttls update expiresAt --collection-group="$c" --enable-ttl --project "$PROJECT"
+done
+```
+
+Deleting the preview service leaves its collections behind; delete them from the console, or let
+the TTL drain them.
 
 The service runs one container with the SPA and the API. The request timeout is 300 seconds because
 a live audit takes 30–60 seconds and is handled synchronously; a client that disconnects recovers

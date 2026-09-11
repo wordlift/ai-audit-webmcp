@@ -8,20 +8,20 @@ import { parseActivationKey, type ActivationCount, type DayVisits, type VisitCou
  * collection uses; the policy itself is created once, see OPERATIONS.md.
  */
 export class FirestoreVisitStore implements VisitStore {
-  constructor(private readonly firestore: Firestore, private readonly now = () => new Date()) {}
+  constructor(private readonly firestore: Firestore, private readonly now = () => new Date(), private readonly prefix = "") {}
 
-  static fromProject(projectId?: string) {
-    return new FirestoreVisitStore(new Firestore({ ignoreUndefinedProperties: true, ...(projectId ? { projectId } : {}) }));
+  static fromProject(projectId?: string, prefix = "") {
+    return new FirestoreVisitStore(new Firestore({ ignoreUndefinedProperties: true, ...(projectId ? { projectId } : {}) }), undefined, prefix);
   }
 
   async addVisits(reportId: string, day: string, counts: VisitCounts, expiresAt: string): Promise<void> {
     const update: Record<string, unknown> = { reportId, day, expiresAt };
     for (const [cls, count] of Object.entries(counts)) update[`counts.${cls}`] = FieldValue.increment(count);
-    await this.firestore.collection("visits").doc(`${reportId}_${day}`).set(update, { merge: true });
+    await this.firestore.collection(`${this.prefix}visits`).doc(`${reportId}_${day}`).set(update, { merge: true });
   }
 
   async visits(reportId: string): Promise<DayVisits[]> {
-    const snapshot = await this.firestore.collection("visits").where("reportId", "==", reportId).get();
+    const snapshot = await this.firestore.collection(`${this.prefix}visits`).where("reportId", "==", reportId).get();
     const now = this.now();
     return snapshot.docs
       .map((document) => document.data() as DayVisits)
@@ -33,11 +33,11 @@ export class FirestoreVisitStore implements VisitStore {
   async addActivations(site: string, day: string, counts: Record<string, number>, expiresAt: string): Promise<void> {
     const update: Record<string, unknown> = { site, day, expiresAt };
     for (const [key, count] of Object.entries(counts)) update[`counts.${key}`] = FieldValue.increment(count);
-    await this.firestore.collection("activations").doc(`${site}_${day}`).set(update, { merge: true });
+    await this.firestore.collection(`${this.prefix}activations`).doc(`${site}_${day}`).set(update, { merge: true });
   }
 
   async activations(site: string): Promise<ActivationCount[]> {
-    const snapshot = await this.firestore.collection("activations").where("site", "==", site).get();
+    const snapshot = await this.firestore.collection(`${this.prefix}activations`).where("site", "==", site).get();
     const now = this.now();
     return snapshot.docs
       .map((document) => document.data() as { site: string; day: string; counts?: Record<string, number>; expiresAt: string })

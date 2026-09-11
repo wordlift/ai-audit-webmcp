@@ -9,14 +9,15 @@ export class FirestoreLeadStore implements LeadStore {
   constructor(
     private readonly firestore: Firestore,
     private readonly now = () => new Date(),
+    private readonly prefix = "",
   ) {}
 
-  static fromProject(projectId?: string) {
-    return new FirestoreLeadStore(new Firestore({ ignoreUndefinedProperties: true, ...(projectId ? { projectId } : {}) }));
+  static fromProject(projectId?: string, prefix = "") {
+    return new FirestoreLeadStore(new Firestore({ ignoreUndefinedProperties: true, ...(projectId ? { projectId } : {}) }), undefined, prefix);
   }
 
   private get collection() {
-    return this.firestore.collection("deepScanLeads");
+    return this.firestore.collection(`${this.prefix}deepScanLeads`);
   }
 
   async record(input: DeepScanLead): Promise<DeepScanLead> {

@@ -21,8 +21,10 @@ describe("published MCP tool definitions", () => {
     const reads = published.filter((tool) => tool.annotations.readOnlyHint);
     expect(reads.map((tool) => tool.name).sort()).toEqual([
       "explain-capability",
+      "explain-entity",
       "explain-foundation-audit",
       "get-audit-report",
+      "inspect-business-model",
       "inspect-terms-of-action",
     ]);
     // Reads answer from the stored report; only an audit goes out to a stranger's website.

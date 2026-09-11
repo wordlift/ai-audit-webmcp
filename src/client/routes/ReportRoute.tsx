@@ -22,6 +22,8 @@ import { SiteToolsBadge } from "../components/SiteToolsBadge";
 import { AlpinaAvailabilityTool } from "../webmcp/AlpinaAvailabilityTool";
 import { ExplainCapabilityTool } from "../webmcp/ExplainCapabilityTool";
 import { ExplainFoundationAuditTool } from "../webmcp/ExplainFoundationAuditTool";
+import { ExplainEntityTool } from "../webmcp/ExplainEntityTool";
+import { InspectBusinessModelTool } from "../webmcp/InspectBusinessModelTool";
 import { InspectServiceMapTool } from "../webmcp/InspectServiceMapTool";
 import { RefineServiceMapTool } from "../webmcp/RefineServiceMapTool";
 
@@ -107,6 +109,8 @@ export function ReportRoute() {
   const tools = (
     <>
       <InspectServiceMapTool reportId={reportId} report={report} />
+      <InspectBusinessModelTool reportId={reportId} report={report} />
+      <ExplainEntityTool reportId={reportId} report={report} />
       <ExplainCapabilityTool reportId={reportId} report={report} />
       <ExplainFoundationAuditTool reportId={reportId} report={report} />
       <RefineServiceMapTool reportId={reportId} report={report} />

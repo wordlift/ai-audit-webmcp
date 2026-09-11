@@ -314,6 +314,50 @@ export const CHECK_ALPINA_AVAILABILITY_TOOL = {
   },
 } as const satisfies ToolDefinition;
 
+export const INSPECT_BUSINESS_MODEL_TOOL = {
+  name: "inspect-business-model",
+  title: "Read the business model",
+  description:
+    "Read the business as the audit modelled it from the pages it read: the business, what it offers, where, who, each entity marked declared (from the site's own markup), inferred (read from its text, a candidate, never evidence) or human-confirmed, with the actions each entity answers for and whether an agent can perform them today. Call this to answer what a company sells, which entities matter, which are only inferred, and what an agent can do here. Read-only; built from a handful of pages, not the whole business.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      reportId: { type: "string", description: "Optional identifier of the report currently open in the page." },
+    },
+    additionalProperties: false,
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+    untrustedContentHint: true,
+  },
+} as const satisfies ToolDefinition;
+
+export const EXPLAIN_ENTITY_TOOL = {
+  name: "explain-entity",
+  title: "Explain one entity",
+  description:
+    "One entity of the business model in full: its type, whether it was declared in the site's markup or inferred from its text, the pages it was seen on, its offers and links, the actions it answers for with their readiness, and the evidence behind each. Look it up by entityId from inspect-business-model, or by the name a person would use. Read-only.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      reportId: { type: "string", description: "Optional identifier of the report currently open in the page." },
+      entityId: { type: "string", description: "The entity's id, as inspect-business-model lists it." },
+      name: { type: "string", description: "The entity's name, or one of its other names, when the id is not to hand." },
+    },
+    additionalProperties: false,
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+    untrustedContentHint: true,
+  },
+} as const satisfies ToolDefinition;
+
 /**
  * The Terms of Action tools were renamed from `*-service-map` on 2026-09-04. A tool name is an
  * address an agent may have written down — in a saved session, a shared procedure, a link — so the

@@ -66,8 +66,10 @@ describe("remote MCP server", () => {
       expect(names).toEqual([
         "audit-website",
         "explain-capability",
+        "explain-entity",
         "explain-foundation-audit",
         "get-audit-report",
+        "inspect-business-model",
         "inspect-terms-of-action",
         "refine-terms-of-action",
       ]);
@@ -101,6 +103,36 @@ describe("remote MCP server", () => {
         arguments: { reportId: summary.reportId },
       });
       expect(structured<{ reportId: string }>(reread).reportId).toBe(summary.reportId);
+    } finally {
+      await close();
+    }
+  });
+
+  it("reads the business model and one entity in full, each line keeping its provenance", async () => {
+    const { client, close } = await connectedClient();
+    try {
+      const audited = await client.callTool({ name: "audit-website", arguments: { url: TRAVEL } });
+      const { reportId } = structured<{ reportId: string }>(audited);
+
+      const model = await client.callTool({ name: "inspect-business-model", arguments: { reportId } });
+      const business = structured<{ counts: { entities: number; declared: number; inferred: number }; entities: Array<{ id: string; name: string; provenance: string; role: string }>; boundaries: string }>(model);
+      expect(business.counts.entities).toBeGreaterThan(0);
+      expect(business.counts.declared + business.counts.inferred).toBeLessThanOrEqual(business.counts.entities);
+      expect(business.entities.every((entity) => ["declared", "inferred", "human-confirmed"].includes(entity.provenance))).toBe(true);
+      expect(business.boundaries).toMatch(/never move readiness/);
+      const text = (model.content as Array<{ text: string }>)[0].text;
+      expect(text).toMatch(/Business model of alpina\.travel/);
+      expect(text).toMatch(/Actions an agent can perform today/);
+
+      const first = business.entities[0]!;
+      const byId = await client.callTool({ name: "explain-entity", arguments: { reportId, entityId: first.id } });
+      expect(structured<{ id: string; pages: unknown[]; evidence: unknown[] }>(byId).id).toBe(first.id);
+      const byName = await client.callTool({ name: "explain-entity", arguments: { reportId, name: first.name.toLowerCase() } });
+      expect(structured<{ id: string }>(byName).id).toBe(first.id);
+
+      const unknown = await client.callTool({ name: "explain-entity", arguments: { reportId, name: "Nobody Ever Heard Of" } });
+      expect(unknown.isError).toBe(true);
+      expect((unknown.content as Array<{ text: string }>)[0].text).toMatch(/Known entities/);
     } finally {
       await close();
     }

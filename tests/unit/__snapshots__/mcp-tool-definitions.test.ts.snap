@@ -88,6 +88,64 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
       "readOnlyHint": true,
       "untrustedContentHint": true,
     },
+    "description": "Read the business as the audit modelled it from the pages it read: the business, what it offers, where, who, each entity marked declared (from the site's own markup), inferred (read from its text, a candidate, never evidence) or human-confirmed, with the actions each entity answers for and whether an agent can perform them today. Call this to answer what a company sells, which entities matter, which are only inferred, and what an agent can do here. Read-only; built from a handful of pages, not the whole business.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "reportId": {
+          "description": "Identifier of the report to act on, as returned by audit-website.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "reportId",
+      ],
+      "type": "object",
+    },
+    "name": "inspect-business-model",
+    "title": "Read the business model",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "untrustedContentHint": true,
+    },
+    "description": "One entity of the business model in full: its type, whether it was declared in the site's markup or inferred from its text, the pages it was seen on, its offers and links, the actions it answers for with their readiness, and the evidence behind each. Look it up by entityId from inspect-business-model, or by the name a person would use. Read-only.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "entityId": {
+          "description": "The entity's id, as inspect-business-model lists it.",
+          "type": "string",
+        },
+        "name": {
+          "description": "The entity's name, or one of its other names, when the id is not to hand.",
+          "type": "string",
+        },
+        "reportId": {
+          "description": "Identifier of the report to act on, as returned by audit-website.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "reportId",
+      ],
+      "type": "object",
+    },
+    "name": "explain-entity",
+    "title": "Explain one entity",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "untrustedContentHint": true,
+    },
     "description": "Read the machine-generated Terms of Action for the open audit report. Call this FIRST when a user wants to review, correct, or human-refine the Terms — before interviewing the business owner and before refine-terms-of-action. Returns the inferred operating role, every entity with its id and machine priority, the business terminology, and every action with its actionId, evidence, current readiness, and boundary.",
     "inputSchema": {
       "additionalProperties": false,
