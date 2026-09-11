@@ -78,10 +78,12 @@ export function modelEntity(entity: DomainEntity, report: ReportRecord): Modelle
     .filter((capability) => capability.expected && capability.appliesTo.some((subject) => subject.id === entity.id))
     .sort((left, right) => right.importance - left.importance)
     .map(modelledAction);
-  const terms = (report.contextGraph?.lexicalEntries ?? [])
-    .filter((term) => term.kind !== "entity-name" && term.entityIds.includes(entity.id) && term.label.toLowerCase() !== entity.name.toLowerCase())
-    .slice(0, MAX_TERMS_PER_ENTITY)
-    .map((term) => term.label);
+  // A word the site uses for this entity, not a headline the page uses for everything on it.
+  const terms = unique(
+    (report.contextGraph?.lexicalEntries ?? [])
+      .filter((term) => term.kind !== "entity-name" && term.entityIds.includes(entity.id) && term.entityIds.length <= 2 && term.label.length <= 40 && term.label.toLowerCase() !== entity.name.toLowerCase())
+      .map((term) => term.label),
+  ).slice(0, MAX_TERMS_PER_ENTITY);
   return {
     id: entity.id,
     name: entity.name,
@@ -134,10 +136,12 @@ export function businessModel(report: ReportRecord, reportUrl: string): Business
     business,
     entities: ordered.slice(0, MAX_ENTITIES),
     capabilities,
-    terminology: (report.contextGraph?.lexicalEntries ?? [])
-      .filter((entry) => entry.kind !== "entity-name")
-      .slice(0, 20)
-      .map((entry) => ({ term: entry.label, ...(entry.meaning ? { meaning: entry.meaning } : {}), entityIds: entry.entityIds, source: entry.provenance ?? "machine-inferred" })),
+    // The site's vocabulary: its categories and the short topics its headings use, once each; never "Other", never a headline.
+    terminology: dedupeTerms(
+      (report.contextGraph?.lexicalEntries ?? [])
+        .filter((entry) => entry.kind !== "entity-name" && entry.label.length <= 40 && entry.label.toLowerCase() !== "other")
+        .map((entry) => ({ term: entry.label, ...(entry.meaning ? { meaning: entry.meaning } : {}), entityIds: entry.entityIds, source: (entry.provenance ?? "machine-inferred") as "human-provided" | "machine-inferred" })),
+    ).slice(0, 20),
     boundaries: MODEL_BOUNDARIES,
   };
 }
@@ -231,6 +235,20 @@ export function entityDetailText(detail: EntityDetailResult): string {
   if (detail.evidence.length > 0) lines.push("", "Evidence:", ...detail.evidence.map((item) => `- ${item.actionId}: ${item.claim} (${item.verification}, ${item.sourceUrl})`));
   lines.push("", detail.boundaries, `Full report: ${detail.reportUrl}`);
   return lines.join("\n");
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
+function dedupeTerms<T extends { term: string }>(terms: T[]): T[] {
+  const seen = new Set<string>();
+  return terms.filter((entry) => {
+    const key = entry.term.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function hostOf(url: string): string {
