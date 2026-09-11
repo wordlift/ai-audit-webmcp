@@ -626,8 +626,10 @@ Still to do from the brief, in the order the brief gives:
 - P1 §21 graph context on the capability card ("Property → offered by Alpina → …") once
   relationships exist.
 - P2 §22 model health in Prove: entity changes and unresolved inferred entities between reads.
-- §26 the agent test as a browser spec: an agent through WebMCP answers the four questions with
-  provenance intact. The tools exist; the spec is next.
+- §26 the agent test is a browser spec now (`tests/e2e/agent-test.spec.ts`): through the remote
+  tools an agent answers what the business offers, which entities matter, which are only inferred
+  and what it can do today, every entity with its provenance, agent-ready only where invoked, and a
+  name the model does not hold refused with the names it does.
 
 Next (P1): Gemini as a recall lever in parallel, page-confirmed, if the lists stay short; usage on the action card
 from the ledger; the enterprise test as a browser spec proving each of the eight questions is two
