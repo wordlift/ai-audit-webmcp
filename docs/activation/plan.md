@@ -634,6 +634,15 @@ Still to do from the brief, in the order the brief gives:
   the head with Talk to us beside it, the three outcomes and their files as one list read in place
   (no dark glimpses), Prove one sentence until there is proof, the engineers' fold, the door again
   at the close, no kicker (the step bar says where you are). Two doors at the top became one.
+- "Test it yourself", 2026-09-11, at Andrea's "go": on a capability the report names something a
+  server can reach for, the detail dialog offers the audit's own call with the person's inputs.
+  `GET/POST /api/reports/:id/capabilities/:actionId/test`: what can be called, live from the
+  site's MCP server (the deprecated SSE transport never), the same gate the audit applies (read-only
+  by annotation, no transactional name), a form from the tool's own schema, one call per click, the
+  answer as it came, and evidence only on "Save as evidence", as a new version of the report,
+  readiness moving the way the evidence says. On alpina.travel the availability check runs through
+  the approved sidecar from the same panel. In-page WebMCP tools stay declared: no server can reach
+  them.
 - Load-sensitive tests under the full parallel run, each passing alone: the alpina sidecar
   upstream failure, "audit then read", the observe tick, the rate-limit pool, and the 404 error
   paths (a 5 s budget). One fails per full run, a different one each time; a serial run of the

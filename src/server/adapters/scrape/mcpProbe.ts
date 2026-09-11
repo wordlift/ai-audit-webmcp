@@ -75,6 +75,89 @@ export async function probeMcpEndpoint(
   }
 }
 
+/** A session on a site's MCP server over the current transport, with the tools it lists: the two steps a single call needs. */
+export interface McpSession {
+  initialized: boolean;
+  session: string | null;
+  serverName: string;
+  tools: McpToolDescriptor[];
+  error?: string;
+}
+
+/**
+ * Opens a session and lists the tools, nothing more: what a person's own call on one tool needs
+ * before it is made. The deprecated SSE transport is not tried; a server that only speaks it is
+ * reported as such.
+ */
+export async function openMcpSession(target: URL, controller: AbortController, options: UrlPolicyOptions = {}): Promise<McpSession> {
+  try {
+    await assertPublicDestination(target, options);
+  } catch (error) {
+    return { initialized: false, session: null, serverName: "", tools: [], error: describe(error) };
+  }
+  const opened = await postRpc(target, controller, options, null, {
+    id: INITIALIZE_ID,
+    method: "initialize",
+    params: { protocolVersion: PROTOCOL_VERSION, capabilities: {}, clientInfo: CLIENT_INFO },
+  });
+  if (opened.status < 200 || opened.status >= 300) {
+    return { initialized: false, session: null, serverName: "", tools: [], error: `the endpoint refused the initialize request with HTTP ${opened.status}` };
+  }
+  const handshake = firstJsonRpc(opened.body);
+  if (!handshake?.result) {
+    return { initialized: false, session: null, serverName: "", tools: [], error: text(handshake?.error?.message, 200) || "the endpoint did not open a session" };
+  }
+  const session = opened.sessionId;
+  await postRpc(target, controller, options, session, { method: "notifications/initialized", params: {} });
+  const listed = await postRpc(target, controller, options, session, { id: TOOLS_LIST_ID, method: "tools/list", params: {} });
+  const info = handshake.result.serverInfo;
+  return {
+    initialized: true,
+    session,
+    serverName: info && typeof info === "object" ? text((info as Record<string, unknown>).name, 80) : "",
+    tools: toolDescriptors(firstJsonRpc(listed.body)?.result?.tools),
+  };
+}
+
+export interface McpCallOutcome {
+  ok: boolean;
+  /** The result as the server sent it, when it answered. */
+  result?: unknown;
+  error?: string;
+}
+
+/** One call on one tool, with the arguments a person supplied. The reply is reported as it came, error or answer. */
+export async function callMcpTool(
+  target: URL,
+  controller: AbortController,
+  options: UrlPolicyOptions,
+  session: string | null,
+  name: string,
+  args: Record<string, unknown>,
+): Promise<McpCallOutcome> {
+  const reply = await postRpc(target, controller, options, session, { id: TOOLS_LIST_ID + 1, method: "tools/call", params: { name, arguments: args } });
+  const message = firstJsonRpc(reply.body);
+  if (!message) return { ok: false, error: reply.status >= 200 && reply.status < 300 ? "the server answered without a JSON-RPC message" : `the server answered HTTP ${reply.status}` };
+  if (message.error) return { ok: false, error: text(message.error.message, 300) || "the call was rejected" };
+  const outcome = message.result as { isError?: unknown; content?: unknown } | undefined;
+  const reported = outcome ? resultError(outcome) : undefined;
+  // A tool that flags its own error says why in its content: that is the reason a person reads.
+  const said = outcome?.isError === true ? contentText(outcome.content) : "";
+  if (!outcome || outcome.isError === true || reported) return { ok: false, result: outcome, error: reported || said || "the call returned an error" };
+  return { ok: true, result: outcome };
+}
+
+function contentText(content: unknown): string {
+  if (!Array.isArray(content)) return "";
+  return content
+    .map((part) => (part && typeof part === "object" && typeof (part as { text?: unknown }).text === "string" ? (part as { text: string }).text : ""))
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 300);
+}
+
 /** The current transport: JSON-RPC over POST, with replies inline as JSON or as an SSE body. */
 async function probeStreamableHttp(
   target: URL,
@@ -444,6 +527,7 @@ function toolDescriptors(tools: unknown): McpToolDescriptor[] {
     .filter((tool): tool is Record<string, unknown> => Boolean(tool) && typeof tool === "object")
     .map((tool) => ({
       name: text(tool.name, 64),
+      ...(typeof tool.description === "string" && tool.description.trim() ? { description: text(tool.description, 300) } : {}),
       inputSchema: tool.inputSchema as McpToolDescriptor["inputSchema"],
       annotations: tool.annotations as McpToolDescriptor["annotations"],
     }))

@@ -12,6 +12,7 @@ const UNSAFE_NAME =
 
 export interface McpToolDescriptor {
   name: string;
+  description?: string;
   inputSchema?: JsonSchema;
   annotations?: { readOnlyHint?: unknown; destructiveHint?: unknown };
 }

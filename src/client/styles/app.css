@@ -1034,6 +1034,30 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .publish-actions a { display: inline-flex; align-items: center; gap: 3px; color: var(--muted); font-size: 0.9rem; text-decoration: none; }
 .publish-actions a:hover { color: var(--brand); }
 .observe-nothing { margin: 0; color: var(--muted); max-width: 70ch; }
+
+/* Test it yourself: the audit's call, with the person's inputs, inside the capability's own dialog. */
+.capability-test { display: grid; gap: 10px; margin: 18px 0 6px; padding: 16px 18px; border: 1px solid color-mix(in srgb, var(--brand) 30%, white); border-radius: 14px; background: color-mix(in srgb, var(--brand) 4%, white); }
+.capability-test .section-kicker { margin: 0; }
+.capability-test-lead, .capability-test-none, .capability-test-note { margin: 0; color: var(--muted); font-size: 0.92rem; }
+.capability-test-pick { display: flex; flex-wrap: wrap; gap: 8px; }
+.capability-test-pick label { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; cursor: pointer; font-size: 0.9rem; }
+.capability-test-pick .is-unsafe { opacity: 0.55; cursor: not-allowed; }
+.capability-test-form { display: grid; gap: 10px; }
+.capability-test-target { margin: 0; font-size: 0.88rem; color: var(--muted); }
+.capability-test-target code { padding: 1px 6px; border-radius: 4px; background: var(--wl-neutral-100); color: var(--ink); font-family: var(--font-mono); font-size: 0.8em; }
+.capability-test-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.capability-test-fields label { display: grid; gap: 4px; font-size: 0.86rem; color: var(--muted); }
+.capability-test-fields input, .capability-test-fields select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; color: var(--ink); background: var(--surface); }
+.capability-test-fields input[type="checkbox"] { justify-self: start; width: 18px; height: 18px; }
+.capability-test-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.capability-test-guard { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.84rem; }
+.capability-test-result { display: grid; gap: 8px; padding: 12px 14px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line-subtle); }
+.capability-test-result.is-answered { border-color: color-mix(in srgb, var(--state-agent-ready) 50%, white); }
+.capability-test-result.is-failed { border-color: color-mix(in srgb, var(--state-missing) 45%, white); }
+.capability-test-verdict { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 600; }
+.capability-test-answer, .capability-test-request pre { margin: 0; padding: 10px 12px; max-height: 220px; overflow: auto; border-radius: 8px; background: var(--wl-neutral-100); font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.capability-test-request > summary { cursor: pointer; color: var(--muted); font-size: 0.86rem; }
+.capability-test-save, .capability-test-saved { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0; color: var(--muted); font-size: 0.9rem; }
 .activate-head h1 { margin: 0; font-size: clamp(1.6rem, 3.4vw, 2.3rem); overflow-wrap: anywhere; }
 .activate-score { margin: 0; color: var(--muted); }
 .activate-score b { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }

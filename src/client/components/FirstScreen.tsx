@@ -347,8 +347,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
       {/* The proof behind the words, one click away: what the audit's agent actually did. */}
       <AgentDiary report={report} />
 
-      <ActionDetailDialog
-        reportId={report.id}
+      <ActionDetailDialog reportId={report.id} report={report}
         capability={selected}
         onOpenChange={(open) => {
           if (!open) setSelected(null);

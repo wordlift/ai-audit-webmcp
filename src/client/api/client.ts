@@ -196,6 +196,43 @@ export interface AlpinaAvailabilityResponse {
   reportUpdateError?: string;
 }
 
+/** What a person can call on one capability, live from the site's own server, each with its input schema and whether it is safe to call. */
+export interface TestableInterface {
+  id: string;
+  name: string;
+  protocol: "mcp" | "sidecar";
+  endpoint: string;
+  safe: boolean;
+  note?: string;
+  description?: string;
+  inputSchema?: Record<string, unknown>;
+}
+
+export interface CapabilityTestOutcome {
+  outcome: "answered" | "failed";
+  latencyMs: number;
+  answer: string;
+  error?: string;
+  request: { endpoint: string; tool: string; arguments: Record<string, unknown> };
+  testedAt: string;
+  updatedReportId?: string;
+  updatedReportUrl?: string;
+}
+
+export async function prepareCapabilityTest(reportId: string, actionId: string): Promise<{ interfaces: TestableInterface[] }> {
+  const { body } = await requestJson(`/api/reports/${reportId}/capabilities/${encodeURIComponent(actionId)}/test`);
+  return body as { interfaces: TestableInterface[] };
+}
+
+export async function runCapabilityTest(reportId: string, actionId: string, input: { interfaceId: string; arguments: Record<string, unknown>; save?: boolean }): Promise<CapabilityTestOutcome> {
+  const { body } = await requestJson(`/api/reports/${reportId}/capabilities/${encodeURIComponent(actionId)}/test`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return body as CapabilityTestOutcome;
+}
+
 /** Read-only availability lookup through the approved server-side sidecar. */
 export async function checkAlpinaAvailability(input: AlpinaAvailabilityInput): Promise<AlpinaAvailabilityResponse> {
   const { body } = await requestJson("/api/sidecars/alpina/availability", {

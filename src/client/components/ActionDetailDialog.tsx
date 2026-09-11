@@ -1,7 +1,8 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { ArrowUpRight, Bot, ExternalLink, UserRound, Wrench, X } from "lucide-react";
 import { useRef } from "react";
-import type { CapabilityResult } from "../../shared/types/index.js";
+import type { CapabilityResult, ReportRecord } from "../../shared/types/index.js";
+import { CapabilityTest, testable } from "./CapabilityTest";
 import { ContractViewer } from "./ContractViewer";
 import { publishUrl, talkToUsUrl } from "./FixPanel";
 import { OWN_WORDS } from "./OwnIt";
@@ -75,7 +76,7 @@ export function verifiedAgo(capability: CapabilityResult, now = Date.now()): str
   return `Verified ${days} ${days === 1 ? "day" : "days"} ago`;
 }
 
-export function ActionDetailDialog({ reportId, capability, onOpenChange }: { reportId: string; capability: CapabilityResult | null; onOpenChange: (open: boolean) => void }) {
+export function ActionDetailDialog({ reportId, report, capability, onOpenChange }: { reportId: string; report?: ReportRecord; capability: CapabilityResult | null; onOpenChange: (open: boolean) => void }) {
   const evidenceRef = useRef<HTMLElement | null>(null);
   const remedy = capability ? remedyFor(capability, reportId) : null;
   const verified = capability ? verifiedAgo(capability) : null;
@@ -117,6 +118,9 @@ export function ActionDetailDialog({ reportId, capability, onOpenChange }: { rep
                 )
               )}
             </section>
+
+            {/* Test it yourself: the audit's own call, with the person's inputs, when the site names something a server can reach. */}
+            {report && testable(report, capability) && <CapabilityTest key={capability.actionId} report={report} capability={capability} />}
 
             <h3 className="dialog-section-title">Technical detail</h3>
             <p className="dialog-description">{capability.description}</p>

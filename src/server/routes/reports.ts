@@ -8,6 +8,7 @@ import type { AuditOrchestrator } from "../services/AuditOrchestrator.js";
 import type { DeepScanDelivery } from "../services/DeepScanDelivery.js";
 import type { VisitLedger } from "../services/VisitLedger.js";
 import { DeepScanGate } from "../services/DeepScanGate.js";
+import type { CapabilityTestService } from "../services/CapabilityTest.js";
 import { ToolCallError } from "../services/toolErrors.js";
 
 /**
@@ -26,6 +27,14 @@ const createReportBodySchema = createReportRequestSchema.extend({
   surface: z.enum(["web", "webmcp"]).optional(),
 });
 
+const capabilityTestInputSchema = z
+  .object({
+    interfaceId: z.string().min(1).max(600),
+    arguments: z.record(z.string().max(80), z.union([z.string().max(2_000), z.number().finite(), z.boolean()])).default({}),
+    save: z.boolean().optional(),
+  })
+  .strict();
+
 function hostOf(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -41,6 +50,7 @@ export function createReportsRouter(
   writeLimiters: RequestHandler[] = [],
   delivery?: DeepScanDelivery,
   visits?: VisitLedger,
+  capabilityTests?: CapabilityTestService,
 ): Router {
   const router = Router();
 
@@ -86,6 +96,33 @@ export function createReportsRouter(
   router.post("/:reportId/refine", ...writeLimiters, async (request, response) => {
     try {
       response.json(await orchestrator.refine(param(request.params.reportId), request.body));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
+  // A person's own call on one capability's interface: what can be called, then one call, with
+  // the inputs the audit would not invent. Evidence only on request, as a new version of the report.
+  router.get("/:reportId/capabilities/:actionId/test", ...writeLimiters, async (request, response) => {
+    if (!capabilityTests) {
+      response.status(404).json({ error: "not_available", message: "Capability tests are not available here." });
+      return;
+    }
+    try {
+      response.json(await capabilityTests.list(param(request.params.reportId), param(request.params.actionId)));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
+  router.post("/:reportId/capabilities/:actionId/test", ...writeLimiters, async (request, response) => {
+    if (!capabilityTests) {
+      response.status(404).json({ error: "not_available", message: "Capability tests are not available here." });
+      return;
+    }
+    try {
+      const input = capabilityTestInputSchema.parse(request.body ?? {});
+      response.json(await capabilityTests.run(param(request.params.reportId), param(request.params.actionId), input));
     } catch (error) {
       sendError(response, error);
     }

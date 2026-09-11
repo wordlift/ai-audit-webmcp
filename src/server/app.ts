@@ -22,6 +22,8 @@ import { Observer, type ObserveOptions } from "./services/Observer.js";
 import { createObserveRouter } from "./routes/observe.js";
 import type { PublishedSiteStore } from "./adapters/published/PublishedSiteStore.js";
 import { DeepScanGate } from "./services/DeepScanGate.js";
+import type { UrlPolicyOptions } from "./security/urlPolicy.js";
+import { CapabilityTestService } from "./services/CapabilityTest.js";
 import { AlpinaAvailabilitySidecar } from "./sidecars/alpina/adapter.js";
 
 export interface AppOptions {
@@ -48,6 +50,8 @@ export interface AppOptions {
   /** Counts who reads a report and who activates a capability, by class and by day. Absent means nothing is counted. */
   visits?: VisitLedger;
   toolService?: AuditToolServiceOptions;
+  /** URL policy and timeout for a person's own calls on a site's tools; tests inject a resolver. */
+  capabilityTest?: UrlPolicyOptions & { timeoutMs?: number };
   /** Where a deep scan's email address is filed. Absent means deep scans are unavailable here. */
   leads?: LeadStore;
   /** Where remote report claims are filed. Absent means remote refinement is unclaimed. */
@@ -163,7 +167,7 @@ export function createApp(options: AppOptions = {}): Express {
     );
     app.use(
       "/api/reports",
-      createReportsRouter(options.orchestrator, limiters, deepScan, writeLimiters, delivery, options.visits),
+      createReportsRouter(options.orchestrator, limiters, deepScan, writeLimiters, delivery, options.visits, new CapabilityTestService(options.orchestrator, options.capabilityTest)),
     );
     // The sidecar draws on its own pool: one agent conversation checks several date ranges, and
     // none of those calls should spend the audit budget.
