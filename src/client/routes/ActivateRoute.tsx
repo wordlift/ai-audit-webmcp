@@ -1,4 +1,4 @@
-import { ArrowUpRight, BookOpen, Copy, Radar, Rocket } from "lucide-react";
+import { ArrowUpRight, BookOpen, Radar, Rocket } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { Publication, PublishedAction, ScoreReading } from "../../shared/types/activate.js";
@@ -7,7 +7,7 @@ import { getPublication, getReport, getVisits, type ReportVisits } from "../api/
 import { AgentSurfaces } from "../components/AgentSurfaces";
 import { StepBar } from "../components/StepBar";
 import { DocDialog, type PublishedDoc } from "../components/DocDialog";
-import { publishUrl } from "../components/FixPanel";
+import { publishUrl, talkToUsUrl } from "../components/FixPanel";
 import { OWN_WORDS } from "../components/OwnIt";
 import { ReportErrorState } from "../components/ReportErrorState";
 
@@ -18,7 +18,6 @@ import { ReportErrorState } from "../components/ReportErrorState";
  * agent-ready, the score and how it moved, and the numbers since publication, every one equal to
  * the ledger. An empty ledger says what to expect, never a row of zeros.
  */
-const PREVIEW_LINES = 8;
 
 function hostOf(url: string): string {
   try {
@@ -164,39 +163,6 @@ export function scoreMovement(history: ScoreReading[] | undefined): { from: numb
   return { from: first.score, to: last.score, since: first.createdAt };
 }
 
-function preview(text: string): string {
-  const lines = text.split("\n");
-  return lines.length > PREVIEW_LINES ? `${lines.slice(0, PREVIEW_LINES).join("\n")}\n…` : text;
-}
-
-function DocCard({ doc, onOpen }: { doc: PublishedDoc; onOpen: (doc: PublishedDoc) => void }) {
-  const [copied, setCopied] = useState(false);
-  async function copy() {
-    await navigator.clipboard.writeText(doc.text);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1_500);
-  }
-  return (
-    <article className="doc-card" aria-label={doc.title}>
-      <header>
-        <span className="doc-kind">{doc.kind}</span>
-        <h3>{doc.title}</h3>
-      </header>
-      <p>{doc.note}</p>
-      {/* The first lines, as a glimpse; the whole document opens in place, formatted, on "Read". */}
-      <button type="button" className="doc-glimpse" onClick={() => onOpen(doc)} aria-label={`Read ${doc.title}`}>
-        <pre>{preview(doc.text)}</pre>
-      </button>
-      <footer>
-        <button type="button" className="doc-read" onClick={() => onOpen(doc)}><BookOpen size={13} aria-hidden="true" /> Read the whole file</button>
-        <span>
-          <button type="button" onClick={() => void copy()}><Copy size={13} aria-hidden="true" /> {copied ? "Copied" : "Copy"}</button>
-          <a href={doc.href} target="_blank" rel="noreferrer">Raw <ArrowUpRight size={13} aria-hidden="true" /></a>
-        </span>
-      </footer>
-    </article>
-  );
-}
 
 const PUBLISHED_ORDER: Record<PublishedAction["publishedAs"], number> = { action: 0, handoff: 1, entity: 2, nothing: 3 };
 
@@ -228,24 +194,24 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
   const [openDoc, setOpenDoc] = useState<PublishedDoc | null>(null);
   const docs: PublishedDoc[] = [
     {
-      kind: "Business data",
-      title: "On your pages",
+      kind: "On your pages",
+      title: "Business data",
       note: "JSON-LD for the site's pages: the entities, and the actions agents may take, each with its entry point or its provider.",
       text: JSON.stringify(publication.jsonLd, null, 2),
       href: publication.documents.pageJsonLd,
       format: "json",
     },
     {
-      kind: "Agent instructions",
-      title: "For agents",
+      kind: "A file agents load",
+      title: "Agent instructions",
       note: "The Terms of Action as a file an agent loads before acting. It states boundaries and cites the report; it never claims an action works.",
       text: publication.skill,
       href: publication.documents.skill,
       format: "markdown",
     },
     {
-      kind: "Discovery",
-      title: "For registries",
+      kind: "Where registries look",
+      title: "Discovery",
       note: `The catalog registries crawl, served from ${publication.catalogPath} on the site.`,
       text: JSON.stringify(publication.catalog, null, 2),
       href: publication.documents.catalog,
@@ -256,37 +222,48 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
   return (
     <div className="activate-page">
       <DocDialog doc={openDoc} onOpenChange={(open) => { if (!open) setOpenDoc(null); }} />
-      <StepBar reportId={report.id} page="activate">
-        <a className="fix-publish" href={activate} target="_blank" rel="noreferrer">
-          Activate with WordLift <ArrowUpRight size={15} aria-hidden="true" />
-        </a>
-      </StepBar>
+      <StepBar reportId={report.id} page="activate" />
 
       <header className="activate-head">
-        <p className="section-kicker"><Rocket size={16} /> Activate</p>
-        <h1>Make {host} usable by AI agents</h1>
-        <p className="first-sentence">Publish what agents need to discover your business, understand its rules and use the actions that work.</p>
-        <a className="fix-publish" href={activate} target="_blank" rel="noreferrer">
-          Activate with WordLift <ArrowUpRight size={15} aria-hidden="true" />
-        </a>
+        <h1><Rocket size={26} aria-hidden="true" /> Make {host} usable by AI agents</h1>
+        <p className="first-sentence">
+          Turn this first model into your agent-ready business layer. WordLift publishes it on your pages, keeps it synchronized, and verifies every week that agents can still use it.
+        </p>
+        <p className="activate-doors">
+          <a className="fix-publish" href={activate} target="_blank" rel="noreferrer">
+            Activate with WordLift <ArrowUpRight size={15} aria-hidden="true" />
+          </a>
+          <a className="activate-talk" href={talkToUsUrl(report.id)} target="_blank" rel="noreferrer">
+            Talk to us <ArrowUpRight size={13} aria-hidden="true" />
+          </a>
+          <span>for a whole business, several sites, or an interface that has to be built.</span>
+        </p>
       </header>
 
       <section className="activate-section" aria-labelledby="outcomes-title">
-        <h2 id="outcomes-title">WordLift publishes and keeps synchronized</h2>
-        <div className="outcomes">
-          <article className="outcome">
-            <h3>Business data</h3>
-            <p>Machine-readable entities and actions on your pages: what you are, what you offer, and what an agent may do with it.</p>
-          </article>
-          <article className="outcome">
-            <h3>Agent instructions</h3>
-            <p>The Terms of Action: what the business does itself, hands off to a partner, or only describes, in a file agents load before acting.</p>
-          </article>
-          <article className="outcome">
-            <h3>Discovery</h3>
-            <p>A machine-readable catalog of the capabilities that work, where agent directories look for it.</p>
-          </article>
-        </div>
+        <h2 id="outcomes-title">What WordLift publishes</h2>
+        <p className="activate-lead">
+          One model, three documents, each readable now. The plugin puts all three on your site and keeps them current.
+        </p>
+        <ul className="publish-list">
+          {docs.map((doc) => (
+            <li key={doc.title}>
+              <article className="publish-item" aria-label={doc.title}>
+                <div className="publish-text">
+                  <span className="doc-kind">{doc.kind}</span>
+                  <h3>{doc.title}</h3>
+                  <p>{doc.note}</p>
+                </div>
+                <div className="publish-actions">
+                  <button type="button" className="doc-read" onClick={() => setOpenDoc(doc)}>
+                    <BookOpen size={14} aria-hidden="true" /> Read the whole file
+                  </button>
+                  <a href={doc.href} target="_blank" rel="noreferrer">Raw <ArrowUpRight size={12} aria-hidden="true" /></a>
+                </div>
+              </article>
+            </li>
+          ))}
+        </ul>
         <p className="activate-lead">
           {publication.decided > 0
             ? `${plural(publication.decided, "decision")} of yours shaped this. `
@@ -313,6 +290,12 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
             </>
           )}
         </p>
+        {!(crawlers.length > 0 || google > 0 || agents.length > 0 || activations.length > 0) ? (
+          <p className="observe-nothing">
+            Nothing to prove yet. Once published, this shows who crawled it, whether Google read it, which agents read it, and which capability an agent activated, with the score's movement.
+            {!hasInterface && " No interface has answered yet, so there is nothing an agent could activate."}
+          </p>
+        ) : (
         <div className="observe-grid">
           <article className="observe-card" aria-labelledby="crawlers-title">
             <h3 id="crawlers-title">Crawlers</h3>
@@ -377,22 +360,12 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
             )}
           </article>
         </div>
+        )}
         <p className="activate-lead">
           <a href={publishUrl(report.id, { intent: "keep" })} target="_blank" rel="noreferrer">Keep it agent-ready</a>: WordLift re-verifies on a
           schedule and writes only when something moves.
         </p>
       </section>
-      <section className="activate-section" aria-labelledby="documents-title">
-        <h2 id="documents-title">The exact artifacts</h2>
-        <p className="activate-lead">One model, three documents, each readable now. The plugin puts all three on your site and keeps them current.</p>
-        <div className="doc-cards">
-          {docs.map((doc) => <DocCard key={doc.title} doc={doc} onOpen={setOpenDoc} />)}
-        </div>
-        <p className="activate-lead">
-          The evidence behind every line is in the report's <Link to={`/reports/${report.id}#full-audit`}>full audit</Link>.
-        </p>
-      </section>
-
       {/* For the engineers: the exact rows the page carries, and every surface agents are given, one fold below the outcome. */}
       <details className="engineers-fold">
         <summary>For your engineers <span>What the page carries · Agent-facing surfaces</span></summary>
@@ -471,6 +444,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
         <a className="fix-publish" href={activate} target="_blank" rel="noreferrer">
           Activate with WordLift <ArrowUpRight size={15} aria-hidden="true" />
         </a>
+        <a className="activate-talk" href={talkToUsUrl(report.id)} target="_blank" rel="noreferrer">Talk to us <ArrowUpRight size={13} aria-hidden="true" /></a>
         <span>Publishes the three documents on your site and keeps them agent-ready.</span>
       </p>
     </div>

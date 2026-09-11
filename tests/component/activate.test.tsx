@@ -132,7 +132,7 @@ describe("the Activate screen", () => {
   it("shows the movement, the table, the three documents, and who read it", () => {
     renderScreen(ledger);
     expect(screen.getByRole("heading", { level: 1, name: "Make alpina.travel usable by AI agents" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: /wordlift publishes and keeps synchronized/i })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /what wordlift publishes/i })).toBeVisible();
     expect(screen.getByText(/of 100 agent-ready since 1 September/)).toHaveTextContent("62 → 74");
 
     const table = screen.getByRole("table");
@@ -150,7 +150,7 @@ describe("the Activate screen", () => {
     expect(rows[3]).toContain("Not relevant");
     expect(rows[3]).toContain("Nothing");
 
-    for (const title of ["On your pages", "For agents", "For registries"]) expect(screen.getByRole("article", { name: title })).toBeVisible();
+    for (const title of ["Business data", "Agent instructions", "Discovery"]) expect(screen.getByRole("article", { name: title })).toBeVisible();
     // Each document opens in place, formatted, and the raw file stays one click away.
     expect(screen.getAllByRole("button", { name: /read the whole file/i })).toHaveLength(3);
     expect(screen.getAllByRole("link", { name: /^raw/i })).toHaveLength(3);
@@ -181,10 +181,10 @@ describe("the Activate screen", () => {
   it("says what to expect when nothing has read it yet, never a row of zeros", () => {
     renderScreen({ reportId: REPORT_ID, since: "2026-09-07T05:00:00.000Z", days: [], activations: [], history: ledger.history!.slice(0, 1) });
     expect(screen.getByText(/The next reading shows how it moved/)).toHaveTextContent("74 of 100 agent-ready.");
-    expect(screen.getByText("No crawler yet. Expect the first within days of publishing.")).toBeVisible();
-    expect(screen.getByText(/Google has not read it yet/)).toBeVisible();
-    expect(screen.getByText(/No agent yet\. Agents arrive once a directory lists the site/)).toBeVisible();
-    expect(screen.getByText(/No agent has activated a capability yet/)).toBeVisible();
+    // While there is nothing to prove, one sentence says what will show, instead of four empty cards.
+    expect(screen.getByText(/Nothing to prove yet/)).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Crawlers" })).toBeNull();
+    expect(screen.getByText(/Nothing to prove yet/)).toHaveTextContent(/whether Google read it/);
     for (const card of screen.getAllByRole("article")) expect(card).not.toHaveTextContent(/\b0\b/);
   });
 
@@ -198,7 +198,7 @@ describe("the Activate screen", () => {
         />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/Nothing to activate yet: no interface has answered\./)).toBeVisible();
+    expect(screen.getByText(/Nothing to prove yet/)).toHaveTextContent(/No interface has answered yet, so there is nothing an agent could activate/);
     expect(screen.getByText(/The three questions are unanswered/)).toBeVisible();
     expect(screen.getByRole("link", { name: "the three questions" })).toHaveAttribute("href", `/reports/${REPORT_ID}#own-it`);
     expect(screen.getByRole("heading", { name: /is alpina\.travel still agent-ready/i })).toBeVisible();

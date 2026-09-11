@@ -24,28 +24,27 @@ test("the Activate screen shows what the page carries, the three documents, and 
   await expect(search).toContainText("Undecided");
   await expect(search).toContainText("The action, with its entry point");
 
-  for (const title of ["On your pages", "For agents", "For registries"]) {
+  for (const title of ["Business data", "Agent instructions", "Discovery"]) {
     await expect(page.getByRole("article", { name: title })).toBeVisible();
   }
   // The document opens in place, as the page it is; the raw file stays one click away.
-  await page.getByRole("article", { name: "For agents" }).getByRole("button", { name: /read the whole file/i }).click();
+  await page.getByRole("article", { name: "Agent instructions" }).getByRole("button", { name: /read the whole file/i }).click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByRole("heading", { name: "For agents" })).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "Agent instructions" })).toBeVisible();
   await expect(dialog.getByRole("heading", { name: "Entities" })).toBeVisible();
   await expect(dialog.getByText(/lines ·/)).toBeVisible();
   const rawUrl = await dialog.getByRole("link", { name: /open the raw file/i }).getAttribute("href");
   expect(rawUrl).toMatch(/\/publish\/skill\.md$/);
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
-  const skillLink = page.getByRole("article", { name: "For agents" }).getByRole("link", { name: /^raw/i });
+  const skillLink = page.getByRole("article", { name: "Agent instructions" }).getByRole("link", { name: /^raw/i });
   const skillUrl = await skillLink.getAttribute("href");
   expect(skillUrl).toBe(rawUrl);
   const skill = await request.get(skillUrl!);
   expect(skill.ok()).toBeTruthy();
   expect(await skill.text()).toMatch(/^---\nname: alpina\.travel Terms of Action/);
 
-  await expect(page.getByText("No crawler yet. Expect the first within days of publishing.")).toBeVisible();
-  await expect(page.getByText(/No agent has activated a capability yet/)).toBeVisible();
+  await expect(page.getByText(/Nothing to prove yet/)).toBeVisible();
 
   await page.getByRole("navigation", { name: "Steps" }).getByRole("link", { name: "Audit", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/reports/${reportId}(#step-audit)?$`));

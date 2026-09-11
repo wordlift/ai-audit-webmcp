@@ -1017,7 +1017,23 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .activate-link { display: inline-flex; align-items: center; gap: 6px; justify-self: start; font-weight: 600; color: var(--brand); text-decoration: none; }
 .activate-link:hover { text-decoration: underline; }
 .activate-page { display: grid; gap: 22px; }
-.activate-head { display: grid; gap: 8px; max-width: 70ch; }
+.activate-head { display: grid; gap: 10px; max-width: 72ch; }
+.activate-head h1 svg { vertical-align: -3px; color: var(--brand); margin-right: 4px; }
+.activate-doors { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 6px 0 0; color: var(--muted); }
+.activate-talk { display: inline-flex; align-items: center; gap: 4px; color: var(--brand); font-weight: 600; text-decoration: none; }
+/* What WordLift publishes: three documents as one list, each readable in place, no glimpses. */
+.publish-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.publish-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 24px; padding: 16px 0; border-top: 1px solid var(--line-subtle); }
+.publish-list li:last-child .publish-item { border-bottom: 1px solid var(--line-subtle); }
+.publish-text { display: grid; gap: 4px; flex: 1 1 36ch; }
+.publish-text h3 { margin: 0; font-size: 1.05rem; }
+.publish-text p { margin: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.45; max-width: 60ch; }
+.publish-actions { display: inline-flex; align-items: center; gap: 14px; flex: 0 0 auto; }
+.publish-actions .doc-read { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--brand); border-radius: 8px; background: none; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
+.publish-actions .doc-read:hover { background: color-mix(in srgb, var(--brand) 8%, white); }
+.publish-actions a { display: inline-flex; align-items: center; gap: 3px; color: var(--muted); font-size: 0.9rem; text-decoration: none; }
+.publish-actions a:hover { color: var(--brand); }
+.observe-nothing { margin: 0; color: var(--muted); max-width: 70ch; }
 .activate-head h1 { margin: 0; font-size: clamp(1.6rem, 3.4vw, 2.3rem); overflow-wrap: anywhere; }
 .activate-score { margin: 0; color: var(--muted); }
 .activate-score b { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
