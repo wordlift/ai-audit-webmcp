@@ -310,6 +310,7 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
         kind: "api-result",
         sourceUrl: search.url,
         claim: `The site's declared SearchAction template did not answer when an agent executed it${search.note ? `: ${search.note}` : ""}`,
+        snippet: search.template,
         confidence: 0.9,
         verification: "failed",
       });
@@ -323,6 +324,8 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
         kind: "api-result",
         sourceUrl: search.url,
         claim: "The declared SearchAction template answered, but results could not be confirmed without executing site scripts",
+        // The template travels here too: a person can run it with their own query from the report.
+        snippet: search.template,
         confidence: 0.7,
         verification: "declared",
       });
@@ -355,6 +358,7 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
         kind: "api-result",
         sourceUrl: probe.url,
         claim: `The site's declared ${probe.actionType} entry point did not answer when an agent executed it${probe.note ? `: ${probe.note}` : ""}`,
+        snippet: probe.template,
         confidence: 0.9,
         verification: "failed",
       });
@@ -367,6 +371,8 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
       kind: "structured-data",
       sourceUrl: probe.sourceUrl,
       claim: `A ${probe.actionType} entry point is declared for this action; the audit did not call it${probe.note ? `: ${probe.note}` : ""}`,
+      // A read the audit could not fill is exactly what a person can: the template travels with it. A write never does.
+      ...(probe.read ? { snippet: probe.template } : {}),
       confidence: 0.8,
       verification: "declared",
     });

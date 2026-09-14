@@ -116,7 +116,7 @@ function readAction(action: unknown, base: URL, sourceUrl: string): DeclaredEntr
  * is: a 200 whose body acknowledges the query, or, for a fixed URL, a 200 with a body at all.
  */
 export async function executeEntryPoint(entry: DeclaredEntryPoint, query: string, options: UrlPolicyOptions = {}): Promise<EntryPointProbe> {
-  const base = { actionType: entry.actionType, actionId: entry.actionId, template: entry.template, sourceUrl: entry.sourceUrl };
+  const base = { actionType: entry.actionType, actionId: entry.actionId, template: entry.template, sourceUrl: entry.sourceUrl, read: entry.read };
   if (!entry.read) {
     return { ...base, url: entry.template, status: 0, invoked: false, ok: false, note: entry.httpMethod === "GET" ? "it would write: a reservation, a purchase, a message" : `it is declared over ${entry.httpMethod}, which an audit never sends` };
   }
@@ -152,7 +152,8 @@ export async function executeEntryPoint(entry: DeclaredEntryPoint, query: string
   }
 }
 
-function reflects(body: string, query: string): boolean {
+/** Does the page acknowledge the query — verbatim, or by its longest word? */
+export function reflects(body: string, query: string): boolean {
   const haystack = body.toLowerCase();
   const needle = query.toLowerCase().trim();
   if (needle.length > 0 && haystack.includes(needle)) return true;

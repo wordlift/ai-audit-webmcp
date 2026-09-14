@@ -22,6 +22,8 @@ export function testable(report: ReportRecord, capability: CapabilityResult): bo
     }
   })();
   if (capability.actionId === "availability.check" && host === SIDECAR_HOST) return true;
+  // A read entry point over GET travels with its template; a write never does, so it is never offered.
+  if (capability.evidence.some((item) => /^(search-action-|entry-point-)/.test(item.id) && typeof item.snippet === "string")) return true;
   return (report.contextGraph?.interfaces ?? []).some((item) => item.actionId === capability.actionId && item.protocol === "mcp" && item.id.startsWith("interface:mcp-tool-") && !/\/sse\/?$/.test(item.sourceUrl));
 }
 
@@ -183,7 +185,7 @@ export function CapabilityTest({ report, capability }: { report: ReportRecord; c
           )}
           <div className="capability-test-actions">
             <button type="submit" className="fix-publish" disabled={busy}>{busy ? "Calling…" : "Run the call"}</button>
-            <span className="capability-test-guard"><ShieldCheck size={14} aria-hidden="true" /> Read-only tools only. One call per click. Nothing is booked or changed.</span>
+            <span className="capability-test-guard"><ShieldCheck size={14} aria-hidden="true" /> Read-only calls only. One call per click. Nothing is booked or changed.</span>
           </div>
         </form>
       )}
@@ -201,7 +203,7 @@ export function CapabilityTest({ report, capability }: { report: ReportRecord; c
           </details>
           {result.updatedReportUrl ? (
             <p className="capability-test-saved">Recorded as evidence in <a href={result.updatedReportUrl}>a new version of this report</a>.</p>
-          ) : current?.protocol === "mcp" ? (
+          ) : current?.protocol === "mcp" || current?.protocol === "http-get" ? (
             <p className="capability-test-save">
               <button type="button" className="fix-publish" onClick={() => void save()} disabled={saving}>{saving ? "Saving…" : "Save as evidence"}</button>
               <span>Creates a new version of this report. Readiness moves the way the evidence says.</span>

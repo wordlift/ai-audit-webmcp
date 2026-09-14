@@ -646,6 +646,14 @@ Still to do from the brief, in the order the brief gives:
   bound meant for a handshake, and alpina's product card is 130 KB, so the call read as "no
   JSON-RPC message". A tool call now reads up to 1 MB; the audit's own calls too, so search_products
   on alpina.travel may verify from the next audit on.
+- "Test it yourself" reaches the site's own GET, 2026-09-14, at Andrea's "yes": a declared
+  schema.org entry point that is a read over GET (the SearchAction, a CheckAction, a ViewAction)
+  is offered from the same panel, one field per placeholder in its template, one GET on the site's
+  own address with the person's inputs, nothing else sent. Judged as the audit judges: a 200 that
+  acknowledges the input is invoked, a 200 that does not is an answer without proof and saves as
+  declared, anything else fails. The template travels with the evidence for read entry points
+  only, so a write (a ReserveAction, a BuyAction) is never offered and cannot be asked for by
+  name. In-page WebMCP tools stay detected and never called: no server can reach them.
 - Load-sensitive tests under the full parallel run, each passing alone: the alpina sidecar
   upstream failure, "audit then read", the observe tick, the rate-limit pool, and the 404 error
   paths (a 5 s budget). One fails per full run, a different one each time; a serial run of the

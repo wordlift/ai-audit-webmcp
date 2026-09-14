@@ -161,5 +161,19 @@ describe("what an executed entry point proves", () => {
     const evidence = detection.evidence.find((item) => item.id.startsWith("entry-point-"));
     expect(evidence?.verification).toBe("declared");
     expect(evidence?.claim).toContain("would write");
+    // A write never carries its template: nothing downstream may offer it for calling.
+    expect(evidence?.snippet).toBeUndefined();
+  });
+
+  it("a read the audit could not fill carries its template, so a person can fill it", () => {
+    const detection = detectSiteEvidence(
+      snapshotWith([probe({ template: "https://alpina.travel/api/availability?from={checkin}&to={checkout}", read: true, invoked: false, ok: false, status: 0, note: "it needs an input the audit cannot supply: checkin" })]),
+      "2026-09-07T10:00:00.000Z",
+    );
+    const evidence = detection.evidence.find((item) => item.id.startsWith("entry-point-"));
+    expect(evidence?.verification).toBe("declared");
+    expect(evidence?.snippet).toBe("https://alpina.travel/api/availability?from={checkin}&to={checkout}");
+    const failed = detectSiteEvidence(snapshotWith([probe({ ok: false, status: 500, note: "it answered HTTP 500" })]), "2026-09-07T10:00:00.000Z");
+    expect(failed.evidence.find((item) => item.id.startsWith("entry-point-"))?.snippet).toBe("https://alpina.travel/api/availability?q={query}");
   });
 });

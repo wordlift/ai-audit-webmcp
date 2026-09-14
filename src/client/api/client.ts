@@ -200,7 +200,7 @@ export interface AlpinaAvailabilityResponse {
 export interface TestableInterface {
   id: string;
   name: string;
-  protocol: "mcp" | "sidecar";
+  protocol: "mcp" | "sidecar" | "http-get";
   endpoint: string;
   safe: boolean;
   note?: string;

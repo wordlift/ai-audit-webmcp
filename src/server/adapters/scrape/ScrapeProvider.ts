@@ -161,6 +161,8 @@ export interface EntryPointProbe {
   status: number;
   /** False for a write, or for an input the audit could not supply: declared, not tested. */
   invoked: boolean;
+  /** True when it is a read over GET: something a person may call again with inputs of their own. */
+  read?: boolean;
   /** True only when the call answered and, if a query was sent, acknowledged it. */
   ok: boolean;
   note?: string;
