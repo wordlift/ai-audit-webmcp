@@ -132,7 +132,8 @@ describe("a person's own call on one capability", () => {
     expect((await orchestrator.get(report.id))?.capabilities?.find((capability) => capability.actionId === "detail.retrieve")?.state).not.toBe("agent-ready");
 
     const failed = await request(app).post(path).send({ interfaceId: `mcp-tool:${ENDPOINT}#get_product`, arguments: { id: "nowhere" } }).expect(200);
-    expect(failed.body).toMatchObject({ outcome: "failed", error: "No property with that id" });
+    // The server answered, with an error of its own: not the same as no answer.
+    expect(failed.body).toMatchObject({ outcome: "errored", error: "No property with that id" });
 
     const saved = await request(app).post(path).send({ interfaceId: `mcp-tool:${ENDPOINT}#get_product`, arguments: { id: "samspitze-4" }, save: true }).expect(200);
     expect(saved.body.updatedReportId).toBeTruthy();

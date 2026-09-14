@@ -27,7 +27,8 @@ export interface TestableInterface {
 }
 
 export interface CapabilityTestOutcome {
-  outcome: "answered" | "failed";
+  /** "errored": the server answered, with an error of its own: a wrong id, a refused input. "failed": no answer came. */
+  outcome: "answered" | "errored" | "failed";
   latencyMs: number;
   answer: string;
   error?: string;
@@ -129,7 +130,7 @@ export class CapabilityTestService {
       const latencyMs = Date.now() - started;
       const testedAt = new Date().toISOString();
       const outcome: CapabilityTestOutcome = {
-        outcome: call.ok ? "answered" : "failed",
+        outcome: call.ok ? "answered" : call.result ? "errored" : "failed",
         latencyMs,
         answer: answerText(call.result),
         ...(call.error ? { error: call.error } : {}),
@@ -145,7 +146,9 @@ export class CapabilityTestService {
           sourceUrl: target.endpoint,
           claim: call.ok
             ? `A person ran the site's MCP tool "${tool.name}" with their own inputs and it answered`
-            : `A person ran the site's MCP tool "${tool.name}" with their own inputs and it failed: ${call.error ?? "no answer"}`,
+            : call.result
+              ? `A person ran the site's MCP tool "${tool.name}" with their own inputs and it answered with an error: ${call.error ?? "unspecified"}`
+              : `A person ran the site's MCP tool "${tool.name}" with their own inputs and it did not answer: ${call.error ?? "no answer"}`,
           confidence: 1,
           verification: call.ok ? "invoked" : "failed",
           collectedAt: testedAt,
@@ -202,7 +205,7 @@ export class CapabilityTestService {
       error = caught instanceof Error ? caught.message.slice(0, 160) : "The address could not be called.";
     }
     const outcome: CapabilityTestOutcome = {
-      outcome: error ? "failed" : "answered",
+      outcome: error ? (status > 0 ? "errored" : "failed") : "answered",
       latencyMs: Date.now() - started,
       answer,
       ...(error ? { error } : {}),
@@ -217,7 +220,9 @@ export class CapabilityTestService {
         kind: "api-result",
         sourceUrl: finalUrl,
         claim: error
-          ? `A person ran the site's declared ${entry.actionType} entry point with their own inputs and it failed: ${error}`
+          ? status > 0
+            ? `A person ran the site's declared ${entry.actionType} entry point with their own inputs and it answered with an error: ${error}`
+            : `A person ran the site's declared ${entry.actionType} entry point with their own inputs and it did not answer: ${error}`
           : acknowledged
             ? `A person ran the site's declared ${entry.actionType} entry point with their own inputs and the site answered for them`
             : `A person ran the site's declared ${entry.actionType} entry point with their own inputs; it answered, but results could not be confirmed without executing site scripts`,

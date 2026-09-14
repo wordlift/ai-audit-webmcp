@@ -209,7 +209,8 @@ export interface TestableInterface {
 }
 
 export interface CapabilityTestOutcome {
-  outcome: "answered" | "failed";
+  /** "errored": the server answered, with an error of its own. "failed": no answer came. */
+  outcome: "answered" | "errored" | "failed";
   latencyMs: number;
   answer: string;
   error?: string;

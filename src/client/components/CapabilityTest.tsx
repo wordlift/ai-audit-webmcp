@@ -194,7 +194,7 @@ export function CapabilityTest({ report, capability }: { report: ReportRecord; c
         <div className={`capability-test-result is-${result.outcome}`} role="status">
           <p className="capability-test-verdict">
             {result.outcome === "answered" ? <CheckCircle2 size={16} aria-hidden="true" /> : <XCircle size={16} aria-hidden="true" />}
-            {result.outcome === "answered" ? "It answered" : "It did not answer"} in {(result.latencyMs / 1000).toFixed(1)} s{result.error ? `: ${result.error}` : "."}
+            {result.outcome === "answered" ? "It answered" : result.outcome === "errored" ? "It answered with an error" : "It did not answer"} in {(result.latencyMs / 1000).toFixed(1)} s{result.error ? `: ${result.error}` : "."}
           </p>
           {result.answer && <pre className="capability-test-answer">{result.answer}</pre>}
           <details className="capability-test-request">
@@ -206,7 +206,7 @@ export function CapabilityTest({ report, capability }: { report: ReportRecord; c
           ) : current?.protocol === "mcp" || current?.protocol === "http-get" ? (
             <p className="capability-test-save">
               <button type="button" className="fix-publish" onClick={() => void save()} disabled={saving}>{saving ? "Saving…" : "Save as evidence"}</button>
-              <span>Creates a new version of this report. Readiness moves the way the evidence says.</span>
+              <span>{result.outcome === "errored" ? "Records a call that ended in an error. If the input was yours to get wrong, correct it and run again instead." : "Creates a new version of this report. Readiness moves the way the evidence says."}</span>
             </p>
           ) : null}
         </div>
