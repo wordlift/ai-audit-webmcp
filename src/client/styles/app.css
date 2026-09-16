@@ -1041,7 +1041,13 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .activate-doors { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 6px 0 0; color: var(--muted); }
 .activate-talk { display: inline-flex; align-items: center; gap: 4px; color: var(--brand); font-weight: 600; text-decoration: none; }
 /* What WordLift publishes: three documents as one list, each readable in place, no glimpses. */
+/* Three outcomes, each with the files that make it true. */
+.outcome-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 22px; }
+.outcome { display: grid; gap: 6px; }
+.outcome h3 { margin: 0; font-size: 1.2rem; }
+.outcome-note { margin: 0 0 4px; color: var(--muted); max-width: 66ch; }
 .publish-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.publish-text h4 { margin: 0; font-size: 1rem; }
 .publish-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 24px; padding: 16px 0; border-top: 1px solid var(--line-subtle); }
 .publish-list li:last-child .publish-item { border-bottom: 1px solid var(--line-subtle); }
 .publish-text { display: grid; gap: 4px; flex: 1 1 36ch; }

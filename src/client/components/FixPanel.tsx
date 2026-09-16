@@ -10,7 +10,11 @@ import type { CapabilityResult, DomainEntity } from "../../shared/types/index.js
 const DASHBOARD_URL = "https://my.wordlift.io/";
 const TALK_TO_US_URL = "https://wordlift.io/book%20a%20demo/";
 
-export type FixIntent = "fix" | "agent-ready" | "activate" | "keep";
+/**
+ * Why someone arrives at the dashboard: to claim the Context Engine, build it into the live graph,
+ * monitor it, activate it, make one action agent-ready, keep one that works, or fix what is missing.
+ */
+export type FixIntent = "fix" | "claim-context" | "build-context" | "monitor" | "activate" | "agent-ready" | "keep";
 
 /** Actions the site expects that no agent can reach: nothing declared, or people only. */
 export function actionsWithoutInterface(capabilities: CapabilityResult[]): CapabilityResult[] {

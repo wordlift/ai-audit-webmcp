@@ -150,6 +150,11 @@ describe("the Activate screen", () => {
     expect(rows[3]).toContain("Not relevant");
     expect(rows[3]).toContain("Nothing");
 
+    // Outcomes first, each with the files that make it true.
+    expect(screen.getAllByRole("heading", { level: 3 }).slice(0, 3).map((heading) => heading.textContent)).toEqual(["Agents can find it", "Agents know the rules", "Agents can use what works"]);
+    expect(screen.getByText(/the entry point an agent actually used|entry points an agent actually used|Nothing an agent can call has answered yet/)).toBeVisible();
+    // The monitoring door carries the report and says why the person came.
+    expect(screen.getByRole("link", { name: "Monitor AI visibility" })).toHaveAttribute("href", expect.stringContaining("intent=monitor"));
     for (const title of ["Business data", "Agent instructions", "Discovery"]) expect(screen.getByRole("article", { name: title })).toBeVisible();
     // Each document opens in place, formatted, and the raw file stays one click away.
     expect(screen.getAllByRole("button", { name: /read the whole file/i })).toHaveLength(3);

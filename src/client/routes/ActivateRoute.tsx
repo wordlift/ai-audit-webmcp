@@ -12,9 +12,10 @@ import { OWN_WORDS } from "../components/OwnIt";
 import { ReportErrorState } from "../components/ReportErrorState";
 
 /**
- * Activate sells the outcome: make the business usable by AI agents. What WordLift publishes and
- * keeps synchronized comes first, in three sentences a person reads; the table of what the page
- * carries and the exact artifacts follow for the architect. Then Prove: is the business still
+ * Activate sells the outcome: make the business usable by AI agents. What WordLift publishes comes
+ * first as three outcomes a person reads (agents can find it, know the rules, use what works), each
+ * with its file readable in place; the table of what the page carries and the surfaces follow, for
+ * the engineers. Then Prove: is the business still
  * agent-ready, the score and how it moved, and the numbers since publication, every one equal to
  * the ledger. An empty ledger says what to expect, never a row of zeros.
  */
@@ -192,7 +193,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
   const hasInterface = publication.actions.some((action) => action.publishedAs === "action");
   const activate = publishUrl(report.id, { intent: "activate" });
   const [openDoc, setOpenDoc] = useState<PublishedDoc | null>(null);
-  const docs: PublishedDoc[] = [
+  const [businessData, instructions, discovery]: PublishedDoc[] = [
     {
       kind: "On your pages",
       title: "Business data",
@@ -218,6 +219,27 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
       format: "json",
     },
   ];
+  // What an agent can call today: the actions published with an entry point, each one the audit's agent used.
+  const usable = publication.actions.filter((action) => action.publishedAs === "action");
+  const outcomes: Array<{ title: string; note: string; docs: PublishedDoc[] }> = [
+    {
+      title: "Agents can find it",
+      note: "Your organization, the things it offers and the capabilities that exist, in machine-readable form on your pages and in the catalog registries crawl.",
+      docs: [businessData!, discovery!],
+    },
+    {
+      title: "Agents know the rules",
+      note: "Your business boundaries, your terminology and the Terms of Action, as the file an agent loads before acting.",
+      docs: [instructions!],
+    },
+    {
+      title: "Agents can use what works",
+      note: usable.length > 0
+        ? `${names(usable)}: ${usable.length === 1 ? "the entry point" : `the ${usable.length} entry points`} an agent actually used, published as ${usable.length === 1 ? "an action" : "actions"}. The rest become actions the day their entry point answers.`
+        : "Nothing an agent can call has answered yet, so no action is published. Each becomes one the day its entry point answers.",
+      docs: [],
+    },
+  ];
 
   return (
     <div className="activate-page">
@@ -227,7 +249,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
       <header className="activate-head">
         <h1><Rocket size={26} aria-hidden="true" /> Make {host} usable by AI agents</h1>
         <p className="first-sentence">
-          Turn this first model into your agent-ready business layer. WordLift publishes it on your pages, keeps it synchronized, and verifies every week that agents can still use it.
+          Make your Context Engine operational. WordLift publishes it on your pages, keeps it synchronized, and verifies every week that agents can still use what works.
         </p>
         <p className="activate-doors">
           <a className="fix-publish" href={activate} target="_blank" rel="noreferrer">
@@ -243,27 +265,37 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
       <section className="activate-section" aria-labelledby="outcomes-title">
         <h2 id="outcomes-title">What WordLift publishes</h2>
         <p className="activate-lead">
-          One model, three documents, each readable now. The plugin puts all three on your site and keeps them current.
+          Your Context Engine, published where agents look, as three outcomes. Each file is readable now; the plugin puts them on your site and keeps them current.
         </p>
-        <ul className="publish-list">
-          {docs.map((doc) => (
-            <li key={doc.title}>
-              <article className="publish-item" aria-label={doc.title}>
-                <div className="publish-text">
-                  <span className="doc-kind">{doc.kind}</span>
-                  <h3>{doc.title}</h3>
-                  <p>{doc.note}</p>
-                </div>
-                <div className="publish-actions">
-                  <button type="button" className="doc-read" onClick={() => setOpenDoc(doc)}>
-                    <BookOpen size={14} aria-hidden="true" /> Read the whole file
-                  </button>
-                  <a href={doc.href} target="_blank" rel="noreferrer">Raw <ArrowUpRight size={12} aria-hidden="true" /></a>
-                </div>
-              </article>
+        <ol className="outcome-list">
+          {outcomes.map((outcome) => (
+            <li key={outcome.title} className="outcome">
+              <h3>{outcome.title}</h3>
+              <p className="outcome-note">{outcome.note}</p>
+              {outcome.docs.length > 0 && (
+                <ul className="publish-list">
+                  {outcome.docs.map((doc) => (
+                    <li key={doc.title}>
+                      <article className="publish-item" aria-label={doc.title}>
+                        <div className="publish-text">
+                          <span className="doc-kind">{doc.kind}</span>
+                          <h4>{doc.title}</h4>
+                          <p>{doc.note}</p>
+                        </div>
+                        <div className="publish-actions">
+                          <button type="button" className="doc-read" onClick={() => setOpenDoc(doc)}>
+                            <BookOpen size={14} aria-hidden="true" /> Read the whole file
+                          </button>
+                          <a href={doc.href} target="_blank" rel="noreferrer">Raw <ArrowUpRight size={12} aria-hidden="true" /></a>
+                        </div>
+                      </article>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           ))}
-        </ul>
+        </ol>
         <p className="activate-lead">
           {publication.decided > 0
             ? `${plural(publication.decided, "decision")} of yours shaped this. `
@@ -362,8 +394,8 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
         </div>
         )}
         <p className="activate-lead">
-          <a href={publishUrl(report.id, { intent: "keep" })} target="_blank" rel="noreferrer">Keep it agent-ready</a>: WordLift re-verifies on a
-          schedule and writes only when something moves.
+          <a href={publishUrl(report.id, { intent: "monitor" })} target="_blank" rel="noreferrer">Monitor AI visibility</a>: use this Context Engine to
+          track how your business is discovered and used by AI systems. WordLift re-verifies on a schedule and writes only when something moves.
         </p>
       </section>
       {/* For the engineers: the exact rows the page carries, and every surface agents are given, one fold below the outcome. */}
@@ -445,7 +477,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
           Activate with WordLift <ArrowUpRight size={15} aria-hidden="true" />
         </a>
         <a className="activate-talk" href={talkToUsUrl(report.id)} target="_blank" rel="noreferrer">Talk to us <ArrowUpRight size={13} aria-hidden="true" /></a>
-        <span>Publishes the three documents on your site and keeps them agent-ready.</span>
+        <span>Publishes your Context Engine on your site and keeps it agent-ready.</span>
       </p>
     </div>
   );
