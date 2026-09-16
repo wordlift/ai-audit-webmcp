@@ -123,6 +123,9 @@ describe("the Context Engine above the reports", () => {
     const report = await audit(app);
     const holder = (await request(app).post(`/api/engines/for-report/${report.id}/claim`)).body.key as string;
     const owner = (await request(app).post(`/api/engines/for-report/${report.id}/claim`)).body.key as string;
+    // A flood of later claims pushes the owner's out of the pending list; the code still proves it.
+    for (let flood = 0; flood < 6; flood += 1) await request(app).post(`/api/engines/for-report/${report.id}/claim`);
+    expect((await request(app).get("/api/engines/alpina.travel/verification").set(KEY, "short")).status).toBe(403);
 
     const verification = await request(app).get("/api/engines/alpina.travel/verification").set(KEY, owner);
     expect(verification.body.metaTag).toBe(`<meta name="wordlift-site-verification" content="${verification.body.code}">`);

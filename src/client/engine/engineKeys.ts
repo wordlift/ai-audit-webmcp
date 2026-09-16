@@ -1,8 +1,8 @@
 /**
  * Where this browser keeps its claim on a site's Context Engine. The key is handed out once, when
  * the engine is claimed, and lives in this browser only; a review run in another browser (ChatGPT's)
- * arrives with a day-long review token in the report link instead, which is taken off the address
- * at once so it is never shared with the page's link.
+ * arrives with a day-long review token in the report link's fragment instead, which no server sees
+ * and which is taken off the address at once so it is never shared with the page's link.
  */
 const KEY_PREFIX = "wl-engine-key:";
 const REVIEW_TOKEN = "wl-engine-review";
@@ -45,13 +45,13 @@ export function engineKeyFor(host: string): string | null {
 export function captureReviewToken(): void {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
-  const token = url.searchParams.get(REVIEW_PARAM);
+  const fragment = new URLSearchParams(url.hash.replace(/^#/, ""));
+  const token = fragment.get(REVIEW_PARAM);
   if (!token) return;
   try {
     storage("session")?.setItem(REVIEW_TOKEN, token.slice(0, 200));
   } catch {
     // Nothing kept: the review files on the report, not on the engine.
   }
-  url.searchParams.delete(REVIEW_PARAM);
-  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}`);
 }

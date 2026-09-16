@@ -23,6 +23,11 @@ function hash(secret: string): string {
   return createHash("sha256").update(secret).digest("hex");
 }
 
+/** A key as claims mint them: long enough that its code cannot be guessed from the engine alone. */
+function isKey(key: string | undefined): key is string {
+  return typeof key === "string" && key.length >= 24 && key.length <= 200;
+}
+
 function matches(storedHash: string, secret: string): boolean {
   const provided = Buffer.from(hash(secret), "hex");
   const stored = Buffer.from(storedHash, "hex");
@@ -159,11 +164,14 @@ export class ContextEngines {
     return engine;
   }
 
-  /** The code a claimant puts on the site, for the holder or a pending claim alike. */
+  /**
+   * The code a claimant puts on the site. It is derived from the claimant's own key, so a code found
+   * on the site proves both that the caller holds the key and that the site is theirs: verification
+   * needs no list of pending claims, and a flood of claims cannot push the owner's out.
+   */
   async verification(host: string, key: string | undefined): Promise<Verification> {
     const engine = await this.requireEngine(host);
-    const standing = this.standing(engine, key);
-    if (!standing || !key) throw new ReportRequestError("Claim this Context Engine first; verification belongs to a claim.", 403, "engine_not_claimed");
+    if (!isKey(key)) throw new ReportRequestError("Claim this Context Engine first; verification belongs to a claim.", 403, "engine_not_claimed");
     const code = verificationCode(engine.id, hash(key));
     return {
       code,
@@ -178,8 +186,7 @@ export class ContextEngines {
    */
   async verify(host: string, key: string | undefined): Promise<ContextEngineView> {
     const engine = await this.requireEngine(host);
-    const standing = this.standing(engine, key);
-    if (!standing || !key) throw new ReportRequestError("Claim this Context Engine first; verification belongs to a claim.", 403, "engine_not_claimed");
+    if (!isKey(key)) throw new ReportRequestError("Claim this Context Engine first; verification belongs to a claim.", 403, "engine_not_claimed");
     const code = verificationCode(engine.id, hash(key));
     const method = await this.findCode(engine.host, code);
     if (!method) {

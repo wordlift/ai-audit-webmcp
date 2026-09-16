@@ -325,13 +325,15 @@ The document holds hashes only: the claim's key, pending claims, and day-long re
 key itself is handed to the claimant once and lives in their browser; `GET /api/engines/for-report/:id`
 returns a view without any of it. A decision persists only when the refine request carries the
 holder's key or a review token in `x-context-engine-key`; without one, a review is a revision of
-its report and nothing more.
+its report and nothing more. A review token travels to ChatGPT in the report link's fragment
+(`#review=`), which browsers never send to a server, so it is in no request log.
 
 Ownership is proved by the site: `POST /api/engines/:host/verify` reads
 `https://<host>/.well-known/wordlift-verification.txt`, then the home page's
 `<meta name="wordlift-site-verification">`, through the same URL policy the audit uses. The code is
-derived from the engine and the claimant's key. A pending claim that proves ownership takes the
-engine over, and every earlier key stops working.
+derived from the engine and the caller's key, so finding it on the site proves both; verification
+needs no pending claim to exist, and a flood of claims cannot lock the owner out. Proving ownership
+takes the engine over, and every earlier key stops working.
 
 To release an engine by hand (a verified owner who lost their browser's key, say), delete its
 document; the next audit of the site starts a fresh draft, and the decisions it held are gone.

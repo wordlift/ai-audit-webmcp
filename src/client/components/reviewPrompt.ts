@@ -17,7 +17,8 @@ export function askAgentPrompt(reportId: string): string {
  * Terms of Action interview is the skill's; this one is the first review, short enough to finish.
  */
 export function reviewPrompt(reportId: string, reviewToken?: string | null): string {
-  const link = reviewToken ? `${reportPageUrl(reportId)}?review=${encodeURIComponent(reviewToken)}` : reportPageUrl(reportId);
+  // In the fragment: the browser keeps it, no server log ever sees it.
+  const link = reviewToken ? `${reportPageUrl(reportId)}#review=${encodeURIComponent(reviewToken)}` : reportPageUrl(reportId);
   return [
     `Open this report in your browser and review what WordLift understood about this business: ${link}`,
     "First, understand. Use inspect-business-model, then tell me in plain words what WordLift thinks this business is, what it offers and where, which of that the site declares, which was only inferred from its content, and the few things agents should be able to do here. No ontology terms.",
