@@ -683,6 +683,94 @@ The two tests the brief sets: the Replit test (a stranger reads the first screen
 agents can do, what is broken and what to click, within thirty seconds) is for two people outside
 the team on the preview; the enterprise test (eight questions, two clicks) is the P1 spec.
 
+## The third brief, 2026-09-16: the Context Engine is the asset
+
+Andrea's third brief, read against the branch at c71c055 (two commits behind: "test it yourself"
+now reaches the site's own GET entry points too). One thesis: the AI Audit is how people arrive,
+the Context Engine is what they keep, Audit → Fix → Activate is its lifecycle. The wedge is
+narrower than "context engine", which others sell: from a public website, an evidence-backed model
+of the business that the owner governs, published back onto the owner's own estate, with what
+agents can actually do verified by calling. Monitoring is a layer across the steps, never a fourth
+step; claiming is the conversion between Audit and Fix.
+
+It reverses one decision. The first screen was an action screen (2026-09-07, 2026-09-10): "AI
+agents can do 1 of the 3 things that matter". Now the model comes first and readiness second, as
+proof. The plain words stay, one precise state each; AGENTS.md > Frozen says so.
+
+What the brief asked for that the branch already had: the declared relations and the one-line
+chain ("AlpiNest → offers Samspitze 4 → in Mariapfarr"), `inspect-business-model` and
+`explain-entity` in the page and on the remote server, Own it's entity questions (Matters / Not
+ours / As read), verification by invocation with "Test it yourself", the Observer writing only
+when something moved.
+
+Built on the branch, 2026-09-16 (P0 1–3, and the copy of 4, 6, 10, 20):
+
+- The first screen leads with the model: "We built a first Context Engine for alpina.travel.",
+  the counts in the site's nouns, the chain, then up to six things (business, offerings, places,
+  people, never a page) each marked Declared, Inferred or Confirmed, and "4 important things ·
+  1 relationship (2 declared · 1 inferred · 1 confirmed)". Then "Can agents use it?", "1 of the
+  3 things that matter most works today. Fix the other 2.", the readiness number, the three
+  actions. A report with no entities keeps the old headline.
+- A reviewed report says so where the model is: "Reviewed · 3 decisions added · not ours: …".
+- Review with ChatGPT sits beside the model, the primary button, with Ask ChatGPT as the second;
+  the "Work with an agent" fold under Fix is gone. The review prompt is rewritten: understand
+  (inspect-business-model, in plain words), question (only what changes the model, a few at a
+  time), refine (the same refine-terms-of-action, no tool renamed). Readiness never moves on a word.
+- The progress screen is the model forming: "Building a Context Engine for …", then "Selected 4
+  representative pages", "Found AlpiNest", "Connected AlpiNest → offers Samspitze 4", then the
+  phase it is in. Only what the running record holds; the declared graph lands at "mapping", and
+  capability checks are not streamed, so none is ticked one by one. The home page's rotating
+  verbs are gone.
+- The deep scan's offer reads "Claim your Context Engine and expand it beyond these 4 pages",
+  "Claim & expand", "Expanding it now". The mechanics and the lead are unchanged. The copy
+  promises only what exists: more pages, the report by email, a note when what agents can do
+  changes. It does not say decisions are saved, because nothing yet saves them beyond the report.
+- Fix is headed "Make your Context Engine authoritative"; Understand's door is "Build the live
+  Context Engine with WordLift" (intent `fix`, unchanged). The fold is "Model & evidence" on the
+  report and in the step bar; the step hints are the brief's. The home page does one job, "Turn
+  your website into a Context Engine for AI agents"; /pitch stays and loses its link from the hero.
+
+Not built, and why:
+
+- **The Context Engine object (P0 5), and with it a claim that is real (11–13).** `ClaimStore`
+  is a per-report refine token and stays that. Proposal: a `contextEngines` record keyed by
+  canonical host, with reports as its evidence snapshots, the human assertions lifted out of the
+  refined child and reapplied to each new snapshot, a status (draft, claimed, live, activated), an
+  owner state (unverified, verified) and the WordLift account once converted. Claiming a draft
+  takes an email; asserting business facts as the owner takes verification (account, domain
+  email, plugin, DNS or Search Console), and publishing takes a verified owner. Two questions come
+  before building it. How does an inferred entity keep its identity across crawls, when its id is
+  minted per read (name and type within the host is the obvious key, and it merges wrongly on
+  namesakes)? And which verification ships first? Andrea's call.
+- **The review visibly changing the page the person came back to (9).** A refined report is a
+  child with its own link; the parent does not know it exists. The banner above shows on the
+  child. Pointing the parent at its latest reviewed version is the Context Engine's "latest
+  report", so it waits for the object rather than growing a second pointer.
+- **Inferred relations (6).** Only with both entities known, a supporting span on a page and an
+  allowed kind, marked inferred until confirmed. Content Analysis returns no relations today;
+  this needs its team or a span-bound pass of our own. Decide which.
+- **Activate outcomes first (16).** Activate already opens on three outcomes. Renaming them to
+  "Agents can find it / know the rules / can use what works", with the files under "For your
+  engineers", is a copy pass. Next.
+- **Context drift in the Observer (8)**, new or vanished entities and relations beside readiness.
+  It compares consecutive snapshots of one engine, so it follows the object.
+- **Dashboard intents and PQL signals (9, 25–27).** `claim-context`, `build-context` and
+  `monitor` are not sent until the dashboard routes them, since an intent it does not know lands
+  nowhere. `contextEngineId` travels once it exists. The HubSpot properties (archetype, declared
+  and inferred counts, top gaps, runs on WordLift, reviewed, claimed, verified, which door) and
+  the funnel events are one change on the lead delivery. Agree the property names with Sales Ops
+  first.
+
+Not to build (the brief's list, kept): a cross-LLM visibility matrix in the audit, a global
+context confidence score, a fourth Monitor step, internal company-memory ingestion, WebMCP as a
+headline, competitor benchmarking in the primary funnel, an account before the first screen, an
+ontology editor, automatic publication of inferred facts, human review moving readiness.
+
+The Replit test becomes the brief's: after thirty seconds on the result page a stranger says what
+the business does, what WordLift inferred against what the company says, what an agent can do
+today, and what claiming does; then, given ChatGPT and no instructions, reviews the understanding,
+corrects something, and sees the model change. The last clause waits for the object above.
+
 ## Review pauses
 
 1. After Audit: the one-minute test with two people outside the team; the bill after a week of

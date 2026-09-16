@@ -5,17 +5,20 @@ import type { CapabilityResult, ReportRecord } from "../../shared/types/index.js
 import { getVisits, startReport, type ReportVisits } from "../api/client";
 import { ActionDetailDialog } from "./ActionDetailDialog";
 import { AgentDiary } from "./AgentDiary";
+import { AgentDoors } from "./AgentDoors";
+import { ContextEnginePreview, contextEngineSummary } from "./ContextEnginePreview";
 import { DeepScanOffer } from "./DeepScanOffer";
 import { publishUrl } from "./FixPanel";
 import { entityRole } from "../../shared/format/businessModel.js";
 import { entityTypeLabel, groupEntities } from "./UnderstandPanel";
 
 /**
- * The first screen of a report is an action screen. It answers, in under a minute, what agents
- * can do with this business and what to do next: the three actions that matter for this kind of
- * site, each with one plain word and one next step. Every plain word maps onto exactly one precise
- * state, never two; the precise vocabulary lives one click below, in the full audit, and in every
- * file an agent reads. The score is evidence; the gap is the product.
+ * The first screen of a report shows the Context Engine first and what agents can do with it second.
+ * It answers, in under a minute, what the business is and offers as the audit understood it, which
+ * of that the site declares and which was inferred, and then the three actions that matter for this
+ * kind of site, each with one plain word and one next step. Every plain word maps onto exactly one
+ * precise state, never two; the precise vocabulary lives one click below, in the model & evidence
+ * fold, and in every file an agent reads. The model is the asset; readiness is the proof.
  */
 export type PlainWord = "works" | "fix" | "talk";
 
@@ -78,6 +81,13 @@ export function headline(capabilities: CapabilityResult[], host: string): string
   if (three.length === 0) return `No agent capabilities are expected for ${host} yet.`;
   const works = three.filter((capability) => capability.state === "agent-ready").length;
   return `AI agents can do ${works} of the ${three.length} ${three.length === 1 ? "thing" : "things"} that matter on ${host}.`;
+}
+
+/** Under "Can agents use it?": how many of the things that matter an agent can do today. */
+export function capabilityLine(capabilities: CapabilityResult[]): string {
+  const three = actionsThatMatter(capabilities);
+  const works = three.filter((capability) => capability.state === "agent-ready").length;
+  return `${works} of the ${three.length} ${three.length === 1 ? "thing" : "things"} that matter most ${works === 1 ? "works" : "work"} today.`;
 }
 
 /** The line under the headline: the size of the gap, or the good news. */
@@ -249,6 +259,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   const score = report.score?.value;
   const ago = readAgo(report.collectedAt, now());
   const gap = gapLine(capabilities);
+  const engine = contextEngineSummary(report);
 
   async function runAgain() {
     setRerunning(true);
@@ -266,13 +277,11 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
     <section className="first-screen" id="step-audit" aria-labelledby="first-screen-title">
       <div className="first-screen-head">
         <p className="section-kicker"><Bot size={16} /> Audit</p>
-        <h1 id="first-screen-title">{headline(capabilities, host)}</h1>
-        {gap && <p className="first-sentence">{gap}</p>}
+        {/* The model first: "it understood my business" is the moment, what agents can do is the proof after it. */}
+        <h1 id="first-screen-title">{engine ? `We built a first Context Engine for ${host}.` : headline(capabilities, host)}</h1>
+        {!engine && gap && <p className="first-sentence">{gap}</p>}
         <p className="first-meta">
           {ago && <span className="read-when">{ago}</span>}
-          {score !== undefined && (
-            <span className="first-score">Agent readiness <b>{score}</b>/100</span>
-          )}
           <span className="chip-arche">{archetype}</span>
           {report.publishedWith && (
             <a className="chip-arche chip-runs-on" href={publishUrl(report.id)} target="_blank" rel="noreferrer" title={`${runsOnLine(report)} ${report.publishedWith.evidence}. Own this site? Open your WordLift dashboard.`}>
@@ -294,7 +303,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
                 <b>{part}</b>
               </span>
             ))}
-            . <a href="#understand">See what we understood</a>
+            .
           </p>
         )}
         {chain && (
@@ -307,8 +316,26 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
             ))}
           </p>
         )}
-        {/* The deeper read, asked for where the counts are: one line that opens in place. */}
+        {engine && <ContextEnginePreview summary={engine} />}
+        {/* Beside the model, the two things to do with it: review it, which makes it better, or ask it, which proves it is usable. */}
+        {engine && <AgentDoors reportId={report.id} />}
+        {/* Claiming is where an address is asked for: the engine expands, and the owner hears when it moves. */}
         <DeepScanOffer report={report} variant="inline" />
+      </div>
+
+      <div className="first-capabilities" aria-labelledby={engine ? "first-capabilities-title" : undefined}>
+        {engine && three.length > 0 && (
+          <>
+            <h2 id="first-capabilities-title">Can agents use it?</h2>
+            <p className="first-sentence">
+              {capabilityLine(capabilities)}
+              {gap && <> {gap}</>}
+            </p>
+          </>
+        )}
+        {score !== undefined && (
+          <p className="first-meta"><span className="first-score">Agent readiness <b>{score}</b>/100</span></p>
+        )}
       </div>
 
       {three.length > 0 && (
@@ -333,7 +360,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
 
       {beyond > 0 && (
         <p className="discovery-line">
-          <a href="#full-audit" onClick={openFullAudit}>All {beyond + three.length} actions a {archetype === "general" ? "site like this" : `${archetype} site`} should offer are in the full audit.</a>
+          <a href="#full-audit" onClick={openFullAudit}>All {beyond + three.length} actions a {archetype === "general" ? "site like this" : `${archetype} site`} should offer are in the model &amp; evidence.</a>
         </p>
       )}
       {report.agentDiscovery?.catalog === "missing" && (

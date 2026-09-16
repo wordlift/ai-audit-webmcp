@@ -1,23 +1,27 @@
 import { expect, test, type Page } from "@playwright/test";
 
-/** The full audit is one click away, and the specs take that click before reading it. */
-const openFullAudit = (page: Page) => page.locator("summary", { hasText: "Full audit" }).click();
+/** The model & evidence fold is one click away, and the specs take that click before reading it. */
+const openFullAudit = (page: Page) => page.locator("summary", { hasText: "Model & evidence" }).click();
 
 test("landing page asks one question and takes a URL", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /can ai agents understand and use your business/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /turn your website into a context engine for ai agents/i })).toBeVisible();
   await expect(page.getByLabel("Website URL")).toBeVisible();
-  await expect(page.getByText(/what stops them, and what to fix/i)).toBeVisible();
+  await expect(page.getByText(/checks what AI agents can actually do with it/i)).toBeVisible();
 });
 
-test("a report opens with three words and keeps the full audit one click away", async ({ page }) => {
+test("a report opens with the Context Engine, then three words, and keeps the model & evidence one click away", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Website URL").fill("https://shop.example");
   await page.getByRole("button", { name: /audit my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
 
-  // The first screen: one sentence, three actions, plain words, nothing precise.
-  await expect(page.getByText(/AI agents can do \d+ of the \d+ things? that matter on/i)).toBeVisible();
+  // The first screen: the Context Engine first, then what agents can do with it, in plain words.
+  await expect(page.getByRole("list", { name: /what wordlift understood/i })).toContainText(/declared|inferred/i);
+  await expect(page.getByRole("button", { name: /review with chatgpt/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Can agents use it?" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /pitching to a client/i })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1, name: /We built a first Context Engine for|AI agents can do \d+ of the \d+/i })).toBeVisible();
   const three = page.getByRole("list", { name: /the actions that matter/i });
   await expect(three.getByRole("listitem")).toHaveCount(3);
   await expect(three).toContainText(/works|fix this|talk to us/i);

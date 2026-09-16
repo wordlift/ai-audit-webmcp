@@ -4,14 +4,14 @@ import { Link } from "react-router-dom";
 /**
  * The three steps a person walks, on both pages, the current one lit: Audit, Fix, Activate. On the
  * report the first two are places on the page and the third is the next page; on Activate the
- * first two lead back. The full audit stays a quieter entry at the end, never a step.
+ * first two lead back. The model & evidence fold stays a quieter entry at the end, never a step.
  */
 export type Step = "audit" | "fix" | "activate";
 
 const STEPS: ReadonlyArray<{ id: Step; label: string; hint: string }> = [
-  { id: "audit", label: "Audit", hint: "What agents can do today" },
-  { id: "fix", label: "Fix", hint: "What agents cannot read yet, and who runs what" },
-  { id: "activate", label: "Activate", hint: "Publish it, and keep it agent-ready" },
+  { id: "audit", label: "Audit", hint: "Understand the business and verify what agents can do" },
+  { id: "fix", label: "Fix", hint: "Correct, confirm and make the Context Engine authoritative" },
+  { id: "activate", label: "Activate", hint: "Publish it and make its capabilities usable by agents" },
 ];
 
 /** On the report, the lit step follows the reader: the section nearest the top of the viewport. */
@@ -64,9 +64,9 @@ export function StepBar({ reportId, page, children }: { reportId: string; page: 
         })}
         <li className="step-aside">
           {page === "report" ? (
-            <a className="step-link step-link-quiet" href="#full-audit" onClick={() => { const fold = document.getElementById("full-audit") as HTMLDetailsElement | null; if (fold) fold.open = true; }}>Full audit</a>
+            <a className="step-link step-link-quiet" href="#full-audit" onClick={() => { const fold = document.getElementById("full-audit") as HTMLDetailsElement | null; if (fold) fold.open = true; }}>Model &amp; evidence</a>
           ) : (
-            <Link className="step-link step-link-quiet" to={`${report}#full-audit`}>Full audit</Link>
+            <Link className="step-link step-link-quiet" to={`${report}#full-audit`}>Model &amp; evidence</Link>
           )}
         </li>
       </ol>

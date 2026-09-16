@@ -15,7 +15,7 @@ test("a human-run sidecar call turns an unverified action into a verified agent 
   await page.getByRole("button", { name: /audit my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
 
-  await page.locator("summary", { hasText: "Full audit" }).click();
+  await page.locator("summary", { hasText: "Model & evidence" }).click();
   const availabilityNode = page.locator(".action-map").getByRole("button", { name: /check availability/i });
   await expect(availabilityNode).toContainText(/unverified/i);
   await page.screenshot({ path: testInfo.outputPath("sidecar-before.png"), fullPage: true });

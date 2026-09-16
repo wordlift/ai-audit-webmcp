@@ -60,7 +60,7 @@ test("the eight enterprise questions are each two clicks from the report", async
 
   // Back on the report, one click opens the full audit for the rest.
   await page.goto(`/reports/${childId}`);
-  await page.locator("summary", { hasText: "Full audit" }).click();
+  await page.locator("summary", { hasText: "Model & evidence" }).click();
 
   // 8, again, for the whole business at once: the boundaries table, one click below, one row per action.
   const boundaries = page.getByRole("row", { name: /check availability/i }).filter({ hasText: /partner handoff/i });
@@ -68,5 +68,5 @@ test("the eight enterprise questions are each two clicks from the report", async
   await expect(boundaries).toContainText("Partners own the inventory.");
   await expect(boundaries).toContainText("Human-provided");
   // Six sections in the fold; the agent-facing surfaces moved to Activate, where publishing lives.
-  await expect(page.getByRole("navigation", { name: /full audit sections/i }).getByRole("link")).toHaveCount(6);
+  await expect(page.getByRole("navigation", { name: /model and evidence sections/i }).getByRole("link")).toHaveCount(6);
 });

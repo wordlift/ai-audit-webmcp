@@ -17,8 +17,8 @@ for (const fixture of FIXTURES) {
     await page.getByRole("button", { name: /audit my site/i }).click();
 
     await expect(page).toHaveURL(/\/reports\//);
-    await expect(page.getByText(/AI agents can do \d+ of the \d+ things? that matter on/i)).toBeVisible();
-    await page.locator("summary", { hasText: "Full audit" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: /We built a first Context Engine for|AI agents can do \d+ of the \d+/i })).toBeVisible();
+    await page.locator("summary", { hasText: "Model & evidence" }).click();
     await expect(page.getByRole("heading", { name: fixture.archetype }).first()).toBeVisible();
     await expect(page.getByText(`${fixture.pages} representative pages analyzed`)).toBeVisible();
     await expect(page.getByText(/classification selects the expected action journey/i)).toBeVisible();

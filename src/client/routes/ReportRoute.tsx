@@ -16,7 +16,6 @@ import { OwnIt } from "../components/OwnIt";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { ReportProgress } from "../components/ReportProgress";
 import { ServiceMapProvenance } from "../components/ServiceMapProvenance";
-import { AgentDoors } from "../components/AgentDoors";
 import { StepBar } from "../components/StepBar";
 import { UnderstandPanel } from "../components/UnderstandPanel";
 import { SiteToolsBadge } from "../components/SiteToolsBadge";
@@ -145,18 +144,19 @@ export function ReportRoute() {
       {report.status === "partial" && (
         <div className="partial-banner" role="status">Partial report: {visibleErrors(report.errors).map(explainReportError).join(" ")}</div>
       )}
-      {/* The first screen speaks three plain words. Everything precise is one click below. */}
+      {/* The Context Engine first, what agents can do with it second. Everything precise is one click below. */}
       <FirstScreen key={`first-${report.id}`} report={report} />
-      {/* Fix, in two parts: publish what agents cannot read, then say who runs what. Both shape what
-          Activate publishes; neither moves readiness. The agent doors sit here, once. */}
+      {/* Fix makes the Context Engine authoritative, in two parts: what agents cannot read, then who runs
+          what. Both shape what Activate publishes; neither moves readiness. The ChatGPT review sits
+          beside the model, on the first screen. */}
       <section className="step-fix" id="step-fix" aria-labelledby="step-fix-title">
         <header className="step-head">
-          <p className="section-kicker" id="step-fix-title"><Wrench size={16} /> Fix</p>
-          <p className="step-subtitle">What agents cannot read yet, and who runs what. Nothing here moves the score; publishing does.</p>
+          <p className="section-kicker"><Wrench size={16} /> Fix</p>
+          <h2 className="step-title" id="step-fix-title">Make your Context Engine authoritative</h2>
+          <p className="step-subtitle">What exists only in your content, and who actually performs each action. Nothing here moves readiness; evidence does.</p>
         </header>
         <UnderstandPanel report={report} />
         <OwnIt key={`own-${report.id}`} report={report} />
-        <AgentDoors reportId={report.id} />
       </section>
       {/* Activate: one screen away, so the report stays three words and their fixes. */}
       <section className="activate-strip" id="step-activate" aria-labelledby="activate-strip-title">
@@ -169,7 +169,7 @@ export function ReportRoute() {
       </section>
       <details className="full-audit" id="full-audit">
         <summary>
-          Full audit <span>Entities · Terminology · Actions · Terms of Action · Evidence</span>
+          Model &amp; evidence <span>Entities · Terminology · Actions · Terms of Action · Evidence</span>
           <small className="full-audit-hint">
             Evidence, entities, terminology, actions, governance and agent-readiness details: the precise layer, the way engineers,
             agencies, auditors and agents read it.
@@ -180,7 +180,7 @@ export function ReportRoute() {
           {/* The seven sections of the enterprise layer, in the order a business model reads: what the
               organisation is and offers, the words it uses, what it should let agents do, who performs
               each action, the contract agents load, why each state was given, and what agents are handed. */}
-          <nav className="full-audit-nav" aria-label="Full audit sections">
+          <nav className="full-audit-nav" aria-label="Model and evidence sections">
             <a href="#audit-entities">Entities</a>
             <a href="#audit-terminology">Terminology</a>
             <a href="#audit-actions">Actions</a>

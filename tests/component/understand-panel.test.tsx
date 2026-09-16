@@ -93,7 +93,7 @@ describe("what an agent understands", () => {
 
   it("publishes the text-only ones with one button carrying the report id, and keeps the markup behind a fold", () => {
     render(<UnderstandPanel report={base} />);
-    const link = screen.getByRole("link", { name: /publish the missing 2 with wordlift/i });
+    const link = screen.getByRole("link", { name: /build the live context engine with wordlift/i });
     expect(link).toHaveAttribute("href", "https://my.wordlift.io/?source=ai-audit&report=4a8a04c0-e247-4bec-a440-d9f3506f9212&intent=fix");
 
     const fold = screen.getByText(/see the markup for one of them/i).closest("details")!;

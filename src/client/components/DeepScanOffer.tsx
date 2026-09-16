@@ -6,11 +6,13 @@ import type { ReportRecord } from "../../shared/types/index.js";
 import { ApiError, startReport } from "../api/client";
 
 /**
- * The one thing the audit asks for, where the person already is.
+ * Claim your Context Engine: the one thing the audit asks for, where the person already is.
  *
- * Everything else here is free and anonymous. Reading further into a site costs real crawl budget
- * and produces a report worth sending on, so this is where an address is exchanged for it — after
- * the reader has seen what the free scan found, never before. It sits on the first screen as one
+ * Everything else here is free and anonymous. What an address buys is the engine growing past the
+ * first pages, sent to the person, and a note when what agents can do there moves (the
+ * Observer re-reads it); underneath, it is the deep scan, and the lead goes where it always went.
+ * It is asked for after the reader has seen what the free scan understood, never before. Claiming
+ * here saves nothing else yet: review decisions stay on the report they were filed on. It sits on the first screen as one
  * line and opens in place, so nobody is sent to the bottom of the page to find a form.
  *
  * The address is submitted and then forgotten by the page: it is never put in the report, and the
@@ -70,10 +72,10 @@ export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS, variant = "st
   if (state === "sent" && started) {
     return (
       <section className="deep-scan-offer deep-scan-offer-sent" id="deep-scan" aria-live="polite">
-        <p className="section-kicker"><ScanSearch size={18} /> Deep scan running</p>
-        <h2>Reading the whole site now.</h2>
+        <p className="section-kicker"><ScanSearch size={18} /> Context Engine claimed</p>
+        <h2>Expanding it now.</h2>
         <p>
-          We are reading up to {DEEP_SCAN_PAGES} pages of {hostOf(target)}. The finished report goes to{" "}
+          We are expanding your Context Engine from {pagesRead} to up to {DEEP_SCAN_PAGES} representative pages of {hostOf(target)}. The finished report goes to{" "}
           <strong>{started.masked}</strong>, and lives at its own link — public and free, like this one.
         </p>
         <Link className="deep-scan-follow" to={`/reports/${started.reportId}`} state={{ started: true }}>
@@ -84,19 +86,19 @@ export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS, variant = "st
   }
 
   return (
-    <section className={`deep-scan-offer deep-scan-inline deep-scan-${variant}`} id="deep-scan" aria-label={`Read up to ${DEEP_SCAN_PAGES} pages instead of ${pagesRead}`}>
+    <section className={`deep-scan-offer deep-scan-inline deep-scan-${variant}`} id="deep-scan" aria-label="Claim your Context Engine">
       <button type="button" className={variant === "inline" ? "deep-scan-inline-link" : "deep-scan-strip"} aria-expanded={open} onClick={() => setOpen((current) => !current)}>
-        {variant === "strip" && <ScanSearch size={16} aria-hidden="true" />} Read up to {DEEP_SCAN_PAGES} pages instead of {pagesRead}{variant === "strip" ? " and get the report by email" : ""}
+        {variant === "strip" && <ScanSearch size={16} aria-hidden="true" />} Claim your Context Engine and expand it beyond {pagesRead === 1 ? "this page" : `these ${pagesRead} pages`}
         <ArrowRight size={14} aria-hidden="true" className={open ? "is-open" : ""} />
       </button>
       {open && (
         <div className="deep-scan-form">
           <p>
-            This report read {pagesRead} representative {pagesRead === 1 ? "page" : "pages"}. A deep scan reads up to {DEEP_SCAN_PAGES} of them: more of
-            what an agent would actually meet. Tell us where to send it and we will run it now.
+            This Context Engine was built from {pagesRead} representative {pagesRead === 1 ? "page" : "pages"}. Claim it and we expand it to up to{" "}
+            {DEEP_SCAN_PAGES}, send you the result, and write when what agents can do there changes.
           </p>
           <form className="input-row" onSubmit={requestDeepScan}>
-            <label className="sr-only" htmlFor="deep-scan-email">Email address for the deep scan report</label>
+            <label className="sr-only" htmlFor="deep-scan-email">Email address to claim this Context Engine</label>
             <input
               id="deep-scan-email"
               type="email"
@@ -108,12 +110,12 @@ export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS, variant = "st
               disabled={state === "sending"}
             />
             <button type="submit" disabled={state === "sending" || email.trim().length === 0}>
-              <Mail size={17} aria-hidden="true" /> {state === "sending" ? "Starting…" : "Send me the deep scan"}
+              <Mail size={17} aria-hidden="true" /> {state === "sending" ? "Starting…" : "Claim & expand"}
             </button>
           </form>
           {error && <p className="deep-scan-error" role="alert">{error}</p>}
           <small>
-            Your address is used to send this report and is never written into it. The report itself stays
+            Your address is used to send the expanded report and notes about changes, and is never written into it. The report itself stays
             public at its own link. <a href="/privacy">How your data is handled</a>.
           </small>
         </div>

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { FirstScreen, actionsThatMatter, foundLine, gapLine, headline, readAgo, readersLine, relationChain, runsOnLine } from "../../src/client/components/FirstScreen";
+import { FirstScreen, actionsThatMatter, capabilityLine, foundLine, gapLine, headline, readAgo, readersLine, relationChain, runsOnLine } from "../../src/client/components/FirstScreen";
 import type { CapabilityResult, ReportRecord } from "../../src/shared/types/index.js";
 
 function capability(overrides: Partial<CapabilityResult> & Pick<CapabilityResult, "actionId" | "label" | "state">): CapabilityResult {
@@ -76,7 +76,7 @@ describe("the first screen", () => {
     expect(screen.getByText("Fix the other 2.")).toBeVisible();
     expect(screen.getByText(/Agent readiness/)).toHaveTextContent("Agent readiness 62/100");
     // The other expected action is one click below, and the link says how many there are in all.
-    expect(screen.getByRole("link", { name: /All 4 actions a travel \/ hospitality site should offer are in the full audit/ })).toHaveAttribute("href", "#full-audit");
+    expect(screen.getByRole("link", { name: /All 4 actions a travel \/ hospitality site should offer are in the model & evidence/ })).toHaveAttribute("href", "#full-audit");
     expect(screen.getByText("62")).toBeVisible();
   });
 
@@ -106,16 +106,58 @@ describe("the first screen", () => {
     expect(screen.getByText(/Agents have no way to find this site's capabilities yet: it publishes no catalog\./)).toBeVisible();
   });
 
-  it("offers the deeper read on the first screen, opening in place, and not on a deep scan", () => {
+  it("offers to claim the Context Engine on the first screen, opening in place, and not on a deep scan", () => {
     renderScreen();
-    const strip = screen.getByRole("button", { name: /Read up to 12 pages instead of 4/ });
+    const strip = screen.getByRole("button", { name: /Claim your Context Engine and expand it beyond these 4 pages/ });
     expect(strip).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByLabelText(/email address/i)).toBeNull();
     fireEvent.click(strip);
     expect(screen.getByLabelText(/email address/i)).toBeVisible();
-    expect(screen.getByRole("button", { name: /send me the deep scan/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /claim & expand/i })).toBeDisabled();
     renderScreen({ ...report, id: "5b8a04c0-e247-4bec-a440-d9f3506f9213", scanDepth: "deep" });
-    expect(screen.getAllByRole("button", { name: /Read up to 12 pages/ })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /Claim your Context Engine/ })).toHaveLength(1);
+  });
+
+  it("shows the Context Engine first, each thing with where the knowledge comes from, and what agents can do with it second", () => {
+    const entity = (id: string, name: string, type: string, extra: Record<string, unknown> = {}) => ({ id, types: [type], name, alternateNames: [], sourceUrls: ["https://www.alpina.travel/"], sameAs: [], offers: [], confidence: 0.9, ...extra });
+    const reviewed = {
+      ...report,
+      refinement: { assertions: {}, decisions: 3, conflicts: [], provenance: "human-provided", appliedAt: "2026-09-07T06:00:00.000Z" },
+      contextGraph: {
+        pages: [{ url: "https://www.alpina.travel/", title: "Alpina", role: "entry", headings: [], entityIds: [] }],
+        entities: [
+          entity("org", "AlpiNest Feriendorf", "LodgingBusiness"),
+          entity("apt", "Samspitze 4", "Apartment", { origin: "inferred", humanPriority: "primary" }),
+          entity("town", "Mariapfarr", "Place", { origin: "inferred" }),
+          entity("site", "Alpina.travel", "WebSite"),
+          entity("other", "Somebody Else GmbH", "Organization", { humanPriority: "demoted" }),
+        ],
+        relations: [{ from: "org", to: "apt", kind: "offers", provenance: "declared", sourceUrl: "https://www.alpina.travel/" }],
+        lexicalEntries: [],
+        interfaces: [],
+        bindings: [],
+      },
+    } as unknown as ReportRecord;
+    renderScreen(reviewed);
+    expect(screen.getByRole("heading", { level: 1, name: "We built a first Context Engine for alpina.travel." })).toBeVisible();
+    const understood = screen.getByRole("list", { name: "What WordLift understood" });
+    expect(within(understood).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "AlpiNest FeriendorfLodging businessDeclared",
+      "Samspitze 4ApartmentConfirmed",
+      "MariapfarrPlaceInferred",
+    ]);
+    // What a review said shows where the model is: the decisions, and what is not ours.
+    expect(screen.getByText(/decisions added/)).toHaveTextContent("Reviewed · 3 decisions added · not ours: Somebody Else GmbH");
+    expect(screen.getByText(/important things/)).toHaveTextContent("4 important things · 1 relationship (2 declared · 1 inferred · 1 confirmed)");
+    // Review beside the model, then the proof.
+    expect(screen.getByRole("button", { name: /Review with ChatGPT/ })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 2, name: "Can agents use it?" })).toBeVisible();
+    expect(screen.getByText("1 of the 3 things that matter most works today. Fix the other 2.")).toBeVisible();
+  });
+
+  it("counts what works among the things that matter most", () => {
+    expect(capabilityLine(report.capabilities ?? [])).toBe("1 of the 3 things that matter most works today.");
+    expect(capabilityLine([capability({ actionId: "a", label: "A", state: "missing" }), capability({ actionId: "b", label: "B", state: "missing" })])).toBe("0 of the 2 things that matter most work today.");
   });
 
   it("says what the agent did in a person's words, never in ours", () => {
@@ -220,7 +262,7 @@ describe("the readers line", () => {
     expect(foundLine(withGraph)).toEqual({ pages: 2, parts: ["1 business", "2 apartments", "2 places", "1 person", "4 things agents should be able to do here"] });
     renderScreen(withGraph);
     expect(screen.getByText(/From 2 pages, WordLift found/)).toHaveTextContent("1 business · 2 apartments · 2 places · 1 person · 4 things agents should be able to do here");
-    expect(screen.getByRole("link", { name: "See what we understood" })).toHaveAttribute("href", "#understand");
+    expect(screen.getByRole("link", { name: "See everything we understood" })).toHaveAttribute("href", "#understand");
     // Without a graph there is nothing to count, and nothing is said.
     expect(foundLine(report)).toBeNull();
   });

@@ -26,7 +26,7 @@ function renderOffer(overrides: Partial<ReportRecord> = {}, graceMs?: number) {
       <DeepScanOffer report={{ ...report, ...overrides } as ReportRecord} {...(graceMs === undefined ? {} : { graceMs })} />
     </MemoryRouter>,
   );
-  const strip = screen.queryByRole("button", { name: /read up to 12 pages/i });
+  const strip = screen.queryByRole("button", { name: /claim your context engine/i });
   if (strip) fireEvent.click(strip);
   return rendered;
 }
@@ -34,12 +34,12 @@ function renderOffer(overrides: Partial<ReportRecord> = {}, graceMs?: number) {
 describe("DeepScanOffer", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("offers the deeper read against what the free scan actually did", () => {
+  it("offers to claim and expand the Context Engine against what the free scan actually did", () => {
     renderOffer();
 
-    expect(screen.getByText(/read 4 representative pages/i)).toBeVisible();
-    expect(screen.getByText(/up to 12 of them/i)).toBeVisible();
-    expect(screen.getByRole("button", { name: /send me the deep scan/i })).toBeDisabled();
+    expect(screen.getByText(/built from 4 representative pages/i)).toBeVisible();
+    expect(screen.getByText(/expand it to up to 12/i)).toBeVisible();
+    expect(screen.getByRole("button", { name: /claim & expand/i })).toBeDisabled();
   });
 
   it("asks for nothing on a report that already read the whole site", () => {
@@ -60,7 +60,7 @@ describe("DeepScanOffer", () => {
 
     renderOffer();
     fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "reviewer@example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /send me the deep scan/i }));
+    fireEvent.click(screen.getByRole("button", { name: /claim & expand/i }));
 
     await waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toMatchObject({
@@ -81,7 +81,7 @@ describe("DeepScanOffer", () => {
 
     renderOffer();
     fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "reviewer@example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /send me the deep scan/i }));
+    fireEvent.click(screen.getByRole("button", { name: /claim & expand/i }));
 
     // The address a reader can recognise, in a page anyone with the link can open.
     expect(await screen.findByText("re******@example.com")).toBeVisible();
@@ -97,12 +97,12 @@ describe("DeepScanOffer", () => {
 
     renderOffer({}, 30);
     fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "reviewer@example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /send me the deep scan/i }));
-    expect(await screen.findByText(/reading the whole site now/i)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /claim & expand/i }));
+    expect(await screen.findByText(/expanding it now/i)).toBeVisible();
     expect(screen.getByRole("link", { name: /follow it live/i })).toBeVisible();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/too many audits/i);
-    expect(screen.queryByText(/reading the whole site now/i)).toBeNull();
+    expect(screen.queryByText(/expanding it now/i)).toBeNull();
   });
 
   it("says what went wrong instead of pretending the scan started", async () => {
@@ -115,9 +115,9 @@ describe("DeepScanOffer", () => {
 
     renderOffer();
     fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "reviewer@example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /send me the deep scan/i }));
+    fireEvent.click(screen.getByRole("button", { name: /claim & expand/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/too many audits/i);
-    expect(screen.queryByText(/deep scan running/i)).toBeNull();
+    expect(screen.queryByText(/context engine claimed/i)).toBeNull();
   });
 });

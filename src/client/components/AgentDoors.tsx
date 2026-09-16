@@ -1,11 +1,12 @@
-import { Bot, Copy } from "lucide-react";
+import { Copy, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { askAgentPrompt, reviewPrompt } from "./reviewPrompt";
 
 /**
- * Both ways to work with an agent, in one place under Fix: read the model this report built, or
- * let ChatGPT interview the team and file the answers here. One fold, two prompts, each copied
- * with one button; the mechanism stays behind the page.
+ * Beside the Context Engine, the two things to do with it in ChatGPT. Review makes the model
+ * better: ChatGPT says what WordLift understood, asks the few questions that matter, and files the
+ * answers here, where they show. Ask proves the model is usable: an agent answers about the business
+ * from it. Each copies one prompt; the mechanism stays behind the page.
  */
 export function AgentDoors({ reportId }: { reportId: string }) {
   const [copied, setCopied] = useState<"ask" | "review" | null>(null);
@@ -15,22 +16,18 @@ export function AgentDoors({ reportId }: { reportId: string }) {
     window.setTimeout(() => setCopied(null), 2_500);
   }
   return (
-    <details className="agent-doors">
-      <summary><Bot size={15} aria-hidden="true" /> Work with an agent</summary>
-      <div className="agent-doors-body">
-        <div className="agent-door">
-          <p><b>Ask what it understood.</b> An agent reads the model this report built, through the tools on this page: what the business offers, which entities matter, which are only inferred, and what it can do here today.</p>
-          <button type="button" className="review-cta" onClick={() => void copy("ask")}>
-            <Copy size={15} aria-hidden="true" /> {copied === "ask" ? "Prompt copied. Paste it into ChatGPT" : "Ask ChatGPT about this business"}
-          </button>
-        </div>
-        <div className="agent-door">
-          <p><b>Let it interview your team.</b> ChatGPT asks about your business, its terminology, its entities and who owns each action, and files the answers here, in the same model.</p>
-          <button type="button" className="review-cta" onClick={() => void copy("review")}>
-            <Copy size={15} aria-hidden="true" /> {copied === "review" ? "Prompt copied. Paste it into ChatGPT" : "Review with ChatGPT"}
-          </button>
-        </div>
+    <section className="agent-doors" aria-labelledby="agent-doors-title">
+      <p className="agent-doors-lead">
+        <b id="agent-doors-title">Review the understanding.</b> ChatGPT tells you what WordLift understood, asks what is right, and files your answers here.
+      </p>
+      <div className="agent-doors-buttons">
+        <button type="button" className="review-cta review-cta-primary" onClick={() => void copy("review")}>
+          <MessageSquare size={15} aria-hidden="true" /> {copied === "review" ? "Prompt copied. Paste it into ChatGPT" : "Review with ChatGPT"}
+        </button>
+        <button type="button" className="review-cta" onClick={() => void copy("ask")}>
+          <Copy size={15} aria-hidden="true" /> {copied === "ask" ? "Prompt copied. Paste it into ChatGPT" : "Ask ChatGPT about this business"}
+        </button>
       </div>
-    </details>
+    </section>
   );
 }

@@ -153,7 +153,7 @@ function EntityList({ entities, tone, report }: { entities: DomainEntity[]; tone
       </ul>
       {more > 0 && (
         <p className="entity-more">
-          <a href="#full-audit" onClick={openFullAudit}>{more} more in the full audit</a>
+          <a href="#full-audit" onClick={openFullAudit}>{more} more in the model &amp; evidence</a>
         </p>
       )}
     </>
@@ -198,9 +198,9 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
       {fixable && (
         <p className="fix-cta">
           <a className="fix-publish" href={publishUrl(report.id, { intent: "fix" })} target="_blank" rel="noreferrer">
-            Publish the missing {textOnly.length} with WordLift <ArrowUpRight size={15} aria-hidden="true" />
+            Build the live Context Engine with WordLift <ArrowUpRight size={15} aria-hidden="true" />
           </a>
-          <span>WordLift writes the machine-readable form for every page and keeps it in sync as the site changes.</span>
+          <span>WordLift turns the {textOnly.length} {textOnly.length === 1 ? "thing" : "things"} only in your content into stable, machine-readable knowledge on every page, and keeps it in sync as the site changes.</span>
         </p>
       )}
 

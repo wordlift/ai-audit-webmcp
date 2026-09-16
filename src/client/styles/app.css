@@ -327,10 +327,6 @@ button:disabled { opacity: 0.6; cursor: wait; }
   animation: pulse 1s infinite;
 }
 
-.progress-word {
-  animation: breathe 2.2s ease-in-out infinite;
-}
-
 .progress-detail {
   color: var(--muted);
   font-size: 0.82rem;
@@ -429,16 +425,20 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .step-fix { display: grid; gap: 18px; }
 .step-head { display: grid; gap: 4px; }
 .step-head .section-kicker { margin: 0; }
+.step-title { margin: 0; font-size: clamp(1.3rem, 2.6vw, 1.7rem); }
 .step-subtitle { margin: 0; color: var(--muted); max-width: 66ch; }
-.agent-doors { border: 1px solid var(--line-subtle); border-radius: 16px; background: var(--surface); padding: 14px 20px; }
-.agent-doors > summary { cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--brand); }
-.agent-doors-body { display: grid; gap: 14px; padding-top: 14px; }
-.agent-door { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; }
-.agent-door p { margin: 0; color: var(--muted); max-width: 62ch; flex: 1 1 34ch; }
-.agent-door .review-cta { flex: 0 0 auto; white-space: nowrap; }
+/* Beside the Context Engine: review it, which makes it better, or ask it, which proves it usable. */
+.agent-doors { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; margin-top: 6px; padding: 14px 18px; border: 1px solid var(--line-subtle); border-radius: 14px; background: color-mix(in srgb, var(--brand) 4%, white); }
+.agent-doors-lead { margin: 0; color: var(--muted); max-width: 52ch; flex: 1 1 30ch; }
+.agent-doors-lead b { color: var(--ink); }
+.agent-doors-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.agent-doors .review-cta { white-space: nowrap; }
+.agent-doors .review-cta:not(.review-cta-primary) { background: var(--surface); color: var(--brand); border: 1px solid color-mix(in srgb, var(--brand) 30%, white); }
+.agent-doors .review-cta:not(.review-cta-primary):hover { background: color-mix(in srgb, var(--brand) 8%, white); }
+@media (max-width: 640px) { .agent-doors .review-cta { white-space: normal; } }
 
 /* The deeper read as one line beside the counts. */
-.deep-scan-inline-link { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
+.deep-scan-inline-link { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
 .deep-scan-inline-link .is-open { transform: rotate(90deg); }
 .deep-scan-inline .deep-scan-form { margin-top: 10px; }
 
@@ -844,6 +844,25 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .first-chain-arrow { color: var(--brand); }
 .first-found a { color: var(--brand); font-weight: 600; }
 
+/* The Context Engine as a person reads it: a few things, each with where the knowledge comes from. */
+.engine-preview { display: grid; gap: 10px; margin-top: 4px; }
+.engine-entities { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 8px; }
+.engine-entity { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; column-gap: 10px; padding: 10px 12px; border: 1px solid var(--line-subtle); border-radius: 12px; background: var(--surface); }
+.engine-entity-name { font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.engine-entity-type { grid-row: 2; color: var(--muted); font-size: 0.82rem; }
+.engine-provenance { grid-row: 1 / span 2; grid-column: 2; align-self: center; padding: 3px 8px; border-radius: 999px; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: help; }
+.engine-provenance-declared { background: color-mix(in srgb, var(--brand) 10%, white); color: var(--brand); }
+.engine-provenance-inferred { background: color-mix(in srgb, var(--state-unverified) 22%, white); color: var(--ink); }
+.engine-provenance-human-confirmed { background: color-mix(in srgb, var(--state-agent-ready) 20%, white); color: var(--ink); }
+.engine-counts { margin: 0; color: var(--muted); font-size: 0.92rem; }
+.engine-counts-provenance { color: var(--faint); }
+.engine-counts a { color: var(--brand); font-weight: 600; }
+.engine-reviewed { margin: 0; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--state-agent-ready) 12%, white); color: var(--ink); font-size: 0.92rem; }
+/* The proof after the model: what agents can do with it today. */
+.first-capabilities { display: grid; gap: 6px; padding-top: 14px; border-top: 1px solid var(--line-subtle); }
+.first-capabilities:empty { display: none; }
+.first-capabilities h2 { margin: 0; font-size: 1.25rem; }
+
 /* Try the model with an AI agent: the second aha, one button. */
 .ask-agent { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 28px; padding: 18px 22px; border: 1px solid var(--line-subtle); border-radius: 16px; background: var(--surface); }
 .ask-agent > div { display: grid; gap: 6px; flex: 1 1 36ch; }
@@ -1143,7 +1162,6 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .observe-surfaces { color: var(--muted); font-size: 0.8rem; }
 
 /* ---------- The pitch: three sites, one screen ---------- */
-.pitch-link { margin: 8px 0 0 !important; }
 .pitch-form { display: grid; gap: 12px; }
 .pitch-form label { font-weight: 600; display: grid; gap: 6px; }
 .pitch-form label input { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; font: inherit; }
@@ -1651,10 +1669,15 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 /* ---------- The report while it is being made ---------- */
 .report-progress h1 { font-size: 2.2rem; margin: 8px 0 18px; }
 .report-progress h1 span { color: var(--brand); }
-.progress-phases { list-style: none; display: flex; flex-wrap: wrap; gap: 18px; margin: 0 0 22px; padding: 0; }
-.progress-phases li { display: flex; align-items: center; gap: 8px; color: var(--faint); font-size: 0.95rem; }
+/* The Context Engine forming: one line per thing the audit has done, top to bottom. */
+.progress-phases { list-style: none; display: grid; gap: 8px; margin: 0 0 22px; padding: 0; }
+.progress-phases li { display: flex; align-items: center; gap: 10px; color: var(--faint); font-size: 0.98rem; animation: progress-arrive 240ms ease-out; }
 .progress-phases li.active { color: var(--ink); font-weight: 600; }
-.progress-phases li.done { color: var(--wl-moss); }
+.progress-phases li.done { color: var(--muted); }
+.progress-phases li.done svg { color: var(--wl-moss); }
+.progress-phases li strong { color: var(--ink); font-weight: 600; }
+@keyframes progress-arrive { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .progress-phases li { animation: none; } }
 .progress-phases li svg { width: 17px; height: 17px; }
 .progress-phases li i {
   display: inline-flex; align-items: center; justify-content: center;
@@ -1672,12 +1695,6 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .progress-arrival header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; color: var(--muted); font-size: 0.85rem; }
 .progress-arrival header strong { font-size: 1.4rem; color: var(--ink); }
 .progress-arrival p { margin: 0; color: var(--muted); font-size: 0.92rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.progress-entities { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
-.progress-entities li {
-  display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px;
-  border: 1px solid var(--line-subtle); border-radius: 999px; background: var(--page); font-size: 0.85rem;
-}
-.progress-entities li span { color: var(--faint); font-size: 0.75rem; }
 .progress-footnote { color: var(--faint); font-size: 0.88rem; }
 
 /* AI crawler access inside the foundation audit. */
@@ -1714,10 +1731,9 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .webmcp-badge-error { border-color: color-mix(in srgb, var(--wl-danger) 35%, white); background: color-mix(in srgb, var(--wl-danger) 10%, white); color: #8e2323; }
 
 @keyframes pulse { 50% { opacity: 0.45; transform: scale(0.8); } }
-@keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .progress-dot, .progress-word, .spin, .progress-arrival { animation: none; }
+  .progress-dot, .spin, .progress-arrival { animation: none; }
 }
 
 @media (max-width: 1000px) {

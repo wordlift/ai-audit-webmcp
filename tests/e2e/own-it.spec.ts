@@ -31,7 +31,7 @@ test("a site owner says who runs each action, and the score stays where the evid
   await expect(page.locator(".first-score b")).toHaveText(score ?? "");
 
   // The precise vocabulary lives one click below, with the decision's provenance.
-  await page.locator("summary", { hasText: "Full audit" }).click();
+  await page.locator("summary", { hasText: "Model & evidence" }).click();
   await expect(page.getByText("Human-refined Terms of Action")).toBeVisible();
   await expect(page.getByText(/3 action boundaries decided/i)).toBeVisible();
 });

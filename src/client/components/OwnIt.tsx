@@ -211,7 +211,7 @@ export function OwnIt({ report }: { report: ReportRecord }) {
             <summary>Also tell us what matters <span className="entity-count">{choices.length}</span></summary>
             <fieldset className="own-it-question own-it-entities">
               <legend>What we found. Is it yours?</legend>
-              <p className="own-it-means">Mark what matters most, and what is not yours. What you leave stays as read; the rest of what we found is in the full audit. Nothing here moves readiness.</p>
+              <p className="own-it-means">Mark what matters most, and what is not yours. What you leave stays as read; the rest of what we found is in the model & evidence. Nothing here moves readiness.</p>
               <ul className="own-it-entity-list">
                 {choices.map((entity) => (
                   <li key={entity.id}>

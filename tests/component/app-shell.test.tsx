@@ -4,12 +4,12 @@ import { MemoryRouter } from "react-router-dom";
 import { App } from "../../src/client/App";
 
 describe("application shell", () => {
-  it("leads with the action-first product thesis", () => {
+  it("leads with one job: a URL in, a model of the business out", () => {
     render(<MemoryRouter><App /></MemoryRouter>);
 
-    expect(screen.getByRole("heading", { name: /can ai agents understand and use your business/i })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /turn your website into a context engine for ai agents/i })).toBeVisible();
     expect(screen.getByLabelText(/website url/i)).toBeVisible();
-    expect(screen.getByText(/what stops them, and what to fix/i)).toBeVisible();
+    expect(screen.getByText(/checks what AI agents can actually do with it/i)).toBeVisible();
     expect(screen.getByRole("button", { name: /audit my site/i })).toBeVisible();
   });
 });
