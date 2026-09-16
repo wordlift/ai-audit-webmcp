@@ -26,11 +26,15 @@ export function sampleJsonLd(entity: DomainEntity): Record<string, unknown> {
   return { "@context": "https://schema.org", ...entityJsonLd(entity) };
 }
 
-/** Where the dashboard picks the report up: the id travels, and the action and intent when there is one. */
-export function publishUrl(reportId: string, options: { action?: string; intent?: FixIntent } = {}): string {
+/**
+ * Where the dashboard picks the report up: the report id travels, the site's Context Engine when it
+ * has one, and the action and intent when there are, so the dashboard knows why someone arrived.
+ */
+export function publishUrl(reportId: string, options: { action?: string; intent?: FixIntent; engine?: string | null } = {}): string {
   const url = new URL(DASHBOARD_URL);
   url.searchParams.set("source", "ai-audit");
   url.searchParams.set("report", reportId);
+  if (options.engine) url.searchParams.set("engine", options.engine);
   if (options.action) url.searchParams.set("action", options.action);
   if (options.intent) url.searchParams.set("intent", options.intent);
   return url.toString();

@@ -10,6 +10,7 @@ import { DocDialog, type PublishedDoc } from "../components/DocDialog";
 import { publishUrl, talkToUsUrl } from "../components/FixPanel";
 import { OWN_WORDS } from "../components/OwnIt";
 import { ReportErrorState } from "../components/ReportErrorState";
+import { EngineProvider, useReportEngine } from "../engine/EngineContext";
 
 /**
  * Activate sells the outcome: make the business usable by AI agents. What WordLift publishes comes
@@ -191,7 +192,8 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
   const agents = agentsByPlatform(visits);
   const activations = activationSummary(visits);
   const hasInterface = publication.actions.some((action) => action.publishedAs === "action");
-  const activate = publishUrl(report.id, { intent: "activate" });
+  const { engine } = useReportEngine();
+  const activate = publishUrl(report.id, { intent: "activate", engine: engine?.id });
   const [openDoc, setOpenDoc] = useState<PublishedDoc | null>(null);
   const [businessData, instructions, discovery]: PublishedDoc[] = [
     {
@@ -394,7 +396,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
         </div>
         )}
         <p className="activate-lead">
-          <a href={publishUrl(report.id, { intent: "monitor" })} target="_blank" rel="noreferrer">Monitor AI visibility</a>: use this Context Engine to
+          <a href={publishUrl(report.id, { intent: "monitor", engine: engine?.id })} target="_blank" rel="noreferrer">Monitor AI visibility</a>: use this Context Engine to
           track how your business is discovered and used by AI systems. WordLift re-verifies on a schedule and writes only when something moves.
         </p>
       </section>
@@ -514,5 +516,9 @@ export function ActivateRoute() {
 
   if (error) return <ReportErrorState title="Nothing to publish yet" message={error} />;
   if (!report || !publication) return <div className="report-loading" role="status">Preparing what the site publishes…</div>;
-  return <ActivateScreen report={report} publication={publication} visits={visits} />;
+  return (
+    <EngineProvider report={report}>
+      <ActivateScreen report={report} publication={publication} visits={visits} />
+    </EngineProvider>
+  );
 }

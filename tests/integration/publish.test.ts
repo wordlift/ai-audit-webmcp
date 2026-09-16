@@ -98,7 +98,7 @@ describe("what the owner decided becomes what the page carries", () => {
     expect(publication.decided).toBe(0);
     expect(publication.actions.find((action) => action.actionId === "site.search")).toMatchObject({ publishedAs: "action", boundary: null });
     expect(publication.actions.filter((action) => action.publishedAs === "handoff")).toEqual([]);
-    expect(publication.skill).toContain("before the owner reviewed it");
+    expect(publication.skill).toContain("before anyone reviewed it");
   });
 
   it("publishes declared entities, promoted inferred ones, and never a demoted one", () => {
@@ -152,7 +152,11 @@ describe("the skill, for acting", () => {
     const { skill } = await orchestrator.publish(child.id);
 
     expect(skill).toMatch(/^---\nname: alpina\.travel Terms of Action\n/);
-    expect(skill).toContain("In the owner's words: destination organization.");
+    // An unclaimed review speaks as a reviewer; only a verified owner's decisions are the business's word.
+    expect(skill).toContain("In the reviewer's words: destination organization.");
+    expect(skill).toContain("made in a review; the reviewer has not proved the site is theirs");
+    const owned = await orchestrator.refine(child.id, { businessRole: "destination-organization" }, { filedBy: "owner" });
+    expect((await orchestrator.publish(owned.id)).skill).toContain("In the owner's words: destination organization.");
     expect(skill).toContain("- **availability**: partner lodging inventory");
     expect(skill).toContain("- Who runs it: ours.");
     expect(skill).toContain("- Who runs it: a partner runs it — Lungau Lodging (https://lungau-lodging.example/book).");

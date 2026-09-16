@@ -31,6 +31,10 @@ function matches(storedHash: string, secret: string): boolean {
 
 export interface ContextEnginesOptions {
   store: ContextEngineStore;
+  /** Whether the site's own catalog carries the Terms of Action we write: the engine is live. */
+  isPublished?: (host: string) => Promise<boolean>;
+  /** Whether an agent has activated one of the site's capabilities and it worked: the engine is activated. */
+  isActivated?: (host: string) => Promise<boolean>;
   now?: () => Date;
   /** How a site is read for its verification code; tests inject one. */
   fetch?: (url: string) => Promise<Pick<SafeFetchResult, "status" | "body">>;
@@ -52,6 +56,23 @@ export interface Verification {
  */
 export class ContextEngines {
   constructor(private readonly options: ContextEnginesOptions) {}
+
+  /** Wires the signals that move an engine past claimed, once the services that hold them exist. */
+  attach(signals: Pick<ContextEnginesOptions, "isPublished" | "isActivated">): void {
+    Object.assign(this.options, signals);
+  }
+
+  /** Draft, claimed, live once its site publishes what we write, activated once an agent used it. */
+  private async statusFor(engine: ContextEngine): Promise<ContextEngine["status"]> {
+    const host = engine.host;
+    const [activated, published] = await Promise.all([
+      this.options.isActivated?.(host).catch(() => false) ?? false,
+      this.options.isPublished?.(host).catch(() => false) ?? false,
+    ]);
+    if (activated) return "activated";
+    if (published) return "live";
+    return engine.claim ? "claimed" : "draft";
+  }
 
   private now(): Date {
     return this.options.now?.() ?? new Date();
@@ -77,8 +98,8 @@ export class ContextEngines {
     try {
       const at = this.now().toISOString();
       const host = reportHost(report);
-      const engine = (await this.options.store.get(host)) ?? newEngine(randomUUID(), host, at);
-      return await this.options.store.put(withSnapshot(engine, report, at));
+      const engine = withSnapshot((await this.options.store.get(host)) ?? newEngine(randomUUID(), host, at), report, at);
+      return await this.options.store.put({ ...engine, status: await this.statusFor(engine) });
     } catch (error) {
       this.options.log?.("engine_record_failed", error instanceof Error ? error.name : "unknown");
       return null;

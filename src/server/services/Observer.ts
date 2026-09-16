@@ -3,13 +3,15 @@ import type { ActivationCount, DayVisits } from "../adapters/visits/VisitStore.j
 import type { DeepScanLead, LeadDelivery, LeadStore } from "../adapters/leads/index.js";
 import type { CapabilityResult, ReportRecord } from "../../shared/types/index.js";
 import type { AuditOrchestrator } from "./AuditOrchestrator.js";
+import { contextDrift } from "../../domain/engine/drift.js";
 import type { VisitLedger } from "./VisitLedger.js";
 
 /**
  * The number that comes to you. A site whose owner gave a deep-scan address is read again on a
  * cadence bounded by the number of such addresses, and a short note goes out only when something
- * moved: the score, a capability that stopped answering and why, one that started, the first
- * crawler, Google's first verified read, an agent's failed activation. Never on a timer alone.
+ * moved: the score, a capability that stopped answering and why, one that started, what the site
+ * now declares or no longer does, a declared connection that appeared or went, the first crawler,
+ * Google's first verified read, an agent's failed activation. Never on a timer alone.
  * One link stops the notes and the re-reads together; the report stays where it is.
  */
 export interface ObserveOptions {
@@ -100,6 +102,9 @@ export function movementBetween(previous: ReportRecord | null, current: ReportRe
       lines.push(`${capability.label} started answering${capability.via === "sidecar" ? ", run by WordLift" : ""}.`);
     }
   }
+
+  // The model itself: what the site declares, what matters that went, which connections changed.
+  lines.push(...contextDrift(previous, current));
 
   let seenCrawler = false;
   let seenGoogle = false;

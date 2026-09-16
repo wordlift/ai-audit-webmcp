@@ -64,6 +64,20 @@ const ROLE_TYPES: ReadonlyArray<[RegExp, string]> = [
   [/\b(bank|credit union)\b/i, "BankOrCreditUnion"],
 ];
 
+/**
+ * Whose word the decisions are, said where an agent reads them: the owner's only when the owner
+ * proved the site is theirs. A reviewer's decisions are published as a reviewer's, never as the
+ * business speaking.
+ */
+export function decidedBy(report: ReportRecord): string {
+  const refinement = report.refinement;
+  if (!refinement) return ", before anyone reviewed it";
+  const count = `${refinement.decisions} decision${refinement.decisions === 1 ? "" : "s"}`;
+  return refinement.filedBy === "owner"
+    ? `, with ${count} made by the site's verified owner`
+    : `, with ${count} made in a review; the reviewer has not proved the site is theirs`;
+}
+
 export function organizationType(role: string | undefined): string {
   if (!role) return "Organization";
   return ROLE_TYPES.find(([pattern]) => pattern.test(role.replaceAll("-", " ")))?.[1] ?? "Organization";
@@ -311,12 +325,12 @@ function skillMarkdown(report: ReportRecord, entities: DomainEntity[], actions: 
     "",
     `Whether any interface named here answers today is stated in the report and nowhere else: ${options.reportUrl}. This file says what the business is, who is responsible for each action, and where an interface is; it never says whether an action answers today.`,
     "",
-    `Published ${publishedAt.slice(0, 10)} by WordLift AI Audit${report.refinement ? `, with ${report.refinement.decisions} decision${report.refinement.decisions === 1 ? "" : "s"} the owner made` : ", before the owner reviewed it"}.`,
+    `Published ${publishedAt.slice(0, 10)} by WordLift AI Audit${decidedBy(report)}.`,
     "",
     "## What this business is",
     "",
     role
-      ? `In the owner's words: ${role.replaceAll("-", " ")}.${archetype && archetype !== "other" ? ` The audit read it as a ${archetype.replace("-", " / ")} site.` : ""}`
+      ? `In the ${report.refinement?.filedBy === "owner" ? "owner's" : "reviewer's"} words: ${role.replaceAll("-", " ")}.${archetype && archetype !== "other" ? ` The audit read it as a ${archetype.replace("-", " / ")} site.` : ""}`
       : archetype && archetype !== "other"
         ? `A ${archetype.replace("-", " / ")} site, as the audit read it. The owner has not yet said otherwise.`
         : "As the audit read it; the owner has not yet said what it is.",
@@ -376,7 +390,7 @@ function catalogFor(report: ReportRecord, actions: PublishedAction[], host: stri
     ...(archetype && archetype !== "other" ? { tags: [archetype] } : {}),
     version: report.actionModelVersion,
     updatedAt: publishedAt,
-    metadata: { report: options.reportUrl, generator: "WordLift AI Audit", decisions: report.refinement?.decisions ?? 0 },
+    metadata: { report: options.reportUrl, generator: "WordLift AI Audit", decisions: report.refinement?.decisions ?? 0, decidedBy: report.refinement ? (report.refinement.filedBy === "owner" ? "verified-owner" : "reviewer") : "nobody" },
   };
   const interfaces: ArdEntry[] = actions
     .filter((action) => action.publishedAs === "action" && action.entryPoint)

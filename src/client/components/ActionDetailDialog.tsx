@@ -1,4 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import { useReportEngine } from "../engine/EngineContext";
 import { ArrowUpRight, Bot, ExternalLink, UserRound, Wrench, X } from "lucide-react";
 import { useRef } from "react";
 import type { CapabilityResult, ReportRecord } from "../../shared/types/index.js";
@@ -24,14 +25,14 @@ export interface Remedy {
 }
 
 /** The diagnosed gap and its door, one per precise state. Never a technology to choose from. */
-export function remedyFor(capability: CapabilityResult, reportId: string): Remedy {
+export function remedyFor(capability: CapabilityResult, reportId: string, engine?: string | null): Remedy {
   switch (capability.state) {
     case "agent-ready":
       return {
         case: "works",
         why: capability.via === "sidecar" ? "Our agent successfully used this, through the interface WordLift runs for you." : "Our agent successfully used this on your site.",
         required: "Nothing today. Keeping it agent-ready means keeping the interface answering, and knowing the day it stops.",
-        cta: { label: "Keep it agent-ready", href: publishUrl(reportId, { action: capability.actionId, intent: "keep" }) },
+        cta: { label: "Keep it agent-ready", href: publishUrl(reportId, { action: capability.actionId, intent: "keep", engine }) },
       };
     case "unverified": {
       const failed = capability.evidence.some((item) => item.audience === "agent" && item.verification === "failed");
@@ -49,7 +50,7 @@ export function remedyFor(capability: CapabilityResult, reportId: string): Remed
         case: "agent-ready",
         why: "A person can do this on your site, but there is no interface an AI agent can use.",
         required: "Expose an agent-readable interface for it. WordLift routes this to the product where one can be published, and to the team where one has to be built.",
-        cta: { label: "Make this agent-ready", href: publishUrl(reportId, { action: capability.actionId, intent: "agent-ready" }) },
+        cta: { label: "Make this agent-ready", href: publishUrl(reportId, { action: capability.actionId, intent: "agent-ready", engine }) },
       };
     case "missing":
       return {
@@ -78,7 +79,8 @@ export function verifiedAgo(capability: CapabilityResult, now = Date.now()): str
 
 export function ActionDetailDialog({ reportId, report, capability, onOpenChange }: { reportId: string; report?: ReportRecord; capability: CapabilityResult | null; onOpenChange: (open: boolean) => void }) {
   const evidenceRef = useRef<HTMLElement | null>(null);
-  const remedy = capability ? remedyFor(capability, reportId) : null;
+  const { engine } = useReportEngine();
+  const remedy = capability ? remedyFor(capability, reportId, engine?.id) : null;
   const verified = capability ? verifiedAgo(capability) : null;
   const owner = capability?.boundary ? OWN_WORDS[capability.boundary] : null;
 

@@ -144,6 +144,12 @@ const visits = new VisitLedger({
   log: (event, ...details) => console.error(event, ...details),
 });
 
+// An engine is live once its site publishes what we write, and activated once an agent used it.
+engines.attach({
+  isPublished: async (host) => Boolean(await published.get(host)),
+  isActivated: async (host) => (await visits.activations(host)).some((row) => row.outcome === "ok" && row.count > 0),
+});
+
 const app = createApp({
   staticDirectory: path.resolve(process.cwd(), "dist"),
   orchestrator,

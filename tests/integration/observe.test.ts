@@ -134,6 +134,35 @@ describe("what moves, and what does not", () => {
     ]);
   });
 
+  it("says what moved in the model: what the site now declares, what matters that went, and the declared connections", () => {
+    const entity = (id: string, name: string, type: string, extra: Record<string, unknown> = {}) => ({ id, name, types: [type], alternateNames: [], sourceUrls: [], sameAs: [], offers: [], confidence: 0.8, ...extra });
+    const graph = (entities: unknown[], relations: unknown[]) => ({ pages: [], entities, relations, lexicalEntries: [], interfaces: [], bindings: [] });
+    const before = {
+      ...reading(62, []),
+      contextGraph: graph(
+        [entity("org", "AlpiNest", "LodgingBusiness"), entity("apt", "Samspitze 4", "Apartment"), entity("town", "Mariapfarr", "Place", { origin: "inferred" }), entity("noise", "Lungau Card", "Product", { origin: "inferred" }), entity("old", "Samspitze 5", "Apartment")],
+        [{ from: "org", to: "apt", kind: "offers", provenance: "declared", sourceUrl: "https://alpina.travel/" }],
+      ),
+    } as unknown as ReportRecord;
+    // A new read mints new ids; the keys are names and roles.
+    const after = {
+      ...reading(62, []),
+      id: randomUUID(),
+      contextGraph: graph(
+        [entity("o2", "AlpiNest", "LodgingBusiness"), entity("a2", "Samspitze 4", "Apartment", { origin: "inferred" }), entity("t2", "Mariapfarr", "Place"), entity("n2", "Samspitze 6", "Apartment")],
+        [{ from: "o2", to: "t2", kind: "located-in", provenance: "declared", sourceUrl: "https://alpina.travel/" }],
+      ),
+    } as unknown as ReportRecord;
+    expect(movementBetween(before, after, null, lead)?.lines).toEqual([
+      "The site now declares Samspitze 6.",
+      "Mariapfarr was only in the text and is declared now.",
+      "Samspitze 5 is no longer found on the pages read.",
+      "Samspitze 4 is no longer declared: agents can only find it in the text now.",
+      "The markup now says: AlpiNest is in Mariapfarr.",
+      "The markup no longer says: AlpiNest offers Samspitze 4.",
+    ]);
+  });
+
   it("tells the first crawler and Google's first read once, and every failed activation since the last read", () => {
     const same = reading(62, []);
     const ledger = {

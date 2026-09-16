@@ -15,6 +15,7 @@ import { FoundationAuditDetails } from "../components/FoundationAuditDetails";
 import { OwnIt } from "../components/OwnIt";
 import { OwnershipPanel } from "../components/OwnershipPanel";
 import { captureReviewToken } from "../engine/engineKeys";
+import { EngineProvider } from "../engine/EngineContext";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { ReportProgress } from "../components/ReportProgress";
 import { ServiceMapProvenance } from "../components/ServiceMapProvenance";
@@ -137,6 +138,7 @@ export function ReportRoute() {
   }
 
   return (
+    <EngineProvider report={report}>
     <div className="report-page">
       {tools}
       <AlpinaAvailabilityTool reportId={report.id} enabled={sidecarApplies(report)} />
@@ -264,5 +266,6 @@ export function ReportRoute() {
         </div>
       </details>
     </div>
+    </EngineProvider>
   );
 }

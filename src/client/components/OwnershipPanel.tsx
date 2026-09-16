@@ -2,7 +2,9 @@ import { Copy, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import type { ReportRecord } from "../../shared/types/index.js";
 import { ApiError, getEngineVerification, verifyEngine, type EngineVerification } from "../api/client";
-import { announceEngineChange, useEngine } from "../engine/useEngine";
+import { useReportEngine } from "../engine/EngineContext";
+import { announceEngineChange } from "../engine/useEngine";
+import { publishUrl } from "./FixPanel";
 
 const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
@@ -12,7 +14,7 @@ const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { da
  * at a well-known path, read by the server, never by the page.
  */
 export function OwnershipPanel({ report }: { report: ReportRecord }) {
-  const { engine, host, key } = useEngine(report);
+  const { engine, host, key } = useReportEngine();
   const [verification, setVerification] = useState<EngineVerification | null>(null);
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -58,9 +60,14 @@ export function OwnershipPanel({ report }: { report: ReportRecord }) {
     <section className="ownership" id="ownership" aria-labelledby="ownership-title">
       <h3 id="ownership-title">{verified ? <><ShieldCheck size={16} aria-hidden="true" /> Owner verified</> : `Is ${host} yours?`}</h3>
       {verified && engine.standing === "owner" && (
-        <p>
-          You proved {host} is yours{engine.owner.verifiedAt ? ` on ${longDate(engine.owner.verifiedAt)}` : ""}. What you decide here is kept as the business's own word, and no reviewer's decision overrides it.
-        </p>
+        <>
+          <p>
+            You proved {host} is yours{engine.owner.verifiedAt ? ` on ${longDate(engine.owner.verifiedAt)}` : ""}. What you decide here is kept as the business's own word, and no reviewer's decision overrides it.
+          </p>
+          <p>
+            <a href={publishUrl(report.id, { intent: "claim-context", engine: engine.id })} target="_blank" rel="noreferrer">Connect it to your WordLift account</a>, where it becomes your live knowledge graph.
+          </p>
+        </>
       )}
       {verified && engine.standing !== "owner" && (
         <p>The owner of {host} verified this Context Engine. Their decisions are the business's own word; a review from anyone else stays on its report.</p>
