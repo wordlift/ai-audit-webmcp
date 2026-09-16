@@ -9,6 +9,7 @@ import { AgentDoors } from "./AgentDoors";
 import { ContextEnginePreview, contextEngineSummary } from "./ContextEnginePreview";
 import { EngineStatus } from "./EngineStatus";
 import { holds, useReportEngine } from "../engine/EngineContext";
+import { track } from "../engine/track";
 import { DeepScanOffer } from "./DeepScanOffer";
 import { publishUrl } from "./FixPanel";
 import { entityRole } from "../../shared/format/businessModel.js";
@@ -287,7 +288,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
           {ago && <span className="read-when">{ago}</span>}
           <span className="chip-arche">{archetype}</span>
           {report.publishedWith && (
-            <a className="chip-arche chip-runs-on" href={publishUrl(report.id, { engine: stored?.id })} target="_blank" rel="noreferrer" title={`${runsOnLine(report)} ${report.publishedWith.evidence}. Own this site? Open your WordLift dashboard.`}>
+            <a className="chip-arche chip-runs-on" href={publishUrl(report.id, { engine: stored?.id })} onClick={() => track(report.id, "door_claim-context")} target="_blank" rel="noreferrer" title={`${runsOnLine(report)} ${report.publishedWith.evidence}. Own this site? Open your WordLift dashboard.`}>
               Runs on {report.publishedWith.name}
             </a>
           )}
@@ -320,7 +321,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
           </p>
         )}
         <EngineStatus report={report} engine={stored} />
-        {engine && <ContextEnginePreview summary={engine} />}
+        {engine && <ContextEnginePreview summary={engine} onExplore={() => track(report.id, "engine_explored")} />}
         {/* Beside the model, the two things to do with it: review it, which makes it better, or ask it, which proves it is usable. */}
         {engine && <AgentDoors reportId={report.id} host={holds(stored) ? stored!.host : null} engineKey={engineKey} />}
         {/* Claiming is where an address is asked for: the engine expands, and the owner hears when it moves. */}
@@ -348,7 +349,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
             const word = plainWord(capability) ?? "fix";
             return (
               <li key={capability.actionId}>
-                <button type="button" className={`three-action three-action-${word}`} onClick={() => setSelected(capability)}>
+                <button type="button" className={`three-action three-action-${word}`} onClick={() => { setSelected(capability); track(report.id, "capability_opened"); }}>
                   <span className="three-action-name">{capability.label}</span>
                   <span className={`plain-word plain-word-${word}`}>
                     {WORD_LABEL[word]}

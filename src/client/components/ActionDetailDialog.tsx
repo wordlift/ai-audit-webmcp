@@ -1,5 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useReportEngine } from "../engine/EngineContext";
+import { track } from "../engine/track";
 import { ArrowUpRight, Bot, ExternalLink, UserRound, Wrench, X } from "lucide-react";
 import { useRef } from "react";
 import type { CapabilityResult, ReportRecord } from "../../shared/types/index.js";
@@ -114,7 +115,7 @@ export function ActionDetailDialog({ reportId, report, capability, onOpenChange 
                     {remedy.cta.label}
                   </button>
                 ) : (
-                  <a className="fix-publish" href={remedy.cta.href} target="_blank" rel="noreferrer">
+                  <a className="fix-publish" href={remedy.cta.href} onClick={() => { if (remedy.case === "works") track(reportId, "door_keep"); else if (remedy.case === "agent-ready") track(reportId, "door_agent-ready"); }} target="_blank" rel="noreferrer">
                     {remedy.cta.label} <ArrowUpRight size={15} aria-hidden="true" />
                   </a>
                 )

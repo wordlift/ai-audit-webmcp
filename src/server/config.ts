@@ -35,6 +35,11 @@ const environmentSchema = z
      */
     HUBSPOT_SOURCE_FIELD: z.string().min(1).max(80).optional(),
     /**
+     * Form properties for qualification signals, `signal=property` pairs separated by commas, e.g.
+     * `claimed=wl_claimed,top_gaps=wl_top_gaps`. Same rule: only properties the form already has.
+     */
+    HUBSPOT_SIGNAL_FIELDS: z.string().max(2_000).optional(),
+    /**
      * Extra egress ranges for hosted assistants, `platform=cidr` entries separated by commas.
      * Anthropic's range and a snapshot of OpenAI's are built in; this adds a platform or a range
      * published after the build.
@@ -137,6 +142,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     HUBSPOT_FORM_GUID: environment.HUBSPOT_FORM_GUID,
     HUBSPOT_REGION: environment.HUBSPOT_REGION,
     HUBSPOT_SOURCE_FIELD: environment.HUBSPOT_SOURCE_FIELD,
+    HUBSPOT_SIGNAL_FIELDS: environment.HUBSPOT_SIGNAL_FIELDS,
     PLATFORM_EGRESS_RANGES: environment.PLATFORM_EGRESS_RANGES,
     PLATFORM_EGRESS_REFRESH_MINUTES: environment.PLATFORM_EGRESS_REFRESH_MINUTES,
     AUDIT_DAILY_BUDGET: environment.AUDIT_DAILY_BUDGET,

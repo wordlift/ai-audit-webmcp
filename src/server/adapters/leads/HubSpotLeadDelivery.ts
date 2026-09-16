@@ -1,5 +1,6 @@
 import { LeadDeliveryError, type DeliverableReport, type LeadDelivery } from "./LeadDelivery.js";
 import type { DeepScanLead } from "./LeadStore.js";
+import { leadSignalsText, type LeadSignalName } from "../../../domain/engine/signals.js";
 
 /**
  * Delivery through the same HubSpot form the WordLift AI Audit already submits to: the Forms v3
@@ -33,6 +34,11 @@ export interface HubSpotOptions {
    * without it the surface is still named in the submission context.
    */
   sourceField?: string;
+  /**
+   * The form properties that hold qualification signals, by signal name. Opt-in per property for the
+   * same reason as the source field; the signals always travel as lines at the end of the summary.
+   */
+  signalFields?: Partial<Record<LeadSignalName, string>>;
   /** Overridable for tests; production is HubSpot's public submission host. */
   endpoint?: string;
   timeoutMs?: number;
@@ -81,8 +87,11 @@ export class HubSpotLeadDelivery implements LeadDelivery {
       { name: "email", value: lead.email },
       { name: "audited_url", value: report.canonicalUrl },
       { name: "audit_score", value: String(report.agentReadinessScore) },
-      { name: "audit_summary", value: plainText(`${report.reportUrl}\n\n${report.summary}`) },
+      { name: "audit_summary", value: plainText(`${report.reportUrl}\n\n${report.summary}${report.signals ? `\n\n${leadSignalsText(report.signals)}` : ""}`) },
       ...(this.options.sourceField ? [{ name: this.options.sourceField, value: SOURCE_VALUES[lead.source] }] : []),
+      ...(report.signals
+        ? Object.entries(this.options.signalFields ?? {}).map(([signal, property]) => ({ name: property as string, value: report.signals![signal as LeadSignalName] }))
+        : []),
     ];
 
     const controller = new AbortController();

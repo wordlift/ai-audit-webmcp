@@ -26,6 +26,7 @@ import type { ScoreReading } from "../../shared/types/activate.js";
 import { publishedSiteIn } from "../../domain/publish/feed.js";
 import type { PublishedSiteStore } from "../adapters/published/PublishedSiteStore.js";
 import type { ContextEngines } from "./ContextEngines.js";
+import { funnel } from "./funnel.js";
 import type {
   Archetype,
   CapabilityEvidence,
@@ -175,6 +176,7 @@ export class AuditOrchestrator {
    * the machine draft stays what the crawl said, and the engine points at the reviewed one.
    */
   private async settled(report: ReportRecord): Promise<ReportRecord> {
+    funnel("audit_completed", report.id, { status: report.status });
     const engines = this.options.engines;
     if (!engines) return report;
     await engines.record(report);
@@ -183,6 +185,7 @@ export class AuditOrchestrator {
       if (carried) {
         const child = await this.refine(report.id, carried.assertions, { carried: true, filedBy: carried.filedBy });
         await engines.record(child);
+        funnel("review_carried", child.id);
       }
     } catch (error) {
       // Nothing a stored decision no longer fits may fail the audit it was meant to improve.

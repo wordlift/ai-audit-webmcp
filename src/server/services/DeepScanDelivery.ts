@@ -1,6 +1,8 @@
 import { auditSummaryText, summarizeReportForAgent } from "../../shared/format/agentSummary.js";
 import type { ReportRecord } from "../../shared/types/index.js";
 import type { LeadDelivery, LeadStore } from "../adapters/leads/index.js";
+import type { ContextEngine } from "../../shared/schemas/contextEngine.js";
+import { leadSignals } from "../../domain/engine/signals.js";
 
 /**
  * Sending a deep scan's report to the address that bought it.
@@ -17,6 +19,8 @@ export interface DeepScanDeliveryOptions {
   delivery?: LeadDelivery;
   publicReportUrl(reportId: string): string;
   loadReport(reportId: string): Promise<ReportRecord | null>;
+  /** The engine of the report's site, for the qualification signals the delivery carries. */
+  engineFor?(report: ReportRecord): Promise<ContextEngine | null>;
   now?: () => Date;
   /** How many previously failed leads to retry alongside each new delivery. */
   retryBatch?: number;
@@ -48,6 +52,7 @@ export class DeepScanDelivery {
         reportUrl: this.options.publicReportUrl(report.id),
         agentReadinessScore: report.score?.value ?? 0,
         summary: auditSummaryText(summarizeReportForAgent(report, this.options.publicReportUrl(report.id))),
+        signals: leadSignals(report, (await this.options.engineFor?.(report).catch(() => null)) ?? null),
       });
     } catch (error) {
       // The address stays owed. Its owner is never named in a log line.

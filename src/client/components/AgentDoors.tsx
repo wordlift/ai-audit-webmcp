@@ -2,6 +2,7 @@ import { Copy, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { getReviewToken } from "../api/client";
 import { askAgentPrompt, reviewPrompt } from "./reviewPrompt";
+import { track } from "../engine/track";
 
 /**
  * Beside the Context Engine, the two things to do with it in ChatGPT. Review makes the model
@@ -12,6 +13,7 @@ import { askAgentPrompt, reviewPrompt } from "./reviewPrompt";
 export function AgentDoors({ reportId, host = null, engineKey = null }: { reportId: string; host?: string | null; engineKey?: string | null }) {
   const [copied, setCopied] = useState<"ask" | "review" | null>(null);
   async function copy(which: "ask" | "review") {
+    track(reportId, which === "ask" ? "ask_prompt_copied" : "review_prompt_copied");
     // The holder's review carries a day-long token in its link, so what ChatGPT files is kept on the engine.
     let token: string | null = null;
     if (which === "review" && host && engineKey) token = await getReviewToken(host, engineKey).then((answer) => answer.token).catch(() => null);

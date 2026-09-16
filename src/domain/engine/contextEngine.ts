@@ -33,7 +33,7 @@ export function reportHost(report: ReportRecord): string {
 export function entityKey(entity: Pick<DomainEntity, "name" | "types">): string {
   const name = entity.name
     .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
@@ -215,6 +215,7 @@ export function engineView(engine: ContextEngine): ContextEngineView {
       terminology: decisions.terminology.length + (decisions.businessRole ? 1 : 0),
     },
     snapshots: engine.snapshots,
+    ...(engine.activeAt ? { activeAt: engine.activeAt } : {}),
     updatedAt: engine.updatedAt,
   };
 }

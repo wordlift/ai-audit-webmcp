@@ -93,6 +93,10 @@ export const contextEngineSchema = z
     latestReviewedReportId: z.string().uuid().optional(),
     decisions: engineDecisionsSchema,
     snapshots: z.array(engineSnapshotSchema).max(20),
+    /** The doors to WordLift a person opened from this engine, newest last: why they came. */
+    intents: z.array(z.object({ intent: z.string().min(1).max(40), at: z.string().datetime() }).strict()).max(20).optional(),
+    /** The last time a person or an agent did something with the engine, not merely read it. */
+    activeAt: z.string().datetime().optional(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
   })
@@ -114,6 +118,7 @@ export interface ContextEngineView {
   latestReviewedReportId?: string;
   decisions: { total: number; byOwner: number; entities: number; actions: number; terminology: number };
   snapshots: EngineSnapshot[];
+  activeAt?: string;
   updatedAt: string;
 }
 

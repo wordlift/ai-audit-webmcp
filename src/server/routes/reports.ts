@@ -10,6 +10,8 @@ import type { VisitLedger } from "../services/VisitLedger.js";
 import { DeepScanGate } from "../services/DeepScanGate.js";
 import type { CapabilityTestService } from "../services/CapabilityTest.js";
 import { ToolCallError } from "../services/toolErrors.js";
+import { funnel } from "../services/funnel.js";
+import { doorIntent, isPageEvent } from "../../shared/format/funnel.js";
 
 /**
  * The address a deep scan is sent to arrives with the request and stops here: it is handed to the
@@ -76,6 +78,23 @@ export function createReportsRouter(
     }
   });
 
+  // A funnel step only the page sees: counted beside the report's readers, logged by name, and a
+  // door to WordLift kept on the site's engine as the reason someone arrived. Never rate limited,
+  // never an error the page has to handle.
+  router.post("/:reportId/events", async (request, response) => {
+    const name = (request.body as { name?: unknown } | undefined)?.name;
+    const report = isPageEvent(name) ? await orchestrator.get(param(request.params.reportId)) : null;
+    if (!report || !isPageEvent(name)) {
+      response.status(204).end();
+      return;
+    }
+    visits?.record(report.id, `event:${name}`);
+    funnel(name, report.id);
+    const intent = doorIntent(name);
+    if (intent) await orchestrator.engines?.noteIntent(report, intent).catch(() => undefined);
+    response.status(204).end();
+  });
+
   router.get("/:reportId", async (request, response) => {
     const report = await orchestrator.get(request.params.reportId);
     if (!report) {
@@ -105,6 +124,7 @@ export function createReportsRouter(
       const child = await orchestrator.refine(reportId, request.body, role ? { filedBy: role } : {});
       if (engines && parent && role && child.refinement) {
         await engines.file(parent, child, child.refinement.assertions, role);
+        funnel("review_filed", parent.id, { role });
         response.setHeader("x-context-engine", "filed");
       } else if (key) {
         response.setHeader("x-context-engine", "not-filed");

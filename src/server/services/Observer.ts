@@ -4,6 +4,7 @@ import type { DeepScanLead, LeadDelivery, LeadStore } from "../adapters/leads/in
 import type { CapabilityResult, ReportRecord } from "../../shared/types/index.js";
 import type { AuditOrchestrator } from "./AuditOrchestrator.js";
 import { contextDrift } from "../../domain/engine/drift.js";
+import { leadSignals } from "../../domain/engine/signals.js";
 import type { VisitLedger } from "./VisitLedger.js";
 
 /**
@@ -293,6 +294,7 @@ export class Observer {
       agentReadinessScore: current.score?.value ?? 0,
       summary,
       subject: "movement",
+      signals: leadSignals(current, (await orchestrator.engines?.forReport(current).catch(() => null)) ?? null),
     });
     this.#sent += 1;
     await leads.markWatched(lead.reportId, { movedAt: now });

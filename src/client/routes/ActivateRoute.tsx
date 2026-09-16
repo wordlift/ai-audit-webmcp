@@ -11,6 +11,7 @@ import { publishUrl, talkToUsUrl } from "../components/FixPanel";
 import { OWN_WORDS } from "../components/OwnIt";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { EngineProvider, useReportEngine } from "../engine/EngineContext";
+import { track } from "../engine/track";
 
 /**
  * Activate sells the outcome: make the business usable by AI agents. What WordLift publishes comes
@@ -254,7 +255,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
           Make your Context Engine operational. WordLift publishes it on your pages, keeps it synchronized, and verifies every week that agents can still use what works.
         </p>
         <p className="activate-doors">
-          <a className="fix-publish" href={activate} target="_blank" rel="noreferrer">
+          <a className="fix-publish" href={activate} onClick={() => track(report.id, "door_activate")} target="_blank" rel="noreferrer">
             Activate with WordLift <ArrowUpRight size={15} aria-hidden="true" />
           </a>
           <a className="activate-talk" href={talkToUsUrl(report.id)} target="_blank" rel="noreferrer">
@@ -396,7 +397,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
         </div>
         )}
         <p className="activate-lead">
-          <a href={publishUrl(report.id, { intent: "monitor", engine: engine?.id })} target="_blank" rel="noreferrer">Monitor AI visibility</a>: use this Context Engine to
+          <a href={publishUrl(report.id, { intent: "monitor", engine: engine?.id })} onClick={() => track(report.id, "door_monitor")} target="_blank" rel="noreferrer">Monitor AI visibility</a>: use this Context Engine to
           track how your business is discovered and used by AI systems. WordLift re-verifies on a schedule and writes only when something moves.
         </p>
       </section>
@@ -475,7 +476,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
       </details>
 
       <p className="activate-close">
-        <a className="fix-publish" href={activate} target="_blank" rel="noreferrer">
+        <a className="fix-publish" href={activate} onClick={() => track(report.id, "door_activate")} target="_blank" rel="noreferrer">
           Activate with WordLift <ArrowUpRight size={15} aria-hidden="true" />
         </a>
         <a className="activate-talk" href={talkToUsUrl(report.id)} target="_blank" rel="noreferrer">Talk to us <ArrowUpRight size={13} aria-hidden="true" /></a>

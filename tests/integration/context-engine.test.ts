@@ -8,6 +8,7 @@ import { FixtureProvider } from "../../src/server/adapters/fixtures/FixtureProvi
 import { MemoryReportStore } from "../../src/server/adapters/store/MemoryReportStore.js";
 import { AuditOrchestrator } from "../../src/server/services/AuditOrchestrator.js";
 import { ContextEngines } from "../../src/server/services/ContextEngines.js";
+import { leadSignals } from "../../src/domain/engine/signals.js";
 import type { ReportRecord } from "../../src/shared/types/index.js";
 
 const fixedNow = new Date("2026-09-16T05:00:00.000Z");
@@ -157,6 +158,31 @@ describe("the Context Engine above the reports", () => {
     advance(25 * 60 * 60 * 1_000);
     const expired = await request(app).post(`/api/reports/${report.id}/refine`).set(KEY, token.body.token).send({ primaryEntityIds: [first.id] });
     expect(expired.headers["x-context-engine"]).toBe("not-filed");
+  });
+});
+
+describe("the funnel and the signals", () => {
+  it("counts a step the page reports, keeps a door on the engine as the reason, and ignores names it does not know", async () => {
+    const { app, engines } = harness();
+    const report = await audit(app);
+    expect((await request(app).post(`/api/reports/${report.id}/events`).send({ name: "door_monitor" })).status).toBe(204);
+    expect((await request(app).post(`/api/reports/${report.id}/events`).send({ name: "anything_else" })).status).toBe(204);
+    expect((await request(app).post(`/api/reports/${randomUUID()}/events`).send({ name: "door_monitor" })).status).toBe(204);
+    const engine = await engines.forReport(report);
+    expect(engine?.intents?.map((entry) => entry.intent)).toEqual(["monitor"]);
+    expect(engine?.activeAt).toBeDefined();
+  });
+
+  it("qualifies a lead by counts and states, never by the business's content", async () => {
+    const { app, engines } = harness();
+    const report = await audit(app);
+    await request(app).post(`/api/engines/for-report/${report.id}/claim`);
+    await request(app).post(`/api/reports/${report.id}/events`).send({ name: "door_build-context" });
+    const signals = leadSignals(report, await engines.forReport(report));
+    expect(signals).toMatchObject({ archetype: "travel-hospitality", engine_status: "claimed", claimed: "yes", owner_verified: "no", reviewed: "no", intents: "build-context" });
+    expect(Number(signals.entities)).toBe(Number(signals.declared) + Number(signals.inferred) + Number(signals.confirmed));
+    const names = report.contextGraph!.entities.map((entity) => entity.name);
+    expect(Object.values(signals).some((value) => names.some((name) => value.includes(name)))).toBe(false);
   });
 });
 

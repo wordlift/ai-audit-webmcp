@@ -5,6 +5,7 @@ import { ApiError, getEngineVerification, verifyEngine, type EngineVerification 
 import { useReportEngine } from "../engine/EngineContext";
 import { announceEngineChange } from "../engine/useEngine";
 import { publishUrl } from "./FixPanel";
+import { track } from "../engine/track";
 
 const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
@@ -24,6 +25,7 @@ export function OwnershipPanel({ report }: { report: ReportRecord }) {
 
   async function showCode() {
     if (!key) return;
+    track(report.id, "ownership_started");
     setMessage(null);
     try {
       setVerification(await getEngineVerification(host, key));
@@ -65,7 +67,7 @@ export function OwnershipPanel({ report }: { report: ReportRecord }) {
             You proved {host} is yours{engine.owner.verifiedAt ? ` on ${longDate(engine.owner.verifiedAt)}` : ""}. What you decide here is kept as the business's own word, and no reviewer's decision overrides it.
           </p>
           <p>
-            <a href={publishUrl(report.id, { intent: "claim-context", engine: engine.id })} target="_blank" rel="noreferrer">Connect it to your WordLift account</a>, where it becomes your live knowledge graph.
+            <a href={publishUrl(report.id, { intent: "claim-context", engine: engine.id })} onClick={() => track(report.id, "door_claim-context")} target="_blank" rel="noreferrer">Connect it to your WordLift account</a>, where it becomes your live knowledge graph.
           </p>
         </>
       )}

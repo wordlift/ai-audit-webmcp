@@ -9,7 +9,8 @@ import type { PlatformEgress } from "./platformEgress.js";
  * is the one worth faking: a "Googlebot" from an address outside Google's published ranges is
  * counted as a claim, not as Google.
  */
-export type VisitorClass = `crawler:${string}` | `agent:${string}` | "human";
+/** `event:` counts a funnel step the page reported, beside who read the report. */
+export type VisitorClass = `crawler:${string}` | `agent:${string}` | "human" | `event:${string}`;
 
 interface CrawlerRule {
   name: string;

@@ -60,7 +60,7 @@ export function contextEngineSummary(report: ReportRecord): ContextEngineSummary
 
 const count = (value: number, noun: string, plural = `${noun}s`) => `${value} ${value === 1 ? noun : plural}`;
 
-export function ContextEnginePreview({ summary }: { summary: ContextEngineSummary }) {
+export function ContextEnginePreview({ summary, onExplore }: { summary: ContextEngineSummary; onExplore?: () => void }) {
   // A zero says nothing a reader needs: "4 declared", not "4 declared · 0 inferred".
   const provenance = [
     [summary.declared, "declared"],
@@ -93,7 +93,7 @@ export function ContextEnginePreview({ summary }: { summary: ContextEngineSummar
         {count(summary.entities, "important thing")}
         {summary.relationships > 0 && <> · {count(summary.relationships, "relationship")}</>}
         {provenance.length > 0 && <span className="engine-counts-provenance"> ({provenance.join(" · ")})</span>}
-        {" "}<a href="#understand">See everything we understood</a>
+        {" "}<a href="#understand" onClick={onExplore}>See everything we understood</a>
       </p>
     </div>
   );

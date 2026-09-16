@@ -2,6 +2,7 @@ import { Router, type Request, type RequestHandler } from "express";
 import type { AuditOrchestrator } from "../services/AuditOrchestrator.js";
 import type { ContextEngines } from "../services/ContextEngines.js";
 import { sendError } from "./reports.js";
+import { funnel } from "../services/funnel.js";
 
 /** The header a claimant's key travels in: never a query string, which ends up in logs and referrers. */
 export const ENGINE_KEY_HEADER = "x-context-engine-key";
@@ -52,7 +53,9 @@ export function createEnginesRouter(orchestrator: AuditOrchestrator, engines: Co
         response.status(409).json({ error: "report_not_ready", message: "Claim the Context Engine once the audit has finished." });
         return;
       }
-      response.json(await engines.claim(report));
+      const claim = await engines.claim(report);
+      funnel("engine_claimed", report.id, { standing: claim.standing });
+      response.json(claim);
     } catch (error) {
       sendError(response, error);
     }
@@ -68,7 +71,9 @@ export function createEnginesRouter(orchestrator: AuditOrchestrator, engines: Co
 
   router.post("/:host/verify", ...writeLimiters, async (request, response) => {
     try {
-      response.json(await engines.verify(one(request.params.host), engineKey(request)));
+      const verified = await engines.verify(one(request.params.host), engineKey(request));
+      funnel("owner_verified", verified.latestReportId ?? "", { host: verified.host });
+      response.json(verified);
     } catch (error) {
       sendError(response, error);
     }

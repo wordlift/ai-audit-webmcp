@@ -128,6 +128,7 @@ export class ContextEngines {
     if (!existing.claim) {
       const engine = await this.options.store.put({
         ...existing,
+        activeAt: at,
         status: existing.status === "draft" ? "claimed" : existing.status,
         claim: { hash: hash(key), createdAt: at, role: existing.owner.state === "verified" ? "owner" : "reviewer" },
         updatedAt: at,
@@ -192,6 +193,7 @@ export class ContextEngines {
     const verified = await this.options.store.put({
       ...engine,
       owner: { state: "verified", method, verifiedAt: at },
+      activeAt: at,
       claim: { hash: hash(key), createdAt: at, role: "owner" },
       pending: [],
       reviewTokens: [],
@@ -248,7 +250,15 @@ export class ContextEngines {
     if (!engine) return null;
     const at = this.now().toISOString();
     const decisions = mergeDecisions(engine.decisions, decisionsFrom(assertions, parent, role, at));
-    const stored = await this.options.store.put(withSnapshot({ ...engine, decisions }, child, at));
+    const stored = await this.options.store.put(withSnapshot({ ...engine, decisions, activeAt: at }, child, at));
     return engineView(stored);
+  }
+
+  /** A door to WordLift opened from this engine: kept so the dashboard and the sales team know why. */
+  async noteIntent(report: ReportRecord, intent: string): Promise<void> {
+    const engine = await this.forReport(report);
+    if (!engine) return;
+    const at = this.now().toISOString();
+    await this.options.store.put({ ...engine, intents: [...(engine.intents ?? []), { intent, at }].slice(-20), activeAt: at, updatedAt: at });
   }
 }

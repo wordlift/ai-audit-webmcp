@@ -29,6 +29,7 @@ import { MemoryPublishedSiteStore } from "./adapters/published/MemoryPublishedSi
 import { AuditOrchestrator, type OrchestratorOptions } from "./services/AuditOrchestrator.js";
 import { FirestoreContextEngineStore, MemoryContextEngineStore } from "./adapters/engines/index.js";
 import { ContextEngines } from "./services/ContextEngines.js";
+import { parseSignalFields } from "../domain/engine/signals.js";
 
 const config = loadConfig();
 const store = config.REPORT_STORE === "firestore"
@@ -56,6 +57,7 @@ const leadDelivery = config.HUBSPOT_PORTAL_ID && config.HUBSPOT_FORM_GUID
       formGuid: config.HUBSPOT_FORM_GUID,
       region: config.HUBSPOT_REGION,
       sourceField: config.HUBSPOT_SOURCE_FIELD,
+      signalFields: parseSignalFields(config.HUBSPOT_SIGNAL_FIELDS),
     })
   : undefined;
 

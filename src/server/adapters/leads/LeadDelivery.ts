@@ -1,4 +1,5 @@
 import type { DeepScanLead } from "./LeadStore.js";
+import type { LeadSignals } from "../../../domain/engine/signals.js";
 
 /**
  * What the delivery system is allowed to know about a report.
@@ -15,6 +16,8 @@ export interface DeliverableReport {
   summary: string;
   /** What this is about: the report itself (the default), or what moved since. Names the send, adds no data. */
   subject?: "report" | "movement";
+  /** Counts and states for qualification: the shape of the business and its engine, never its content. */
+  signals?: LeadSignals;
 }
 
 export class LeadDeliveryError extends Error {

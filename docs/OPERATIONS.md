@@ -35,6 +35,7 @@ inputs differ.
 | `HUBSPOT_FORM_GUID` | — | The form a deep scan's report is delivered through |
 | `HUBSPOT_REGION` | `na1` | `eu1` for an EU-hosted portal: it has its own submission host |
 | `HUBSPOT_SOURCE_FIELD` | — | A form property recording which surface a lead came from. Create it on the form before setting this |
+| `HUBSPOT_SIGNAL_FIELDS` | — | Qualification signals into form properties, `signal=property` pairs, e.g. `claimed=wl_claimed,top_gaps=wl_top_gaps`. Same rule: only properties the form already has |
 | `PLATFORM_EGRESS_RANGES` | — | Extra hosted-assistant egress ranges, `platform=cidr` entries separated by commas. Anthropic's range and a snapshot of OpenAI's are built in |
 | `PLATFORM_EGRESS_REFRESH_MINUTES` | `360` | How often OpenAI's published connector ranges are re-read at runtime. `0` keeps the built-in snapshot |
 | `AUDIT_DAILY_BUDGET` | `2000` | Audits the whole service runs in a day, whoever asks; past it audits answer "at capacity" until tomorrow and reads go on. `0` removes the ceiling. Per instance, like the other limits |
@@ -282,6 +283,35 @@ gcloud firestore fields ttls update expiresAt --collection-group=visits --enable
 gcloud firestore fields ttls update expiresAt --collection-group=activations --enable-ttl --project ai-audit-wordlift
 gcloud firestore fields ttls update expiresAt --collection-group=publishedSites --enable-ttl --project ai-audit-wordlift
 ```
+
+## The funnel: what is counted, and where
+
+Every lead delivery and every "what moved" note ends its summary with qualification signals:
+archetype, whether the site runs on WordLift, the counts of declared, inferred and confirmed
+entities and of relationships, expected and agent-ready actions, the top three gaps by action id,
+and the engine's status, whether it was reviewed, claimed, owner-verified, and which doors to
+WordLift were opened from it. Counts and states only, never the business's content. To file any of
+them into a HubSpot property, create the property on the form first, then name it in
+`HUBSPOT_SIGNAL_FIELDS` (the signal names are in `src/domain/engine/signals.ts`); a property the
+form does not have makes HubSpot refuse the whole submission.
+
+The funnel's steps are logged as one JSON line each, `{"event":"funnel","name":...,"reportId":...}`,
+so a log-based metric per name counts them without anything else to run:
+
+- from the server: `audit_completed`, `review_filed`, `review_carried`, `engine_claimed`, `owner_verified`;
+- from the page, through `POST /api/reports/:id/events`: `engine_explored`, `review_prompt_copied`,
+  `ask_prompt_copied`, `capability_opened`, `ownership_started`, and `door_<intent>` for every door
+  to the dashboard. A door is also kept on the site's engine as the reason someone arrived.
+
+```bash
+gcloud logging metrics create funnel_steps --project ai-audit-wordlift \
+  --description="AI Audit funnel steps by name" \
+  --log-filter='resource.type="cloud_run_revision" AND jsonPayload.event="funnel"' \
+  --label-extractors='name=EXTRACT(jsonPayload.name)'
+```
+
+An active Context Engine is one with `activeAt` in the period: claimed, reviewed, verified, or a
+door opened from it, not merely read.
 
 ## Context Engines: one per site, above its reports
 

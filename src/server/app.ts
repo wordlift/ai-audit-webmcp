@@ -160,6 +160,7 @@ export function createApp(options: AppOptions = {}): Express {
       delivery: options.leadDelivery,
       publicReportUrl: (reportId) => (options.orchestrator as AuditOrchestrator).reportUrl(reportId),
       loadReport: (reportId) => (options.orchestrator as AuditOrchestrator).get(reportId),
+      engineFor: async (report) => (await options.orchestrator?.engines?.forReport(report)) ?? null,
     });
     app.get("/api/demo/alpina", async (_request, response) => response.json(await options.orchestrator?.pinnedAlpina()));
     // Every child report is a stored document someone else can be shown, so the writes that make

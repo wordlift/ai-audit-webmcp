@@ -4,6 +4,7 @@ import type { DomainEntity, ReportRecord } from "../../shared/types/index.js";
 import { plainWord, type PlainWord } from "./FirstScreen";
 import { publishUrl, sampleJsonLd } from "./FixPanel";
 import { useReportEngine } from "../engine/EngineContext";
+import { track } from "../engine/track";
 
 /**
  * Fix what agents cannot understand. Every entity the audit read on the site's pages, counted:
@@ -199,7 +200,7 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
 
       {fixable && (
         <p className="fix-cta">
-          <a className="fix-publish" href={publishUrl(report.id, { intent: "build-context", engine: engine?.id })} target="_blank" rel="noreferrer">
+          <a className="fix-publish" href={publishUrl(report.id, { intent: "build-context", engine: engine?.id })} onClick={() => track(report.id, "door_build-context")} target="_blank" rel="noreferrer">
             Build the live Context Engine with WordLift <ArrowUpRight size={15} aria-hidden="true" />
           </a>
           <span>WordLift turns the {textOnly.length} {textOnly.length === 1 ? "thing" : "things"} only in your content into stable, machine-readable knowledge on every page, and keeps it in sync as the site changes.</span>
