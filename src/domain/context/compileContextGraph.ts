@@ -9,6 +9,7 @@ import type {
   EntityRelation,
 } from "../../shared/types/index.js";
 import { DEEP_SCAN_PAGES } from "../../shared/format/deepScan.js";
+import { inferRelations } from "./inferRelations.js";
 
 const ENTITY_ACTIONS: Record<string, string[]> = {
   Organization: ["site.browse", "site.search", "source.verify", "inquiry.submit", "policy.explain"],
@@ -54,7 +55,9 @@ export function compileContextGraph(
   archetype?: keyof typeof BUSINESS_TYPES,
 ): ContextGraph {
   const { entities, idMap } = mergeEntities(pages, canonicalUrl, new Set(BUSINESS_TYPES[archetype ?? "other"] ?? []));
-  const relations = compileRelations(pages, entities, idMap);
+  const declared = compileRelations(pages, entities, idMap);
+  // What the text says plainly, beside what the markup declares; inferred, with its sentence.
+  const relations = [...declared, ...inferRelations(pages, entities, declared)].slice(0, 200);
   const actionIdsByEntity = actionMapForEntities(entities, capabilities);
   const interfaces = capabilities.flatMap((capability) =>
     capability.evidence.map((evidence) => interfaceFrom(evidence, capability, entities, actionIdsByEntity)),

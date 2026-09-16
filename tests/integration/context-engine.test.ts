@@ -161,6 +161,43 @@ describe("the Context Engine above the reports", () => {
   });
 });
 
+describe("relations a review settles", () => {
+  it("confirms a relation read from the text, rejects a wrong one, and carries both onto the next read", async () => {
+    const { app, orchestrator, advance } = harness();
+    const base = await audit(app);
+    // A read whose text said two things plainly: one right, one wrong.
+    const entities = base.contextGraph!.entities;
+    const [a, b, c] = [entities[0]!, entities[1]!, entities[2]!];
+    const inferred = [
+      { from: a.id, to: b.id, kind: "offers" as const, provenance: "inferred" as const, sourceUrl: TRAVEL, evidence: `${a.name} offers ${b.name}.` },
+      { from: a.id, to: c.id, kind: "offers" as const, provenance: "inferred" as const, sourceUrl: TRAVEL, evidence: `${a.name} offers ${c.name}.` },
+    ];
+    const store = (orchestrator as unknown as { store: { put(report: ReportRecord): Promise<ReportRecord> } }).store;
+    const read = await store.put({ ...base, id: randomUUID(), contextGraph: { ...base.contextGraph!, relations: [...(base.contextGraph!.relations ?? []), ...inferred] } });
+    const key = (await request(app).post(`/api/engines/for-report/${read.id}/claim`)).body.key as string;
+
+    const refined = await request(app)
+      .post(`/api/reports/${read.id}/refine`)
+      .set(KEY, key)
+      .send({ relationDecisions: [{ from: a.id, kind: "offers", to: b.id, decision: "confirm" }, { from: a.id, kind: "offers", to: c.id, decision: "reject" }, { from: b.id, kind: "brand", to: a.id, decision: "confirm" }] });
+    expect(refined.status).toBe(200);
+    const relations = (refined.body as ReportRecord).contextGraph!.relations!;
+    expect(relations.find((relation) => relation.to === b.id && relation.kind === "offers")?.provenance).toBe("confirmed");
+    expect(relations.some((relation) => relation.to === c.id && relation.kind === "offers")).toBe(false);
+    expect((refined.body as ReportRecord).refinement!.conflicts).toEqual([`No relation brand from ${b.id} to ${a.id} in this report`]);
+
+    // The next read of the site reads the same sentences again; the engine settles them the same way.
+    advance(60_000);
+    const next = await audit(app);
+    const reread = await store.put({ ...next, id: randomUUID(), contextGraph: { ...next.contextGraph!, relations: [...(next.contextGraph!.relations ?? []), ...inferred] } });
+    const assertions = await orchestrator.engines!.carry(reread);
+    expect(assertions?.assertions.relationDecisions).toEqual([
+      { from: a.id, kind: "offers", to: b.id, decision: "confirm" },
+      { from: a.id, kind: "offers", to: c.id, decision: "reject" },
+    ]);
+  });
+});
+
 describe("the funnel and the signals", () => {
   it("counts a step the page reports, keeps a door on the engine as the reason, and ignores names it does not know", async () => {
     const { app, engines } = harness();

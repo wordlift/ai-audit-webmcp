@@ -158,13 +158,21 @@ export const entityActionBindingSchema = z
  * apartment, an apartment is in a place, a service is provided by a partner. Nothing here is
  * inferred; a relation the text merely suggests never enters the graph.
  */
+export const entityRelationKindSchema = z.enum(["offers", "located-in", "provided-by", "part-of", "serves", "brand"]);
+
 export const entityRelationSchema = z
   .object({
     from: z.string().min(1).max(500),
     to: z.string().min(1).max(500),
-    kind: z.enum(["offers", "located-in", "provided-by", "part-of", "serves", "brand"]),
-    provenance: z.literal("declared"),
+    kind: entityRelationKindSchema,
+    /**
+     * Declared: the site's markup says so. Inferred: one sentence on a page names both ends with the
+     * words for this kind between them, and says nothing more; never evidence. Confirmed: a review said so.
+     */
+    provenance: z.enum(["declared", "inferred", "confirmed"]),
     sourceUrl: z.string().url().max(2_048),
+    /** For an inferred relation, the sentence that supports it, as the page wrote it. */
+    evidence: z.string().min(1).max(300).optional(),
   })
   .strict();
 
@@ -448,6 +456,20 @@ export const humanAssertionSchema = z
             rationale: z.string().min(1).max(500).optional(),
             /** For a partner handoff: who runs it. Published as the action's provider. */
             partner: actionPartnerSchema.optional(),
+          })
+          .strict(),
+      )
+      .max(80)
+      .optional(),
+    /** Judgments about how two entities relate: confirm an inferred relation, or reject any that is wrong. */
+    relationDecisions: z
+      .array(
+        z
+          .object({
+            from: z.string().min(1).max(500),
+            kind: entityRelationKindSchema,
+            to: z.string().min(1).max(500),
+            decision: z.enum(["confirm", "reject"]),
           })
           .strict(),
       )

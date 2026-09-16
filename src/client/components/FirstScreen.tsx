@@ -196,12 +196,13 @@ export function foundLine(report: ReportRecord): { pages: number; parts: string[
 }
 
 /**
- * The shape of the business in one line, from what its markup declares: the business, one thing
- * it offers, where that is. "AlpiNest → offers Samspitze 4 → in Mariapfarr". Nothing inferred
- * joins it, and a site whose markup declares no relation gets no line.
+ * The shape of the business in one line: the business, one thing it offers, where that is.
+ * "AlpiNest → offers Samspitze 4 → in Mariapfarr". By default only what the markup declares or a
+ * review confirmed joins it; asked for the text too, it is the line a poorly marked-up site gets,
+ * said as read from the text.
  */
-export function relationChain(report: ReportRecord): string[] | null {
-  const relations = report.contextGraph?.relations ?? [];
+export function relationChain(report: ReportRecord, include: "settled" | "with-text" = "settled"): string[] | null {
+  const relations = (report.contextGraph?.relations ?? []).filter((relation) => include === "with-text" || relation.provenance !== "inferred");
   const entities = (report.contextGraph?.entities ?? []).filter((entity) => entity.humanPriority !== "demoted");
   if (relations.length === 0 || entities.length === 0) return null;
   const byId = new Map(entities.map((entity) => [entity.id, entity]));
@@ -257,7 +258,9 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   const beyond = beyondTheThree(capabilities);
   const primary = report.classification?.primaryArchetype;
   const found = foundLine(report);
-  const chain = relationChain(report);
+  const settledChain = relationChain(report);
+  const chain = settledChain ?? relationChain(report, "with-text");
+  const chainFromText = !settledChain && Boolean(chain);
   const archetype = !primary || primary === "other" ? "general" : primary.replaceAll("-", " / ");
   const score = report.score?.value;
   const ago = readAgo(report.collectedAt, now());
@@ -311,13 +314,14 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
           </p>
         )}
         {chain && (
-          <p className="first-chain" aria-label="How the business fits together, as its markup declares it">
+          <p className="first-chain" aria-label={chainFromText ? "How the business fits together, as read from its text" : "How the business fits together, as its markup declares it"}>
             {chain.map((step, index) => (
               <span key={step}>
                 {index > 0 && <span className="first-chain-arrow" aria-hidden="true"> → </span>}
                 <span className={index === 0 ? "first-chain-head" : undefined}>{step}</span>
               </span>
             ))}
+            {chainFromText && <span className="first-chain-inferred" title="Read from a sentence on the site, not declared in its markup. Review it to confirm."> · read from the text</span>}
           </p>
         )}
         <EngineStatus report={report} engine={stored} />

@@ -112,7 +112,7 @@ export class ContextEngines {
     if (!engine?.claim) return null;
     const assertions = assertionsFor(report, engine.decisions);
     if (!assertions) return null;
-    const byOwner = [engine.decisions.businessRole, ...engine.decisions.entities, ...engine.decisions.actions, ...engine.decisions.terminology].some((decision) => decision?.by === "owner");
+    const byOwner = [engine.decisions.businessRole, ...engine.decisions.entities, ...engine.decisions.actions, ...engine.decisions.terminology, ...(engine.decisions.relations ?? [])].some((decision) => decision?.by === "owner");
     return { assertions, filedBy: byOwner ? "owner" : "reviewer" };
   }
 

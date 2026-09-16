@@ -53,6 +53,20 @@ export const engineDecisionsSchema = z
     entities: z.array(engineEntityDecisionSchema).max(120),
     actions: z.array(engineActionDecisionSchema).max(80),
     terminology: z.array(engineTermSchema).max(40),
+    /** Relations confirmed or rejected, keyed by both ends' keys and the kind. */
+    relations: z
+      .array(
+        z
+          .object({
+            key: z.string().min(1).max(700),
+            decision: z.enum(["confirm", "reject"]),
+            by: engineRoleSchema,
+            at: z.string().datetime(),
+          })
+          .strict(),
+      )
+      .max(80)
+      .optional(),
   })
   .strict();
 

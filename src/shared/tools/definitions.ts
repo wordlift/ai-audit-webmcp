@@ -238,6 +238,22 @@ export const REFINE_SERVICE_MAP_TOOL = {
         },
         description: "Judgments about the machine's own vocabulary (at most 40 entries).",
       },
+      relationDecisions: {
+        type: "array",
+        maxItems: 80,
+        items: {
+          type: "object",
+          properties: {
+            from: { type: "string", description: "The entity id the relation starts from, as inspect-business-model lists it." },
+            kind: { type: "string", enum: ["offers", "located-in", "provided-by", "part-of", "serves", "brand"] },
+            to: { type: "string", description: "The entity id the relation points to." },
+            decision: { type: "string", enum: ["confirm", "reject"], description: "confirm makes a relation read from the text the reviewer's word; reject takes any relation out of the model." },
+          },
+          required: ["from", "kind", "to", "decision"],
+          additionalProperties: false,
+        },
+        description: "Judgments about how two entities relate (at most 80): confirm the relations read from the text that are right, reject the ones that are wrong.",
+      },
       actionDecisions: {
         type: "array",
         maxItems: 80,

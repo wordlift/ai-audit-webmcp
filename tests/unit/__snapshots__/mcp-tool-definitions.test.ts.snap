@@ -311,6 +311,50 @@ exports[`published MCP tool definitions > publishes exactly this contract 1`] = 
           "maxItems": 80,
           "type": "array",
         },
+        "relationDecisions": {
+          "description": "Judgments about how two entities relate (at most 80): confirm the relations read from the text that are right, reject the ones that are wrong.",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "decision": {
+                "description": "confirm makes a relation read from the text the reviewer's word; reject takes any relation out of the model.",
+                "enum": [
+                  "confirm",
+                  "reject",
+                ],
+                "type": "string",
+              },
+              "from": {
+                "description": "The entity id the relation starts from, as inspect-business-model lists it.",
+                "type": "string",
+              },
+              "kind": {
+                "enum": [
+                  "offers",
+                  "located-in",
+                  "provided-by",
+                  "part-of",
+                  "serves",
+                  "brand",
+                ],
+                "type": "string",
+              },
+              "to": {
+                "description": "The entity id the relation points to.",
+                "type": "string",
+              },
+            },
+            "required": [
+              "from",
+              "kind",
+              "to",
+              "decision",
+            ],
+            "type": "object",
+          },
+          "maxItems": 80,
+          "type": "array",
+        },
         "reportId": {
           "description": "Identifier of the report to act on, as returned by audit-website.",
           "type": "string",

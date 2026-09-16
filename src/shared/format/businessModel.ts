@@ -33,14 +33,16 @@ export interface ModelledEntity {
   terms: string[];
 }
 
-/** How two entities relate, as the site's markup declared it, with the names an agent can say. */
+/** How two entities relate, with the names an agent can say: declared by the markup, read from a sentence, or confirmed in a review. */
 export interface ModelledRelation {
   from: string;
   fromName: string;
   kind: EntityRelation["kind"];
   to: string;
   toName: string;
-  provenance: "declared";
+  provenance: EntityRelation["provenance"];
+  /** The sentence an inferred relation was read from. */
+  evidence?: string;
 }
 
 export const RELATION_PHRASES: Record<EntityRelation["kind"], string> = {
@@ -57,7 +59,15 @@ export function modelRelations(report: ReportRecord, entities: ModelledEntity[])
   const names = new Map(entities.map((entity) => [entity.id, entity.name]));
   return (report.contextGraph?.relations ?? [])
     .filter((relation) => names.has(relation.from) && names.has(relation.to))
-    .map((relation) => ({ from: relation.from, fromName: names.get(relation.from)!, kind: relation.kind, to: relation.to, toName: names.get(relation.to)!, provenance: "declared" as const }));
+    .map((relation) => ({
+      from: relation.from,
+      fromName: names.get(relation.from)!,
+      kind: relation.kind,
+      to: relation.to,
+      toName: names.get(relation.to)!,
+      provenance: relation.provenance,
+      ...(relation.evidence ? { evidence: relation.evidence } : {}),
+    }));
 }
 
 export interface BusinessModelResult {
@@ -196,8 +206,18 @@ export function businessModelText(model: BusinessModelResult): string {
     if (group.length === 0) continue;
     lines.push("", `${ROLE_HEADINGS[role]}:`, ...group.map(entityLine));
   }
-  if (model.relationships.length > 0) {
-    lines.push("", "How it fits together, as the site's markup declares it:", ...model.relationships.slice(0, 24).map((relation) => `- ${relation.fromName} ${RELATION_PHRASES[relation.kind]} ${relation.toName}`));
+  const sayRelation = (relation: ModelledRelation) => `- ${relation.fromName} ${RELATION_PHRASES[relation.kind]} ${relation.toName}`;
+  const settled = model.relationships.filter((relation) => relation.provenance !== "inferred");
+  const inferred = model.relationships.filter((relation) => relation.provenance === "inferred");
+  if (settled.length > 0) {
+    lines.push("", "How it fits together, as the site's markup declares it or a review confirmed:", ...settled.slice(0, 24).map((relation) => `${sayRelation(relation)}${relation.provenance === "confirmed" ? " (confirmed)" : ""}`));
+  }
+  if (inferred.length > 0) {
+    lines.push(
+      "",
+      "Read from the text, not confirmed (ask the owner; confirm or reject with refine-terms-of-action relationDecisions, using the ids from inspect-business-model):",
+      ...inferred.slice(0, 16).map((relation) => `${sayRelation(relation)}, from "${relation.evidence ?? ""}"`),
+    );
   }
   const expected = model.capabilities.filter((capability) => capability.expected);
   const works = expected.filter((capability) => capability.agentReady).map((capability) => capability.label);
@@ -266,7 +286,7 @@ export function entityDetailText(detail: EntityDetailResult): string {
   if (detail.sameAs.length > 0) lines.push(`Same as: ${detail.sameAs.join(", ")}.`);
   if (detail.offers.length > 0) lines.push(`Offers: ${detail.offers.map((offer) => [offer.name, offer.price !== undefined ? `${offer.price} ${offer.priceCurrency ?? ""}`.trim() : null, offer.availability].filter(Boolean).join(", ")).join("; ")}.`);
   lines.push(`Seen on: ${detail.pages.length > 0 ? detail.pages.map((page) => page.url).join(", ") : detail.sources.join(", ")}.`);
-  if (detail.relations.length > 0) lines.push(`Relations the markup declares: ${detail.relations.map((relation) => `${relation.fromName} ${RELATION_PHRASES[relation.kind]} ${relation.toName}`).join("; ")}.`);
+  if (detail.relations.length > 0) lines.push(`Relations: ${detail.relations.map((relation) => `${relation.fromName} ${RELATION_PHRASES[relation.kind]} ${relation.toName} (${relation.provenance})`).join("; ")}.`);
   if (detail.answersFor.length > 0) lines.push(`Answers for: ${detail.answersFor.map((action) => `${action.label} [${STATE_WORDS[action.state] ?? action.state}]`).join(", ")}.`);
   if (detail.terms.length > 0) lines.push(`The site's words for it: ${detail.terms.map((term) => `"${term}"`).join(", ")}.`);
   if (detail.evidence.length > 0) lines.push("", "Evidence:", ...detail.evidence.map((item) => `- ${item.actionId}: ${item.claim} (${item.verification}, ${item.sourceUrl})`));

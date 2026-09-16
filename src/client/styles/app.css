@@ -842,6 +842,7 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .first-chain { margin: 0; color: var(--muted); font-size: 0.95rem; }
 .first-chain-head { color: var(--ink); font-weight: 600; }
 .first-chain-arrow { color: var(--brand); }
+.first-chain-inferred { color: var(--faint); font-size: 0.85rem; cursor: help; }
 .first-found a { color: var(--brand); font-weight: 600; }
 
 /* The Context Engine as a person reads it: a few things, each with where the knowledge comes from. */

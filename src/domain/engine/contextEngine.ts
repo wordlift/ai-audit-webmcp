@@ -117,8 +117,14 @@ export function decisionsFrom(assertions: HumanAssertion, parent: ReportRecord, 
       if (entity) entityDecisions.push({ key: entityKey(entity), name: entity.name.slice(0, 300), decision, by, at });
     }
   }
+  const relations = (assertions.relationDecisions ?? []).flatMap((decision) => {
+    const from = entities.get(decision.from);
+    const to = entities.get(decision.to);
+    return from && to ? [{ key: `${entityKey(from)} ${decision.kind} ${entityKey(to)}`, decision: decision.decision, by, at }] : [];
+  });
   return {
     ...(assertions.businessRole ? { businessRole: { value: assertions.businessRole, by, at } } : {}),
+    ...(relations.length > 0 ? { relations } : {}),
     entities: entityDecisions,
     actions: (assertions.actionDecisions ?? []).map((decision) => ({ ...decision, by, at })),
     terminology: (assertions.terminology ?? []).map((entry) => ({ ...entry, by, at })),
@@ -135,8 +141,10 @@ export function mergeDecisions(current: EngineDecisions, next: EngineDecisions):
     return [...byKey.values()].slice(-max);
   };
   const businessRole = next.businessRole ? keep(current.businessRole, next.businessRole) : current.businessRole;
+  const relations = merge(current.relations ?? [], next.relations ?? [], (item) => item.key, 80);
   return {
     ...(businessRole ? { businessRole } : {}),
+    ...(relations.length > 0 ? { relations } : {}),
     entities: merge(current.entities, next.entities, (item) => item.key, 120),
     actions: merge(current.actions, next.actions, (item) => item.actionId, 80),
     terminology: merge(current.terminology, next.terminology, (item) => item.term.toLowerCase(), 40),
@@ -144,7 +152,7 @@ export function mergeDecisions(current: EngineDecisions, next: EngineDecisions):
 }
 
 export function decisionCount(decisions: EngineDecisions): number {
-  return (decisions.businessRole ? 1 : 0) + decisions.entities.length + decisions.actions.length + decisions.terminology.length;
+  return (decisions.businessRole ? 1 : 0) + decisions.entities.length + decisions.actions.length + decisions.terminology.length + (decisions.relations?.length ?? 0);
 }
 
 /**
@@ -166,12 +174,21 @@ export function assertionsFor(report: ReportRecord, decisions: EngineDecisions):
     .filter((decision) => actionIds.has(decision.actionId))
     .map(({ by: _by, at: _at, ...decision }) => decision);
   const terminology = decisions.terminology.map(({ term, meaning }) => ({ term, meaning }));
+  const entitiesById = new Map((report.contextGraph?.entities ?? []).map((entity) => [entity.id, entity]));
+  const relationVerdicts = new Map((decisions.relations ?? []).map((entry) => [entry.key, entry.decision]));
+  const relationDecisions = (report.contextGraph?.relations ?? []).flatMap((relation) => {
+    const from = entitiesById.get(relation.from);
+    const to = entitiesById.get(relation.to);
+    const verdict = from && to ? relationVerdicts.get(`${entityKey(from)} ${relation.kind} ${entityKey(to)}`) : undefined;
+    return verdict ? [{ from: relation.from, kind: relation.kind, to: relation.to, decision: verdict }] : [];
+  });
   const assertions: HumanAssertion = {
     ...(decisions.businessRole ? { businessRole: decisions.businessRole.value } : {}),
     ...(primaryEntityIds.length > 0 ? { primaryEntityIds } : {}),
     ...(demotedEntityIds.length > 0 ? { demotedEntityIds } : {}),
     ...(actionDecisions.length > 0 ? { actionDecisions } : {}),
     ...(terminology.length > 0 ? { terminology } : {}),
+    ...(relationDecisions.length > 0 ? { relationDecisions: relationDecisions.slice(0, 80) } : {}),
   };
   return Object.keys(assertions).length > 0 ? assertions : null;
 }
@@ -195,6 +212,7 @@ export function engineView(engine: ContextEngine): ContextEngineView {
   const { decisions } = engine;
   const all = [
     ...(decisions.businessRole ? [decisions.businessRole] : []),
+    ...(decisions.relations ?? []),
     ...decisions.entities,
     ...decisions.actions,
     ...decisions.terminology,

@@ -406,7 +406,26 @@ export class AuditOrchestrator {
       return next;
     });
 
+    // How two things relate: a confirmation makes an inferred relation the reviewer's word, a
+    // rejection takes any relation out of the model. A relation the report does not hold is a conflict.
+    const relationKey = (relation: { from: string; kind: string; to: string }) => `${relation.from}|${relation.kind}|${relation.to}`;
+    const parentRelations = parent.contextGraph.relations ?? [];
+    const heldRelations = new Set(parentRelations.map(relationKey));
+    const relationDecisions = new Map(
+      (assertions.relationDecisions ?? [])
+        .filter((decision) => {
+          if (heldRelations.has(relationKey(decision))) return true;
+          conflicts.push(`No relation ${decision.kind} from ${decision.from} to ${decision.to} in this report`);
+          return false;
+        })
+        .map((decision) => [relationKey(decision), decision.decision]),
+    );
+    const relations = parentRelations
+      .filter((relation) => relationDecisions.get(relationKey(relation)) !== "reject")
+      .map((relation) => (relationDecisions.get(relationKey(relation)) === "confirm" && relation.provenance === "inferred" ? { ...relation, provenance: "confirmed" as const } : relation));
+
     const appliedDecisions =
+      relationDecisions.size +
       (assertions.businessRole ? 1 : 0) +
       promoted.length +
       demoted.length +
@@ -417,7 +436,10 @@ export class AuditOrchestrator {
       throw new ReportRequestError("No assertion in the request applies to this report.", 400);
     }
 
-    const contextGraph = refreshContextGraph({ ...parent.contextGraph, entities, lexicalEntries: lexicon }, capabilities);
+    const contextGraph = refreshContextGraph(
+      { ...parent.contextGraph, entities, lexicalEntries: lexicon, ...(parent.contextGraph.relations ? { relations } : {}) },
+      capabilities,
+    );
 
     // Applicability follows the human's map: a demoted entity no longer answers for an action,
     // and a promoted one answers first.

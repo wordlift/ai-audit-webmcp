@@ -59,8 +59,10 @@ export function relationPhrases(entity: DomainEntity, report: ReportRecord, limi
   const names = new Map((report.contextGraph?.entities ?? []).map((candidate) => [candidate.id, candidate.name]));
   const phrases: string[] = [];
   for (const relation of report.contextGraph?.relations ?? []) {
-    if (relation.from === entity.id && names.has(relation.to)) phrases.push(`${RELATION_WORDS[relation.kind] ?? relation.kind} ${names.get(relation.to)}`);
-    else if (relation.to === entity.id && relation.kind === "offers" && names.has(relation.from)) phrases.push(`offered by ${names.get(relation.from)}`);
+    // What only the text says is marked so; the markup's word and a review's stand as they are.
+    const read = relation.provenance === "inferred" ? " (from the text)" : "";
+    if (relation.from === entity.id && names.has(relation.to)) phrases.push(`${RELATION_WORDS[relation.kind] ?? relation.kind} ${names.get(relation.to)}${read}`);
+    else if (relation.to === entity.id && relation.kind === "offers" && names.has(relation.from)) phrases.push(`offered by ${names.get(relation.from)}${read}`);
   }
   return [...new Set(phrases)].slice(0, limit);
 }
@@ -127,7 +129,7 @@ function EntityList({ entities, tone, report }: { entities: DomainEntity[]; tone
               <span className="entity-type">{entityTypeLabel(entity.types[0])}</span>
               {whereFound(entity) && <span className="entity-where">{whereFound(entity)}</span>}
               {relationPhrases(entity, report).length > 0 && (
-                <span className="entity-relations" aria-label={`What the site's markup says ${entity.name} relates to`}>
+                <span className="entity-relations" aria-label={`How ${entity.name} relates to the rest of the business`}>
                   {relationPhrases(entity, report).join(" · ")}
                 </span>
               )}

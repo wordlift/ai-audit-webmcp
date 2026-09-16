@@ -77,7 +77,7 @@ describe("the business as the audit modelled it", () => {
     expect(text).toContain("5 entities: 2 declared in the site's markup, 2 inferred from its text, 1 confirmed by the owner. 3 expected actions, 1 agent-ready.");
     expect(text).toContain("- Samspitze 4 (Apartment, inferred); answers for Check availability [fix this], Book a stay [talk to us]; the site's words: \"Alpine stays\"");
     expect(text).toContain("- Lungau (Place, inferred, same as https://www.wikidata.org/wiki/Q268090)");
-    expect(text).toContain("How it fits together, as the site's markup declares it:\n- AlpiNest Feriendorf Lungau offers Samspitze 4\n- Samspitze 4 is in Lungau");
+    expect(text).toContain("How it fits together, as the site's markup declares it or a review confirmed:\n- AlpiNest Feriendorf Lungau offers Samspitze 4\n- Samspitze 4 is in Lungau");
     expect(text).toContain("Actions an agent can perform today: Search the site.");
     expect(text).toContain("Actions people can do here that agents cannot yet: Check availability.");
     expect(text).toContain("never move readiness");
@@ -95,7 +95,7 @@ describe("the business as the audit modelled it", () => {
     // Relations at either end, on the entities the model kept; one to nowhere is not a relation.
     expect(detail.relations.map((relation) => `${relation.fromName} ${relation.kind} ${relation.toName}`)).toEqual(["AlpiNest Feriendorf Lungau offers Samspitze 4", "Samspitze 4 located-in Lungau"]);
     const text = entityDetailText(detail);
-    expect(text).toContain("Relations the markup declares: AlpiNest Feriendorf Lungau offers Samspitze 4; Samspitze 4 is in Lungau.");
+    expect(text).toContain("Relations: AlpiNest Feriendorf Lungau offers Samspitze 4 (declared); Samspitze 4 is in Lungau (declared).");
     expect(text).toContain("Samspitze 4 (Apartment), inferred, confidence 90%.");
     expect(text).toContain("Also called: Samspitze IV.");
     expect(text).toContain("- availability.check: People can check availability (observed, https://alpina.travel/booking)");
