@@ -108,7 +108,7 @@ describe("the first screen", () => {
 
   it("offers to claim the Context Engine on the first screen, opening in place, and not on a deep scan", () => {
     renderScreen();
-    const strip = screen.getByRole("button", { name: /Claim your Context Engine and expand it beyond these 4 pages/ });
+    const strip = screen.getByRole("button", { name: /Claim your Context Engine: keep your decisions, expand it, hear when it changes/ });
     expect(strip).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByLabelText(/email address/i)).toBeNull();
     fireEvent.click(strip);

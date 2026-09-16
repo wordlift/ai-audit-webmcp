@@ -64,6 +64,8 @@ support them. Declarations never earn readiness; only invoked evidence does.
 | What production is running | `GET https://beta.audit.wordlift.io/api/health` → `release`, `mode`, `surfaces` |
 | What the tools promise, on every transport | `src/shared/tools/definitions.ts` |
 | How a tool call is answered | `src/server/services/AuditToolService.ts` |
+| What a site's Context Engine keeps across reads, and who may change it | `src/domain/engine/contextEngine.ts`, `src/server/services/ContextEngines.ts` |
+| How relations are read from a page's text | `src/domain/context/inferRelations.ts` |
 
 ## Commit messages
 

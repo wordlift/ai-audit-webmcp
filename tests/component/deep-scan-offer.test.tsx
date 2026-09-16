@@ -37,8 +37,8 @@ describe("DeepScanOffer", () => {
   it("offers to claim and expand the Context Engine against what the free scan actually did", () => {
     renderOffer();
 
-    expect(screen.getByText(/built from 4 representative pages/i)).toBeVisible();
-    expect(screen.getByText(/expand it to up to 12/i)).toBeVisible();
+    expect(screen.getByText(/built from 4 representative pages\. Claim it to save it/i)).toBeVisible();
+    expect(screen.getByText(/expand it to up to 12 pages/i)).toBeVisible();
     expect(screen.getByRole("button", { name: /claim & expand/i })).toBeDisabled();
   });
 

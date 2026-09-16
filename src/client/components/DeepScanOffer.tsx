@@ -10,12 +10,13 @@ import { announceEngineChange } from "../engine/useEngine";
 /**
  * Claim your Context Engine: the one thing the audit asks for, where the person already is.
  *
- * Everything else here is free and anonymous. What an address buys is the engine growing past the
- * first pages, sent to the person, and a note when what agents can do there moves (the
- * Observer re-reads it); underneath, it is the deep scan, and the lead goes where it always went.
- * It is asked for after the reader has seen what the free scan understood, never before. Claiming
- * here saves nothing else yet: review decisions stay on the report they were filed on. It sits on the first screen as one
- * line and opens in place, so nobody is sent to the bottom of the page to find a form.
+ * Everything else here is free and anonymous. What an address buys is ownership of an emerging
+ * asset: this browser holds the site's Context Engine, so every decision made here or in a ChatGPT
+ * review is kept and applied to every later read; the engine grows past the first pages and is sent
+ * to the person; and a note goes out when the model or what agents can do there moves (the Observer
+ * re-reads it). Underneath, it is the deep scan, and the lead goes where it always went. It is asked
+ * for after the reader has seen what the free scan understood, never before. It sits on the first
+ * screen as one line and opens in place, so nobody is sent to the bottom of the page to find a form.
  *
  * The address is submitted and then forgotten by the page: it is never put in the report, and the
  * confirmation shows it masked, because a shared report link must not carry the address of whoever
@@ -105,14 +106,15 @@ export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS, variant = "st
   return (
     <section className={`deep-scan-offer deep-scan-inline deep-scan-${variant}`} id="deep-scan" aria-label="Claim your Context Engine">
       <button type="button" className={variant === "inline" ? "deep-scan-inline-link" : "deep-scan-strip"} aria-expanded={open} onClick={() => setOpen((current) => !current)}>
-        {variant === "strip" && <ScanSearch size={16} aria-hidden="true" />} {claimed ? "Expand your Context Engine" : "Claim your Context Engine and expand it"} beyond {pagesRead === 1 ? "this page" : `these ${pagesRead} pages`}
+        {variant === "strip" && <ScanSearch size={16} aria-hidden="true" />} {claimed ? `Expand your Context Engine beyond ${pagesRead === 1 ? "this page" : `these ${pagesRead} pages`}` : "Claim your Context Engine: keep your decisions, expand it, hear when it changes"}
         <ArrowRight size={14} aria-hidden="true" className={open ? "is-open" : ""} />
       </button>
       {open && (
         <div className="deep-scan-form">
           <p>
-            This Context Engine was built from {pagesRead} representative {pagesRead === 1 ? "page" : "pages"}. Claim it and we expand it to up to{" "}
-            {DEEP_SCAN_PAGES}, send you the result, and write when what agents can do there changes.
+            This Context Engine was built from {pagesRead} representative {pagesRead === 1 ? "page" : "pages"}. Claim it to save it: your review
+            decisions are kept for every later read of the site, we expand it to up to {DEEP_SCAN_PAGES} pages and send you the result, and we
+            write when something important changes. Verifying you own the site comes next.
           </p>
           <form className="input-row" onSubmit={requestDeepScan}>
             <label className="sr-only" htmlFor="deep-scan-email">Email address to claim this Context Engine</label>

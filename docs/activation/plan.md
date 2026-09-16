@@ -724,42 +724,61 @@ Built on the branch, 2026-09-16 (P0 1–3, and the copy of 4, 6, 10, 20):
 - The deep scan's offer reads "Claim your Context Engine and expand it beyond these 4 pages",
   "Claim & expand", "Expanding it now". The mechanics and the lead are unchanged. The copy
   promises only what exists: more pages, the report by email, a note when what agents can do
-  changes. It does not say decisions are saved, because nothing yet saves them beyond the report.
+  changes. (Later the same day, once the engine kept decisions, the offer says so: "keep your
+  decisions, expand it, hear when it changes".)
 - Fix is headed "Make your Context Engine authoritative"; Understand's door is "Build the live
   Context Engine with WordLift" (intent `fix`, unchanged). The fold is "Model & evidence" on the
   report and in the step bar; the step hints are the brief's. The home page does one job, "Turn
   your website into a Context Engine for AI agents"; /pitch stays and loses its link from the hero.
 
-Not built, and why:
+Then built, the same day, in passes (every item the brief listed as P0, and the loop around them):
 
-- **The Context Engine object (P0 5), and with it a claim that is real (11–13).** `ClaimStore`
-  is a per-report refine token and stays that. Proposal: a `contextEngines` record keyed by
-  canonical host, with reports as its evidence snapshots, the human assertions lifted out of the
-  refined child and reapplied to each new snapshot, a status (draft, claimed, live, activated), an
-  owner state (unverified, verified) and the WordLift account once converted. Claiming a draft
-  takes an email; asserting business facts as the owner takes verification (account, domain
-  email, plugin, DNS or Search Console), and publishing takes a verified owner. Two questions come
-  before building it. How does an inferred entity keep its identity across crawls, when its id is
-  minted per read (name and type within the host is the obvious key, and it merges wrongly on
-  namesakes)? And which verification ships first? Andrea's call.
-- **The review visibly changing the page the person came back to (9).** A refined report is a
-  child with its own link; the parent does not know it exists. The banner above shows on the
-  child. Pointing the parent at its latest reviewed version is the Context Engine's "latest
-  report", so it waits for the object rather than growing a second pointer.
-- **Inferred relations (6).** Only with both entities known, a supporting span on a page and an
-  allowed kind, marked inferred until confirmed. Content Analysis returns no relations today;
-  this needs its team or a span-bound pass of our own. Decide which.
-- **Activate outcomes first (16).** Activate already opens on three outcomes. Renaming them to
-  "Agents can find it / know the rules / can use what works", with the files under "For your
-  engineers", is a copy pass. Next.
-- **Context drift in the Observer (8)**, new or vanished entities and relations beside readiness.
-  It compares consecutive snapshots of one engine, so it follows the object.
-- **Dashboard intents and PQL signals (9, 25–27).** `claim-context`, `build-context` and
-  `monitor` are not sent until the dashboard routes them, since an intent it does not know lands
-  nowhere. `contextEngineId` travels once it exists. The HubSpot properties (archetype, declared
-  and inferred counts, top gaps, runs on WordLift, reviewed, claimed, verified, which door) and
-  the funnel events are one change on the lead delivery. Agree the property names with Sales Ops
-  first.
+- **The Context Engine object (P0 5, 11–13).** `contextEngines`, one document per host, above the
+  reports (`src/domain/engine/contextEngine.ts`, `src/server/services/ContextEngines.ts`). Every
+  finished read is recorded on it as a small snapshot. Claiming with an address (the deep scan's
+  form, now "Claim your Context Engine") hands the browser a key; a review filed with the key, from
+  Own it or from ChatGPT through a day-long review token in the prompt's link, is kept as decisions
+  keyed by what survives a new read: an entity's name and role, an action's id, a relation's two
+  ends and kind. The next read of the site gets them back as a reviewed revision marked `carried`.
+  A review without the key is what it always was, a revision of its report. `ClaimStore` is
+  untouched. Andrea's two questions, decided in the build: the key across crawls is name and role
+  (namesakes merge; a review can demote the wrong one), and the first verification is the site's
+  own proof, a `wordlift-site-verification` meta tag or `/.well-known/wordlift-verification.txt`,
+  read by the server through the URL policy. A second claim waits, pending, until it proves the
+  site; then it takes the engine over and every earlier key stops. The owner's decisions are the
+  business's word and no reviewer's overrides them; the skill says whose decisions it carries.
+  Statuses: draft, claimed, live once the site's catalog carries our Terms of Action, activated
+  once an agent's call worked.
+- **The review changing the page (9).** The report page reads its engine again when the person
+  comes back to the tab: "Reviewed since this report. Open it", and on a carried read "Your earlier
+  review carried over". A reviewed report says "Reviewed · N decisions added · not ours: …", and
+  "Reviewed by the owner" when it was.
+- **Inferred relations (6), our own span-bound pass** (`src/domain/context/inferRelations.ts`):
+  two entities the graph holds, adjacent in one sentence on a page they were both found on, with
+  only the words for an allowed kind between them (offers, in or located in, run by, or an address
+  like "Mariapfarr, Lungau" that is not a list). Kept as inferred with the sentence, never evidence,
+  never published. On alpina.travel's live text: Samspitze 4 in Mariapfarr, Mariapfarr in Lungau,
+  Lungau in the Austrian Alps, Pichl in Lungau. The first screen says the shape "read from the text"
+  when the markup declares none; Own it asks "Is this right?"; `refine-terms-of-action` takes
+  `relationDecisions` (an optional addition, the published contract otherwise unchanged).
+- **Activate outcomes first (16).** Agents can find it, agents know the rules, agents can use what
+  works, each with its files readable in place; the table and surfaces in the engineers' fold.
+- **Context drift in the Observer (8)** (`src/domain/engine/drift.ts`): what the site now declares,
+  what mattered and is gone, what slipped from declared to only written, which declared connections
+  appeared or went. What the extractor alone reads differently between days is not news.
+- **Dashboard intents and PQL signals (9, 25–27).** Every door carries the report, the engine and
+  the intent (`claim-context`, `build-context`, `monitor`, `activate`, `agent-ready`, `keep`); the
+  dashboard may ignore what it does not route yet. Every delivery and note ends with qualification
+  signals, counts and states only; a HubSpot property takes one only when named in
+  `HUBSPOT_SIGNAL_FIELDS`. The funnel's steps are JSON log lines for a log-based metric, from the
+  server and from the page; a door opened is kept on the engine. `activeAt` on an engine is the
+  activation metric's input: Active Context Engines are those with `activeAt` in the period.
+
+Still Andrea's or others' to do: the WordLift dashboard routing the new intents and reading
+`engine`; the HubSpot properties, created on the form before `HUBSPOT_SIGNAL_FIELDS` names them;
+the log-based metric (recipe in OPERATIONS.md); a Firestore backup policy for `contextEngines`,
+which has no TTL on purpose. Relations stay a reading of the text, not a model's guess; if Content
+Analysis learns to return relations with spans, they fold in beside ours.
 
 Not to build (the brief's list, kept): a cross-LLM visibility matrix in the audit, a global
 context confidence score, a fourth Monitor step, internal company-memory ingestion, WebMCP as a
