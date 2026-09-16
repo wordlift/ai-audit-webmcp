@@ -7,6 +7,8 @@ import { ActionDetailDialog } from "./ActionDetailDialog";
 import { AgentDiary } from "./AgentDiary";
 import { AgentDoors } from "./AgentDoors";
 import { ContextEnginePreview, contextEngineSummary } from "./ContextEnginePreview";
+import { EngineStatus } from "./EngineStatus";
+import { useEngine } from "../engine/useEngine";
 import { DeepScanOffer } from "./DeepScanOffer";
 import { publishUrl } from "./FixPanel";
 import { entityRole } from "../../shared/format/businessModel.js";
@@ -260,6 +262,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   const ago = readAgo(report.collectedAt, now());
   const gap = gapLine(capabilities);
   const engine = contextEngineSummary(report);
+  const { engine: stored, key: engineKey } = useEngine(report);
 
   async function runAgain() {
     setRerunning(true);
@@ -316,11 +319,12 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
             ))}
           </p>
         )}
+        <EngineStatus report={report} engine={stored} />
         {engine && <ContextEnginePreview summary={engine} />}
         {/* Beside the model, the two things to do with it: review it, which makes it better, or ask it, which proves it is usable. */}
-        {engine && <AgentDoors reportId={report.id} />}
+        {engine && <AgentDoors reportId={report.id} host={stored?.standing === "reviewer" || stored?.standing === "owner" ? stored.host : null} engineKey={engineKey} />}
         {/* Claiming is where an address is asked for: the engine expands, and the owner hears when it moves. */}
-        <DeepScanOffer report={report} variant="inline" />
+        <DeepScanOffer report={report} variant="inline" claimed={stored?.standing === "reviewer" || stored?.standing === "owner"} />
       </div>
 
       <div className="first-capabilities" aria-labelledby={engine ? "first-capabilities-title" : undefined}>

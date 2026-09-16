@@ -858,6 +858,25 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .engine-counts-provenance { color: var(--faint); }
 .engine-counts a { color: var(--brand); font-weight: 600; }
 .engine-reviewed { margin: 0; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--state-agent-ready) 12%, white); color: var(--ink); font-size: 0.92rem; }
+/* Where this report stands in its site's Context Engine. */
+.engine-status { display: grid; gap: 6px; }
+.engine-status-line { margin: 0; display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.86rem; }
+.engine-status-verified { color: var(--ink); }
+.engine-status-verified svg { color: var(--wl-moss); }
+.engine-carried, .engine-newer { margin: 0; padding: 8px 12px; border-radius: 10px; font-size: 0.92rem; background: color-mix(in srgb, var(--state-agent-ready) 12%, white); color: var(--ink); }
+.engine-newer { background: color-mix(in srgb, var(--brand) 8%, white); }
+.engine-newer a { display: inline-flex; align-items: center; gap: 4px; color: var(--brand); font-weight: 600; }
+.deep-scan-pending { margin: 0; color: var(--ink); }
+/* Ownership: the difference between a reviewer and the business. */
+.ownership { display: grid; gap: 10px; padding: 18px 22px; border: 1px solid var(--line-subtle); border-radius: 16px; background: var(--surface); }
+.ownership h3 { margin: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 1.05rem; }
+.ownership h3 svg { color: var(--wl-moss); }
+.ownership p { margin: 0; color: var(--muted); max-width: 70ch; }
+.ownership a { color: var(--brand); font-weight: 600; }
+.ownership .review-cta { justify-self: start; }
+.ownership-steps { display: grid; gap: 10px; }
+.ownership-steps code { font-family: var(--font-mono); font-size: 0.85em; overflow-wrap: anywhere; }
+.ownership-error { color: var(--state-missing) !important; }
 /* The proof after the model: what agents can do with it today. */
 .first-capabilities { display: grid; gap: 6px; padding-top: 14px; border-top: 1px solid var(--line-subtle); }
 .first-capabilities:empty { display: none; }

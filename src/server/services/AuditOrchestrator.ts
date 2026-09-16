@@ -25,6 +25,7 @@ import { compilePublication, type Publication } from "../../domain/publish/publi
 import type { ScoreReading } from "../../shared/types/activate.js";
 import { publishedSiteIn } from "../../domain/publish/feed.js";
 import type { PublishedSiteStore } from "../adapters/published/PublishedSiteStore.js";
+import type { ContextEngines } from "./ContextEngines.js";
 import type {
   Archetype,
   CapabilityEvidence,
@@ -71,6 +72,8 @@ export interface OrchestratorOptions {
   reuseWindowMs?: number;
   /** Where the sites that publish through us are kept, for the entry source. Absent means none is kept. */
   published?: PublishedSiteStore;
+  /** The Context Engines every finished read is recorded on, and whose decisions a new read carries. Absent means none. */
+  engines?: ContextEngines;
 }
 
 const DEFAULT_REUSE_WINDOW_MS = 24 * 60 * 60 * 1_000;
@@ -130,7 +133,7 @@ export class AuditOrchestrator {
         ? null
         : await this.recentReport(target.toString(), request.depth ?? "basic", request.requestId);
     if (source) {
-      return this.store.finalize(this.deriveFrom(running, source));
+      return this.settled(await this.store.finalize(this.deriveFrom(running, source)));
     }
 
     // Progress is visible before the audit finishes: each patch replaces the running record, so
@@ -149,7 +152,7 @@ export class AuditOrchestrator {
         request.archetypeOverride ?? undefined,
         onProgress,
       );
-      return await this.store.finalize({ ...finalReport, collectedAt: running.createdAt });
+      return this.settled(await this.store.finalize({ ...finalReport, collectedAt: running.createdAt }));
     } catch (error) {
       // A record left `running` traps every retry of this requestId in polling until it expires,
       // so the failure itself becomes the terminal state before the error reaches the caller.
@@ -160,6 +163,38 @@ export class AuditOrchestrator {
 
   async get(id: string): Promise<ReportRecord | null> {
     return this.store.get(id);
+  }
+
+  get engines(): ContextEngines | undefined {
+    return this.options.engines;
+  }
+
+  /**
+   * A finished read, recorded on its site's Context Engine; when the engine keeps decisions, they
+   * are applied to this read as a reviewed revision of it. The read itself is returned unchanged:
+   * the machine draft stays what the crawl said, and the engine points at the reviewed one.
+   */
+  private async settled(report: ReportRecord): Promise<ReportRecord> {
+    const engines = this.options.engines;
+    if (!engines) return report;
+    await engines.record(report);
+    try {
+      const carried = await engines.carry(report);
+      if (carried) {
+        const child = await this.refine(report.id, carried.assertions, { carried: true, filedBy: carried.filedBy });
+        await engines.record(child);
+      }
+    } catch (error) {
+      // Nothing a stored decision no longer fits may fail the audit it was meant to improve.
+      if (!(error instanceof ReportRequestError)) console.error("engine_carry_failed", error instanceof Error ? error.name : "unknown");
+    }
+    return report;
+  }
+
+  /** A revision recorded on its engine, and returned as it is. */
+  private async noted(report: ReportRecord): Promise<ReportRecord> {
+    await this.options.engines?.record(report);
+    return report;
   }
 
   /**
@@ -283,7 +318,7 @@ export class AuditOrchestrator {
       errors: parent.errors,
       evidenceTruncated: parent.evidenceTruncated,
     };
-    return this.store.createRevision(parent.id, child);
+    return this.noted(await this.store.createRevision(parent.id, child));
   }
 
   /**
@@ -292,7 +327,7 @@ export class AuditOrchestrator {
    * can mark an action agent-ready — readiness still requires invocation evidence. Assertions
    * that reference nothing in the report are returned as conflicts instead of being applied.
    */
-  async refine(parentId: string, input: unknown): Promise<ReportRecord> {
+  async refine(parentId: string, input: unknown, origin: { carried?: boolean; filedBy?: "reviewer" | "owner" } = {}): Promise<ReportRecord> {
     const assertions = refineReportRequestSchema.parse(input);
     const parent = await this.required(parentId);
     if (!parent.capabilities || !parent.classification || !parent.contextGraph) {
@@ -409,6 +444,8 @@ export class AuditOrchestrator {
         conflicts: conflicts.slice(0, 30),
         provenance: "human-provided",
         appliedAt: this.now().toISOString(),
+        ...(origin.carried ? { carried: true } : {}),
+        ...(origin.filedBy ? { filedBy: origin.filedBy } : {}),
       },
       score: scoreReadiness(capabilities),
       priorities: rankPriorities(capabilities),
@@ -427,7 +464,7 @@ export class AuditOrchestrator {
       null,
       parent.classification?.override,
     );
-    return this.store.createRevision(parent.id, child);
+    return this.noted(await this.store.createRevision(parent.id, child));
   }
 
   async contract(reportId: string, actionId: string) {
@@ -535,7 +572,7 @@ export class AuditOrchestrator {
       errors: parent.errors,
       evidenceTruncated: parent.evidenceTruncated || merged.truncated,
     };
-    return this.store.createRevision(parent.id, child);
+    return this.noted(await this.store.createRevision(parent.id, child));
   }
 
   /** Stores a terminal failed revision of a running report, with a caller-safe message. */

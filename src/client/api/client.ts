@@ -1,5 +1,6 @@
 import { reportRecordSchema, runningReportResponseSchema } from "../../shared/schemas/report.js";
 import type { Publication, ScoreReading } from "../../shared/types/activate.js";
+import type { ContextEngineView, EngineClaimResult } from "../../shared/schemas/contextEngine.js";
 import type { Archetype, HumanAssertion, ReportRecord, ScanDepth } from "../../shared/types/index.js";
 
 const POLL_INTERVAL_MS = 1_500;
@@ -150,14 +151,57 @@ export async function recompileReport(reportId: string, archetype: Archetype): P
   return reportRecordSchema.parse(body);
 }
 
-/** Applies a reviewer's structured judgment as an immutable child revision. */
-export async function refineReport(reportId: string, assertions: HumanAssertion): Promise<ReportRecord> {
+/**
+ * Applies a reviewer's structured judgment as an immutable child revision. When this browser holds
+ * the site's Context Engine, the key travels with it and the engine keeps the decisions too.
+ */
+export async function refineReport(reportId: string, assertions: HumanAssertion, engineKey?: string | null): Promise<ReportRecord> {
   const { body } = await requestJson(`/api/reports/${reportId}/refine`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...(engineKey ? { [ENGINE_KEY_HEADER]: engineKey } : {}) },
     body: JSON.stringify(assertions),
   });
   return reportRecordSchema.parse(body);
+}
+
+const ENGINE_KEY_HEADER = "x-context-engine-key";
+const withKey = (key: string | null | undefined): Record<string, string> => (key ? { [ENGINE_KEY_HEADER]: key } : {});
+
+/** The site's Context Engine as anyone may read it, and what this browser's key stands for on it. */
+export async function getEngine(reportId: string, key?: string | null): Promise<EngineWithStanding> {
+  const { body } = await requestJson(`/api/engines/for-report/${reportId}`, { headers: withKey(key) });
+  // A proxy or a page under test may answer with something else; that is no engine.
+  const engine = body as Partial<EngineWithStanding> | null;
+  if (!engine || typeof engine.host !== "string" || !engine.owner || !Array.isArray(engine.snapshots) || !engine.decisions) throw new Error("Not a Context Engine");
+  return engine as EngineWithStanding;
+}
+
+export async function claimEngine(reportId: string): Promise<EngineClaimResult> {
+  const { body } = await requestJson(`/api/engines/for-report/${reportId}/claim`, { method: "POST" });
+  return body as EngineClaimResult;
+}
+
+export async function getEngineVerification(host: string, key: string): Promise<EngineVerification> {
+  const { body } = await requestJson(`/api/engines/${encodeURIComponent(host)}/verification`, { headers: withKey(key) });
+  return body as EngineVerification;
+}
+
+export async function verifyEngine(host: string, key: string): Promise<ContextEngineView> {
+  const { body } = await requestJson(`/api/engines/${encodeURIComponent(host)}/verify`, { method: "POST", headers: withKey(key) });
+  return body as ContextEngineView;
+}
+
+export async function getReviewToken(host: string, key: string): Promise<{ token: string; expiresAt: string }> {
+  const { body } = await requestJson(`/api/engines/${encodeURIComponent(host)}/review-token`, { method: "POST", headers: withKey(key) });
+  return body as { token: string; expiresAt: string };
+}
+
+export type EngineStanding = "none" | "pending" | "reviewer" | "owner";
+export type EngineWithStanding = ContextEngineView & { standing: EngineStanding };
+export interface EngineVerification {
+  code: string;
+  metaTag: string;
+  wellKnownUrl: string;
 }
 
 export interface AlpinaAvailabilityInput {

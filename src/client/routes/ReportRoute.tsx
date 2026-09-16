@@ -13,6 +13,8 @@ import { ExecutiveSummary } from "../components/ExecutiveSummary";
 import { FirstScreen } from "../components/FirstScreen";
 import { FoundationAuditDetails } from "../components/FoundationAuditDetails";
 import { OwnIt } from "../components/OwnIt";
+import { OwnershipPanel } from "../components/OwnershipPanel";
+import { captureReviewToken } from "../engine/engineKeys";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { ReportProgress } from "../components/ReportProgress";
 import { ServiceMapProvenance } from "../components/ServiceMapProvenance";
@@ -47,6 +49,8 @@ export function ReportRoute() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  // A review link from the holder carries a day-long token: kept for this tab, taken off the address.
+  useState(() => captureReviewToken());
 
   useEffect(() => {
     let cancelled = false;
@@ -157,6 +161,7 @@ export function ReportRoute() {
         </header>
         <UnderstandPanel report={report} />
         <OwnIt key={`own-${report.id}`} report={report} />
+        <OwnershipPanel report={report} />
       </section>
       {/* Activate: one screen away, so the report stays three words and their fixes. */}
       <section className="activate-strip" id="step-activate" aria-labelledby="activate-strip-title">

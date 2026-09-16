@@ -283,6 +283,29 @@ gcloud firestore fields ttls update expiresAt --collection-group=activations --e
 gcloud firestore fields ttls update expiresAt --collection-group=publishedSites --enable-ttl --project ai-audit-wordlift
 ```
 
+## Context Engines: one per site, above its reports
+
+Every finished read of a site is recorded on its Context Engine in `contextEngines` (one document
+per host, prefixed like every collection). A report expires after thirty days; the engine does
+not, because it holds what people decided about the site's model, and a new read gets those
+decisions back as a reviewed revision (`refinement.carried`). There is no TTL policy on this
+collection, and none should be added.
+
+The document holds hashes only: the claim's key, pending claims, and day-long review tokens. The
+key itself is handed to the claimant once and lives in their browser; `GET /api/engines/for-report/:id`
+returns a view without any of it. A decision persists only when the refine request carries the
+holder's key or a review token in `x-context-engine-key`; without one, a review is a revision of
+its report and nothing more.
+
+Ownership is proved by the site: `POST /api/engines/:host/verify` reads
+`https://<host>/.well-known/wordlift-verification.txt`, then the home page's
+`<meta name="wordlift-site-verification">`, through the same URL policy the audit uses. The code is
+derived from the engine and the claimant's key. A pending claim that proves ownership takes the
+engine over, and every earlier key stops working.
+
+To release an engine by hand (a verified owner who lost their browser's key, say), delete its
+document; the next audit of the site starts a fresh draft, and the decisions it held are gone.
+
 ## The entry source: the sites that publish through us
 
 Registries such as Google's read Agentic Resource Discovery catalogs from each site's well-known

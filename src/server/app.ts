@@ -4,6 +4,7 @@ import { createAgentSurfaceRouter } from "./routes/agentSurface.js";
 import { createAlpinaRouter } from "./routes/alpina.js";
 import { createMcpRouter } from "./routes/mcp.js";
 import { createReportsRouter } from "./routes/reports.js";
+import { createEnginesRouter } from "./routes/engines.js";
 import {
   createAuditRateLimiters,
   createMcpRateLimiters,
@@ -140,6 +141,7 @@ export function createApp(options: AppOptions = {}): Express {
         deepScans: Boolean(options.leads),
         reportDelivery: options.leadDelivery?.name ?? null,
         claimedRefinement: Boolean(options.claims),
+        contextEngines: Boolean(options.orchestrator?.engines),
       },
       // How many egress ranges each hosted platform holds: a refresh that stopped is visible here.
       platformEgress: options.platformEgress?.summary() ?? null,
@@ -165,6 +167,7 @@ export function createApp(options: AppOptions = {}): Express {
     const writeLimiters: RequestHandler[] = createAuditRateLimiters(
       options.writeRateLimits ?? { ...options.rateLimits, perIp: 40, global: 800 },
     );
+    if (options.orchestrator.engines) app.use("/api/engines", createEnginesRouter(options.orchestrator, options.orchestrator.engines, writeLimiters));
     app.use(
       "/api/reports",
       createReportsRouter(options.orchestrator, limiters, deepScan, writeLimiters, delivery, options.visits, new CapabilityTestService(options.orchestrator, options.capabilityTest)),

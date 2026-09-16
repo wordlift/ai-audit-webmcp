@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import type { DomainEntity, ActionBoundary, CapabilityResult, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
 import { entityRole } from "../../shared/format/businessModel.js";
 import { refineReport } from "../api/client";
+import { engineKeyFor, hostOf } from "../engine/engineKeys";
 import { actionsThatMatter } from "./FirstScreen";
 
 /**
@@ -121,7 +122,7 @@ export function OwnIt({ report }: { report: ReportRecord }) {
         ...(decisions.length > 0 ? { actionDecisions: decisions } : {}),
         ...(primaryEntityIds.length > 0 ? { primaryEntityIds } : {}),
         ...(demotedEntityIds.length > 0 ? { demotedEntityIds } : {}),
-      });
+      }, engineKeyFor(hostOf(report.canonicalUrl ?? report.requestedUrl)));
       navigate(`/reports/${child.id}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Your answers could not be saved.");
@@ -242,7 +243,9 @@ export function OwnIt({ report }: { report: ReportRecord }) {
           <div className="own-it-actions">
             <button type="submit" disabled={saving || !anything}>{saving ? "Saving…" : "Save my answers"}</button>
             {said.length > 0 && <button type="button" onClick={() => setEditing(false)}>Keep what I said</button>}
-            <span>Your answers create a new version of this report. The score stays where the evidence put it.</span>
+            <span>
+              Your answers create a new version of this report{engineKeyFor(hostOf(report.canonicalUrl ?? report.requestedUrl)) ? " and are kept on your Context Engine for every later read" : ""}. The score stays where the evidence put it.
+            </span>
           </div>
           {error && <p role="alert" className="own-it-error">{error}</p>}
         </form>

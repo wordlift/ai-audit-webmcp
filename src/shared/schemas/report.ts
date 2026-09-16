@@ -464,6 +464,10 @@ export const refinementSchema = z
     conflicts: z.array(z.string().min(1).max(300)).max(30),
     provenance: z.literal("human-provided"),
     appliedAt: z.string().datetime(),
+    /** Applied by the Context Engine to a new read of the site, from decisions made on an earlier one. */
+    carried: z.boolean().optional(),
+    /** Whose decisions these are: a reviewer holding the engine's claim, or its verified owner. Absent: unclaimed. */
+    filedBy: z.enum(["reviewer", "owner"]).optional(),
   })
   .strict();
 

@@ -27,6 +27,8 @@ import {
 import { FirestorePublishedSiteStore } from "./adapters/published/FirestorePublishedSiteStore.js";
 import { MemoryPublishedSiteStore } from "./adapters/published/MemoryPublishedSiteStore.js";
 import { AuditOrchestrator, type OrchestratorOptions } from "./services/AuditOrchestrator.js";
+import { FirestoreContextEngineStore, MemoryContextEngineStore } from "./adapters/engines/index.js";
+import { ContextEngines } from "./services/ContextEngines.js";
 
 const config = loadConfig();
 const store = config.REPORT_STORE === "firestore"
@@ -91,6 +93,14 @@ const providers: OrchestratorOptions["providers"] = mode === "live"
     }
   : undefined;
 
+// One Context Engine per site, above its reports: what people decided about the model outlives them.
+const engines = new ContextEngines({
+  store: config.REPORT_STORE === "firestore"
+    ? FirestoreContextEngineStore.fromProject(config.GOOGLE_CLOUD_PROJECT, config.FIRESTORE_COLLECTION_PREFIX)
+    : new MemoryContextEngineStore(),
+  log: (event, ...details) => console.error(event, ...details),
+});
+
 const orchestrator = new AuditOrchestrator(store, loadActionModel(config.ACTION_MODEL_VERSION), new FixtureProvider(), {
   publicAppUrl: config.PUBLIC_APP_URL,
   ttlDays: config.REPORT_TTL_DAYS,
@@ -98,6 +108,7 @@ const orchestrator = new AuditOrchestrator(store, loadActionModel(config.ACTION_
   providers,
   markupOnBasic: config.MARKUP_ON_BASIC,
   published,
+  engines,
 });
 
 // A hosted assistant's users all arrive from its published addresses, so those draw on a pool per

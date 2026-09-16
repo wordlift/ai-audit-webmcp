@@ -3,7 +3,9 @@ import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 import { BASIC_SCAN_PAGES, DEEP_SCAN_PAGES, maskEmail } from "../../shared/format/deepScan.js";
 import type { ReportRecord } from "../../shared/types/index.js";
-import { ApiError, startReport } from "../api/client";
+import { ApiError, claimEngine, startReport } from "../api/client";
+import { hostOf as engineHost, saveEngineKey } from "../engine/engineKeys";
+import { announceEngineChange } from "../engine/useEngine";
 
 /**
  * Claim your Context Engine: the one thing the audit asks for, where the person already is.
@@ -22,12 +24,13 @@ import { ApiError, startReport } from "../api/client";
 /** How long a refusal gets to arrive before the scan is announced as running. A live audit answers only when it is done. */
 const ACCEPT_GRACE_MS = 2_500;
 
-export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS, variant = "strip" }: { report: ReportRecord; graceMs?: number; variant?: "strip" | "inline" }) {
+export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS, variant = "strip", claimed = false }: { report: ReportRecord; graceMs?: number; variant?: "strip" | "inline"; claimed?: boolean }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);
   const [started, setStarted] = useState<{ reportId: string; masked: string } | null>(null);
+  const [standing, setStanding] = useState<"holder" | "pending" | null>(null);
 
   if (report.scanDepth === "deep") return null;
 
@@ -41,6 +44,15 @@ export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS, variant = "st
 
     setState("sending");
     setError(null);
+    // The claim itself: this browser keeps the key, so its reviews are kept on the engine. A server
+    // without engines, or a refusal, still runs the expansion the address was given for.
+    claimEngine(report.id)
+      .then((claim) => {
+        saveEngineKey(engineHost(report.canonicalUrl ?? report.requestedUrl), claim.key);
+        setStanding(claim.standing);
+        announceEngineChange();
+      })
+      .catch(() => undefined);
     try {
       const audit = startReport(target, { depth: "deep", email: address, surface: "web" });
       // A refused address or a rate limit comes back at once and must not be announced as a scan
@@ -78,6 +90,11 @@ export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS, variant = "st
           We are expanding your Context Engine from {pagesRead} to up to {DEEP_SCAN_PAGES} representative pages of {hostOf(target)}. The finished report goes to{" "}
           <strong>{started.masked}</strong>, and lives at its own link — public and free, like this one.
         </p>
+        {standing === "pending" && (
+          <p className="deep-scan-pending">
+            Someone else claimed this Context Engine first. <a href="#ownership">Verify you own {hostOf(target)}</a> to take it over.
+          </p>
+        )}
         <Link className="deep-scan-follow" to={`/reports/${started.reportId}`} state={{ started: true }}>
           Follow it live →
         </Link>
@@ -88,7 +105,7 @@ export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS, variant = "st
   return (
     <section className={`deep-scan-offer deep-scan-inline deep-scan-${variant}`} id="deep-scan" aria-label="Claim your Context Engine">
       <button type="button" className={variant === "inline" ? "deep-scan-inline-link" : "deep-scan-strip"} aria-expanded={open} onClick={() => setOpen((current) => !current)}>
-        {variant === "strip" && <ScanSearch size={16} aria-hidden="true" />} Claim your Context Engine and expand it beyond {pagesRead === 1 ? "this page" : `these ${pagesRead} pages`}
+        {variant === "strip" && <ScanSearch size={16} aria-hidden="true" />} {claimed ? "Expand your Context Engine" : "Claim your Context Engine and expand it"} beyond {pagesRead === 1 ? "this page" : `these ${pagesRead} pages`}
         <ArrowRight size={14} aria-hidden="true" className={open ? "is-open" : ""} />
       </button>
       {open && (

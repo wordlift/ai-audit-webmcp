@@ -93,9 +93,23 @@ export function createReportsRouter(
     }
   });
 
+  // A review filed with the holder's key of the site's Context Engine is kept there too, so the next
+  // read of the site carries it. Without a key the review is what it always was: a revision of this report.
   router.post("/:reportId/refine", ...writeLimiters, async (request, response) => {
     try {
-      response.json(await orchestrator.refine(param(request.params.reportId), request.body));
+      const reportId = param(request.params.reportId);
+      const engines = orchestrator.engines;
+      const key = request.get("x-context-engine-key");
+      const parent = engines && key ? await orchestrator.get(reportId) : null;
+      const role = engines && parent ? await engines.roleFor(parent, key) : null;
+      const child = await orchestrator.refine(reportId, request.body, role ? { filedBy: role } : {});
+      if (engines && parent && role && child.refinement) {
+        await engines.file(parent, child, child.refinement.assertions, role);
+        response.setHeader("x-context-engine", "filed");
+      } else if (key) {
+        response.setHeader("x-context-engine", "not-filed");
+      }
+      response.json(child);
     } catch (error) {
       sendError(response, error);
     }
@@ -241,6 +255,10 @@ export function sendError(response: Response, error: unknown) {
     return;
   }
   const message = error instanceof Error ? error.message : "Unexpected report error";
+  if (error && typeof error === "object" && (error as { status?: unknown }).status === 404) {
+    response.status(404).json({ error: "report_not_found", message });
+    return;
+  }
   if (/not found|expired/i.test(message)) {
     response.status(404).json({ error: "report_not_found", message });
     return;

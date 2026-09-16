@@ -35,6 +35,8 @@ export interface ContextEngineSummary {
   notOurs: string[];
   /** Human decisions the review filed, when this report is a reviewed one. */
   decisions: number | null;
+  /** Whose decisions: the verified owner's, a claimant's, or nobody's in particular. */
+  filedBy: "owner" | "reviewer" | null;
 }
 
 export function contextEngineSummary(report: ReportRecord): ContextEngineSummary | null {
@@ -52,6 +54,7 @@ export function contextEngineSummary(report: ReportRecord): ContextEngineSummary
     preview: model.entities.filter((entity) => entity.role !== "content").slice(0, MAX_PREVIEW),
     notOurs: (report.contextGraph?.entities ?? []).filter((entity) => entity.humanPriority === "demoted").map((entity) => entity.name),
     decisions: report.refinement ? report.refinement.decisions : null,
+    filedBy: report.refinement?.filedBy ?? null,
   };
 }
 
@@ -68,7 +71,7 @@ export function ContextEnginePreview({ summary }: { summary: ContextEngineSummar
     <div className="engine-preview">
       {summary.decisions !== null && (
         <p className="engine-reviewed" role="status">
-          <b>Reviewed</b> · {count(summary.decisions, "decision")} added
+          <b>{summary.filedBy === "owner" ? "Reviewed by the owner" : "Reviewed"}</b> · {count(summary.decisions, "decision")} added
           {summary.notOurs.length > 0 && <> · not ours: {summary.notOurs.slice(0, 3).join(", ")}</>}
         </p>
       )}
@@ -77,7 +80,10 @@ export function ContextEnginePreview({ summary }: { summary: ContextEngineSummar
           <li key={entity.id} className={`engine-entity engine-entity-${entity.provenance}`}>
             <span className="engine-entity-name">{entity.name}</span>
             <span className="engine-entity-type">{entityTypeLabel(entity.type)}</span>
-            <span className={`engine-provenance engine-provenance-${entity.provenance}`} title={PROVENANCE_HINT[entity.provenance]}>
+            <span
+              className={`engine-provenance engine-provenance-${entity.provenance}`}
+              title={entity.provenance === "human-confirmed" && summary.filedBy === "owner" ? "Confirmed by the site's verified owner." : entity.provenance === "human-confirmed" && summary.filedBy !== "owner" ? "Confirmed in a review; the reviewer has not proved the site is theirs." : PROVENANCE_HINT[entity.provenance]}
+            >
               {PROVENANCE_WORD[entity.provenance]}
             </span>
           </li>
