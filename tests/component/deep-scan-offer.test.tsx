@@ -71,6 +71,46 @@ describe("DeepScanOffer", () => {
     });
   });
 
+  it("claims the engine once the address is accepted, and never lets a pending key replace one this browser holds", async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem("wl-engine-key:alpina.travel", "holder_key_kept_from_before");
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      calls.push(String(url));
+      if (String(url).endsWith("/claim")) {
+        return new Response(JSON.stringify({ engine: { host: "alpina.travel" }, key: "pending_key_from_a_later_claim", standing: "pending" }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      return new Response(JSON.stringify({ ...report, status: "running", phase: "understanding" }), { status: 202, headers: { "content-type": "application/json" } });
+    }));
+
+    renderOffer();
+    fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "reviewer@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /claim & expand/i }));
+
+    await waitFor(() => expect(calls.some((url) => url.endsWith("/claim"))).toBe(true));
+    expect(calls.findIndex((url) => url === "/api/reports")).toBeLessThan(calls.findIndex((url) => url.endsWith("/claim")));
+    await waitFor(() => expect(screen.getByText(/Someone else claimed this Context Engine first/)).toBeVisible());
+    expect(window.localStorage.getItem("wl-engine-key:alpina.travel")).toBe("holder_key_kept_from_before");
+  });
+
+  it("asks for no second key from a browser that already holds the engine", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      calls.push(String(url));
+      return new Response(JSON.stringify({ ...report, status: "running", phase: "understanding" }), { status: 202, headers: { "content-type": "application/json" } });
+    }));
+    render(
+      <MemoryRouter>
+        <DeepScanOffer report={report} claimed />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /expand your context engine/i }));
+    fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "reviewer@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /^expand it$/i }));
+    await waitFor(() => expect(screen.getByText(/Expanding it now/)).toBeVisible());
+    expect(calls.some((url) => url.endsWith("/claim"))).toBe(false);
+  });
+
   it("confirms with the address masked, and a link to watch the scan", async () => {
     vi.stubGlobal("fetch", vi.fn(async () =>
       new Response(JSON.stringify({ ...report, status: "running", phase: "understanding" }), {

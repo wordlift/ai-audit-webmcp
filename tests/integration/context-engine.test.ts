@@ -226,6 +226,106 @@ describe("the funnel and the signals", () => {
   });
 });
 
+describe("what the review of the engine found, fixed", () => {
+  it("files a report on the site that was asked for, never on the one its canonical link names", async () => {
+    const { orchestrator, engines } = harness();
+    const base = (await orchestrator.create({ requestId: randomUUID(), url: TRAVEL }))!;
+    const store = (orchestrator as unknown as { store: { put(report: ReportRecord): Promise<ReportRecord> } }).store;
+    const hostile = await store.put({ ...base, id: randomUUID(), requestedUrl: "https://attacker.example/", canonicalUrl: "https://alpina.travel/" });
+    await engines.record(hostile);
+    expect((await engines.forHost("attacker.example"))?.latestReportId).toBe(hostile.id);
+    expect((await engines.forHost("alpina.travel"))?.snapshots.some((snapshot) => snapshot.reportId === hostile.id)).toBe(false);
+  });
+
+  it("hands out one holder key when two claims race, and that key works", async () => {
+    const { app } = harness();
+    const report = await audit(app);
+    const claims = await Promise.all([1, 2, 3].map(() => request(app).post(`/api/engines/for-report/${report.id}/claim`)));
+    const holders = claims.filter((claim) => claim.body.standing === "holder");
+    expect(holders).toHaveLength(1);
+    expect((await request(app).get(`/api/engines/for-report/${report.id}`).set(KEY, holders[0]!.body.key)).body.standing).toBe("reviewer");
+    // A door opened at the same moment as a claim loses neither.
+    const [door, claim] = await Promise.all([
+      request(app).post(`/api/reports/${report.id}/events`).send({ name: "door_monitor" }),
+      request(app).post(`/api/engines/for-report/${report.id}/claim`),
+    ]);
+    expect(door.status).toBe(204);
+    expect(claim.body.standing).toBe("pending");
+    expect((await request(app).get(`/api/engines/for-report/${report.id}`).set(KEY, holders[0]!.body.key)).body.standing).toBe("reviewer");
+  });
+
+  it("records a site whose entity is named by a very long headline, in any script", async () => {
+    const { orchestrator, engines } = harness();
+    const base = (await orchestrator.create({ requestId: randomUUID(), url: TRAVEL }))!;
+    const long = "한국어 여행 안내 ".repeat(30).slice(0, 300);
+    const store = (orchestrator as unknown as { store: { put(report: ReportRecord): Promise<ReportRecord> } }).store;
+    const graph = base.contextGraph!;
+    const read = await store.put({ ...base, id: randomUUID(), contextGraph: { ...graph, entities: [{ ...graph.entities[0]!, name: long }, ...graph.entities.slice(1)] } });
+    expect(await engines.record(read)).not.toBeNull();
+    const claim = await engines.claim(read);
+    expect(claim.standing).toBe("holder");
+    const role = await engines.roleFor(read, claim.key);
+    expect(await engines.file(read, read, { primaryEntityIds: [graph.entities[0]!.id] }, role!)).toBe(1);
+  });
+
+  it("carries decisions in the owner's name only when every one of them is the owner's", async () => {
+    const site: { body?: string } = {};
+    const { app, orchestrator, engines, advance } = harness(site);
+    const report = await audit(app);
+    const key = (await request(app).post(`/api/engines/for-report/${report.id}/claim`)).body.key as string;
+    await request(app).post(`/api/reports/${report.id}/refine`).set(KEY, key).send({ businessRole: "destination-organization" });
+    const code = (await request(app).get("/api/engines/alpina.travel/verification").set(KEY, key)).body.code as string;
+    site.body = `<meta name="wordlift-site-verification" content="${code}">`;
+    expect((await request(app).post("/api/engines/alpina.travel/verify").set(KEY, key)).status).toBe(200);
+    await request(app).post(`/api/reports/${report.id}/refine`).set(KEY, key).send({ terminology: [{ term: "stay", meaning: "a booked apartment night" }] });
+    advance(60_000);
+    const next = await audit(app);
+    expect((await engines.carry((await orchestrator.get(next.id))!))?.filedBy).toBe("reviewer");
+    // The owner remaking the reviewer's decision makes the whole set theirs.
+    await request(app).post(`/api/reports/${report.id}/refine`).set(KEY, key).send({ businessRole: "destination-organization" });
+    expect((await engines.carry((await orchestrator.get(next.id))!))?.filedBy).toBe("owner");
+  });
+
+  it("lets only the key hand out review tokens, so a token cannot renew itself", async () => {
+    const { app } = harness();
+    const report = await audit(app);
+    const key = (await request(app).post(`/api/engines/for-report/${report.id}/claim`)).body.key as string;
+    const token = (await request(app).post("/api/engines/alpina.travel/review-token").set(KEY, key)).body.token as string;
+    expect((await request(app).post("/api/engines/alpina.travel/review-token").set(KEY, token)).status).toBe(403);
+    // Many review links in use at once: the first still files.
+    for (let click = 0; click < 10; click += 1) await request(app).post("/api/engines/alpina.travel/review-token").set(KEY, key);
+    const { first } = pick(report);
+    const filed = await request(app).post(`/api/reports/${report.id}/refine`).set(KEY, token).send({ primaryEntityIds: [first.id] });
+    expect(filed.headers["x-context-engine"]).toBe("filed");
+  });
+
+  it("keeps judgments about the machine's vocabulary, and says not-filed for a review the engine keeps nothing of", async () => {
+    const { app, orchestrator, engines, advance } = harness();
+    const report = await audit(app);
+    const term = report.contextGraph!.lexicalEntries.find((entry) => entry.kind !== "entity-name")!.label;
+    const key = (await request(app).post(`/api/engines/for-report/${report.id}/claim`)).body.key as string;
+    const filed = await request(app).post(`/api/reports/${report.id}/refine`).set(KEY, key).send({ terminologyDecisions: [{ term, decision: "reject" }] });
+    expect(filed.headers["x-context-engine"]).toBe("filed");
+    advance(60_000);
+    const next = await audit(app);
+    expect((await engines.carry((await orchestrator.get(next.id))!))?.assertions.terminologyDecisions).toEqual([{ term, decision: "reject" }]);
+  });
+
+  it("verifies a site served on www, and ignores a proof that redirected to another domain", async () => {
+    const pages: Record<string, { status: number; body: string; finalUrl?: string }> = {};
+    const { app, engines } = harness();
+    const report = await audit(app);
+    const key = (await request(app).post(`/api/engines/for-report/${report.id}/claim`)).body.key as string;
+    const code = (await request(app).get("/api/engines/alpina.travel/verification").set(KEY, key)).body.code as string;
+    (engines as unknown as { options: { fetch: (url: string) => Promise<{ status: number; body: string; finalUrl?: string }> } }).options.fetch = async (url) => pages[url] ?? { status: 404, body: "" };
+    pages["https://alpina.travel/"] = { status: 200, body: `<meta name="wordlift-site-verification" content="${code}">`, finalUrl: "https://elsewhere.example/" };
+    expect((await request(app).post("/api/engines/alpina.travel/verify").set(KEY, key)).status).toBe(409);
+    pages["https://www.alpina.travel/.well-known/wordlift-verification.txt"] = { status: 200, body: code, finalUrl: "https://www.alpina.travel/.well-known/wordlift-verification.txt" };
+    const verified = await request(app).post("/api/engines/alpina.travel/verify").set(KEY, key);
+    expect(verified.body.owner).toMatchObject({ state: "verified", method: "well-known" });
+  });
+});
+
 describe("decisions that survive a new read", () => {
   const entity = (id: string, name: string, type: string) => ({ id, name, types: [type], alternateNames: [], sourceUrls: [], sameAs: [], offers: [], confidence: 0.8 });
   const report = (ids: string[]) =>

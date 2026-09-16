@@ -335,6 +335,12 @@ derived from the engine and the caller's key, so finding it on the site proves b
 needs no pending claim to exist, and a flood of claims cannot lock the owner out. Proving ownership
 takes the engine over, and every earlier key stops working.
 
+An engine is reached only through the host a report was asked for, never through the page's own
+canonical link, which could name any domain. Every write to it is a Firestore transaction, so a claim,
+a review, a verification and a door opened at the same moment never lose each other. Verification
+reads the host and its `www.` twin, and ignores an answer that redirected to another domain. Review
+tokens are handed out only by the key itself, never by another token, and last a day.
+
 To release an engine by hand (a verified owner who lost their browser's key, say), delete its
 document; the next audit of the site starts a fresh draft, and the decisions it held are gone.
 

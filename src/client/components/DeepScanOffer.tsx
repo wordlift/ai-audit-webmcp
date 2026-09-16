@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { BASIC_SCAN_PAGES, DEEP_SCAN_PAGES, maskEmail } from "../../shared/format/deepScan.js";
 import type { ReportRecord } from "../../shared/types/index.js";
 import { ApiError, claimEngine, startReport } from "../api/client";
-import { hostOf as engineHost, saveEngineKey } from "../engine/engineKeys";
+import { engineKeyFor, saveEngineKey } from "../engine/engineKeys";
 import { announceEngineChange } from "../engine/useEngine";
 
 /**
@@ -45,15 +45,20 @@ export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS, variant = "st
 
     setState("sending");
     setError(null);
-    // The claim itself: this browser keeps the key, so its reviews are kept on the engine. A server
-    // without engines, or a refusal, still runs the expansion the address was given for.
-    claimEngine(report.id)
-      .then((claim) => {
-        saveEngineKey(engineHost(report.canonicalUrl ?? report.requestedUrl), claim.key);
-        setStanding(claim.standing);
-        announceEngineChange();
-      })
-      .catch(() => undefined);
+    // The claim itself, once the address is accepted: this browser keeps the key, so its reviews are
+    // kept on the engine. A browser that already holds the engine asks for no second key, and a
+    // pending key never replaces one it holds. A server without engines still runs the expansion.
+    const claim = () => {
+      if (claimed) return;
+      claimEngine(report.id)
+        .then((result) => {
+          const host = result.engine.host;
+          if (result.standing === "holder" || !engineKeyFor(host)) saveEngineKey(host, result.key);
+          setStanding(result.standing);
+          announceEngineChange();
+        })
+        .catch(() => undefined);
+    };
     try {
       const audit = startReport(target, { depth: "deep", email: address, surface: "web" });
       // A refused address or a rate limit comes back at once and must not be announced as a scan
@@ -65,6 +70,7 @@ export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS, variant = "st
       setStarted({ reportId: audit.reportId, masked: maskEmail(address) });
       setEmail("");
       setState("sent");
+      claim();
       if (outcome === "running") {
         accepted.catch((caught) => {
           setStarted(null);
@@ -129,7 +135,7 @@ export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS, variant = "st
               disabled={state === "sending"}
             />
             <button type="submit" disabled={state === "sending" || email.trim().length === 0}>
-              <Mail size={17} aria-hidden="true" /> {state === "sending" ? "Starting…" : "Claim & expand"}
+              <Mail size={17} aria-hidden="true" /> {state === "sending" ? "Starting…" : claimed ? "Expand it" : "Claim & expand"}
             </button>
           </form>
           {error && <p className="deep-scan-error" role="alert">{error}</p>}

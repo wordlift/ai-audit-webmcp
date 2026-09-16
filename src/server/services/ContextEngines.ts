@@ -1,8 +1,10 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import {
+  allDecisions,
   assertionsFor,
   carriesCode,
   decisionsFrom,
+  decisionCount,
   engineView,
   hostOf,
   mergeDecisions,
@@ -18,20 +20,21 @@ import { ReportRequestError } from "../errors.js";
 import { safeFetch, type SafeFetchResult, type UrlPolicyOptions } from "../security/urlPolicy.js";
 
 const REVIEW_TOKEN_MS = 24 * 60 * 60 * 1_000;
+const MAX_REVIEW_TOKENS = 20;
 
 function hash(secret: string): string {
   return createHash("sha256").update(secret).digest("hex");
-}
-
-/** A key as claims mint them: long enough that its code cannot be guessed from the engine alone. */
-function isKey(key: string | undefined): key is string {
-  return typeof key === "string" && key.length >= 24 && key.length <= 200;
 }
 
 function matches(storedHash: string, secret: string): boolean {
   const provided = Buffer.from(hash(secret), "hex");
   const stored = Buffer.from(storedHash, "hex");
   return provided.length === stored.length && timingSafeEqual(provided, stored);
+}
+
+/** A key as claims mint them: long enough that its code cannot be guessed from the engine alone. */
+function isKey(key: string | undefined): key is string {
+  return typeof key === "string" && key.length >= 24 && key.length <= 200;
 }
 
 export interface ContextEnginesOptions {
@@ -42,7 +45,7 @@ export interface ContextEnginesOptions {
   isActivated?: (host: string) => Promise<boolean>;
   now?: () => Date;
   /** How a site is read for its verification code; tests inject one. */
-  fetch?: (url: string) => Promise<Pick<SafeFetchResult, "status" | "body">>;
+  fetch?: (url: string) => Promise<Pick<SafeFetchResult, "status" | "body"> & { finalUrl?: string }>;
   urlPolicy?: UrlPolicyOptions;
   log?: (event: string, ...details: unknown[]) => void;
 }
@@ -53,11 +56,15 @@ export interface Verification {
   wellKnownUrl: string;
 }
 
+type Standing = { role: EngineRole; via: "key" | "token" } | "pending" | null;
+
 /**
  * The Context Engines: one per site, above its reports. Every finished read of a site is recorded
  * on its engine; a review filed with the holder's key becomes decisions the engine keeps; a new
  * read gets those decisions back as a review of its own. Claiming takes an address; asserting as
  * the business takes the site's own proof, a code on its home page or at a well-known path.
+ *
+ * Every write is one read-change-write in the store, so two writers never lose each other's change.
  */
 export class ContextEngines {
   constructor(private readonly options: ContextEnginesOptions) {}
@@ -67,20 +74,16 @@ export class ContextEngines {
     Object.assign(this.options, signals);
   }
 
-  /** Draft, claimed, live once its site publishes what we write, activated once an agent used it. */
-  private async statusFor(engine: ContextEngine): Promise<ContextEngine["status"]> {
-    const host = engine.host;
+  private now(): Date {
+    return this.options.now?.() ?? new Date();
+  }
+
+  private async signals(host: string): Promise<{ published: boolean; activated: boolean }> {
     const [activated, published] = await Promise.all([
       this.options.isActivated?.(host).catch(() => false) ?? false,
       this.options.isPublished?.(host).catch(() => false) ?? false,
     ]);
-    if (activated) return "activated";
-    if (published) return "live";
-    return engine.claim ? "claimed" : "draft";
-  }
-
-  private now(): Date {
-    return this.options.now?.() ?? new Date();
+    return { published, activated };
   }
 
   async forHost(host: string): Promise<ContextEngine | null> {
@@ -101,24 +104,33 @@ export class ContextEngines {
     if (report.status !== "completed" && report.status !== "partial") return null;
     if (!report.contextGraph) return null;
     try {
-      const at = this.now().toISOString();
       const host = reportHost(report);
-      const engine = withSnapshot((await this.options.store.get(host)) ?? newEngine(randomUUID(), host, at), report, at);
-      return await this.options.store.put({ ...engine, status: await this.statusFor(engine) });
+      const { published, activated } = await this.signals(host);
+      const at = this.now().toISOString();
+      return await this.options.store.update(host, (current) => {
+        const engine = withSnapshot(current ?? newEngine(randomUUID(), host, at), report, at);
+        // Draft, claimed, live once its site publishes what we write, activated once an agent used it.
+        const status = activated ? "activated" : published ? "live" : engine.claim ? "claimed" : "draft";
+        return { ...engine, status };
+      });
     } catch (error) {
       this.options.log?.("engine_record_failed", error instanceof Error ? error.name : "unknown");
       return null;
     }
   }
 
-  /** The decisions this engine keeps, as assertions about a new read of the site; null when there are none to carry. */
+  /**
+   * The decisions this engine keeps, as assertions about a new read of the site; null when there are
+   * none to carry. They are the owner's only when every one of them is: a reviewer's decision the
+   * owner did not remake is never published in the owner's name.
+   */
   async carry(report: ReportRecord): Promise<{ assertions: HumanAssertion; filedBy: EngineRole } | null> {
     const engine = await this.forReport(report);
     if (!engine?.claim) return null;
     const assertions = assertionsFor(report, engine.decisions);
     if (!assertions) return null;
-    const byOwner = [engine.decisions.businessRole, ...engine.decisions.entities, ...engine.decisions.actions, ...engine.decisions.terminology, ...(engine.decisions.relations ?? [])].some((decision) => decision?.by === "owner");
-    return { assertions, filedBy: byOwner ? "owner" : "reviewer" };
+    const decisions = allDecisions(engine.decisions);
+    return { assertions, filedBy: decisions.length > 0 && decisions.every((decision) => decision.by === "owner") ? "owner" : "reviewer" };
   }
 
   /**
@@ -126,34 +138,34 @@ export class ContextEngines {
    * engine someone else holds waits: its key files nothing until the site proves it is the claimant's.
    */
   async claim(report: ReportRecord): Promise<EngineClaimResult> {
-    const at = this.now().toISOString();
     const host = reportHost(report);
-    const existing = (await this.options.store.get(host)) ?? withSnapshot(newEngine(randomUUID(), host, at), report, at);
     const key = randomBytes(24).toString("base64url");
-    if (!existing.claim) {
-      const engine = await this.options.store.put({
-        ...existing,
-        activeAt: at,
-        status: existing.status === "draft" ? "claimed" : existing.status,
-        claim: { hash: hash(key), createdAt: at, role: existing.owner.state === "verified" ? "owner" : "reviewer" },
-        updatedAt: at,
-      });
-      return { engine: engineView(engine), key, standing: "holder" };
-    }
-    const engine = await this.options.store.put({
-      ...existing,
-      pending: [...existing.pending, { hash: hash(key), createdAt: at }].slice(-5),
-      updatedAt: at,
+    let standing: EngineClaimResult["standing"] = "holder";
+    const at = this.now().toISOString();
+    const engine = await this.options.store.update(host, (current) => {
+      const existing = current ?? withSnapshot(newEngine(randomUUID(), host, at), report, at);
+      if (!existing.claim) {
+        standing = "holder";
+        return {
+          ...existing,
+          activeAt: at,
+          status: existing.status === "draft" ? "claimed" : existing.status,
+          claim: { hash: hash(key), createdAt: at, role: existing.owner.state === "verified" ? "owner" : "reviewer" },
+          updatedAt: at,
+        };
+      }
+      standing = "pending";
+      return { ...existing, pending: [...existing.pending, { hash: hash(key), createdAt: at }].slice(-5), updatedAt: at };
     });
-    return { engine: engineView(engine), key, standing: "pending" };
+    return { engine: engineView(engine!), key, standing };
   }
 
-  /** Who a key speaks for on this engine: the holder's role, a pending claim, or nobody. */
-  standing(engine: ContextEngine, key: string | undefined): { role: EngineRole } | "pending" | null {
+  /** Who a key speaks for on this engine: the holder's role (by the key itself or a review token), a pending claim, or nobody. */
+  standing(engine: ContextEngine, key: string | undefined): Standing {
     if (!key) return null;
-    if (engine.claim && matches(engine.claim.hash, key)) return { role: engine.claim.role };
+    if (engine.claim && matches(engine.claim.hash, key)) return { role: engine.claim.role, via: "key" };
     const now = this.now();
-    if (engine.claim && engine.reviewTokens.some((token) => new Date(token.expiresAt) > now && matches(token.hash, key))) return { role: engine.claim.role };
+    if (engine.claim && engine.reviewTokens.some((token) => new Date(token.expiresAt) > now && matches(token.hash, key))) return { role: engine.claim.role, via: "token" };
     if (engine.pending.some((pending) => matches(pending.hash, key))) return "pending";
     return null;
   }
@@ -181,8 +193,9 @@ export class ContextEngines {
   }
 
   /**
-   * Reads the site for the claimant's code. Found, the claimant becomes the verified owner: a
-   * pending claim takes the engine over, and every earlier key and review token stops working.
+   * Reads the site for the claimant's code. Found, the claimant becomes the verified owner: a pending
+   * claim takes the engine over, and every earlier key and review token stops working. The site is
+   * read first; the change is made on the engine as it stands afterwards, so nothing filed meanwhile is lost.
    */
   async verify(host: string, key: string | undefined): Promise<ContextEngineView> {
     const engine = await this.requireEngine(host);
@@ -197,48 +210,65 @@ export class ContextEngines {
       );
     }
     const at = this.now().toISOString();
-    const verified = await this.options.store.put({
-      ...engine,
-      owner: { state: "verified", method, verifiedAt: at },
-      activeAt: at,
-      claim: { hash: hash(key), createdAt: at, role: "owner" },
-      pending: [],
-      reviewTokens: [],
-      status: engine.status === "draft" ? "claimed" : engine.status,
-      updatedAt: at,
-    });
+    const verified = await this.options.store.update(engine.host, (current) =>
+      current && current.id === engine.id
+        ? {
+            ...current,
+            owner: { state: "verified", method, verifiedAt: at },
+            activeAt: at,
+            claim: { hash: hash(key), createdAt: at, role: "owner" },
+            pending: [],
+            reviewTokens: [],
+            status: current.status === "draft" ? "claimed" : current.status,
+            updatedAt: at,
+          }
+        : null,
+    );
+    if (!verified || verified.owner.state !== "verified") throw new ReportRequestError("The Context Engine changed while the site was read. Check again.", 409, "engine_changed");
     return engineView(verified);
   }
 
+  /** The site's own two places, on the host and on its www twin, and only answers that stayed on the site. */
   private async findCode(host: string, code: string): Promise<"meta-tag" | "well-known" | null> {
     const read = this.options.fetch ?? ((url: string) => safeFetch(url, { maxBytes: 512_000, timeoutMs: 8_000, ...this.options.urlPolicy }));
-    for (const [where, url] of [
-      ["well-known", `https://${host}/.well-known/wordlift-verification.txt`],
-      ["meta-tag", `https://${host}/`],
-    ] as const) {
-      try {
-        const answer = await read(url);
-        if (answer.status >= 200 && answer.status < 300 && carriesCode(answer.body, code, where)) return where;
-      } catch (error) {
-        this.options.log?.("engine_verify_read_failed", where, error instanceof Error ? error.name : "unknown");
+    for (const origin of [host, `www.${host}`]) {
+      for (const [where, url] of [
+        ["well-known", `https://${origin}/.well-known/wordlift-verification.txt`],
+        ["meta-tag", `https://${origin}/`],
+      ] as const) {
+        try {
+          const answer = await read(url);
+          // A redirect to another domain proves that domain, not this one.
+          if (answer.finalUrl && hostOf(answer.finalUrl) !== host) continue;
+          if (answer.status >= 200 && answer.status < 300 && carriesCode(answer.body, code, where)) return where;
+        } catch (error) {
+          this.options.log?.("engine_verify_read_failed", where, error instanceof Error ? error.name : "unknown");
+        }
       }
     }
     return null;
   }
 
-  /** A day-long stand-in for the holder's key, for a review run in a browser that does not hold it. */
+  /**
+   * A day-long stand-in for the holder's key, for a review run in a browser that does not hold it.
+   * Only the key itself hands one out: a token cannot renew itself into access that never expires.
+   */
   async reviewToken(host: string, key: string | undefined): Promise<{ token: string; expiresAt: string }> {
     const engine = await this.requireEngine(host);
     const standing = this.standing(engine, key);
-    if (!standing || standing === "pending") throw new ReportRequestError("Only the holder of this Context Engine's claim can hand out a review.", 403, "engine_not_holder");
+    if (!standing || standing === "pending" || standing.via !== "key") throw new ReportRequestError("Only the holder of this Context Engine's claim can hand out a review.", 403, "engine_not_holder");
     const now = this.now();
     const token = randomBytes(24).toString("base64url");
     const expiresAt = new Date(now.getTime() + REVIEW_TOKEN_MS).toISOString();
-    await this.options.store.put({
-      ...engine,
-      reviewTokens: [...engine.reviewTokens.filter((existing) => new Date(existing.expiresAt) > now), { hash: hash(token), createdAt: now.toISOString(), expiresAt }].slice(-5),
-      updatedAt: now.toISOString(),
-    });
+    await this.options.store.update(engine.host, (current) =>
+      current
+        ? {
+            ...current,
+            reviewTokens: [...current.reviewTokens.filter((existing) => new Date(existing.expiresAt) > now), { hash: hash(token), createdAt: now.toISOString(), expiresAt }].slice(-MAX_REVIEW_TOKENS),
+            updatedAt: now.toISOString(),
+          }
+        : null,
+    );
     return { token, expiresAt };
   }
 
@@ -251,21 +281,26 @@ export class ContextEngines {
     return standing && standing !== "pending" ? standing.role : null;
   }
 
-  /** Keeps a review's decisions on the engine and records the reviewed report as its latest. */
-  async file(parent: ReportRecord, child: ReportRecord, assertions: HumanAssertion, role: EngineRole): Promise<ContextEngineView | null> {
-    const engine = await this.forReport(parent);
-    if (!engine) return null;
+  /**
+   * Keeps a review's decisions on the engine and records the reviewed report as its latest. Returns
+   * how many decisions were kept: a review of nothing the engine keeps files nothing.
+   */
+  async file(parent: ReportRecord, child: ReportRecord, assertions: HumanAssertion, role: EngineRole): Promise<number> {
     const at = this.now().toISOString();
-    const decisions = mergeDecisions(engine.decisions, decisionsFrom(assertions, parent, role, at));
-    const stored = await this.options.store.put(withSnapshot({ ...engine, decisions, activeAt: at }, child, at));
-    return engineView(stored);
+    const incoming = decisionsFrom(assertions, parent, role, at);
+    const kept = decisionCount(incoming);
+    if (kept === 0) return 0;
+    const stored = await this.options.store.update(reportHost(parent), (current) =>
+      current ? withSnapshot({ ...current, decisions: mergeDecisions(current.decisions, incoming), activeAt: at }, child, at) : null,
+    );
+    return stored ? kept : 0;
   }
 
   /** A door to WordLift opened from this engine: kept so the dashboard and the sales team know why. */
   async noteIntent(report: ReportRecord, intent: string): Promise<void> {
-    const engine = await this.forReport(report);
-    if (!engine) return;
     const at = this.now().toISOString();
-    await this.options.store.put({ ...engine, intents: [...(engine.intents ?? []), { intent, at }].slice(-20), activeAt: at, updatedAt: at });
+    await this.options.store.update(reportHost(report), (current) =>
+      current ? { ...current, intents: [...(current.intents ?? []), { intent, at }].slice(-20), activeAt: at, updatedAt: at } : null,
+    );
   }
 }

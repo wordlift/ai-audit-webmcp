@@ -24,6 +24,11 @@ export function hostOf(url: string): string {
   }
 }
 
+/** The site a report's engine belongs to: the one that was asked for, as the server keys it. */
+export function engineHostFor(report: { requestedUrl: string }): string {
+  return hostOf(report.requestedUrl);
+}
+
 export function saveEngineKey(host: string, key: string): void {
   try {
     storage("local")?.setItem(`${KEY_PREFIX}${host}`, key);

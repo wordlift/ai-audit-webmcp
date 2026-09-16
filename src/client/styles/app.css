@@ -433,6 +433,7 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .agent-doors-lead b { color: var(--ink); }
 .agent-doors-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .agent-doors .review-cta { white-space: nowrap; }
+.agent-doors-failed { flex-basis: 100%; margin: 0; color: var(--state-missing); font-size: 0.88rem; }
 .agent-doors .review-cta:not(.review-cta-primary) { background: var(--surface); color: var(--brand); border: 1px solid color-mix(in srgb, var(--brand) 30%, white); }
 .agent-doors .review-cta:not(.review-cta-primary):hover { background: color-mix(in srgb, var(--brand) 8%, white); }
 @media (max-width: 640px) { .agent-doors .review-cta { white-space: normal; } }

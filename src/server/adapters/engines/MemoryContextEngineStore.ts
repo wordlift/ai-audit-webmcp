@@ -9,9 +9,13 @@ export class MemoryContextEngineStore implements ContextEngineStore {
     return engine ? structuredClone(engine) : null;
   }
 
-  async put(input: ContextEngine): Promise<ContextEngine> {
-    const engine = contextEngineSchema.parse(input);
-    this.#engines.set(engine.host, structuredClone(engine));
+  // Synchronous from read to write: nothing else runs in between on one event loop.
+  async update(host: string, change: (current: ContextEngine | null) => ContextEngine | null): Promise<ContextEngine | null> {
+    const current = this.#engines.get(host);
+    const next = change(current ? structuredClone(current) : null);
+    if (!next) return current ? structuredClone(current) : null;
+    const engine = contextEngineSchema.parse(next);
+    this.#engines.set(host, structuredClone(engine));
     return engine;
   }
 }

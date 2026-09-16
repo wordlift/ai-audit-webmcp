@@ -3,7 +3,7 @@ import { refineSummaryText, refineToolResult, type RefineToolResult } from "../.
 import { humanAssertionSchema } from "../../shared/schemas/report.js";
 import type { ReportRecord } from "../../shared/types/index.js";
 import { refineReport, reportPageUrl } from "../api/client";
-import { engineKeyFor, hostOf } from "../engine/engineKeys";
+import { engineHostFor, engineKeyFor } from "../engine/engineKeys";
 import { resolveOpenReport } from "./reportToolScope";
 import { REFINE_SERVICE_MAP_TOOL, REFINE_SERVICE_MAP_TOOL_ALIAS } from "./toolSchemas";
 
@@ -33,7 +33,7 @@ export function RefineServiceMapTool({ reportId, report }: { reportId: string; r
     const assertions = parsed.data;
 
     // A review run in a browser holding the site's Context Engine (or its review token) is kept there too.
-    const child = await refineReport(current.id, assertions, engineKeyFor(hostOf(current.canonicalUrl ?? current.requestedUrl)));
+    const child = await refineReport(current.id, assertions, engineKeyFor(engineHostFor(current)));
     return refineToolResult(current, child, assertions, reportPageUrl(child.id));
   };
 

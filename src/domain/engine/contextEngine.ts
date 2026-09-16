@@ -20,9 +20,15 @@ export function hostOf(url: string): string {
   }
 }
 
+/**
+ * The site a report belongs to is the one that was asked for. A page's canonical link is the page's
+ * own claim and could name any domain; an engine is never reached through it.
+ */
 export function reportHost(report: ReportRecord): string {
-  return hostOf(report.canonicalUrl ?? report.requestedUrl);
+  return hostOf(report.requestedUrl);
 }
+
+const MAX_KEY_NAME = 240;
 
 /**
  * What identifies an entity across two reads of the same site: the audit mints ids per read for
@@ -36,7 +42,9 @@ export function entityKey(entity: Pick<DomainEntity, "name" | "types">): string 
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
+    .trim()
+    // A headline used as a name can be long, and some scripts grow when decomposed: the key is bounded.
+    .slice(0, MAX_KEY_NAME);
   return `${name}|${entityRole(entity as DomainEntity)}`;
 }
 
@@ -122,9 +130,11 @@ export function decisionsFrom(assertions: HumanAssertion, parent: ReportRecord, 
     const to = entities.get(decision.to);
     return from && to ? [{ key: `${entityKey(from)} ${decision.kind} ${entityKey(to)}`, decision: decision.decision, by, at }] : [];
   });
+  const terminologyDecisions = (assertions.terminologyDecisions ?? []).map((decision) => ({ ...decision, by, at }));
   return {
     ...(assertions.businessRole ? { businessRole: { value: assertions.businessRole, by, at } } : {}),
     ...(relations.length > 0 ? { relations } : {}),
+    ...(terminologyDecisions.length > 0 ? { terminologyDecisions } : {}),
     entities: entityDecisions,
     actions: (assertions.actionDecisions ?? []).map((decision) => ({ ...decision, by, at })),
     terminology: (assertions.terminology ?? []).map((entry) => ({ ...entry, by, at })),
@@ -142,17 +152,31 @@ export function mergeDecisions(current: EngineDecisions, next: EngineDecisions):
   };
   const businessRole = next.businessRole ? keep(current.businessRole, next.businessRole) : current.businessRole;
   const relations = merge(current.relations ?? [], next.relations ?? [], (item) => item.key, 80);
+  const terminologyDecisions = merge(current.terminologyDecisions ?? [], next.terminologyDecisions ?? [], (item) => item.term.toLowerCase(), 40);
   return {
     ...(businessRole ? { businessRole } : {}),
     ...(relations.length > 0 ? { relations } : {}),
+    ...(terminologyDecisions.length > 0 ? { terminologyDecisions } : {}),
     entities: merge(current.entities, next.entities, (item) => item.key, 120),
     actions: merge(current.actions, next.actions, (item) => item.actionId, 80),
     terminology: merge(current.terminology, next.terminology, (item) => item.term.toLowerCase(), 40),
   };
 }
 
+/** Every decision the engine keeps, of every kind, with who made it. */
+export function allDecisions(decisions: EngineDecisions): Array<{ by: EngineRole }> {
+  return [
+    ...(decisions.businessRole ? [decisions.businessRole] : []),
+    ...decisions.entities,
+    ...decisions.actions,
+    ...decisions.terminology,
+    ...(decisions.terminologyDecisions ?? []),
+    ...(decisions.relations ?? []),
+  ];
+}
+
 export function decisionCount(decisions: EngineDecisions): number {
-  return (decisions.businessRole ? 1 : 0) + decisions.entities.length + decisions.actions.length + decisions.terminology.length + (decisions.relations?.length ?? 0);
+  return allDecisions(decisions).length;
 }
 
 /**
@@ -189,6 +213,9 @@ export function assertionsFor(report: ReportRecord, decisions: EngineDecisions):
     ...(actionDecisions.length > 0 ? { actionDecisions } : {}),
     ...(terminology.length > 0 ? { terminology } : {}),
     ...(relationDecisions.length > 0 ? { relationDecisions: relationDecisions.slice(0, 80) } : {}),
+    ...((decisions.terminologyDecisions ?? []).length > 0
+      ? { terminologyDecisions: decisions.terminologyDecisions!.map(({ by: _by, at: _at, ...decision }) => decision) }
+      : {}),
   };
   return Object.keys(assertions).length > 0 ? assertions : null;
 }
@@ -210,13 +237,7 @@ export function carriesCode(body: string, code: string, where: "meta-tag" | "wel
 
 export function engineView(engine: ContextEngine): ContextEngineView {
   const { decisions } = engine;
-  const all = [
-    ...(decisions.businessRole ? [decisions.businessRole] : []),
-    ...(decisions.relations ?? []),
-    ...decisions.entities,
-    ...decisions.actions,
-    ...decisions.terminology,
-  ];
+  const all = allDecisions(decisions);
   return {
     id: engine.id,
     host: engine.host,
@@ -230,7 +251,7 @@ export function engineView(engine: ContextEngine): ContextEngineView {
       byOwner: all.filter((decision) => decision.by === "owner").length,
       entities: decisions.entities.length,
       actions: decisions.actions.length,
-      terminology: decisions.terminology.length + (decisions.businessRole ? 1 : 0),
+      terminology: decisions.terminology.length + (decisions.terminologyDecisions?.length ?? 0) + (decisions.businessRole ? 1 : 0),
     },
     snapshots: engine.snapshots,
     ...(engine.activeAt ? { activeAt: engine.activeAt } : {}),

@@ -81,7 +81,7 @@ export function createReportsRouter(
   // A funnel step only the page sees: counted beside the report's readers, logged by name, and a
   // door to WordLift kept on the site's engine as the reason someone arrived. Never rate limited,
   // never an error the page has to handle.
-  router.post("/:reportId/events", async (request, response) => {
+  router.post("/:reportId/events", ...writeLimiters, async (request, response) => {
     const name = (request.body as { name?: unknown } | undefined)?.name;
     const report = isPageEvent(name) ? await orchestrator.get(param(request.params.reportId)) : null;
     if (!report || !isPageEvent(name)) {
@@ -122,9 +122,16 @@ export function createReportsRouter(
       const parent = engines && key ? await orchestrator.get(reportId) : null;
       const role = engines && parent ? await engines.roleFor(parent, key) : null;
       const child = await orchestrator.refine(reportId, request.body, role ? { filedBy: role } : {});
-      if (engines && parent && role && child.refinement) {
-        await engines.file(parent, child, child.refinement.assertions, role);
-        funnel("review_filed", parent.id, { role });
+      // The child is stored whatever the engine does next: a failure to keep the decisions says so in
+      // a header, never as a failed save of a review that was saved.
+      const kept = engines && parent && role && child.refinement
+        ? await engines.file(parent, child, child.refinement.assertions, role).catch((error: unknown) => {
+            console.error("engine_file_failed", error instanceof Error ? error.name : "unknown");
+            return 0;
+          })
+        : 0;
+      if (kept > 0) {
+        funnel("review_filed", parent!.id, { role: role! });
         response.setHeader("x-context-engine", "filed");
       } else if (key) {
         response.setHeader("x-context-engine", "not-filed");

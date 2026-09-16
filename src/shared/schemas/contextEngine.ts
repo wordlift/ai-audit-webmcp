@@ -53,6 +53,21 @@ export const engineDecisionsSchema = z
     entities: z.array(engineEntityDecisionSchema).max(120),
     actions: z.array(engineActionDecisionSchema).max(80),
     terminology: z.array(engineTermSchema).max(40),
+    /** Judgments about the machine's own vocabulary: kept, redefined, or thrown out. */
+    terminologyDecisions: z
+      .array(
+        z
+          .object({
+            term: z.string().min(1).max(240),
+            decision: z.enum(["confirm", "replace", "reject"]),
+            meaning: z.string().min(1).max(300).optional(),
+            by: engineRoleSchema,
+            at: z.string().datetime(),
+          })
+          .strict(),
+      )
+      .max(40)
+      .optional(),
     /** Relations confirmed or rejected, keyed by both ends' keys and the kind. */
     relations: z
       .array(
@@ -102,7 +117,7 @@ export const contextEngineSchema = z
     /** Later claims, waiting on verification. */
     pending: z.array(secretSchema).max(5),
     /** Short-lived stand-ins for the holder's key, for a review run in another browser (ChatGPT's). */
-    reviewTokens: z.array(secretSchema.extend({ expiresAt: z.string().datetime() }).strict()).max(5),
+    reviewTokens: z.array(secretSchema.extend({ expiresAt: z.string().datetime() }).strict()).max(20),
     latestReportId: z.string().uuid().optional(),
     latestReviewedReportId: z.string().uuid().optional(),
     decisions: engineDecisionsSchema,

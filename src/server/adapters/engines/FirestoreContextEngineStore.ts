@@ -21,9 +21,18 @@ export class FirestoreContextEngineStore implements ContextEngineStore {
     return parsed.success ? parsed.data : null;
   }
 
-  async put(input: ContextEngine): Promise<ContextEngine> {
-    const engine = contextEngineSchema.parse(input);
-    await this.collection.doc(engine.host).set(engine);
-    return engine;
+  // A transaction: Firestore retries the change if the document moved underneath it.
+  async update(host: string, change: (current: ContextEngine | null) => ContextEngine | null): Promise<ContextEngine | null> {
+    const document = this.collection.doc(host);
+    return this.firestore.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(document);
+      const parsed = snapshot.exists ? contextEngineSchema.safeParse(snapshot.data()) : null;
+      const current = parsed?.success ? parsed.data : null;
+      const next = change(current);
+      if (!next) return current;
+      const engine = contextEngineSchema.parse(next);
+      transaction.set(document, engine);
+      return engine;
+    });
   }
 }

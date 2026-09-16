@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ReportRecord } from "../../shared/types/index.js";
 import { getEngine, type EngineWithStanding } from "../api/client";
-import { engineKeyFor, hostOf } from "./engineKeys";
+import { engineHostFor, engineKeyFor } from "./engineKeys";
 
 const CHANGED = "wl-engine-changed";
 
@@ -16,7 +16,7 @@ export function announceEngineChange(): void {
  * no engine, or a server without engines, reads as null and nothing is shown.
  */
 export function useEngine(report: ReportRecord): { engine: EngineWithStanding | null; host: string; key: string | null; refresh: () => void } {
-  const host = hostOf(report.canonicalUrl ?? report.requestedUrl);
+  const host = engineHostFor(report);
   const [engine, setEngine] = useState<EngineWithStanding | null>(null);
   const [key, setKey] = useState<string | null>(() => engineKeyFor(host));
 
