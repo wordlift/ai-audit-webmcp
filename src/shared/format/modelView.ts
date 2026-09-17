@@ -185,7 +185,9 @@ export function modelView(report: ReportRecord): ModelView {
   const salience = (entity: DomainEntity) => {
     const name = normalized(entity.name);
     if (name.length < 3) return 0;
-    return pages.reduce((score, page) => score + (normalized(page.title ?? "").includes(name) ? 2 : 0) + (page.headings ?? []).filter((heading) => normalized(heading).includes(name)).length, 0);
+    // Whole words only: "Pro" is not in "projects", "CLI" is not in "clients".
+    const said = (text: string) => ` ${normalized(text)} `.includes(` ${name} `);
+    return pages.reduce((score, page) => score + (said(page.title ?? "") ? 2 : 0) + (page.headings ?? []).filter(said).length, 0);
   };
   const rank = (left: DomainEntity, right: DomainEntity, weight: (entity: DomainEntity) => number = () => 0) =>
     Number(primary(right)) - Number(primary(left)) ||
@@ -340,7 +342,12 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   const subject = business ?? offerings[0];
   if (!subject) return null;
   const archetype = report.classification?.primaryArchetype ?? "other";
-  const kind = business && GENERIC_BUSINESS_TYPES.has(subject.type) ? categoryNoun(report) ?? ARCHETYPE_NOUNS[archetype] ?? typeLabel(subject.type) : typeLabel(subject.type);
+  // The archetype says it precisely for software, shops, publishers and finance; travel and hospitality
+  // lump restaurants with hotels, and "other" says nothing, so there the pages' category speaks first.
+  const categoryFirst = archetype === "travel-hospitality" || !ARCHETYPE_NOUNS[archetype];
+  const kind = business && GENERIC_BUSINESS_TYPES.has(subject.type)
+    ? (categoryFirst ? categoryNoun(report) ?? ARCHETYPE_NOUNS[archetype] : ARCHETYPE_NOUNS[archetype] ?? categoryNoun(report)) ?? typeLabel(subject.type)
+    : typeLabel(subject.type);
   // Without a business the sentence is about the leading offering alone: it offers nothing itself.
   // What the site declares or a review confirmed speaks for the business before what the text only mentions.
   const settled = offerings.filter((offering) => offering.provenance !== "inferred");
