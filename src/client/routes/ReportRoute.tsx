@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowRight, Rocket, Share2 , Wrench } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { explainReportError, failureTitle, visibleErrors } from "../../shared/format/explainError.js";
+import { explainReportError, failureTitle, onlyFoundationMissing, visibleErrors } from "../../shared/format/explainError.js";
 import type { Archetype, ReportRecord } from "../../shared/types/index.js";
 import { ApiError, getReport, recompileReport } from "../api/client";
 import { ActionJourney } from "../components/ActionJourney";
@@ -147,7 +147,7 @@ export function ReportRoute() {
         <Link to="/"><ArrowLeft size={17} /> New audit</Link>
         <button type="button" onClick={share}><Share2 size={17} /> {copied ? "Copied" : "Share report"}</button>
       </StepBar>
-      {report.status === "partial" && (
+      {report.status === "partial" && !onlyFoundationMissing(report.errors) && (
         <div className="partial-banner" role="status">Partial report: {visibleErrors(report.errors).map(explainReportError).join(" ")}</div>
       )}
       {/* The Context Engine first, what agents can do with it second. Everything precise is one click below. */}

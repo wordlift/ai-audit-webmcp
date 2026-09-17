@@ -51,6 +51,16 @@ export function visibleErrors(errors: ReportError[]): ReportError[] {
   return collectionFailed ? errors.filter((error) => error.code !== "classifier_unavailable") : errors;
 }
 
+/**
+ * Whether all that went wrong is the foundation audit not answering: the model and what agents can
+ * do are whole, only the foundation score is missing. That is a line beside the score, not a banner
+ * above the business.
+ */
+export function onlyFoundationMissing(errors: ReportError[]): boolean {
+  const visible = visibleErrors(errors).filter((error) => error.code !== "classifier_unavailable");
+  return visible.length > 0 && visible.every((error) => error.provider === "wordlift-ai-audit");
+}
+
 /** A heading for a report that could not be built, chosen by what actually went wrong. */
 export function failureTitle(errors: ReportError[]): string {
   const codes = new Set(errors.map((error) => error.code));

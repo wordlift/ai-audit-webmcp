@@ -885,6 +885,7 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .first-capabilities { display: grid; gap: 6px; padding-top: 14px; border-top: 1px solid var(--line-subtle); }
 .first-capabilities:empty { display: none; }
 .first-capabilities h2 { margin: 0; font-size: 1.25rem; }
+.first-note { margin: 0; color: var(--faint); font-size: 0.85rem; }
 
 /* Try the model with an AI agent: the second aha, one button. */
 .ask-agent { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 28px; padding: 18px 22px; border: 1px solid var(--line-subtle); border-radius: 16px; background: var(--surface); }

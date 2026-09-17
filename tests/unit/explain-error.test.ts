@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { explainReportError } from "../../src/shared/format/explainError.js";
+import { explainReportError, onlyFoundationMissing } from "../../src/shared/format/explainError.js";
 
 describe("what a stored error means for the reader", () => {
   it("says the foundation audit is missing and why, never the status code or the provider's words", () => {
@@ -13,5 +13,12 @@ describe("what a stored error means for the reader", () => {
 
   it("keeps the other reasons as they were", () => {
     expect(explainReportError({ code: "collection_timeout", message: "x", stage: "collect" } as never)).toBe("The site took too long to answer, so its pages could not be read.");
+  });
+
+  it("tells a report missing only its foundation score from one whose reading of the site went wrong", () => {
+    const foundation = { code: "audit_timeout", phase: "understanding" as const, provider: "wordlift-ai-audit", message: "The audit service took too long to respond.", retryable: true };
+    expect(onlyFoundationMissing([foundation])).toBe(true);
+    expect(onlyFoundationMissing([foundation, { code: "thin_sample", phase: "understanding" as const, message: "Only 2 representative pages could be read.", retryable: true }])).toBe(false);
+    expect(onlyFoundationMissing([])).toBe(false);
   });
 });

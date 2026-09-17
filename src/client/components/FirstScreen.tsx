@@ -14,6 +14,7 @@ import { track } from "../engine/track";
 import { DeepScanOffer } from "./DeepScanOffer";
 import { publishUrl } from "./FixPanel";
 import { entityRole } from "../../shared/format/businessModel.js";
+import { onlyFoundationMissing } from "../../shared/format/explainError.js";
 import { entityTypeLabel, groupEntities } from "./UnderstandPanel";
 
 /**
@@ -359,6 +360,9 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         )}
         {score !== undefined && (
           <p className="first-meta"><span className="first-score">Agent readiness <b>{score}</b>/100</span></p>
+        )}
+        {report.status === "partial" && onlyFoundationMissing(report.errors) && (
+          <p className="first-note">No foundation score this time: WordLift's foundation audit did not answer. Run again to include it.</p>
         )}
       </div>
 
