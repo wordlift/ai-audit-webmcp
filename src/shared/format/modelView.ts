@@ -121,13 +121,26 @@ export function modelView(report: ReportRecord): ModelView {
   const businesses = all.filter((entity) => entityRole(entity) === "business");
   // One name, one business: an Organization and a Brand called Allbirds are Allbirds.
   const businessName = (entity: DomainEntity) => normalized(entity.name).replace(/[\s,.]+(inc|llc|ltd|limited|gmbh|srl|s r l|spa|s p a|ag|sa|bv|corp|corporation|co)\.?$/, "").trim();
-  const ownBusinesses = businesses
+  const distinct = businesses
     .filter((entity) => !namesTheSite(entity, host))
     .filter((entity, index, list) => list.findIndex((other) => businessName(other) === businessName(entity)) === index);
+  // Beside a business the site declares, a brand only the text names is a line it sells ("Runner NZ"), not a second business.
+  const settledBusiness = distinct.some((entity) => entityProvenance(entity) !== "inferred");
+  const productLines = settledBusiness ? distinct.filter((entity) => entityProvenance(entity) === "inferred" && entity.types.includes("Brand")) : [];
+  const ownBusinesses = distinct.filter((entity) => !productLines.includes(entity));
   const businessPool = (ownBusinesses.length > 0 ? ownBusinesses : businesses).sort((left, right) => rank(left, right));
 
+  // Among names the model is equally sure of, one that carries the business's own name ("WordLift Agent")
+  // or names a thing in more than one word ("Data Connect") is more likely what it sells than a bare
+  // category ("Eyewear").
+  const ownName = businessPool[0] ? businessName(businessPool[0]) : "";
+  const specificity = (entity: DomainEntity) => {
+    const name = normalized(entity.name);
+    return (ownName && name.includes(ownName) ? 2 : 0) + (name.split(" ").length > 1 ? 1 : 0);
+  };
+
   // Offerings, one per product: variants fold into the shortest name they share a base with.
-  const offeringPool = all.filter((entity) => entityRole(entity) === "offering" && !isPlatform(entity, host));
+  const offeringPool = [...all.filter((entity) => entityRole(entity) === "offering" && !isPlatform(entity, host)), ...productLines];
   // An inferred event is usually a headline ("Mountain days"), an inferred offer a banner ("Final Sale"):
   // each stays out unless something connects it or someone confirmed it.
   const offeringCandidates = offeringPool.filter(
@@ -146,7 +159,7 @@ export function modelView(report: ReportRecord): ModelView {
       return { entity: lead, variants: members.length - 1 };
     })
     // A product the site lists in many variants is one it sells most visibly.
-    .sort((left, right) => rank(left.entity, right.entity, (entity) => (entity === left.entity ? left.variants : right.variants) * 2 + salience(entity)));
+    .sort((left, right) => rank(left.entity, right.entity, (entity) => (entity === left.entity ? left.variants : right.variants) * 2 + salience(entity) + specificity(entity)));
 
   const places = all.filter((entity) => entityRole(entity) === "place").sort((left, right) => rank(left, right, depth));
   const people = all.filter((entity) => entityRole(entity) === "person");

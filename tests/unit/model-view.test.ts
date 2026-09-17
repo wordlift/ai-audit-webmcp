@@ -68,6 +68,19 @@ describe("the model a stranger meets", () => {
     expect(view.sentence).toBe("Allbirds is a brand offering Men's Runner NZ Slip On.");
   });
 
+  it("reads a brand only the text names, beside a declared business, as a line it sells; and prefers specific names among equals", () => {
+    const shop = modelView(report("allbirds.com", [entity("brand", "Allbirds", "Brand"), entity("line", "Runner NZ", "Brand", { origin: "inferred" })]));
+    expect(shop.counts.businesses).toBe(1);
+    expect(shop.offerings.map((item) => item.name)).toEqual(["Runner NZ"]);
+    const software = modelView(report("wordlift.io", [
+      entity("org", "WordLift", "Organization", { origin: "inferred" }),
+      entity("eye", "Eyewear", "Product", { origin: "inferred", confidence: 0.6 }),
+      entity("dc", "Data Connect", "SoftwareApplication", { origin: "inferred", confidence: 0.6 }),
+      entity("agent", "WordLift Agent", "Service", { origin: "inferred", confidence: 0.6 }),
+    ]));
+    expect(software.offerings.map((item) => item.name)).toEqual(["WordLift Agent", "Data Connect", "Eyewear"]);
+  });
+
   it("keeps a platform a page mentions out of what the business offers, except on the platform's own site", () => {
     const mentions = [entity("org", "WordLift", "Organization"), entity("g", "Google", "SoftwareApplication", { origin: "inferred" }), entity("dc", "Data Connect", "SoftwareApplication", { origin: "inferred" })];
     expect(modelView(report("wordlift.io", mentions)).offerings.map((item) => item.name)).toEqual(["Data Connect"]);
