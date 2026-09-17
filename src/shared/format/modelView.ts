@@ -88,10 +88,26 @@ export function modelView(report: ReportRecord): ModelView {
   const relations = (graph?.relations ?? []).filter((relation) => all.some((entity) => entity.id === relation.from) && all.some((entity) => entity.id === relation.to));
   const connected = new Set(relations.flatMap((relation) => [relation.from, relation.to]));
   const primary = (entity: DomainEntity) => entity.humanPriority === "primary";
-  // A place inside another reads before the place that holds it: Mariapfarr, then Lungau.
-  const within = (entity: DomainEntity) =>
-    relations.filter((relation) => relation.from === entity.id && relation.kind === "located-in").length -
-    relations.filter((relation) => relation.to === entity.id && relation.kind === "located-in").length;
+  // A place inside another reads before the place that holds it: Mariapfarr, then Lungau, then the Alps.
+  const depth = (entity: DomainEntity) => {
+    let hops = 0;
+    let at = entity.id;
+    const seen = new Set([at]);
+    for (;;) {
+      const up = relations.find((relation) => relation.from === at && relation.kind === "located-in" && !seen.has(relation.to));
+      if (!up || hops > 5) return hops;
+      hops += 1;
+      seen.add(up.to);
+      at = up.to;
+    }
+  };
+  // What the site puts in its titles and headings is what it is about: a name there outranks one named in passing.
+  const pages = graph?.pages ?? [];
+  const salience = (entity: DomainEntity) => {
+    const name = normalized(entity.name);
+    if (name.length < 3) return 0;
+    return pages.reduce((score, page) => score + (normalized(page.title ?? "").includes(name) ? 2 : 0) + (page.headings ?? []).filter((heading) => normalized(heading).includes(name)).length, 0);
+  };
   const rank = (left: DomainEntity, right: DomainEntity, weight: (entity: DomainEntity) => number = () => 0) =>
     Number(primary(right)) - Number(primary(left)) ||
     Number(connected.has(right.id)) - Number(connected.has(left.id)) ||
@@ -104,9 +120,10 @@ export function modelView(report: ReportRecord): ModelView {
   // The business: the one that is not just the website's name, unless nothing else is.
   const businesses = all.filter((entity) => entityRole(entity) === "business");
   // One name, one business: an Organization and a Brand called Allbirds are Allbirds.
+  const businessName = (entity: DomainEntity) => normalized(entity.name).replace(/[\s,.]+(inc|llc|ltd|limited|gmbh|srl|s r l|spa|s p a|ag|sa|bv|corp|corporation|co)\.?$/, "").trim();
   const ownBusinesses = businesses
     .filter((entity) => !namesTheSite(entity, host))
-    .filter((entity, index, list) => list.findIndex((other) => normalized(other.name) === normalized(entity.name)) === index);
+    .filter((entity, index, list) => list.findIndex((other) => businessName(other) === businessName(entity)) === index);
   const businessPool = (ownBusinesses.length > 0 ? ownBusinesses : businesses).sort((left, right) => rank(left, right));
 
   // Offerings, one per product: variants fold into the shortest name they share a base with.
@@ -129,9 +146,9 @@ export function modelView(report: ReportRecord): ModelView {
       return { entity: lead, variants: members.length - 1 };
     })
     // A product the site lists in many variants is one it sells most visibly.
-    .sort((left, right) => rank(left.entity, right.entity, (entity) => (entity === left.entity ? left.variants : right.variants)));
+    .sort((left, right) => rank(left.entity, right.entity, (entity) => (entity === left.entity ? left.variants : right.variants) * 2 + salience(entity)));
 
-  const places = all.filter((entity) => entityRole(entity) === "place").sort((left, right) => rank(left, right, within));
+  const places = all.filter((entity) => entityRole(entity) === "place").sort((left, right) => rank(left, right, depth));
   const people = all.filter((entity) => entityRole(entity) === "person");
 
   const business = businessPool[0] ? view(businessPool[0]) : null;
@@ -190,8 +207,11 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   if (!subject) return null;
   const kind = typeLabel(subject.type);
   // Without a business the sentence is about the leading offering alone: it offers nothing itself.
-  const shown = business ? offerings.slice(0, 3) : [];
-  const totalOfferings = business ? offerings.length : 0;
+  // What the site declares or a review confirmed speaks for the business before what the text only mentions.
+  const settled = offerings.filter((offering) => offering.provenance !== "inferred");
+  const pool = business ? (settled.length > 0 ? settled : offerings) : [];
+  const shown = pool.slice(0, 3);
+  const totalOfferings = pool.length;
   const more = totalOfferings - shown.length;
   const nouns = shown.length > 0 ? list(shown.map((offering) => offering.name)) + (more > 0 ? ` and ${more} more` : "") : "";
   const place = where(subject.id) ?? (shown[0] ? where(shown[0].id) : undefined);

@@ -53,6 +53,21 @@ describe("the model a stranger meets", () => {
     expect(view.sentence).toBe("AlpiNest Feriendorf Lungau is a lodging business offering Samspitze 4. The site is about Mariapfarr, in Lungau.");
   });
 
+  it("names what the site declares before what its text mentions, and what its headings are about before a passing name", () => {
+    const graphReport = report("allbirds.com", [
+      entity("brand", "Allbirds", "Brand"),
+      entity("inc", "Allbirds, Inc.", "Organization"),
+      entity("runner", "Men's Runner NZ Slip On", "ProductGroup"),
+      entity("shoes", "Men's Shoes", "Product", { origin: "inferred" }),
+      entity("dasher", "Tree Dasher 2", "Product", { origin: "inferred" }),
+    ]);
+    (graphReport.contextGraph!.pages as unknown[]) = [{ url: "https://x/", title: "Allbirds", headings: ["Tree Dasher 2", "Shop now"] }];
+    const view = modelView(graphReport);
+    expect(view.counts.businesses).toBe(1);
+    expect(view.offerings.map((item) => item.name)).toEqual(["Men's Runner NZ Slip On", "Tree Dasher 2", "Men's Shoes"]);
+    expect(view.sentence).toBe("Allbirds is a brand offering Men's Runner NZ Slip On.");
+  });
+
   it("keeps a platform a page mentions out of what the business offers, except on the platform's own site", () => {
     const mentions = [entity("org", "WordLift", "Organization"), entity("g", "Google", "SoftwareApplication", { origin: "inferred" }), entity("dc", "Data Connect", "SoftwareApplication", { origin: "inferred" })];
     expect(modelView(report("wordlift.io", mentions)).offerings.map((item) => item.name)).toEqual(["Data Connect"]);
