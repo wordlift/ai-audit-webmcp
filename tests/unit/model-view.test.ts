@@ -99,6 +99,13 @@ describe("the model a stranger meets", () => {
     expect(view.preview.map((item) => `${item.name}:${item.type}`)).toEqual(["Allbirds:Brand", "Men's Runner NZ Slip On:ProductGroup"]);
   });
 
+  it("names four offerings when four is all there is, and says how many more only when two or more are left", () => {
+    const four = modelView(report("wordlift.io", [entity("org", "WordLift", "Organization"), ...["Data Connect", "WordLift Agent", "Content Generation Tool", "Visibility Solution"].map((name, index) => entity(`o${index}`, name, "Service"))]));
+    expect(four.sentence).not.toMatch(/more/);
+    const six = modelView(report("wordlift.io", [entity("org", "WordLift", "Organization"), ...["Data Connect", "WordLift Agent", "Content Generation Tool", "Visibility Solution", "Product Performance Solution", "Pricing Plan Tool"].map((name, index) => entity(`o${index}`, name, "Service"))]));
+    expect(six.sentence).toMatch(/and 3 more\.$/);
+  });
+
   it("keeps a platform a page mentions out of what the business offers, except on the platform's own site", () => {
     const mentions = [entity("org", "WordLift", "Organization"), entity("g", "Google", "SoftwareApplication", { origin: "inferred" }), entity("dc", "Data Connect", "SoftwareApplication", { origin: "inferred" })];
     expect(modelView(report("wordlift.io", mentions)).offerings.map((item) => item.name)).toEqual(["Data Connect"]);

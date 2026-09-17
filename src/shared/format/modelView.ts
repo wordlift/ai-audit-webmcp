@@ -260,7 +260,8 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   // Only what the site declares, when it declares something: a sentence that names a slogan as a product
   // loses the reader faster than one that names a single product.
   const pool = business ? (settled.length > 0 ? settled : offerings) : [];
-  const shown = pool.slice(0, 3);
+  // "and 1 more" reads as a thing left out on purpose: name four when four is all there is.
+  const shown = pool.slice(0, pool.length <= 4 ? 4 : 3);
   const totalOfferings = pool.length;
   const more = totalOfferings - shown.length;
   const nouns = shown.length > 0 ? list(shown.map((offering) => offering.name)) + (more > 0 ? ` and ${more} more` : "") : "";

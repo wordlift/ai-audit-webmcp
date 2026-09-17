@@ -134,12 +134,12 @@ function openFullAudit() {
 export function readAgo(collectedAt: string | undefined, now: number): string | null {
   if (!collectedAt) return null;
   const minutes = Math.max(0, Math.round((now - new Date(collectedAt).getTime()) / 60_000));
-  if (minutes < 2) return "Read just now";
-  if (minutes < 90) return `Read ${minutes} minutes ago`;
+  if (minutes < 2) return "Site read just now";
+  if (minutes < 90) return `Site read ${minutes} minutes ago`;
   const hours = Math.round(minutes / 60);
-  if (hours < 36) return `Read ${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+  if (hours < 36) return `Site read ${hours} ${hours === 1 ? "hour" : "hours"} ago`;
   const days = Math.round(hours / 24);
-  return `Read ${days} ${days === 1 ? "day" : "days"} ago`;
+  return `Site read ${days} ${days === 1 ? "day" : "days"} ago`;
 }
 
 function hostOf(url: string): string {
@@ -148,6 +148,18 @@ function hostOf(url: string): string {
   } catch {
     return url;
   }
+}
+
+/**
+ * What the business says it is, from its home page's own description: the value it claims, in its
+ * words, beside what WordLift read. Quoted, never rewritten; nothing when the page says nothing useful.
+ */
+export function ownWords(report: ReportRecord): string | null {
+  const pages = report.contextGraph?.pages ?? [];
+  const entry = pages.find((page) => page.role === "entry") ?? pages[0];
+  const words = entry?.description?.replace(/\s+/g, " ").trim();
+  if (!words || words.length < 24 || words.toLowerCase() === entry?.title?.toLowerCase()) return null;
+  return words.length > 180 ? `${words.slice(0, 177).replace(/\s+\S*$/, "")}…` : words;
 }
 
 /** "3 crawlers and 1 agent have read this": the readers that are not people, summed across days. */
@@ -304,12 +316,13 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
             understand it and act on it: its first <b>Context Engine</b>.
           </p>
         )}
+        {engine && ownWords(report) && <p className="first-own-words">In its own words: “{ownWords(report)}”</p>}
         <p className="first-meta">
           {ago && <span className="read-when">{ago}</span>}
           <span className="chip-arche">{archetype}</span>
           {report.publishedWith && (
             <a className="chip-arche chip-runs-on" href={publishUrl(report.id, { engine: stored?.id })} onClick={() => track(report.id, "door_claim-context")} target="_blank" rel="noreferrer" title={`${runsOnLine(report)} ${report.publishedWith.evidence}. Own this site? Open your WordLift dashboard.`}>
-              Already uses {report.publishedWith.name}
+              This site already uses {report.publishedWith.name}
             </a>
           )}
           {ago && (
@@ -355,7 +368,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         {score !== undefined && (
           <p className="first-meta">
             <span className="first-score">Agent readiness <b>{score}</b>/100</span>
-            <span className="first-score-means">how much of what matters here our agent actually completed when it tried</span>
+            <span className="first-score-means">the share of what matters here that our agent completed when it tried</span>
           </p>
         )}
         {report.status === "partial" && onlyFoundationMissing(report.errors) && (

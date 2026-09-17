@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { FirstScreen, actionsThatMatter, capabilityLine, gapLine, headline, readAgo, readersLine, relationChain, runsOnLine } from "../../src/client/components/FirstScreen";
+import { FirstScreen, actionsThatMatter, capabilityLine, gapLine, ownWords, headline, readAgo, readersLine, relationChain, runsOnLine } from "../../src/client/components/FirstScreen";
 import type { CapabilityResult, ReportRecord } from "../../src/shared/types/index.js";
 
 function capability(overrides: Partial<CapabilityResult> & Pick<CapabilityResult, "actionId" | "label" | "state">): CapabilityResult {
@@ -97,7 +97,7 @@ describe("the first screen", () => {
 
   it("says when the site was read, and offers to read it again", () => {
     renderScreen();
-    expect(screen.getByText(/Read 3 hours ago/)).toBeVisible();
+    expect(screen.getByText(/Site read 3 hours ago/)).toBeVisible();
     expect(screen.getByRole("button", { name: /run again/i })).toBeVisible();
   });
 
@@ -159,7 +159,7 @@ describe("the first screen", () => {
     // The site is the subject of what agents can do, and the gap is a door to its fix.
     expect(screen.getByText(/already lets an AI agent/)).toHaveTextContent("alpina.travel already lets an AI agent check availability, but not yet book a stay or find a property. See how to fix them");
     expect(screen.getByRole("link", { name: "See how to fix them" })).toHaveAttribute("href", "#step-fix");
-    expect(screen.getByText(/our agent actually completed/)).toBeVisible();
+    expect(screen.getByText(/our agent completed when it tried/)).toBeVisible();
   });
 
   it("counts what works among the things that matter most", () => {
@@ -175,6 +175,16 @@ describe("the first screen", () => {
     expect(list).toHaveTextContent("Our agent successfully used this. Run by WordLift.");
     expect(list).toHaveTextContent("There is no agent-accessible interface yet.");
     expect(list).not.toHaveTextContent(/invocation|unverified|agent-ready|declared/i);
+  });
+});
+
+describe("in the business's own words", () => {
+  it("quotes the home page's own description, shortened, and says nothing when it has none worth quoting", () => {
+    const page = (description?: string, title = "Alpina") => ({ ...report, contextGraph: { pages: [{ url: "https://alpina.travel/", title, role: "entry", headings: [], entityIds: [], ...(description ? { description } : {}) }], entities: [], lexicalEntries: [], interfaces: [], bindings: [] } }) as unknown as ReportRecord;
+    expect(ownWords(page("Alpine holiday apartments in Lungau, Austria."))).toBe("Alpine holiday apartments in Lungau, Austria.");
+    expect(ownWords(page("Short."))).toBeNull();
+    expect(ownWords(page("Lungau Holidays & Family Apartment", "Lungau Holidays & Family Apartment"))).toBeNull();
+    expect(ownWords(page("word ".repeat(60)))?.endsWith("…")).toBe(true);
   });
 });
 
@@ -198,10 +208,10 @@ describe("which actions matter", () => {
     const at = "2026-09-07T05:00:00.000Z";
     const t = (iso: string) => new Date(iso).getTime();
     expect(readAgo(undefined, NOW)).toBeNull();
-    expect(readAgo(at, t("2026-09-07T05:00:30.000Z"))).toBe("Read just now");
-    expect(readAgo(at, t("2026-09-07T05:40:00.000Z"))).toBe("Read 40 minutes ago");
-    expect(readAgo(at, t("2026-09-07T08:00:00.000Z"))).toBe("Read 3 hours ago");
-    expect(readAgo(at, t("2026-09-09T06:00:00.000Z"))).toBe("Read 2 days ago");
+    expect(readAgo(at, t("2026-09-07T05:00:30.000Z"))).toBe("Site read just now");
+    expect(readAgo(at, t("2026-09-07T05:40:00.000Z"))).toBe("Site read 40 minutes ago");
+    expect(readAgo(at, t("2026-09-07T08:00:00.000Z"))).toBe("Site read 3 hours ago");
+    expect(readAgo(at, t("2026-09-09T06:00:00.000Z"))).toBe("Site read 2 days ago");
   });
 });
 
@@ -224,7 +234,7 @@ describe("the readers line", () => {
 
   it("names the platform the site's own data declares, beside the archetype, and says what it already delivers next to the score", () => {
     renderScreen(onWordLift);
-    const chip = screen.getByRole("link", { name: "Already uses WordLift" });
+    const chip = screen.getByRole("link", { name: "This site already uses WordLift" });
     expect(chip).toHaveAttribute("href", expect.stringContaining("my.wordlift.io"));
     expect(chip).toHaveAttribute("href", expect.stringContaining(report.id));
     expect(chip).toHaveAttribute("title", expect.stringContaining("Entity ids on data.wordlift.io"));
