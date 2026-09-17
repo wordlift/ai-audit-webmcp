@@ -66,8 +66,7 @@ describe("the model a stranger meets", () => {
     expect(view.counts.businesses).toBe(1);
     // A collection the text names ("Men's Shoes") is where things are filed, not one of them.
     expect(view.offerings.map((item) => item.name)).toEqual(["Men's Runner NZ Slip On", "Tree Dasher 2"]);
-    // What the site declares is named first; what the text adds follows it.
-    expect(view.sentence).toBe("Allbirds is a brand offering Men's Runner NZ Slip On and Tree Dasher 2.");
+    expect(view.sentence).toBe("Allbirds is a brand offering Men's Runner NZ Slip On.");
   });
 
   it("reads a brand only the text names, beside a declared business, as a line it sells; and prefers specific names among equals", () => {
@@ -84,7 +83,7 @@ describe("the model a stranger meets", () => {
   });
 
   it("tells a collection from a thing, and says what a generic organization is by the kind of site it runs", () => {
-    for (const name of ["Men's Shoes", "New Arrivals", "Apparel & Accessories", "Performance & Rank Tracking"]) expect(looksLikeCategory(name)).toBe(true);
+    for (const name of ["Men's Shoes", "New Arrivals", "Apparel & Accessories", "Performance & Rank Tracking", "Wildly Comfortable", "Shop Tree Runners", "Discover More"]) expect(looksLikeCategory(name)).toBe(true);
     for (const name of ["Samspitze 4", "Data Connect", "WordLift Agent", "Tree Dasher 2", "AI-Powered SEO", "Runner NZ"]) expect(looksLikeCategory(name)).toBe(false);
     const saas = { ...report("wordlift.io", [entity("org", "WordLift", "Organization", { origin: "inferred" }), entity("dc", "Data Connect", "SoftwareApplication", { origin: "inferred" })]), classification: { primaryArchetype: "saas" } } as unknown as ReportRecord;
     expect(modelView(saas).sentence).toBe("WordLift is a software company offering Data Connect.");

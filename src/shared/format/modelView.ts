@@ -65,6 +65,8 @@ const GENERIC_BUSINESS_TYPES = new Set(["Organization", "Corporation", "LocalBus
  */
 export function looksLikeCategory(name: string): boolean {
   const words = name.trim().split(/\s+/);
+  // A slogan, not a thing: "Wildly Comfortable", "Shop New Arrivals", "Discover More".
+  if (words.length <= 3 && (/ly$/i.test(words[0] ?? "") || /^(shop|discover|explore|browse|find|get|see|made|meet|free)$/i.test(words[0] ?? ""))) return true;
   if (/\s(&|and)\s/i.test(name)) return true;
   if (/\d/.test(name) || words.length > 3) return false;
   if (words.some((word) => /[a-z][A-Z]/.test(word) || /^[A-Z]{2,}$/.test(word))) return false;
@@ -255,7 +257,9 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   // Without a business the sentence is about the leading offering alone: it offers nothing itself.
   // What the site declares or a review confirmed speaks for the business before what the text only mentions.
   const settled = offerings.filter((offering) => offering.provenance !== "inferred");
-  const pool = business ? [...settled, ...offerings.filter((offering) => offering.provenance === "inferred")] : [];
+  // Only what the site declares, when it declares something: a sentence that names a slogan as a product
+  // loses the reader faster than one that names a single product.
+  const pool = business ? (settled.length > 0 ? settled : offerings) : [];
   const shown = pool.slice(0, 3);
   const totalOfferings = pool.length;
   const more = totalOfferings - shown.length;

@@ -269,7 +269,7 @@ describe("the readers line", () => {
     } as unknown as ReportRecord;
     renderScreen(withGraph);
     // What the business is leads; a byline, the site's own name and a demoted thing are not in the sentence or the cards.
-    expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf Lungau is a lodging business offering Samspitze 5 and Samspitze 4." })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf Lungau is a lodging business offering Samspitze 5." })).toBeVisible();
     expect(screen.getByText(/WordLift built a model/)).toHaveTextContent("From 2 pages of alpina.travel, WordLift built a model");
     const cards = screen.getByRole("list", { name: "What WordLift understood" });
     expect(cards).not.toHaveTextContent(/Andrea Volpini|Old brochure|Alpina\.travel/);
