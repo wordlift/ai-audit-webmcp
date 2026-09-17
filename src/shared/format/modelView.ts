@@ -260,7 +260,7 @@ export function modelView(report: ReportRecord): ModelView {
   const offeringCandidates = offeringPool.filter((entity) => {
     if (entityProvenance(entity) !== "inferred" || connected.has(entity.id)) return true;
     // A priced offer is a thing the business sells ("$2 Sodas"); an unpriced one is a banner ("Final Sale").
-    if (entity.types.includes("Offer")) return /[$€£¥]\s?\d|\d\s?(€|eur|usd|gbp)\b/i.test(entity.name);
+    if (entity.types.includes("Offer")) return /^([$€£¥]\s?\d|\d+([.,]\d+)?\s?(€|eur|usd|gbp)\b)/i.test(entity.name) && entity.name.length <= 40;
     if (entity.types.includes("Event")) return false;
     // A collection the text names is where things are filed, not one of the things.
     return !looksLikeCategory(entity.name);
@@ -295,7 +295,9 @@ export function modelView(report: ReportRecord): ModelView {
   const offeringView = (entity: DomainEntity, variants: number): ViewEntity => ({ ...view(entity, variants, typeFor(entity)), ...(prominence(entity) >= 2 ? { prominent: true } : {}) });
   // A bare word only the text names ("Underwear", "Pro") is a label, not a card a stranger reads as what the
   // business sells; it waits behind "Show all". A name the site is built around ("Basecamp") is not bare.
-  const cardWorthy = offerings.filter(({ entity }) => entityProvenance(entity) !== "inferred" || !looksGeneric(entity.name) || prominence(entity) >= 2);
+  // Headings name categories as often as products, so a bare word earns a card from the domain or from being
+  // on three pages or more, never from a heading alone.
+  const cardWorthy = offerings.filter(({ entity }) => entityProvenance(entity) !== "inferred" || !looksGeneric(entity.name) || normalized(entity.name).replace(/\s+/g, "") === hostLabel || entity.sourceUrls.length >= 3);
   const shownOfferings = cardWorthy.slice(0, 3).map(({ entity, variants }) => offeringView(entity, variants));
   const containerOf = (entity: DomainEntity) => {
     const up = relations.find((relation) => relation.from === entity.id && relation.kind === "located-in");
@@ -389,8 +391,8 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   const prominent = candidates.filter((offering) => offering.prominent);
   const named = candidates.filter((offering) => !looksGeneric(offering.name));
   const pool = prominent.length > 0 ? prominent : named.length > 0 ? named : candidates.slice(0, 1);
-  // "and 1 more" reads as a thing left out on purpose: name four when four is all there is.
-  const shown = pool.slice(0, pool.length <= 4 ? 4 : 3);
+  // Three names read at a glance; past three, "and more" says there is more without a count to parse.
+  const shown = pool.slice(0, 3);
   const totalOfferings = pool.length;
   const more = totalOfferings - shown.length;
   // When the site holds more than the sentence names, say so as a kind ("products such as ..."), so one
@@ -402,7 +404,7 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   const oneKind = new Set(shown.map((offering) => pluralKind([offering.type]))).size === 1;
   const said = list(shown.map((offering) => offering.name));
   const nouns =
-    shown.length === 0 ? "" : more > 0 ? `${said} and ${more} more` : allOfferings > shown.length ? (oneKind ? `${kindOf} such as ${said}` : `${shown.map((offering) => offering.name).join(", ")} and more`) : said;
+    shown.length === 0 ? "" : more > 0 || allOfferings > shown.length ? (oneKind ? `${kindOf} such as ${said}` : `${shown.map((offering) => offering.name).join(", ")} and more`) : said;
   const place = where(subject.id) ?? (shown[0] ? where(shown[0].id) : undefined);
   const placeName = place ? names.get(place.to) : undefined;
   const placeOf = placeName ? where(place!.to) : undefined;

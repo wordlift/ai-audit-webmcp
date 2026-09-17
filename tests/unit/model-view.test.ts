@@ -99,11 +99,13 @@ describe("the model a stranger meets", () => {
     expect(view.preview.map((item) => `${item.name}:${item.type}`)).toEqual(["Allbirds:Brand", "Men's Runner NZ Slip On:ProductGroup"]);
   });
 
-  it("names four offerings when four is all there is, and says how many more only when two or more are left", () => {
-    const four = modelView(report("wordlift.io", [entity("org", "WordLift", "Organization"), ...["Data Connect", "WordLift Agent", "Content Generation Tool", "Visibility Solution"].map((name, index) => entity(`o${index}`, name, "Service"))]));
-    expect(four.sentence).not.toMatch(/more/);
-    const six = modelView(report("wordlift.io", [entity("org", "WordLift", "Organization"), ...["Data Connect", "WordLift Agent", "Content Generation Tool", "Visibility Solution", "Product Performance Solution", "Pricing Plan Tool"].map((name, index) => entity(`o${index}`, name, "Service"))]));
-    expect(six.sentence).toMatch(/and 3 more\.$/);
+  it("names three offerings at most, and says there is more without a count to parse", () => {
+    const names = ["Data Connect", "WordLift Agent", "Content Generation Tool", "Visibility Solution", "Product Performance Solution"];
+    const four = modelView(report("wordlift.io", [entity("org", "WordLift", "Organization"), ...names.slice(0, 4).map((name, index) => entity(`o${index}`, name, "Service"))]));
+    expect(four.sentence).toMatch(/^WordLift is an organization offering services such as [^,]+, [^,]+ and [^,]+\.$/);
+    const mixed = modelView(report("wordlift.io", [entity("org", "WordLift", "Organization"), entity("a", "Data Connect", "SoftwareApplication"), entity("b", "WordLift Agent", "Service"), entity("c", "Content Generation Tool", "Service"), entity("d", "Visibility Solution", "Service")]));
+    expect(mixed.sentence).toMatch(/and more\.$/);
+    expect(mixed.sentence).not.toMatch(/\d more/);
   });
 
   it("keeps a bare one-word name out of the sentence when there are specific names to say", () => {
