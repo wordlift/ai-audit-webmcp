@@ -55,7 +55,7 @@ export function AgentDoors({ reportId, host = null, engineKey = null }: { report
   return (
     <section className="agent-doors" aria-labelledby="agent-doors-title">
       <p className="agent-doors-lead">
-        <b id="agent-doors-title">Review the understanding with ChatGPT.</b> It tells you what WordLift understood, asks what is right, and files your answers here{host ? ", kept on your Context Engine" : ""}. Needs a paid ChatGPT plan and its Work mode.
+        <b id="agent-doors-title">Review it with ChatGPT</b> (paid plan, Work mode): it asks what is right and files your answers here{host ? ", on your Context Engine" : ""}.
       </p>
       <div className="agent-doors-buttons">
         <button type="button" className="review-cta review-cta-primary" onClick={() => void copy("review")}>
