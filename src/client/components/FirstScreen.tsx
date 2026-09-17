@@ -286,7 +286,9 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   const gap = gapLine(capabilities);
   const engine = contextEngineSummary(report);
   // The line of how it fits together says again what the sentence already says when the sentence names the places.
-  const chain = fullChain && !(engine?.sentence && fullChain.slice(1).every((step) => engine.sentence!.includes(step.replace(/^(in|offers) /, "")))) ? fullChain : null;
+  // Once the sentence says where ("..., in Mariapfarr, Lungau."), the line only repeats it.
+  const sentenceSaysWhere = Boolean(engine?.sentence && fullChain && fullChain.slice(1).some((step) => step.startsWith("in ") && engine.sentence!.includes(step.slice(3))));
+  const chain = fullChain && !sentenceSaysWhere && !(engine?.sentence && fullChain.slice(1).every((step) => engine.sentence!.includes(step.replace(/^(in|offers) /, "")))) ? fullChain : null;
   const chainFromText = !settledChain && Boolean(chain);
   const { engine: stored, key: engineKey } = useReportEngine();
 

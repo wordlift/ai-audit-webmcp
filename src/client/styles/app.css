@@ -215,6 +215,8 @@ summary:focus-visible {
 }
 
 main { padding-block: 40px 90px; }
+/* A report is read from its first line: the step bar sits close under the header. */
+main:has(> .report-page) { padding-top: 8px; }
 
 footer {
   display: flex;
