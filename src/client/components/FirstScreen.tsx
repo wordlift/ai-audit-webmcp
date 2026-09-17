@@ -305,7 +305,8 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   return (
     <section className="first-screen" id="step-audit" aria-labelledby="first-screen-title">
       <div className="first-screen-head">
-        <p className="section-kicker"><Bot size={16} /> Audit</p>
+        {/* The step bar already says this is Audit; the space goes to the proof. */}
+        {!engine && <p className="section-kicker"><Bot size={16} /> Audit</p>}
         {/* The moment is the headline: what the business is, in one sentence from what was read. What
             a Context Engine is follows in one plain line, so nobody has to guess who built what. */}
         <h1 id="first-screen-title" className={engine?.sentence ? "first-understood" : undefined}>

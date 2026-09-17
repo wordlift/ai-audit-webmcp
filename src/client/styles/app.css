@@ -428,7 +428,7 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .step-title { margin: 0; font-size: clamp(1.3rem, 2.6vw, 1.7rem); }
 .step-subtitle { margin: 0; color: var(--muted); max-width: 66ch; }
 /* Beside the Context Engine: review it, which makes it better, or ask it, which proves it usable. */
-.agent-doors { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; margin-top: 6px; padding: 14px 18px; border: 1px solid var(--line-subtle); border-radius: 14px; background: color-mix(in srgb, var(--brand) 4%, white); }
+.agent-doors { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; margin-top: 4px; padding: 10px 16px; border: 1px solid var(--line-subtle); border-radius: 14px; background: color-mix(in srgb, var(--brand) 4%, white); }
 .agent-doors-lead { margin: 0; color: var(--muted); max-width: 52ch; flex: 1 1 30ch; }
 .agent-doors-lead b { color: var(--ink); }
 .agent-doors-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -820,13 +820,13 @@ button:disabled { opacity: 0.6; cursor: wait; }
    vocabulary keeps its own colours one click below, in the full audit. */
 .first-screen {
   display: grid;
-  gap: 18px;
-  padding: clamp(22px, 4vw, 36px);
+  gap: 14px;
+  padding: clamp(20px, 3.2vw, 30px);
   background: var(--surface);
   border: 1px solid var(--line-subtle);
   border-radius: 18px;
 }
-.first-screen-head { display: grid; gap: 8px; }
+.first-screen-head { display: grid; gap: 7px; }
 .first-screen h1 { margin: 0; font-size: clamp(1.6rem, 3.4vw, 2.3rem); overflow-wrap: anywhere; }
 .first-sentence { margin: 0; font-size: 1.12rem; max-width: 62ch; }
 .first-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; margin: 0; color: var(--muted); font-size: 0.9rem; }
@@ -854,7 +854,7 @@ button:disabled { opacity: 0.6; cursor: wait; }
 /* The Context Engine as a person reads it: a few things, each with where the knowledge comes from. */
 .engine-preview { display: grid; gap: 10px; margin-top: 4px; }
 .engine-entities { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 8px; }
-.engine-entity { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; column-gap: 10px; padding: 10px 12px; border: 1px solid var(--line-subtle); border-radius: 12px; background: var(--surface); }
+.engine-entity { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; column-gap: 10px; padding: 8px 12px; border: 1px solid var(--line-subtle); border-radius: 12px; background: var(--surface); }
 .engine-entity-name { font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
 .engine-entity-type { grid-row: 2; color: var(--muted); font-size: 0.82rem; }
 .engine-provenance { grid-row: 1 / span 2; grid-column: 2; align-self: center; padding: 3px 8px; border-radius: 999px; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: help; }
@@ -885,7 +885,7 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .ownership-steps code { font-family: var(--font-mono); font-size: 0.85em; overflow-wrap: anywhere; }
 .ownership-error { color: var(--state-missing) !important; }
 /* The proof after the model: what agents can do with it today. */
-.first-capabilities { display: grid; gap: 6px; padding-top: 14px; border-top: 1px solid var(--line-subtle); }
+.first-capabilities { display: grid; gap: 4px; padding-top: 10px; border-top: 1px solid var(--line-subtle); }
 .first-capabilities:empty { display: none; }
 .first-capabilities h2 { margin: 0; font-size: 1.25rem; }
 .first-note { margin: 0; color: var(--faint); font-size: 0.85rem; }
