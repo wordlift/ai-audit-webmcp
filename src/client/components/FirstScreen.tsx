@@ -325,7 +325,8 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         <p className="first-meta">
           {ago && <span className="read-when">{ago}</span>}
           <span className="chip-arche">{archetype}</span>
-          {report.publishedWith && (
+          {/* On the platform's own site the badge says nothing a reader can use, and reads as self-praise. */}
+          {report.publishedWith && !/(^|\.)wordlift\.(io|com)$/i.test(host) && (
             <a className="chip-arche chip-runs-on" href={publishUrl(report.id, { engine: stored?.id })} onClick={() => track(report.id, "door_claim-context")} target="_blank" rel="noreferrer" title={`${runsOnLine(report)} ${report.publishedWith.evidence}. Own this site? Open your WordLift dashboard.`}>
               This site already uses {report.publishedWith.name}
             </a>
@@ -371,7 +372,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         {score !== undefined && (
           <p className="first-meta">
             <span className="first-score">Agent readiness <b>{score}</b>/100</span>
-            <span className="first-score-means">the share of what matters here that our agent completed when it tried</span>
+            <span className="first-score-means">based on what our agent could actually do when it tried</span>
           </p>
         )}
         {report.status === "partial" && onlyFoundationMissing(report.errors) && (

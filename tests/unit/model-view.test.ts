@@ -112,6 +112,14 @@ describe("the model a stranger meets", () => {
     expect(view.preview.map((item) => item.name)).toContain("Eyewear");
   });
 
+  it("says a shop offers products such as one when it set collections aside, and says where a place is", () => {
+    const shop = modelView(report("allbirds.com", [entity("brand", "Allbirds", "Brand"), entity("runner", "Men's Runner NZ Slip On", "ProductGroup"), entity("shoes", "Men's Shoes", "Product", { origin: "inferred" })]));
+    expect(shop.sentence).toBe("Allbirds is a brand offering products such as Men's Runner NZ Slip On.");
+    const lodging = modelView(report("alpina.travel", [entity("org", "AlpiNest", "LodgingBusiness"), entity("town", "Mariapfarr", "Place", { origin: "inferred" }), entity("region", "Lungau", "Place", { origin: "inferred" })], [{ from: "town", to: "region", kind: "located-in", provenance: "inferred", sourceUrl: "https://x/" }]));
+    expect(lodging.places.find((place) => place.name === "Mariapfarr")).toBeDefined();
+    expect(lodging.preview.find((item) => item.name === "Mariapfarr")?.within).toBe("Lungau");
+  });
+
   it("keeps a platform a page mentions out of what the business offers, except on the platform's own site", () => {
     const mentions = [entity("org", "WordLift", "Organization"), entity("g", "Google", "SoftwareApplication", { origin: "inferred" }), entity("dc", "Data Connect", "SoftwareApplication", { origin: "inferred" })];
     expect(modelView(report("wordlift.io", mentions)).offerings.map((item) => item.name)).toEqual(["Data Connect"]);

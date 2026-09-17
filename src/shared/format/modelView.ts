@@ -12,6 +12,8 @@ export interface ViewEntity {
   id: string;
   name: string;
   type: string;
+  /** For a place inside another the model knows: "Lungau", so the card says "Place in Lungau". */
+  within?: string;
   role: EntityRole;
   provenance: EntityProvenance;
   /** How many more variants of this product the site lists, folded into it. */
@@ -179,6 +181,8 @@ export function modelView(report: ReportRecord): ModelView {
     const base = normalized(entity.name.split(VARIANT_SEPARATOR)[0] ?? entity.name);
     groups.set(base, [...(groups.get(base) ?? []), entity]);
   }
+  // The collections and slogans set aside still say the site offers more than the sentence names.
+  const setAside = offeringPool.filter((entity) => entityProvenance(entity) === "inferred" && !connected.has(entity.id) && !entity.types.includes("Event") && !entity.types.includes("Offer") && looksLikeCategory(entity.name));
   // An inferred name inside a declared one ("Runner NZ Slip On" in "Men's Runner NZ Slip On") is the declared thing read again.
   const settledNames = offeringCandidates.filter((entity) => entityProvenance(entity) !== "inferred").map((entity) => normalized(entity.name));
   for (const [base, members] of [...groups.entries()]) {
@@ -200,7 +204,14 @@ export function modelView(report: ReportRecord): ModelView {
   const business = businessPool[0] ? view(businessPool[0]) : null;
   const typeFor = (entity: DomainEntity) => (productLines.includes(entity) ? "ProductLine" : undefined);
   const shownOfferings = offerings.slice(0, 3).map(({ entity, variants }) => view(entity, variants, typeFor(entity)));
-  const shownPlaces = places.slice(0, business || shownOfferings.length > 0 ? 2 : 4).map((entity) => view(entity));
+  const containerOf = (entity: DomainEntity) => {
+    const up = relations.find((relation) => relation.from === entity.id && relation.kind === "located-in");
+    return up ? all.find((candidate) => candidate.id === up.to)?.name : undefined;
+  };
+  const shownPlaces = places.slice(0, business || shownOfferings.length > 0 ? 2 : 4).map((entity) => {
+    const within = containerOf(entity);
+    return { ...view(entity), ...(within ? { within } : {}) };
+  });
   const preview = [...(business ? [business] : []), ...shownOfferings, ...shownPlaces].slice(0, 6);
 
   const labels = new Map<string, number>();
@@ -225,7 +236,7 @@ export function modelView(report: ReportRecord): ModelView {
       inferred: counted.filter((entity) => entityProvenance(entity) === "inferred").length,
       confirmed: counted.filter((entity) => entityProvenance(entity) === "human-confirmed").length,
     },
-    sentence: sentenceFor(report, business, offerings.map(({ entity, variants }) => view(entity, variants, typeFor(entity))), relations, all),
+    sentence: sentenceFor(report, business, offerings.map(({ entity, variants }) => view(entity, variants, typeFor(entity))), relations, all, offerings.length + setAside.length),
   };
 }
 
@@ -262,7 +273,7 @@ function list(names: string[]): string {
  * it offers, and where, only when a relation says where. "AlpiNest Feriendorf Lungau is a lodging
  * business offering Samspitze 4, in Mariapfarr." Nothing is said that the model does not hold.
  */
-function sentenceFor(report: ReportRecord, business: ViewEntity | null, offerings: ViewEntity[], relations: EntityRelation[], all: DomainEntity[]): string | null {
+function sentenceFor(report: ReportRecord, business: ViewEntity | null, offerings: ViewEntity[], relations: EntityRelation[], all: DomainEntity[], everything = offerings.length): string | null {
   const names = new Map(all.map((entity) => [entity.id, entity.name]));
   const where = (id: string) => relations.find((relation) => relation.from === id && relation.kind === "located-in");
   const subject = business ?? offerings[0];
@@ -284,7 +295,8 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   const more = totalOfferings - shown.length;
   // When the site holds more than the sentence names, say so as a kind ("products such as ..."), so one
   // product never stands for the whole business.
-  const allOfferings = business ? offerings.length : 0;
+  // Counted before collections and slogans were set aside: a shop with "Men's Shoes" sells more than one shoe.
+  const allOfferings = business ? Math.max(offerings.length, everything) : 0;
   const kindOf = pluralKind(offerings.map((offering) => offering.type));
   const named = list(shown.map((offering) => offering.name));
   const nouns = shown.length === 0 ? "" : more > 0 ? `${named} and ${more} more` : allOfferings > shown.length ? `${kindOf} such as ${named}` : named;

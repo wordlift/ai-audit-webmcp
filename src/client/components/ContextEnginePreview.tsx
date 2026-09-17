@@ -12,8 +12,8 @@ import { entityTypeLabel } from "./UnderstandPanel";
 const MAX_PREVIEW = 6;
 
 export const PROVENANCE_WORD: Record<EntityProvenance, string> = {
-  declared: "Declared",
-  inferred: "Inferred",
+  declared: "Declared by site",
+  inferred: "Inferred from text",
   "human-confirmed": "Confirmed",
 };
 
@@ -86,7 +86,8 @@ export function ContextEnginePreview({ summary, onExplore, host = "The site" }: 
           <li key={entity.id} className={`engine-entity engine-entity-${entity.provenance}`}>
             <span className="engine-entity-name">{entity.name}</span>
             <span className="engine-entity-type">
-              {entityTypeLabel(entity.type)}
+              {entity.type === "ProductLine" ? "Product line" : entityTypeLabel(entity.type)}
+              {entity.within && ` in ${entity.within}`}
               {entity.variants > 0 && ` · ${entity.variants + 1} variants`}
             </span>
             <span

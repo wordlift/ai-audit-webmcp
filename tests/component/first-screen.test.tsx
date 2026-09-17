@@ -144,9 +144,9 @@ describe("the first screen", () => {
     expect(screen.getByText(/WordLift built a model/)).toHaveTextContent("From 1 page of alpina.travel, WordLift built a model of this business that AI agents can use to understand it and act on it: its first Context Engine.");
     const understood = screen.getByRole("list", { name: "What WordLift understood" });
     expect(within(understood).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
-      "AlpiNest FeriendorfLodging businessDeclared",
+      "AlpiNest FeriendorfLodging businessDeclared by site",
       "Samspitze 4ApartmentConfirmed",
-      "MariapfarrPlaceInferred",
+      "MariapfarrPlaceInferred from text",
     ]);
     // What a review said shows where the model is: the decisions, and what is not ours.
     expect(screen.getByText(/decisions added/)).toHaveTextContent("Reviewed · 3 decisions added · not ours: Somebody Else GmbH");
@@ -159,7 +159,7 @@ describe("the first screen", () => {
     // The site is the subject of what agents can do, and the gap is a door to its fix.
     expect(screen.getByText(/already lets an AI agent/)).toHaveTextContent("alpina.travel already lets an AI agent check availability, but not yet book a stay or find a property. See how to fix them");
     expect(screen.getByRole("link", { name: "See how to fix them" })).toHaveAttribute("href", "#step-fix");
-    expect(screen.getByText(/our agent completed when it tried/)).toBeVisible();
+    expect(screen.getByText(/our agent could actually do when it tried/)).toBeVisible();
   });
 
   it("counts what works among the things that matter most", () => {
