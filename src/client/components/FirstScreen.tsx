@@ -134,12 +134,12 @@ function openFullAudit() {
 export function readAgo(collectedAt: string | undefined, now: number): string | null {
   if (!collectedAt) return null;
   const minutes = Math.max(0, Math.round((now - new Date(collectedAt).getTime()) / 60_000));
-  if (minutes < 2) return "Site read just now";
-  if (minutes < 90) return `Site read ${minutes} minutes ago`;
+  if (minutes < 2) return "Checked just now";
+  if (minutes < 90) return `Checked ${minutes} minutes ago`;
   const hours = Math.round(minutes / 60);
-  if (hours < 36) return `Site read ${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+  if (hours < 36) return `Checked ${hours} ${hours === 1 ? "hour" : "hours"} ago`;
   const days = Math.round(hours / 24);
-  return `Site read ${days} ${days === 1 ? "day" : "days"} ago`;
+  return `Checked ${days} ${days === 1 ? "day" : "days"} ago`;
 }
 
 function hostOf(url: string): string {
@@ -279,13 +279,15 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   const beyond = beyondTheThree(capabilities);
   const primary = report.classification?.primaryArchetype;
   const settledChain = relationChain(report);
-  const chain = settledChain ?? relationChain(report, "with-text");
-  const chainFromText = !settledChain && Boolean(chain);
+  const fullChain = settledChain ?? relationChain(report, "with-text");
   const archetype = !primary || primary === "other" ? "general" : primary.replaceAll("-", " / ");
   const score = report.score?.value;
   const ago = readAgo(report.collectedAt, now());
   const gap = gapLine(capabilities);
   const engine = contextEngineSummary(report);
+  // The line of how it fits together says again what the sentence already says when the sentence names the places.
+  const chain = fullChain && !(engine?.sentence && fullChain.slice(1).every((step) => engine.sentence!.includes(step.replace(/^(in|offers) /, "")))) ? fullChain : null;
+  const chainFromText = !settledChain && Boolean(chain);
   const { engine: stored, key: engineKey } = useReportEngine();
 
   async function runAgain() {
@@ -346,8 +348,6 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         {engine && <ContextEnginePreview summary={engine} host={host} onExplore={() => track(report.id, "engine_explored")} />}
         {/* Beside the model, the two things to do with it: review it, which makes it better, or ask it, which proves it is usable. */}
         {engine && <AgentDoors reportId={report.id} host={holds(stored) ? stored!.host : null} engineKey={engineKey} />}
-        {/* Claiming is where an address is asked for: the engine expands, and the owner hears when it moves. */}
-        <DeepScanOffer report={report} variant="inline" claimed={holds(stored)} />
       </div>
 
       <div className="first-capabilities" aria-labelledby={engine ? "first-capabilities-title" : undefined}>
@@ -395,6 +395,9 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
           })}
         </ol>
       )}
+
+      {/* Claiming comes after the proof: what the model is, what agents can do with it, then keep it. */}
+      <DeepScanOffer report={report} variant="inline" claimed={holds(stored)} />
 
       {beyond > 0 && (
         <p className="discovery-line">

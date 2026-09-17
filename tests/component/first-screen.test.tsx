@@ -97,7 +97,7 @@ describe("the first screen", () => {
 
   it("says when the site was read, and offers to read it again", () => {
     renderScreen();
-    expect(screen.getByText(/Site read 3 hours ago/)).toBeVisible();
+    expect(screen.getByText(/Checked 3 hours ago/)).toBeVisible();
     expect(screen.getByRole("button", { name: /run again/i })).toBeVisible();
   });
 
@@ -208,10 +208,10 @@ describe("which actions matter", () => {
     const at = "2026-09-07T05:00:00.000Z";
     const t = (iso: string) => new Date(iso).getTime();
     expect(readAgo(undefined, NOW)).toBeNull();
-    expect(readAgo(at, t("2026-09-07T05:00:30.000Z"))).toBe("Site read just now");
-    expect(readAgo(at, t("2026-09-07T05:40:00.000Z"))).toBe("Site read 40 minutes ago");
-    expect(readAgo(at, t("2026-09-07T08:00:00.000Z"))).toBe("Site read 3 hours ago");
-    expect(readAgo(at, t("2026-09-09T06:00:00.000Z"))).toBe("Site read 2 days ago");
+    expect(readAgo(at, t("2026-09-07T05:00:30.000Z"))).toBe("Checked just now");
+    expect(readAgo(at, t("2026-09-07T05:40:00.000Z"))).toBe("Checked 40 minutes ago");
+    expect(readAgo(at, t("2026-09-07T08:00:00.000Z"))).toBe("Checked 3 hours ago");
+    expect(readAgo(at, t("2026-09-09T06:00:00.000Z"))).toBe("Checked 2 days ago");
   });
 });
 
@@ -279,7 +279,7 @@ describe("the readers line", () => {
     } as unknown as ReportRecord;
     renderScreen(withGraph);
     // What the business is leads; a byline, the site's own name and a demoted thing are not in the sentence or the cards.
-    expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf Lungau is a lodging business offering Samspitze 5." })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf Lungau is a lodging business offering apartments such as Samspitze 5." })).toBeVisible();
     expect(screen.getByText(/WordLift built a model/)).toHaveTextContent("From 2 pages of alpina.travel, WordLift built a model");
     const cards = screen.getByRole("list", { name: "What WordLift understood" });
     expect(cards).not.toHaveTextContent(/Andrea Volpini|Old brochure|Alpina\.travel/);
@@ -301,7 +301,9 @@ describe("the readers line", () => {
     ] } } as unknown as ReportRecord;
     expect(relationChain(declared)).toEqual(["AlpiNest Feriendorf Lungau", "offers Samspitze 4", "in Mariapfarr"]);
     renderScreen(declared);
-    expect(screen.getByLabelText(/How the business fits together/)).toHaveTextContent("AlpiNest Feriendorf Lungau → offers Samspitze 4 → in Mariapfarr");
+    // The sentence already says it: "... offering Samspitze 4, in Mariapfarr." The line would say it twice.
+    expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf Lungau is a lodging business offering Samspitze 4, in Mariapfarr." })).toBeVisible();
+    expect(screen.queryByLabelText(/How the business fits together/)).toBeNull();
     // Only the business's own place when the offering has none.
     const orgPlace = { ...declared, contextGraph: { ...graph, relations: [{ from: "org", to: "town", kind: "located-in", provenance: "declared", sourceUrl: "https://www.alpina.travel/" }] } } as unknown as ReportRecord;
     expect(relationChain(orgPlace)).toEqual(["AlpiNest Feriendorf Lungau", "in Mariapfarr"]);

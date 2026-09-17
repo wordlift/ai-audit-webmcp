@@ -235,6 +235,21 @@ export function typeLabel(type: string | undefined): string {
   return type.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2").toLowerCase();
 }
 
+/** "products", "apartments", "services": what most of the offerings are, said as a plural a person uses. */
+function pluralKind(types: string[]): string {
+  const nouns: Record<string, string> = {
+    Product: "products", ProductGroup: "products", ProductLine: "products", Offer: "offers", Service: "services",
+    SoftwareApplication: "software", WebApplication: "software", Apartment: "apartments", Accommodation: "stays",
+    Hotel: "hotels", Event: "events", Course: "courses", Vehicle: "vehicles", FinancialProduct: "financial products",
+  };
+  const counts = new Map<string, number>();
+  for (const type of types) {
+    const noun = nouns[type] ?? "offerings";
+    counts.set(noun, (counts.get(noun) ?? 0) + 1);
+  }
+  return [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? "offerings";
+}
+
 const article = (noun: string) => (/^[aeiou]/i.test(noun) ? `an ${noun}` : `a ${noun}`);
 
 function list(names: string[]): string {
@@ -267,7 +282,12 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   const shown = pool.slice(0, pool.length <= 4 ? 4 : 3);
   const totalOfferings = pool.length;
   const more = totalOfferings - shown.length;
-  const nouns = shown.length > 0 ? list(shown.map((offering) => offering.name)) + (more > 0 ? ` and ${more} more` : "") : "";
+  // When the site holds more than the sentence names, say so as a kind ("products such as ..."), so one
+  // product never stands for the whole business.
+  const allOfferings = business ? offerings.length : 0;
+  const kindOf = pluralKind(offerings.map((offering) => offering.type));
+  const named = list(shown.map((offering) => offering.name));
+  const nouns = shown.length === 0 ? "" : more > 0 ? `${named} and ${more} more` : allOfferings > shown.length ? `${kindOf} such as ${named}` : named;
   const place = where(subject.id) ?? (shown[0] ? where(shown[0].id) : undefined);
   const placeName = place ? names.get(place.to) : undefined;
   const placeOf = placeName ? where(place!.to) : undefined;

@@ -66,7 +66,7 @@ describe("the model a stranger meets", () => {
     expect(view.counts.businesses).toBe(1);
     // A collection the text names ("Men's Shoes") is where things are filed, not one of them.
     expect(view.offerings.map((item) => item.name)).toEqual(["Men's Runner NZ Slip On", "Tree Dasher 2"]);
-    expect(view.sentence).toBe("Allbirds is a brand offering Men's Runner NZ Slip On.");
+    expect(view.sentence).toBe("Allbirds is a brand offering products such as Men's Runner NZ Slip On.");
   });
 
   it("reads a brand only the text names, beside a declared business, as a line it sells; and prefers specific names among equals", () => {
@@ -108,7 +108,7 @@ describe("the model a stranger meets", () => {
 
   it("keeps a bare one-word name out of the sentence when there are specific names to say", () => {
     const view = modelView(report("wordlift.io", [entity("org", "WordLift", "Organization"), entity("a", "WordLift Agent", "Service"), entity("b", "Data Connect", "SoftwareApplication"), entity("c", "Eyewear", "Product")]));
-    expect(view.sentence).toBe("WordLift is an organization offering WordLift Agent and Data Connect.");
+    expect(view.sentence).toBe("WordLift is an organization offering services such as WordLift Agent and Data Connect.");
     expect(view.preview.map((item) => item.name)).toContain("Eyewear");
   });
 
