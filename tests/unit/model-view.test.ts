@@ -108,7 +108,7 @@ describe("the model a stranger meets", () => {
 
   it("keeps a bare one-word name out of the sentence when there are specific names to say", () => {
     const view = modelView(report("wordlift.io", [entity("org", "WordLift", "Organization"), entity("a", "WordLift Agent", "Service"), entity("b", "Data Connect", "SoftwareApplication"), entity("c", "Eyewear", "Product")]));
-    expect(view.sentence).toBe("WordLift is an organization offering services such as WordLift Agent and Data Connect.");
+    expect(view.sentence).toBe("WordLift is an organization offering WordLift Agent, Data Connect and more.");
     expect(view.preview.map((item) => item.name)).toContain("Eyewear");
   });
 
@@ -155,6 +155,23 @@ describe("the model a stranger meets", () => {
     expect(view.sentence).toBe("Shake Shack is a restaurant business.");
     expect(view.counts.businesses).toBe(1);
     expect(view.preview.map((item) => item.name)).toEqual(["Shake Shack"]);
+  });
+
+  it("reads a chain's places as what it offers, and says which places the site is about (as on a hotel group's site)", () => {
+    const hotels = {
+      ...report("thehoxton.com", [
+        entity("org", "The Hoxton", "Organization", { sourceUrls: ["a", "b", "c", "d"] }),
+        entity("bare", "Hoxton", "Hotel", { origin: "inferred" }),
+        entity("brussels", "The Hoxton, Brussels", "Hotel", { origin: "inferred" }),
+        entity("hox", "Hox", "Hotel", { origin: "inferred" }),
+        ...["Amsterdam", "Barcelona", "Berlin", "Paris", "Rome"].map((name) => entity(name.toLowerCase(), name, "Place", { origin: "inferred" })),
+      ]),
+      classification: { primaryArchetype: "travel-hospitality", categories: [{ name: "/Travel & Transportation/Hotels & Accommodations/Other", confidence: 1 }] },
+    } as unknown as ReportRecord;
+    const view = modelView(hotels);
+    expect(view.counts.businesses).toBe(1);
+    expect(view.offerings.map((item) => item.name)).toEqual(["The Hoxton, Brussels"]);
+    expect(view.sentence).toBe("The Hoxton is a hotel business offering The Hoxton, Brussels. The site is about Amsterdam, Barcelona, Berlin and 2 more places.");
   });
 
   it("keeps a platform a page mentions out of what the business offers, except on the platform's own site", () => {

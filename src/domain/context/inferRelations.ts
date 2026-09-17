@@ -129,8 +129,9 @@ export function inferRelations(pages: SitePageSnapshot[], entities: DomainEntity
         if (gap.length > MAX_GAP) continue;
         const rule = RULES.find((candidate) => candidate.from.includes(left.role) && candidate.to.includes(right.role) && candidate.words.test(gap));
         if (!rule) continue;
-        // "Mariapfarr, Lungau" is an address; "Mariapfarr, Tamsweg and Mauterndorf" is a list of equals.
-        if (rule.words === APPOSITION && inAList(sentence, mentions, index)) continue;
+        // "Mariapfarr, Lungau" is an address; "Mariapfarr, Tamsweg and Mauterndorf" is a list of equals, and
+        // "Explore London, Holborn" is a menu. An address follows "in", "at" or "near".
+        if (rule.words === APPOSITION && (inAList(sentence, mentions, index) || !/\b(in|at|near)\s*$/i.test(sentence.slice(Math.max(0, left.start - 16), left.start)))) continue;
         const key = `${left.entity.id}|${rule.kind}|${right.entity.id}`;
         if (known.has(key)) continue;
         known.add(key);

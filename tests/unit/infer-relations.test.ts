@@ -42,7 +42,7 @@ describe("relations read from the text", () => {
   it("reads a page whose blocks arrived glued, a plain adjective, and an address, but not a list of places", () => {
     const tamsweg = entity("tamsweg", "Tamsweg", "Place");
     const relations = inferRelations(
-      [page("One easy apartment base.IntroductionSamspitze 4 in sunny Mariapfarr, with a full kitchen. Two-bedroom apartment in Mariapfarr, Lungau, in the Alps. Day trips to Mariapfarr, Tamsweg and Lungau.")],
+      [page("One easy apartment base.IntroductionSamspitze 4 in sunny Mariapfarr, with a full kitchen. Two-bedroom apartment in Mariapfarr, Lungau, in the Alps. Day trips to Mariapfarr, Tamsweg and Lungau. Explore Lungau, Mariapfarr for the summer.")],
       [apt, town, region, tamsweg],
       [],
     );

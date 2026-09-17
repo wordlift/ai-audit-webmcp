@@ -108,7 +108,8 @@ export function looksLikeCategory(name: string): boolean {
   // A slogan, not a thing: "Wildly Comfortable", "Shop New Arrivals", "Discover More".
   if (words.length <= 3 && (/ly$/i.test(words[0] ?? "") || /^(shop|discover|explore|browse|find|get|see|made|meet|free)$/i.test(words[0] ?? ""))) return true;
   if (/\s(&|and)\s/i.test(name)) return true;
-  if (/\d/.test(name) || words.length > 3) return false;
+  // "The Hoxton, Brussels" names one place of a business, not a shelf of things.
+  if (/\d/.test(name) || words.length > 3 || name.includes(",")) return false;
   if (words.some((word) => /[a-z][A-Z]/.test(word) || /^[A-Z]{2,}$/.test(word))) return false;
   return /[a-z]{3,}s$/.test(words[words.length - 1] ?? "");
 }
@@ -207,7 +208,16 @@ export function modelView(report: ReportRecord): ModelView {
     .filter((entity, index, list) => list.findIndex((other) => businessName(other) === businessName(entity)) === index);
   // Beside a business the site declares, a brand only the text names is a line it sells ("Runner NZ"), not a second business.
   const settledBusiness = distinct.some((entity) => entityProvenance(entity) !== "inferred");
-  const productLines = settledBusiness ? distinct.filter((entity) => entityProvenance(entity) === "inferred" && entity.types.includes("Brand")) : [];
+  // A business only the text names that carries the declared business's own name is one of its places:
+  // "The Hoxton, Brussels" is what The Hoxton offers. Its bare namesake ("Hoxton") is the business itself.
+  const declaredBusiness = distinct.find((entity) => entityProvenance(entity) !== "inferred");
+  const tokens = (name: string) => new Set(normalized(name).split(" ").filter((token) => token.length > 2 && token !== "the"));
+  const ownTokens = declaredBusiness ? tokens(declaredBusiness.name) : new Set<string>();
+  const carriesOwnName = (entity: DomainEntity) => ownTokens.size > 0 && [...ownTokens].every((token) => tokens(entity.name).has(token));
+  const namesake = (entity: DomainEntity) => carriesOwnName(entity) && tokens(entity.name).size === ownTokens.size;
+  const productLines = settledBusiness
+    ? distinct.filter((entity) => entityProvenance(entity) === "inferred" && !namesake(entity) && (entity.types.includes("Brand") || carriesOwnName(entity)))
+    : [];
   // Any other business only the text names, beside the one the site declares, is a mention ("Reese's" in a
   // shake), not a second business of this site's; a review can still confirm it.
   const ownBusinesses = distinct.filter((entity) => !productLines.includes(entity) && !(settledBusiness && entityProvenance(entity) === "inferred" && !connected.has(entity.id)));
@@ -225,7 +235,7 @@ export function modelView(report: ReportRecord): ModelView {
   };
   const specificity = (entity: DomainEntity) => {
     const name = normalized(entity.name);
-    return (ownName && name.includes(ownName) ? 2 : 0) + (name.split(" ").length > 1 ? 1 : 0) + prominence(entity) - (looksGeneric(entity.name) ? 3 : 0);
+    return (ownName && name.includes(ownName) ? 2 : 0) + (productLines.includes(entity) && !entity.types.includes("Brand") ? 3 : 0) + (name.split(" ").length > 1 ? 1 : 0) + prominence(entity) - (looksGeneric(entity.name) ? 3 : 0);
   };
 
   // Offerings, one per product: variants fold into the shortest name they share a base with.
@@ -264,7 +274,7 @@ export function modelView(report: ReportRecord): ModelView {
   const people = all.filter((entity) => entityRole(entity) === "person");
 
   const business = businessPool[0] ? view(businessPool[0]) : null;
-  const typeFor = (entity: DomainEntity) => (productLines.includes(entity) ? "ProductLine" : undefined);
+  const typeFor = (entity: DomainEntity) => (productLines.includes(entity) && entity.types.includes("Brand") ? "ProductLine" : undefined);
   const offeringView = (entity: DomainEntity, variants: number): ViewEntity => ({ ...view(entity, variants, typeFor(entity)), ...(prominence(entity) >= 2 ? { prominent: true } : {}) });
   const shownOfferings = offerings.slice(0, 3).map(({ entity, variants }) => offeringView(entity, variants));
   const containerOf = (entity: DomainEntity) => {
@@ -368,8 +378,11 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   // Counted before collections and slogans were set aside: a shop with "Men's Shoes" sells more than one shoe.
   const allOfferings = business ? Math.max(offerings.length, everything) : 0;
   const kindOf = pluralKind(offerings.map((offering) => offering.type));
+  // One kind reads "hotels such as ..."; different kinds are named, and "and more" says there is more.
+  const oneKind = new Set(shown.map((offering) => pluralKind([offering.type]))).size === 1;
   const said = list(shown.map((offering) => offering.name));
-  const nouns = shown.length === 0 ? "" : more > 0 ? `${said} and ${more} more` : allOfferings > shown.length ? `${kindOf} such as ${said}` : said;
+  const nouns =
+    shown.length === 0 ? "" : more > 0 ? `${said} and ${more} more` : allOfferings > shown.length ? (oneKind ? `${kindOf} such as ${said}` : `${shown.map((offering) => offering.name).join(", ")} and more`) : said;
   const place = where(subject.id) ?? (shown[0] ? where(shown[0].id) : undefined);
   const placeName = place ? names.get(place.to) : undefined;
   const placeOf = placeName ? where(place!.to) : undefined;
@@ -379,6 +392,12 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   if (!placeName) {
     const nested = relations.find((relation) => relation.kind === "located-in" && all.some((entity) => entity.id === relation.from && entityRole(entity) === "place"));
     if (nested && names.get(nested.from) && names.get(nested.to)) return `${body} The site is about ${names.get(nested.from)}, in ${names.get(nested.to)}.`;
+    // A chain names many places and says none is inside another: which places, then, and how many.
+    const places = all.filter((entity) => entityRole(entity) === "place");
+    if (places.length >= 3) {
+      const first = places.slice(0, 3).map((place) => place.name);
+      return `${body} The site is about ${list(places.length > 3 ? [...first, `${places.length - 3} more places`] : first)}.`;
+    }
   }
   return report.contextGraph ? body : null;
 }
