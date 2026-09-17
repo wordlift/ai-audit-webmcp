@@ -1,4 +1,4 @@
-import { looksGeneric, looksLikeCategory, modelView } from "../../src/shared/format/modelView.js";
+import { looksGeneric, looksLikeCategory, modelView, siteKind } from "../../src/shared/format/modelView.js";
 import type { ReportRecord } from "../../src/shared/types/index.js";
 
 const entity = (id: string, name: string, type: string, extra: Record<string, unknown> = {}) => ({ id, name, types: [type], alternateNames: [], sourceUrls: ["https://x/"], sameAs: [], offers: [], confidence: 0.8, ...extra });
@@ -152,9 +152,9 @@ describe("the model a stranger meets", () => {
       classification: { primaryArchetype: "travel-hospitality", categories: [{ name: "/Food & Drink/Restaurants/Fast Food", confidence: 1 }] },
     } as unknown as ReportRecord;
     const view = modelView(shack);
-    expect(view.sentence).toBe("Shake Shack is a restaurant business.");
+    expect(view.sentence).toBe("Shake Shack is a restaurant business offering $2 Sodas.");
     expect(view.counts.businesses).toBe(1);
-    expect(view.preview.map((item) => item.name)).toEqual(["Shake Shack"]);
+    expect(view.preview.map((item) => item.name)).toEqual(["Shake Shack", "$2 Sodas"]);
   });
 
   it("reads a chain's places as what it offers, and says which places the site is about (as on a hotel group's site)", () => {
@@ -172,6 +172,23 @@ describe("the model a stranger meets", () => {
     expect(view.counts.businesses).toBe(1);
     expect(view.offerings.map((item) => item.name)).toEqual(["The Hoxton, Brussels"]);
     expect(view.sentence).toBe("The Hoxton is a hotel business offering The Hoxton, Brussels. The site is about Amsterdam, Barcelona, Berlin and 2 more places.");
+  });
+
+  it("counts a priced offer as what a restaurant sells, keeps bare words off the cards, and names the kind of site by its pages", () => {
+    const shack = {
+      ...report("shakeshack.com", [
+        entity("org", "Shake Shack", "Organization"),
+        entity("sodas", "$2 Sodas", "Offer", { origin: "inferred" }),
+        entity("fries", "$4 Fries", "Offer", { origin: "inferred" }),
+        entity("sale", "Final Sale", "Offer", { origin: "inferred" }),
+      ]),
+      classification: { primaryArchetype: "travel-hospitality", categories: [{ name: "/Food & Drink/Restaurants/Fast Food", confidence: 1 }] },
+    } as unknown as ReportRecord;
+    expect(modelView(shack).sentence).toBe("Shake Shack is a restaurant business offering $2 Sodas and $4 Fries.");
+    expect(siteKind(shack)).toBe("food & drink");
+    const bombas = modelView(report("bombas.com", [entity("brand", "Bombas", "Brand"), entity("slip", "Women's Saturday Suede Slip-On", "Product"), entity("under", "Underwear", "Product", { origin: "inferred" })]));
+    expect(bombas.preview.map((item) => item.name)).toEqual(["Bombas", "Women's Saturday Suede Slip-On"]);
+    expect(bombas.offerings.map((item) => item.name)).toContain("Underwear");
   });
 
   it("keeps a platform a page mentions out of what the business offers, except on the platform's own site", () => {

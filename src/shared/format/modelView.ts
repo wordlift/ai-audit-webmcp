@@ -134,6 +134,19 @@ const VARIANT_SEPARATOR = /\s+[-–—|/]\s+|\s*,\s*size\b|\s+\((?:size|colou?r)
 
 const normalized = (value: string) => value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^\p{L}\p{N}.]+/gu, " ").trim();
 
+/**
+ * The kind of site in a chip's words: the archetype, unless it blurs what the pages are about, in which
+ * case the top category the classifier is sure of ("food & drink" rather than "travel / hospitality").
+ */
+export function siteKind(report: ReportRecord): string {
+  const archetype = report.classification?.primaryArchetype;
+  const blurred = !archetype || archetype === "other" || archetype === "travel-hospitality";
+  const top = [...(report.classification?.categories ?? [])].filter((category) => category.confidence >= 0.5).sort((left, right) => right.confidence - left.confidence)[0];
+  const family = top?.name.split("/").filter(Boolean)[0];
+  if (blurred && family && !/^travel/i.test(family)) return family.toLowerCase();
+  return !archetype || archetype === "other" ? "general" : archetype.replaceAll("-", " / ");
+}
+
 export function hostName(report: ReportRecord): string {
   try {
     return new URL(report.requestedUrl).hostname.replace(/^www\./, "").toLowerCase();
@@ -246,7 +259,9 @@ export function modelView(report: ReportRecord): ModelView {
   // each stays out unless something connects it or someone confirmed it.
   const offeringCandidates = offeringPool.filter((entity) => {
     if (entityProvenance(entity) !== "inferred" || connected.has(entity.id)) return true;
-    if (entity.types.includes("Event") || entity.types.includes("Offer")) return false;
+    // A priced offer is a thing the business sells ("$2 Sodas"); an unpriced one is a banner ("Final Sale").
+    if (entity.types.includes("Offer")) return /[$€£¥]\s?\d|\d\s?(€|eur|usd|gbp)\b/i.test(entity.name);
+    if (entity.types.includes("Event")) return false;
     // A collection the text names is where things are filed, not one of the things.
     return !looksLikeCategory(entity.name);
   });
@@ -278,7 +293,10 @@ export function modelView(report: ReportRecord): ModelView {
   const business = businessPool[0] ? view(businessPool[0]) : null;
   const typeFor = (entity: DomainEntity) => (productLines.includes(entity) && entity.types.includes("Brand") ? "ProductLine" : undefined);
   const offeringView = (entity: DomainEntity, variants: number): ViewEntity => ({ ...view(entity, variants, typeFor(entity)), ...(prominence(entity) >= 2 ? { prominent: true } : {}) });
-  const shownOfferings = offerings.slice(0, 3).map(({ entity, variants }) => offeringView(entity, variants));
+  // A bare word only the text names ("Underwear", "Pro") is a label, not a card a stranger reads as what the
+  // business sells; it waits behind "Show all". A name the site is built around ("Basecamp") is not bare.
+  const cardWorthy = offerings.filter(({ entity }) => entityProvenance(entity) !== "inferred" || !looksGeneric(entity.name) || prominence(entity) >= 2);
+  const shownOfferings = cardWorthy.slice(0, 3).map(({ entity, variants }) => offeringView(entity, variants));
   const containerOf = (entity: DomainEntity) => {
     const up = relations.find((relation) => relation.from === entity.id && relation.kind === "located-in");
     return up ? all.find((candidate) => candidate.id === up.to)?.name : undefined;

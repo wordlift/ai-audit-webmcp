@@ -7,7 +7,7 @@ import { ActionDetailDialog } from "./ActionDetailDialog";
 import { AgentDiary } from "./AgentDiary";
 import { AgentDoors } from "./AgentDoors";
 import { ContextEnginePreview, cardAssertions, contextEngineSummary } from "./ContextEnginePreview";
-import { modelView } from "../../shared/format/modelView.js";
+import { modelView, siteKind } from "../../shared/format/modelView.js";
 import { EngineStatus } from "./EngineStatus";
 import { holds, useReportEngine } from "../engine/EngineContext";
 import { track } from "../engine/track";
@@ -159,7 +159,7 @@ export function ownWords(report: ReportRecord): string | null {
   const entry = pages.find((page) => page.role === "entry") ?? pages[0];
   const words = entry?.description?.replace(/\s+/g, " ").trim();
   if (!words || words.length < 24 || words.toLowerCase() === entry?.title?.toLowerCase()) return null;
-  return words.length > 180 ? `${words.slice(0, 177).replace(/\s+\S*$/, "")}…` : words;
+  return words.length > 150 ? `${words.slice(0, 147).replace(/\s+\S*$/, "")}…` : words;
 }
 
 /** "3 crawlers and 1 agent have read this": the readers that are not people, summed across days. */
@@ -280,7 +280,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   const primary = report.classification?.primaryArchetype;
   const settledChain = relationChain(report);
   const fullChain = settledChain ?? relationChain(report, "with-text");
-  const archetype = !primary || primary === "other" ? "general" : primary.replaceAll("-", " / ");
+  const archetype = siteKind(report);
   const score = report.score?.value;
   const ago = readAgo(report.collectedAt, now());
   const gap = gapLine(capabilities);

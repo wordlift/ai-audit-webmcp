@@ -150,7 +150,7 @@ describe("the first screen", () => {
     ]);
     // What a review said shows where the model is: the decisions, and what is not ours.
     expect(screen.getByText(/decisions added/)).toHaveTextContent("Reviewed · 3 decisions added · not ours: Somebody Else GmbH");
-    expect(screen.getByText(/declared by the site/)).toHaveTextContent("1 declared by the site · 1 read from its text · 1 confirmed in a review. Where each came from");
+    expect(screen.getByText(/declared by the site/)).toHaveTextContent("1 declared by the site · 1 read from its text · 1 confirmed in a review. Mark each one Relevant or Not ours. Where each came from");
     // A draft nobody claimed says nothing about its engine in the first thirty seconds.
     expect(screen.queryByText(/Draft Context Engine/)).toBeNull();
     // Review beside the model, then the proof.

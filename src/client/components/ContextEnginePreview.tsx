@@ -183,6 +183,7 @@ export function ContextEnginePreview({
         {summary.declared === 0 && summary.confirmed === 0 && summary.inferred > 0
           ? `${host} declares none of these in its markup: WordLift read ${summary.inferred === 1 ? "it" : `all ${summary.inferred}`} from its text.`
           : `${provenance.join(" · ")}.`}{" "}
+        {onSave && <span className="engine-counts-hint">Mark each one Relevant or Not ours. </span>}
         {everything.length > summary.preview.length && (
           <>
             <button type="button" className="engine-show-all" aria-expanded={showAll} onClick={() => setShowAll((current) => !current)}>
