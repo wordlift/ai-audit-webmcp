@@ -178,6 +178,16 @@ describe("the first screen", () => {
   });
 });
 
+describe("a site that could not be read", () => {
+  it("says so in the headline, with the reason and a way to try again, instead of a score of nothing", () => {
+    const blocked = { ...report, status: "partial", errors: [{ code: "site_blocked", phase: "understanding", message: "The site refused automated access.", retryable: true }], collectedAt: report.collectedAt } as unknown as ReportRecord;
+    renderScreen(blocked);
+    expect(screen.getByRole("heading", { level: 1, name: "WordLift could not read alpina.travel." })).toBeVisible();
+    expect(screen.getByText(/Nothing below is about the business yet/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
+  });
+});
+
 describe("in the business's own words", () => {
   it("quotes the home page's own description, shortened, and says nothing when it has none worth quoting", () => {
     const page = (description?: string, title = "Alpina") => ({ ...report, contextGraph: { pages: [{ url: "https://alpina.travel/", title, role: "entry", headings: [], entityIds: [], ...(description ? { description } : {}) }], entities: [], lexicalEntries: [], interfaces: [], bindings: [] } }) as unknown as ReportRecord;

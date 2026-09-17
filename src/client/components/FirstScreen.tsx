@@ -14,7 +14,7 @@ import { track } from "../engine/track";
 import { DeepScanOffer } from "./DeepScanOffer";
 import { publishUrl } from "./FixPanel";
 import { entityRole } from "../../shared/format/businessModel.js";
-import { onlyFoundationMissing } from "../../shared/format/explainError.js";
+import { explainReportError, onlyFoundationMissing, unreadableReason } from "../../shared/format/explainError.js";
 import { entityTypeLabel, groupEntities } from "./UnderstandPanel";
 
 /**
@@ -285,6 +285,8 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   const ago = readAgo(report.collectedAt, now());
   const gap = gapLine(capabilities);
   const engine = contextEngineSummary(report);
+  // A site that could not be read has no model and no proof: the page says that, not a score of nothing.
+  const unreadable = !engine ? unreadableReason(report.errors) : null;
   // The line of how it fits together says again what the sentence already says when the sentence names the places.
   // Once the sentence says where ("..., in Mariapfarr, Lungau."), the line only repeats it.
   const sentenceSaysWhere = Boolean(engine?.sentence && fullChain && fullChain.slice(1).some((step) => step.startsWith("in ") && engine.sentence!.includes(step.slice(3))));
@@ -312,9 +314,15 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         {/* The moment is the headline: what the business is, in one sentence from what was read. What
             a Context Engine is follows in one plain line, so nobody has to guess who built what. */}
         <h1 id="first-screen-title" className={engine?.sentence ? "first-understood" : undefined}>
-          {engine?.sentence ?? (engine ? `WordLift built a first Context Engine for ${host}.` : headline(capabilities, host))}
+          {engine?.sentence ?? (engine ? `WordLift built a first Context Engine for ${host}.` : unreadable ? `WordLift could not read ${host}.` : headline(capabilities, host))}
         </h1>
-        {!engine && gap && <p className="first-sentence">{gap}</p>}
+        {unreadable && (
+          <p className="first-sentence">
+            {explainReportError(unreadable)} Nothing below is about the business yet.{" "}
+            <button type="button" className="run-again" onClick={() => void runAgain()} disabled={rerunning}>{rerunning ? "Reading again…" : "Try again"}</button>
+          </p>
+        )}
+        {!engine && !unreadable && gap && <p className="first-sentence">{gap}</p>}
         {engine && (
           <p className="first-context">
             From {engine.pages} {engine.pages === 1 ? "page" : "pages"} of {host}, WordLift built a model of this business that AI agents can use to

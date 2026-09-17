@@ -1,4 +1,4 @@
-import { looksLikeCategory, modelView } from "../../src/shared/format/modelView.js";
+import { looksGeneric, looksLikeCategory, modelView } from "../../src/shared/format/modelView.js";
 import type { ReportRecord } from "../../src/shared/types/index.js";
 
 const entity = (id: string, name: string, type: string, extra: Record<string, unknown> = {}) => ({ id, name, types: [type], alternateNames: [], sourceUrls: ["https://x/"], sameAs: [], offers: [], confidence: 0.8, ...extra });
@@ -118,6 +118,43 @@ describe("the model a stranger meets", () => {
     const lodging = modelView(report("alpina.travel", [entity("org", "AlpiNest", "LodgingBusiness"), entity("town", "Mariapfarr", "Place", { origin: "inferred" }), entity("region", "Lungau", "Place", { origin: "inferred" })], [{ from: "town", to: "region", kind: "located-in", provenance: "inferred", sourceUrl: "https://x/" }]));
     expect(lodging.places.find((place) => place.name === "Mariapfarr")).toBeDefined();
     expect(lodging.preview.find((item) => item.name === "Mariapfarr")?.within).toBe("Lungau");
+  });
+
+  it("leads with the name the site is built around, and keeps page labels out of the sentence (as on a software site)", () => {
+    const pages = ["https://basecamp.com/", "https://basecamp.com/features", "https://basecamp.com/pricing", "https://basecamp.com/guides"];
+    const graphReport = {
+      ...report("basecamp.com", [
+        entity("co", "37signals", "Organization", { origin: "inferred" }),
+        entity("bc", "Basecamp", "SoftwareApplication", { origin: "inferred", sourceUrls: pages }),
+        entity("bc5", "BC5", "SoftwareApplication", { origin: "inferred" }),
+        entity("cli", "CLI", "SoftwareApplication", { origin: "inferred" }),
+        entity("pro", "Pro", "Product", { origin: "inferred" }),
+        entity("page", "Project page", "SoftwareApplication", { origin: "inferred" }),
+        entity("skills", "Skills", "SoftwareApplication", { origin: "inferred" }),
+      ]),
+      classification: { primaryArchetype: "saas", categories: [{ name: "/Computers & Electronics/Software/Business & Productivity Software", confidence: 1 }] },
+    } as unknown as ReportRecord;
+    const view = modelView(graphReport);
+    expect(view.sentence).toBe("37signals is a software company offering software such as Basecamp.");
+    expect(view.preview.map((item) => item.name).slice(0, 2)).toEqual(["37signals", "Basecamp"]);
+    for (const name of ["Project page", "CLI", "Pro", "Skills", "Eyewear"]) expect(looksGeneric(name)).toBe(true);
+    for (const name of ["Data Connect", "Men's Runner NZ Slip On", "Samspitze 4", "BC5", "WordLift Agent"]) expect(looksGeneric(name)).toBe(false);
+  });
+
+  it("says what a business is by what its pages are about, and leaves mentions of other businesses out (as on a restaurant site)", () => {
+    const shack = {
+      ...report("shakeshack.com", [
+        entity("org", "Shake Shack", "Organization"),
+        entity("glued", "Help Center\nCatering", "Restaurant", { origin: "inferred" }),
+        entity("candy", "Reese's", "Restaurant", { origin: "inferred" }),
+        entity("deal", "$2 Sodas", "Offer", { origin: "inferred" }),
+      ]),
+      classification: { primaryArchetype: "travel-hospitality", categories: [{ name: "/Food & Drink/Restaurants/Fast Food", confidence: 1 }] },
+    } as unknown as ReportRecord;
+    const view = modelView(shack);
+    expect(view.sentence).toBe("Shake Shack is a restaurant business.");
+    expect(view.counts.businesses).toBe(1);
+    expect(view.preview.map((item) => item.name)).toEqual(["Shake Shack"]);
   });
 
   it("keeps a platform a page mentions out of what the business offers, except on the platform's own site", () => {

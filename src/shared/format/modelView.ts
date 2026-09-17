@@ -18,6 +18,8 @@ export interface ViewEntity {
   provenance: EntityProvenance;
   /** How many more variants of this product the site lists, folded into it. */
   variants: number;
+  /** A name the site is built around: in its domain or titles, or on more than one page read. */
+  prominent?: boolean;
 }
 
 export interface ModelView {
@@ -61,6 +63,42 @@ const ARCHETYPE_NOUNS: Record<string, string> = {
 const GENERIC_BUSINESS_TYPES = new Set(["Organization", "Corporation", "LocalBusiness"]);
 
 /**
+ * What a business is, from the content category the classifier read on its pages, most specific first:
+ * "/Food & Drink/Restaurants/Fast Food" is a restaurant business, whatever archetype restaurants share
+ * with hotels. Only a category the classifier is fairly sure of speaks.
+ */
+const CATEGORY_NOUNS: Array<[string, string]> = [
+  ["/Food & Drink/Restaurants", "restaurant business"],
+  ["/Food & Drink", "food and drink business"],
+  ["/Travel & Transportation/Hotels & Accommodations", "hotel business"],
+  ["/Travel & Transportation", "travel business"],
+  ["/Travel", "travel business"],
+  ["/Computers & Electronics/Software", "software company"],
+  ["/Internet & Telecom", "internet company"],
+  ["/Apparel", "fashion brand"],
+  ["/Shopping", "shop"],
+  ["/Finance/Insurance", "insurance company"],
+  ["/Finance", "financial services company"],
+  ["/Health", "health business"],
+  ["/Beauty & Fitness", "beauty and fitness business"],
+  ["/Real Estate", "real estate business"],
+  ["/Autos & Vehicles", "automotive business"],
+  ["/Jobs & Education/Education", "education provider"],
+  ["/News", "publisher"],
+  ["/Arts & Entertainment", "entertainment business"],
+  ["/Business & Industrial", "business services company"],
+];
+
+function categoryNoun(report: ReportRecord): string | null {
+  const categories = [...(report.classification?.categories ?? [])].filter((category) => category.confidence >= 0.5).sort((left, right) => right.confidence - left.confidence);
+  for (const category of categories) {
+    const match = CATEGORY_NOUNS.find(([prefix]) => category.name.startsWith(prefix));
+    if (match) return match[1];
+  }
+  return null;
+}
+
+/**
  * A collection a shop or a site files things under ("Men's Shoes", "New Arrivals", "Apparel &
  * Accessories") rather than a thing it offers: two things joined, or a short run of words ending in a
  * plural, with no number and no brand-like capital inside a word.
@@ -73,6 +111,19 @@ export function looksLikeCategory(name: string): boolean {
   if (/\d/.test(name) || words.length > 3) return false;
   if (words.some((word) => /[a-z][A-Z]/.test(word) || /^[A-Z]{2,}$/.test(word))) return false;
   return /[a-z]{3,}s$/.test(words[words.length - 1] ?? "");
+}
+
+/**
+ * A name that is a label on the page rather than a thing the business offers: a phrase with an
+ * ordinary lowercase word in it ("Project page"), a short acronym ("CLI", "SDK"), or one plain word
+ * ("Pro", "Skills", "Unlimited"). Prominence on the site outweighs it: "Basecamp" is one word too.
+ */
+export function looksGeneric(name: string): boolean {
+  const words = name.trim().split(/\s+/);
+  if (words.length > 1) return words.slice(1).some((word) => /^[a-z]{3,}$/.test(word) && !/^(and|of|for|the|with|by|to|in|on)$/.test(word));
+  const word = words[0] ?? "";
+  if (/^[A-Z]{2,4}$/.test(word)) return true;
+  return /^[A-Z][a-z]+$/.test(word) && !/\d/.test(word);
 }
 
 /** Where a variant's own words begin: "Men's Runner NZ Slip On - Mushroom (Mushroom Sole) - Size 10". */
@@ -111,7 +162,8 @@ const PROVENANCE_RANK: Record<EntityProvenance, number> = { "human-confirmed": 0
 export function modelView(report: ReportRecord): ModelView {
   const host = hostName(report);
   const graph = report.contextGraph;
-  const all = (graph?.entities ?? []).filter((entity) => entity.humanPriority !== "demoted");
+  // A name spread over lines is two page fragments glued by the extractor, never a thing.
+  const all = (graph?.entities ?? []).filter((entity) => entity.humanPriority !== "demoted" && !/[\r\n]/.test(entity.name));
   const relations = (graph?.relations ?? []).filter((relation) => all.some((entity) => entity.id === relation.from) && all.some((entity) => entity.id === relation.to));
   const connected = new Set(relations.flatMap((relation) => [relation.from, relation.to]));
   const primary = (entity: DomainEntity) => entity.humanPriority === "primary";
@@ -154,16 +206,24 @@ export function modelView(report: ReportRecord): ModelView {
   // Beside a business the site declares, a brand only the text names is a line it sells ("Runner NZ"), not a second business.
   const settledBusiness = distinct.some((entity) => entityProvenance(entity) !== "inferred");
   const productLines = settledBusiness ? distinct.filter((entity) => entityProvenance(entity) === "inferred" && entity.types.includes("Brand")) : [];
-  const ownBusinesses = distinct.filter((entity) => !productLines.includes(entity));
+  // Any other business only the text names, beside the one the site declares, is a mention ("Reese's" in a
+  // shake), not a second business of this site's; a review can still confirm it.
+  const ownBusinesses = distinct.filter((entity) => !productLines.includes(entity) && !(settledBusiness && entityProvenance(entity) === "inferred" && !connected.has(entity.id)));
   const businessPool = (ownBusinesses.length > 0 ? ownBusinesses : businesses).sort((left, right) => rank(left, right));
 
   // Among names the model is equally sure of, one that carries the business's own name ("WordLift Agent")
   // or names a thing in more than one word ("Data Connect") is more likely what it sells than a bare
   // category ("Eyewear").
   const ownName = businessPool[0] ? businessName(businessPool[0]) : "";
+  const hostLabel = host.split(".")[0] ?? "";
+  // The site is about the name it is built around: its domain, its titles, the most pages.
+  const prominence = (entity: DomainEntity) => {
+    const name = normalized(entity.name).replace(/\s+/g, "");
+    return (hostLabel && name === hostLabel ? 6 : 0) + salience(entity) + Math.min(3, entity.sourceUrls.length - 1);
+  };
   const specificity = (entity: DomainEntity) => {
     const name = normalized(entity.name);
-    return (ownName && name.includes(ownName) ? 2 : 0) + (name.split(" ").length > 1 ? 1 : 0);
+    return (ownName && name.includes(ownName) ? 2 : 0) + (name.split(" ").length > 1 ? 1 : 0) + prominence(entity) - (looksGeneric(entity.name) ? 3 : 0);
   };
 
   // Offerings, one per product: variants fold into the shortest name they share a base with.
@@ -203,7 +263,8 @@ export function modelView(report: ReportRecord): ModelView {
 
   const business = businessPool[0] ? view(businessPool[0]) : null;
   const typeFor = (entity: DomainEntity) => (productLines.includes(entity) ? "ProductLine" : undefined);
-  const shownOfferings = offerings.slice(0, 3).map(({ entity, variants }) => view(entity, variants, typeFor(entity)));
+  const offeringView = (entity: DomainEntity, variants: number): ViewEntity => ({ ...view(entity, variants, typeFor(entity)), ...(prominence(entity) >= 2 ? { prominent: true } : {}) });
+  const shownOfferings = offerings.slice(0, 3).map(({ entity, variants }) => offeringView(entity, variants));
   const containerOf = (entity: DomainEntity) => {
     const up = relations.find((relation) => relation.from === entity.id && relation.kind === "located-in");
     return up ? all.find((candidate) => candidate.id === up.to)?.name : undefined;
@@ -222,7 +283,7 @@ export function modelView(report: ReportRecord): ModelView {
   const counted = [...(ownBusinesses.length > 0 ? ownBusinesses : businesses), ...offerings.map((item) => item.entity), ...places, ...people];
   return {
     business,
-    offerings: offerings.map(({ entity, variants }) => view(entity, variants, typeFor(entity))),
+    offerings: offerings.map(({ entity, variants }) => offeringView(entity, variants)),
     places: places.map((entity) => view(entity)),
     preview,
     counts: {
@@ -236,7 +297,7 @@ export function modelView(report: ReportRecord): ModelView {
       inferred: counted.filter((entity) => entityProvenance(entity) === "inferred").length,
       confirmed: counted.filter((entity) => entityProvenance(entity) === "human-confirmed").length,
     },
-    sentence: sentenceFor(report, business, offerings.map(({ entity, variants }) => view(entity, variants, typeFor(entity))), relations, all, offerings.length + setAside.length),
+    sentence: sentenceFor(report, business, offerings.map(({ entity, variants }) => offeringView(entity, variants)), relations, all, offerings.length + setAside.length),
   };
 }
 
@@ -279,16 +340,18 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   const subject = business ?? offerings[0];
   if (!subject) return null;
   const archetype = report.classification?.primaryArchetype ?? "other";
-  const kind = business && GENERIC_BUSINESS_TYPES.has(subject.type) && ARCHETYPE_NOUNS[archetype] ? ARCHETYPE_NOUNS[archetype]! : typeLabel(subject.type);
+  const kind = business && GENERIC_BUSINESS_TYPES.has(subject.type) ? categoryNoun(report) ?? ARCHETYPE_NOUNS[archetype] ?? typeLabel(subject.type) : typeLabel(subject.type);
   // Without a business the sentence is about the leading offering alone: it offers nothing itself.
   // What the site declares or a review confirmed speaks for the business before what the text only mentions.
   const settled = offerings.filter((offering) => offering.provenance !== "inferred");
   // Only what the site declares, when it declares something: a sentence that names a slogan as a product
   // loses the reader faster than one that names a single product.
   const candidates = business ? (settled.length > 0 ? settled : offerings) : [];
-  // With specific names to say, a bare one-word name ("Eyewear") stays in the cards, out of the sentence.
-  const specific = candidates.filter((offering) => offering.name.trim().split(/\s+/).length > 1 || /\d/.test(offering.name));
-  const pool = specific.length >= 2 ? specific : candidates;
+  // What the site is built around speaks for it; otherwise every name that is not a page label does.
+  // "Basecamp" leads basecamp.com; "Project page", "CLI" and a bare "Eyewear" stay in the cards.
+  const prominent = candidates.filter((offering) => offering.prominent);
+  const named = candidates.filter((offering) => !looksGeneric(offering.name));
+  const pool = prominent.length > 0 ? prominent : named.length > 0 ? named : candidates.slice(0, 1);
   // "and 1 more" reads as a thing left out on purpose: name four when four is all there is.
   const shown = pool.slice(0, pool.length <= 4 ? 4 : 3);
   const totalOfferings = pool.length;
@@ -298,8 +361,8 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   // Counted before collections and slogans were set aside: a shop with "Men's Shoes" sells more than one shoe.
   const allOfferings = business ? Math.max(offerings.length, everything) : 0;
   const kindOf = pluralKind(offerings.map((offering) => offering.type));
-  const named = list(shown.map((offering) => offering.name));
-  const nouns = shown.length === 0 ? "" : more > 0 ? `${named} and ${more} more` : allOfferings > shown.length ? `${kindOf} such as ${named}` : named;
+  const said = list(shown.map((offering) => offering.name));
+  const nouns = shown.length === 0 ? "" : more > 0 ? `${said} and ${more} more` : allOfferings > shown.length ? `${kindOf} such as ${said}` : said;
   const place = where(subject.id) ?? (shown[0] ? where(shown[0].id) : undefined);
   const placeName = place ? names.get(place.to) : undefined;
   const placeOf = placeName ? where(place!.to) : undefined;

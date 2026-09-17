@@ -61,6 +61,14 @@ export function onlyFoundationMissing(errors: ReportError[]): boolean {
   return visible.length > 0 && visible.every((error) => error.provider === "wordlift-ai-audit");
 }
 
+/** What stopped the site's pages from being read at all: the collector, or a destination the service refuses. */
+const UNREADABLE_CODES = new Set(["site_blocked", "collection_timeout", "collector_failed", "dns_failure", "private_network", "too_many_redirects", "response_too_large", "unsupported_port", "invalid_url"]);
+
+/** The reason a site could not be read, when that is what happened; null when its pages were read. */
+export function unreadableReason(errors: ReportError[]): ReportError | null {
+  return errors.find((error) => UNREADABLE_CODES.has(error.code)) ?? null;
+}
+
 /** A heading for a report that could not be built, chosen by what actually went wrong. */
 export function failureTitle(errors: ReportError[]): string {
   const codes = new Set(errors.map((error) => error.code));
