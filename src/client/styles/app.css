@@ -862,8 +862,8 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .engine-entity-name { font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
 .engine-entity-type { grid-row: 2; color: var(--muted); font-size: 0.82rem; }
 /* A decision where the thing is read: relevant, or not ours. */
-.engine-entity-actions { grid-column: 1 / -1; display: flex; gap: 6px; margin-top: 6px; }
-.engine-entity-actions button { padding: 2px 9px; border: 1px solid var(--line-subtle); border-radius: 999px; background: var(--surface); color: var(--muted); font: inherit; font-size: 0.76rem; cursor: pointer; }
+.engine-entity-actions { grid-row: 2; grid-column: 2; align-self: end; justify-self: end; display: flex; gap: 4px; margin-top: 4px; }
+.engine-entity-actions button { padding: 1px 8px; border: 1px solid var(--line-subtle); border-radius: 999px; background: var(--surface); color: var(--muted); font: inherit; font-size: 0.76rem; cursor: pointer; }
 .engine-entity-actions button:hover { color: var(--ink); border-color: color-mix(in srgb, var(--ink) 30%, transparent); }
 .engine-entity-actions button[aria-pressed="true"] { color: var(--ink); border-color: transparent; }
 .engine-entity.is-relevant { border-color: var(--state-agent-ready); }
@@ -875,7 +875,7 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .engine-save .review-cta { padding: 7px 14px; }
 .engine-save-undo, .engine-show-all { padding: 0; border: 0; background: none; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
 .engine-save-error { flex-basis: 100%; color: var(--state-missing); }
-.engine-provenance { grid-row: 1 / span 2; grid-column: 2; align-self: center; padding: 3px 8px; border-radius: 999px; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: help; }
+.engine-provenance { grid-row: 1; grid-column: 2; align-self: start; justify-self: end; padding: 3px 8px; border-radius: 999px; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: help; }
 .engine-provenance-declared { background: color-mix(in srgb, var(--brand) 10%, white); color: var(--brand); }
 .engine-provenance-inferred { background: color-mix(in srgb, var(--state-unverified) 22%, white); color: var(--ink); }
 .engine-provenance-human-confirmed { background: color-mix(in srgb, var(--state-agent-ready) 20%, white); color: var(--ink); }
