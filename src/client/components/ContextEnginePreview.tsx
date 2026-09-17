@@ -1,5 +1,6 @@
 import type { ReportRecord } from "../../shared/types/index.js";
-import { businessModel, type EntityProvenance, type ModelledEntity } from "../../shared/format/businessModel.js";
+import type { EntityProvenance } from "../../shared/format/businessModel.js";
+import { modelView, type ModelView, type ViewEntity } from "../../shared/format/modelView.js";
 import { entityTypeLabel } from "./UnderstandPanel";
 
 /**
@@ -29,8 +30,11 @@ export interface ContextEngineSummary {
   inferred: number;
   confirmed: number;
   relationships: number;
-  /** What matters most, never a page or an article: the business, its offerings, its places, its people. */
-  preview: ModelledEntity[];
+  /** What matters most, never a page or an article: the business, up to three offerings, up to two places. */
+  preview: ViewEntity[];
+  /** One sentence of what the business is, from the model's own facts. */
+  sentence: string | null;
+  view: ModelView;
   /** Named "not ours" in a review: said on the screen, so a correction is seen to land. */
   notOurs: string[];
   /** Human decisions the review filed, when this report is a reviewed one. */
@@ -42,16 +46,18 @@ export interface ContextEngineSummary {
 export function contextEngineSummary(report: ReportRecord): ContextEngineSummary | null {
   const pages = report.contextGraph?.pages.length ?? 0;
   if (pages === 0) return null;
-  const model = businessModel(report, "");
-  if (model.counts.entities === 0) return null;
+  const view = modelView(report);
+  if (view.preview.length === 0) return null;
   return {
     pages,
-    entities: model.counts.entities,
-    declared: model.counts.declared,
-    inferred: model.counts.inferred,
-    confirmed: model.counts.humanConfirmed,
-    relationships: model.relationships.length,
-    preview: model.entities.filter((entity) => entity.role !== "content").slice(0, MAX_PREVIEW),
+    entities: view.counts.declared + view.counts.inferred + view.counts.confirmed,
+    declared: view.counts.declared,
+    inferred: view.counts.inferred,
+    confirmed: view.counts.confirmed,
+    relationships: view.counts.relationships,
+    preview: view.preview.slice(0, MAX_PREVIEW),
+    sentence: view.sentence,
+    view,
     notOurs: (report.contextGraph?.entities ?? []).filter((entity) => entity.humanPriority === "demoted").map((entity) => entity.name),
     decisions: report.refinement ? report.refinement.decisions : null,
     filedBy: report.refinement?.filedBy ?? null,
@@ -61,11 +67,11 @@ export function contextEngineSummary(report: ReportRecord): ContextEngineSummary
 const count = (value: number, noun: string, plural = `${noun}s`) => `${value} ${value === 1 ? noun : plural}`;
 
 export function ContextEnginePreview({ summary, onExplore }: { summary: ContextEngineSummary; onExplore?: () => void }) {
-  // A zero says nothing a reader needs: "4 declared", not "4 declared · 0 inferred".
+  // A zero says nothing a reader needs: "4 declared by the site", not "· 0 read from its text".
   const provenance = [
-    [summary.declared, "declared"],
-    [summary.inferred, "inferred"],
-    [summary.confirmed, "confirmed"],
+    [summary.declared, "declared by the site"],
+    [summary.inferred, "read from its text"],
+    [summary.confirmed, "confirmed in a review"],
   ].filter(([value]) => Number(value) > 0).map(([value, word]) => `${value} ${word}`);
   return (
     <div className="engine-preview">
@@ -79,7 +85,10 @@ export function ContextEnginePreview({ summary, onExplore }: { summary: ContextE
         {summary.preview.map((entity) => (
           <li key={entity.id} className={`engine-entity engine-entity-${entity.provenance}`}>
             <span className="engine-entity-name">{entity.name}</span>
-            <span className="engine-entity-type">{entityTypeLabel(entity.type)}</span>
+            <span className="engine-entity-type">
+              {entityTypeLabel(entity.type)}
+              {entity.variants > 0 && ` · ${entity.variants + 1} variants`}
+            </span>
             <span
               className={`engine-provenance engine-provenance-${entity.provenance}`}
               title={entity.provenance === "human-confirmed" && summary.filedBy === "owner" ? "Confirmed by the site's verified owner." : entity.provenance === "human-confirmed" && summary.filedBy !== "owner" ? "Confirmed in a review; the reviewer has not proved the site is theirs." : PROVENANCE_HINT[entity.provenance]}
@@ -90,10 +99,8 @@ export function ContextEnginePreview({ summary, onExplore }: { summary: ContextE
         ))}
       </ul>
       <p className="engine-counts">
-        {count(summary.entities, "important thing")}
-        {summary.relationships > 0 && <> · {count(summary.relationships, "relationship")}</>}
-        {provenance.length > 0 && <span className="engine-counts-provenance"> ({provenance.join(" · ")})</span>}
-        {" "}<a href="#understand" onClick={onExplore}>See everything we understood</a>
+        {provenance.join(" · ")}.{" "}
+        <a href="#understand" onClick={onExplore}>See everything we understood</a>
       </p>
     </div>
   );

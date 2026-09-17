@@ -7,6 +7,7 @@ import { ActionDetailDialog } from "./ActionDetailDialog";
 import { AgentDiary } from "./AgentDiary";
 import { AgentDoors } from "./AgentDoors";
 import { ContextEnginePreview, contextEngineSummary } from "./ContextEnginePreview";
+import { modelView } from "../../shared/format/modelView.js";
 import { EngineStatus } from "./EngineStatus";
 import { holds, useReportEngine } from "../engine/EngineContext";
 import { track } from "../engine/track";
@@ -169,30 +170,18 @@ function pluralNoun(count: number, label: string): string {
  */
 export function foundLine(report: ReportRecord): { pages: number; parts: string[] } | null {
   const pages = report.contextGraph?.pages.length ?? 0;
-  const entities = (report.contextGraph?.entities ?? []).filter((entity) => entity.humanPriority !== "demoted");
-  if (pages === 0 || entities.length === 0) return null;
-  const offerings = new Map<string, number>();
-  let businesses = 0;
-  let places = 0;
-  let people = 0;
-  for (const entity of entities) {
-    const role = entityRole(entity);
-    if (role === "business") businesses += 1;
-    else if (role === "place") places += 1;
-    else if (role === "person") people += 1;
-    else if (role === "offering") {
-      const label = entityTypeLabel(entity.types[0]);
-      offerings.set(label, (offerings.get(label) ?? 0) + 1);
-    }
-  }
+  if (pages === 0) return null;
+  // Counted the way the first screen shows the model: variants as one product, the site's own name not a business.
+  const { counts } = modelView(report);
   const parts: string[] = [];
-  if (businesses > 0) parts.push(pluralNoun(businesses, "business"));
-  for (const [label, count] of [...offerings.entries()].sort((left, right) => right[1] - left[1]).slice(0, 3)) parts.push(pluralNoun(count, label));
-  if (places > 0) parts.push(pluralNoun(places, "place"));
-  if (people > 0) parts.push(people === 1 ? "1 person" : `${people} people`);
+  if (counts.businesses > 0) parts.push(pluralNoun(counts.businesses, "business"));
+  for (const { label, count } of counts.offerings.slice(0, 3)) parts.push(pluralNoun(count, label));
+  if (counts.places > 0) parts.push(pluralNoun(counts.places, "place"));
+  if (counts.people > 0) parts.push(counts.people === 1 ? "1 person" : `${counts.people} people`);
+  if (parts.length === 0) return null;
   const expected = (report.capabilities ?? []).filter((capability) => capability.expected).length;
   if (expected > 0) parts.push(`${expected} ${expected === 1 ? "thing" : "things"} agents should be able to do here`);
-  return parts.length > 0 ? { pages, parts } : null;
+  return { pages, parts };
 }
 
 /**
@@ -211,16 +200,34 @@ export function relationChain(report: ReportRecord, include: "settled" | "with-t
     .filter((entity) => entityRole(entity) === "business")
     .sort((left, right) => Number(right.humanPriority === "primary") - Number(left.humanPriority === "primary") || outgoing(right.id, "offers").length - outgoing(left.id, "offers").length || Number(left.origin === "inferred") - Number(right.origin === "inferred"));
   const business = businesses[0];
-  if (!business) return null;
-  const steps = [business.name];
-  const offered = outgoing(business.id, "offers")[0];
-  let last = business.id;
-  if (offered) {
-    steps.push(`offers ${byId.get(offered.to)!.name}`);
-    last = offered.to;
+  if (business) {
+    const steps = [business.name];
+    const offered = outgoing(business.id, "offers")[0];
+    let last = business.id;
+    if (offered) {
+      steps.push(`offers ${byId.get(offered.to)!.name}`);
+      last = offered.to;
+    }
+    const where = outgoing(last, "located-in")[0] ?? (last !== business.id ? outgoing(business.id, "located-in")[0] : undefined);
+    if (where) steps.push(`in ${byId.get(where.to)!.name}`);
+    if (steps.length >= 2) return steps;
   }
-  const where = outgoing(last, "located-in")[0] ?? (last !== business.id ? outgoing(business.id, "located-in")[0] : undefined);
-  if (where) steps.push(`in ${byId.get(where.to)!.name}`);
+  // No connection starts at the business: the shape of what it offers still reads, place within place.
+  // "Samspitze 4 → in Mariapfarr → in Lungau".
+  const start = entities
+    .filter((entity) => entityRole(entity) === "offering" && outgoing(entity.id, "located-in").length > 0)
+    .sort((left, right) => Number(right.humanPriority === "primary") - Number(left.humanPriority === "primary") || Number(left.origin === "inferred") - Number(right.origin === "inferred"))[0];
+  if (!start) return null;
+  const steps = [start.name];
+  const seen = new Set([start.id]);
+  let at = start.id;
+  for (let hop = 0; hop < 3; hop += 1) {
+    const next = outgoing(at, "located-in").find((relation) => !seen.has(relation.to));
+    if (!next) break;
+    steps.push(`in ${byId.get(next.to)!.name}`);
+    seen.add(next.to);
+    at = next.to;
+  }
   return steps.length >= 2 ? steps : null;
 }
 
@@ -287,6 +294,8 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         {/* The model first: "it understood my business" is the moment, what agents can do is the proof after it. */}
         <h1 id="first-screen-title">{engine ? `We built a first Context Engine for ${host}.` : headline(capabilities, host)}</h1>
         {!engine && gap && <p className="first-sentence">{gap}</p>}
+        {/* The moment: what the business is, in one sentence, before any count. */}
+        {engine?.sentence && <p className="first-understood">{engine.sentence}</p>}
         <p className="first-meta">
           {ago && <span className="read-when">{ago}</span>}
           <span className="chip-arche">{archetype}</span>

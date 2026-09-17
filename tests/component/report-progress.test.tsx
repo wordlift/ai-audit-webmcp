@@ -52,7 +52,7 @@ describe("ReportProgress", () => {
     expect(steps).toHaveTextContent("Found Northstar Lending");
     expect(steps).toHaveTextContent("Working out what agents should be able to do here");
     expect(screen.getByText("85/100")).toBeVisible();
-    expect(screen.getByText(/We call what the site declares rather than counting it/)).toBeVisible();
+    expect(screen.getByText(/call what the site declares rather than counting it/)).toBeVisible();
   });
 
   it("names a connection the markup declares, and marks the call phase once it runs", () => {
@@ -70,6 +70,15 @@ describe("ReportProgress", () => {
     expect(screen.getByText("Northstar Lending → offers Home Loan")).toBeVisible();
     expect(progressSteps(withRelation).find((step) => step.key === "checking")?.state).toBe("active");
     expect(progressSteps(withRelation).find((step) => step.key === "mapping")?.state).toBe("done");
+  });
+
+  it("says how far the reading of the text has got, and waits to work out actions until it is done", () => {
+    const halfway = { ...running, textRead: { read: 1, of: 4 } } as ReportRecord;
+    expect(progressSteps(halfway).find((step) => step.key === "text")).toMatchObject({ state: "active", label: "Reading the text of the pages · 1 of 4" });
+    expect(progressSteps(halfway).find((step) => step.key === "mapping")?.state).toBe("waiting");
+    const read = { ...running, textRead: { read: 4, of: 4 } } as ReportRecord;
+    expect(progressSteps(read).find((step) => step.key === "text")).toMatchObject({ state: "done", label: "Read the text of 4 pages" });
+    expect(progressSteps(read).find((step) => step.key === "mapping")?.state).toBe("active");
   });
 
   it("shows only the first step when nothing has landed yet", () => {

@@ -27,12 +27,15 @@ export function EngineStatus({ report, engine }: { report: ReportRecord; engine:
   if (!engine) return null;
   const newer = newerReview(report, engine);
   const carried = report.refinement?.carried;
+  // A draft nobody claimed is every first visit: nothing to say about it in the first thirty seconds.
+  const quiet = !engine.claimed && engine.owner.state !== "verified" && engine.decisions.total === 0;
+  if (quiet && !newer && !carried) return null;
   return (
     <div className="engine-status">
-      <p className={`engine-status-line engine-status-${engine.owner.state === "verified" ? "verified" : engine.claimed ? "claimed" : "draft"}`}>
+      {!quiet && <p className={`engine-status-line engine-status-${engine.owner.state === "verified" ? "verified" : engine.claimed ? "claimed" : "draft"}`}>
         {engine.owner.state === "verified" && <ShieldCheck size={14} aria-hidden="true" />} {engineLine(engine)}
         {engine.decisions.total > 0 && <> · {engine.decisions.total} {engine.decisions.total === 1 ? "decision" : "decisions"} kept</>}
-      </p>
+      </p>}
       {carried && (
         <p className="engine-carried" role="status">
           Your earlier review carried over to this read: {report.refinement!.decisions} {report.refinement!.decisions === 1 ? "decision" : "decisions"} applied to what the site says today.

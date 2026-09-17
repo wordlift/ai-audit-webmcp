@@ -557,6 +557,8 @@ export const reportRecordSchema = z
     capabilities: z.array(capabilityResultSchema).max(80).optional(),
     /** Present only on a human-refined revision; the machine draft never carries one. */
     refinement: refinementSchema.optional(),
+    /** While an audit runs: how many of the pages sent to the extractor have been read. */
+    textRead: z.object({ read: z.number().int().min(0).max(100), of: z.number().int().min(1).max(100) }).strict().optional(),
     score: readinessScoreSchema.optional(),
     priorities: z.array(priorityGapSchema).max(3).optional(),
     agentDiscovery: agentDiscoverySchema.optional(),

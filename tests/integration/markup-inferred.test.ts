@@ -115,6 +115,46 @@ function orchestrator(markup?: MarkupProvider, extra: Partial<OrchestratorOption
 const audit = (target: AuditOrchestrator, depth?: "basic" | "deep") =>
   target.create({ requestId: randomUUID(), url: "https://alpina.travel/", ...(depth ? { depth } : {}) });
 
+describe("the model forming while the audit runs", () => {
+  it("reads the text as soon as the pages land, without waiting on the foundation audit, and publishes each page as it is read", async () => {
+    let releaseAudit: () => void = () => undefined;
+    const auditGate = new Promise<void>((resolve) => (releaseAudit = resolve));
+    const store = new MemoryReportStore(900_000, () => fixedNow);
+    const { provider, asked } = fakeMarkup();
+    const target = new AuditOrchestrator(store, loadActionModel(), new FixtureProvider(), {
+      publicAppUrl: "https://audit.example/",
+      ttlDays: 30,
+      now: () => fixedNow,
+      mode: "live",
+      reuseWindowMs: 0,
+      providers: {
+        scrape: scraper,
+        markup: provider,
+        audit: { name: "slow-audit", audit: async (url) => { await auditGate; return { url: url.toString(), status: "completed", signals: [], evidence: [], errors: [] }; } },
+      },
+    });
+    const requestId = randomUUID();
+    const finished = target.create({ requestId, url: "https://alpina.travel/", depth: "deep" });
+
+    // The foundation audit is still out, and the extractor has read every page already.
+    let running = await store.get(requestId);
+    for (let wait = 0; wait < 50 && !(running?.textRead?.read === running?.textRead?.of && running?.textRead); wait += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      running = await store.get(requestId);
+    }
+    expect(asked.length).toBe(2);
+    expect(running?.status).toBe("running");
+    expect(running?.textRead).toEqual({ read: 2, of: 2 });
+    expect(running?.contextGraph?.entities.some((entity) => entity.name === "Lungau Valley" && entity.origin === "inferred")).toBe(true);
+
+    releaseAudit();
+    const report = await finished;
+    expect(report.status).not.toBe("running");
+    expect(report.textRead).toBeUndefined();
+    expect(report.contextGraph?.entities.some((entity) => entity.name === "Lungau Valley")).toBe(true);
+  });
+});
+
 describe("the markup a page should have", () => {
   it("tells the extractor what kind of site it is reading, and reads the evidence before anything is inferred", async () => {
     const { provider, asked } = fakeMarkup({ withOffer: true });

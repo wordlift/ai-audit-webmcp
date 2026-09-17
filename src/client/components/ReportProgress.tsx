@@ -45,8 +45,18 @@ export function progressSteps(report: ReportRecord): ProgressStep[] {
     }
   }
   const checking = report.phase === "checking";
+  // The text is read page by page after the markup: said while it happens, with how far it got.
+  const text = report.textRead;
+  const reading = Boolean(text && text.read < text.of) || (pages > 0 && !text && !checking);
+  if (pages > 0) {
+    steps.push(
+      text && text.read >= text.of
+        ? { key: "text", state: "done", label: `Read the text of ${text.of} ${text.of === 1 ? "page" : "pages"}` }
+        : { key: "text", state: "active", label: text ? `Reading the text of the pages · ${text.read} of ${text.of}` : "Reading the text of the pages" },
+    );
+  }
   if (pages > 0 || report.phase !== "understanding") {
-    steps.push({ key: "mapping", state: checking ? "done" : "active", label: "Working out what agents should be able to do here" });
+    steps.push({ key: "mapping", state: checking ? "done" : reading ? "waiting" : "active", label: "Working out what agents should be able to do here" });
   }
   steps.push({ key: "checking", state: checking ? "active" : "waiting", label: "Calling what the site declares, to see what answers" });
   return steps;
@@ -88,8 +98,8 @@ export function ReportProgress({ report }: { report: ReportRecord }) {
       )}
 
       <p className="progress-footnote" role="status">
-        We call what the site declares rather than counting it. This page updates itself; the report
-        appears when the audit lands, usually within a minute.
+        We read the text of every page and call what the site declares rather than counting it. This page
+        updates itself as the model forms; the report appears when the audit lands, usually in one to two minutes.
       </p>
     </div>
   );

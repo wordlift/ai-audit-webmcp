@@ -11,7 +11,9 @@ test("a claimed Context Engine keeps a correction across a new read of the site"
   await page.getByRole("button", { name: /audit my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
   const firstUrl = page.url();
-  await expect(page.getByText(/Context Engine · /).first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /We built a first Context Engine for saas\.example/ })).toBeVisible();
+  // A first visit says nothing about an unclaimed draft.
+  await expect(page.getByText(/Draft Context Engine/)).toHaveCount(0);
 
   // Claim: the address goes with the expansion, and this browser now holds the engine.
   const offer = page.getByRole("region", { name: /claim your context engine/i });

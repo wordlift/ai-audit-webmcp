@@ -148,7 +148,11 @@ describe("the first screen", () => {
     ]);
     // What a review said shows where the model is: the decisions, and what is not ours.
     expect(screen.getByText(/decisions added/)).toHaveTextContent("Reviewed · 3 decisions added · not ours: Somebody Else GmbH");
-    expect(screen.getByText(/important things/)).toHaveTextContent("4 important things · 1 relationship (2 declared · 1 inferred · 1 confirmed)");
+    expect(screen.getByText(/declared by the site/)).toHaveTextContent("1 declared by the site · 1 read from its text · 1 confirmed in a review. See everything we understood");
+    // What the business is, in one sentence, from the model's own facts.
+    expect(screen.getByText("AlpiNest Feriendorf is a lodging business offering Samspitze 4.")).toBeVisible();
+    // A draft nobody claimed says nothing about its engine in the first thirty seconds.
+    expect(screen.queryByText(/Draft Context Engine/)).toBeNull();
     // Review beside the model, then the proof.
     expect(screen.getByRole("button", { name: /Review with ChatGPT/ })).toBeVisible();
     expect(screen.getByRole("heading", { level: 2, name: "Can agents use it?" })).toBeVisible();

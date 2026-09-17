@@ -665,31 +665,36 @@ export class AuditOrchestrator {
       ? providers.scrape.collect(target, { maxPages: pagesForDepth(scanDepth) })
       : Promise.resolve(null);
     const auditPromise = providers.audit ? providers.audit.audit(target) : Promise.resolve(null);
+    const publish = (patch: Partial<ReportRecord>) => (onProgress ? onProgress(patch).catch(() => undefined) : Promise.resolve());
 
-    // Each provider's arrival is published as soon as it lands — the page shows the entities
-    // while the foundation audit is still thinking, and vice versa. The progress jobs sit inside
-    // the same allSettled, so every partial is persisted before the final report overwrites it.
-    const progressJobs: Array<Promise<unknown>> = [];
-    if (onProgress) {
-      progressJobs.push(
-        scrapePromise
-          .then((snapshot) =>
-            snapshot
-              ? onProgress({
-                  phase: "mapping",
-                  canonicalUrl: snapshot.canonicalUrl,
-                  contextGraph: compileContextGraph(snapshot.pages, [], [], snapshot.canonicalUrl),
-                })
-              : undefined,
-          )
-          .catch(() => undefined),
-        auditPromise
-          .then((audit) => (audit?.foundation ? onProgress({ foundationAudit: audit.foundation }) : undefined))
-          .catch(() => undefined),
-      );
-    }
+    // Understanding starts the moment the pages land, never waiting on the foundation audit: what
+    // the markup declares is published at once, then the extractor reads the text page by page and
+    // each page's entities and connections are published as that page is read. The wait is the
+    // model forming. Evidence is read from what the collector found before any entity is inferred:
+    // what a model reads into the text can never become a claim about the site.
+    const understandingPromise = scrapePromise.then(async (landed) => {
+      if (!landed) return null;
+      const graphNow = () => compileContextGraph(landed.pages, [], [], landed.canonicalUrl);
+      await publish({ phase: "mapping", canonicalUrl: landed.canonicalUrl, contextGraph: graphNow() });
+      const detected = detectSiteEvidence(landed, collectedAt);
+      const classified = providers.classify
+        ? await providers.classify.classify({ text: landed.text, url: landed.canonicalUrl })
+        : { categories: [], model: "behavior-only" as const };
+      // The kind of site from what the pages and their categories say; the foundation audit's signals
+      // still decide the archetype the report compiles with, once it lands.
+      const kind = inferArchetype(this.model, classified.categories, detected.signals).primaryArchetype;
+      const inferred = providers.markup
+        ? await this.inferMarkup(landed, providers.markup, scanDepth, kind, (read, of) => publish({ contextGraph: graphNow(), textRead: { read, of } }))
+        : undefined;
+      return { detection: detected, classification: classified, markup: inferred };
+    });
 
-    const [snapshotResult, auditResult] = await Promise.allSettled([scrapePromise, auditPromise, ...progressJobs]);
+    // The foundation score is published when it lands, beside whatever the model has by then.
+    const progressJobs: Array<Promise<unknown>> = [
+      auditPromise.then((landed) => (landed?.foundation ? publish({ foundationAudit: landed.foundation }) : undefined)).catch(() => undefined),
+    ];
+
+    const [snapshotResult, auditResult, understandingResult] = await Promise.allSettled([scrapePromise, auditPromise, understandingPromise, ...progressJobs]);
 
     let snapshot: SiteSnapshot | null = null;
     if (snapshotResult.status === "fulfilled") {
@@ -710,18 +715,15 @@ export class AuditOrchestrator {
       errors.push(auditErrorToReportError(auditResult.reason));
     }
 
-    // Evidence is read from what the collector found, before any entity is inferred: what a model
-    // reads into the text can never become a claim about the site.
-    const detection = snapshot ? detectSiteEvidence(snapshot, collectedAt) : { evidence: [], signals: [] };
-    const classification = snapshot && providers.classify
-      ? await providers.classify.classify({ text: snapshot.text, url: snapshot.canonicalUrl })
-      : { categories: [], model: "behavior-only", failureReason: snapshot ? undefined : "No page text was collected." };
-
-    // The entities a page is about, read from its text once the audit knows what kind of site it
-    // is reading, so the extractor looks for the things that kind of business is made of. A second
-    // source beside the declared one, labelled as such, never evidence, never readiness.
-    const siteType = inferArchetype(this.model, classification.categories, [...detection.signals, ...(audit?.signals ?? [])]).primaryArchetype;
-    const markup = snapshot && providers.markup ? await this.inferMarkup(snapshot, providers.markup, scanDepth, siteType) : undefined;
+    if (snapshot && understandingResult.status === "rejected") throw understandingResult.reason;
+    const understanding = understandingResult.status === "fulfilled" ? understandingResult.value : null;
+    const detection = understanding?.detection ?? { evidence: [], signals: [] };
+    const classification: { categories: ContentCategory[]; model: string; failureReason?: string } = understanding?.classification ?? {
+      categories: [],
+      model: "behavior-only",
+      failureReason: snapshot ? undefined : "No page text was collected.",
+    };
+    const markup = understanding?.markup;
 
     if (classification.failureReason) {
       errors.push(failure("classifier_unavailable", "understanding", classification.failureReason, false));
@@ -795,6 +797,7 @@ export class AuditOrchestrator {
     provider: MarkupProvider,
     scanDepth?: ScanDepth,
     siteType?: Archetype,
+    onPageRead?: (read: number, of: number) => Promise<unknown>,
   ): Promise<CompiledInputs["markup"] | undefined> {
     const onBasic = this.options.markupOnBasic ?? "thin";
     const pages =
@@ -806,10 +809,19 @@ export class AuditOrchestrator {
     const chosen = pages.slice(0, pagesForDepth(scanDepth));
     if (chosen.length === 0) return { provider: provider.name, model: provider.model, pagesGenerated: 0, pagesFailed: 0 };
 
+    // Each page's entities join the model the moment that page is read, so the progress screen can show them.
+    let read = 0;
     const outcomes = await Promise.allSettled(
-      chosen.map((page) =>
-        provider.generate({ url: page.url, title: page.title, description: page.description, headings: page.headings, text: page.text, ...(siteType ? { siteType } : {}) }),
-      ),
+      chosen.map(async (page) => {
+        try {
+          const outcome = await provider.generate({ url: page.url, title: page.title, description: page.description, headings: page.headings, text: page.text, ...(siteType ? { siteType } : {}) });
+          page.entities.push(...outcome.entities);
+          return outcome;
+        } finally {
+          read += 1;
+          await onPageRead?.(read, chosen.length);
+        }
+      }),
     );
     let generated = 0;
     let failed = 0;
@@ -830,7 +842,6 @@ export class AuditOrchestrator {
       inputTokens += outcome.value.usage.inputTokens;
       outputTokens += outcome.value.usage.outputTokens;
       estimatedUsd += outcome.value.usage.estimatedUsd;
-      page.entities.push(...outcome.value.entities);
     });
     console.log("markup_generated", provider.name, provider.model, generated, failed, inputTokens, outputTokens, estimatedUsd.toFixed(5));
     return { provider: provider.name, model: provider.model, pagesGenerated: generated, pagesFailed: failed };
