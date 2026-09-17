@@ -227,6 +227,14 @@ export function createReportsRouter(
       sendError(response, error);
     }
   });
+  router.get("/:reportId/publish/llms.txt", async (request, response) => {
+    try {
+      const publication = await orchestrator.publish(param(request.params.reportId));
+      response.type("text/plain; charset=utf-8").send(publication.llms);
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
   router.get("/:reportId/publish/ai-catalog.json", async (request, response) => {
     try {
       const publication = await orchestrator.publish(param(request.params.reportId));

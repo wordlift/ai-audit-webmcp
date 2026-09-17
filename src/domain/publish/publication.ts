@@ -2,6 +2,7 @@ import { entityJsonLd } from "../../shared/format/entityJsonLd.js";
 import type { ActionBoundary, CapabilityEvidence, CapabilityResult, ContextGraph, DomainEntity, ReportRecord } from "../../shared/types/index.js";
 import type { EntryProtocol, Publication, PublishedAction, PublishedAs, PublishedEntryPoint } from "../../shared/types/activate.js";
 import { ARD, ardManifestSchema, type ArdEntry, type ArdManifest } from "./ardSchema.js";
+import { llmsText } from "./llms.js";
 
 export type { EntryProtocol, Publication, PublishedAction, PublishedAs, PublishedEntryPoint };
 
@@ -436,6 +437,12 @@ export function compilePublication(report: ReportRecord, options: PublicationOpt
     .filter((capability) => capability.expected || capability.boundary || capability.expectationSource.includes("human:decision"))
     .map((capability) => publishedAction(capability, graph, options));
   const siteName = entities.find((entity) => entity.types.includes("WebSite"))?.name ?? graph?.pages[0]?.title ?? host;
+  const documents = {
+    pageJsonLd: `${options.apiUrl}/publish/page.jsonld`,
+    skill: `${options.apiUrl}/publish/skill.md`,
+    catalog: `${options.apiUrl}/publish/ai-catalog.json`,
+    llms: `${options.apiUrl}/publish/llms.txt`,
+  };
 
   return {
     site: origin,
@@ -445,14 +452,11 @@ export function compilePublication(report: ReportRecord, options: PublicationOpt
     publishedAt,
     decided: report.refinement?.decisions ?? 0,
     actions,
-    documents: {
-      pageJsonLd: `${options.apiUrl}/publish/page.jsonld`,
-      skill: `${options.apiUrl}/publish/skill.md`,
-      catalog: `${options.apiUrl}/publish/ai-catalog.json`,
-    },
+    documents,
     catalogPath: ARD.path,
     jsonLd: pageJsonLd(report, entities, actions, origin, host),
     skill: skillMarkdown(report, entities, actions, host, options, publishedAt),
     catalog: catalogFor(report, actions, host, origin, siteName, options, publishedAt),
+    llms: llmsText(report, entities, actions, { origin, host, reportUrl: options.reportUrl, documents }),
   };
 }

@@ -10,6 +10,7 @@ export const PAGE_EVENTS = [
   "ask_prompt_copied",
   "capability_opened",
   "ownership_started",
+  "model_corrected",
   "door_claim-context",
   "door_build-context",
   "door_monitor",

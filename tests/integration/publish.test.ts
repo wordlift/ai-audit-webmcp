@@ -145,6 +145,33 @@ describe("what the owner decided becomes what the page carries", () => {
   });
 });
 
+describe("llms.txt, for language models", () => {
+  it("says what the business is from what may be published, lists only actions that answered, and links the other documents", async () => {
+    const { orchestrator } = harness();
+    const { child } = await refinedAlpina(orchestrator);
+    const report = (await orchestrator.get(child.id))!;
+    const { llms, documents, actions } = await orchestrator.publish(child.id);
+
+    expect(llms).toMatch(/^# .+\n\n> .+\n/);
+    expect(llms).toContain("## What an agent can do");
+    expect(llms).toContain(`- [Terms of Action](${documents.skill})`);
+    expect(llms).toContain("- [Agent catalog](https://alpina.travel/.well-known/ai-catalog.json)");
+    expect(llms).toContain(`- [AI Audit report](${report ? `https://audit.example/reports/${child.id}` : ""})`);
+    // An action is listed only where an agent's call answered.
+    // An action is listed as callable only where an agent's call answered; a partner's is said as the partner's.
+    for (const action of actions.filter((candidate) => candidate.publishedAs === "entity" || candidate.publishedAs === "nothing")) expect(llms).not.toContain(`- [${action.label}](`);
+    for (const action of actions.filter((candidate) => candidate.publishedAs === "handoff" && candidate.provider)) expect(llms).toContain(`handled by ${action.provider!.name}`);
+    // Nothing the text alone suggested is published.
+    for (const entity of (report.contextGraph?.entities ?? []).filter((candidate) => candidate.origin === "inferred" && candidate.humanPriority !== "primary")) {
+      expect(llms).not.toContain(`[${entity.name}]`);
+    }
+    const served = await request(createApp({ orchestrator, rateLimits: { enabled: false } })).get(`/api/reports/${child.id}/publish/llms.txt`);
+    expect(served.status).toBe(200);
+    expect(served.headers["content-type"]).toMatch(/text\/plain/);
+    expect(served.text).toBe(llms);
+  });
+});
+
 describe("the skill, for acting", () => {
   it("carries every decision and no readiness claim", async () => {
     const { orchestrator } = harness();

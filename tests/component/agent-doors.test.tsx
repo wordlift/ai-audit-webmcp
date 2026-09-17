@@ -11,10 +11,14 @@ describe("beside the Context Engine, review it or ask it", () => {
     const writeText = vi.fn(async () => undefined);
     Object.assign(navigator, { clipboard: { writeText } });
     render(<AgentDoors reportId={REPORT} />);
-    expect(screen.getByText("Review the understanding.")).toBeInTheDocument();
+    expect(screen.getByText("Review the understanding with ChatGPT.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Ask ChatGPT about this business/ }));
     await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(askAgentPrompt(REPORT)));
     expect(await screen.findByRole("button", { name: /Prompt copied/ })).toBeInTheDocument();
+    // Where it goes is said at once: ChatGPT's Work mode, where the page's tools run.
+    expect(screen.getByRole("status")).toHaveTextContent("In ChatGPT, switch to Work, then paste it");
+    expect(screen.getByRole("link", { name: "Open ChatGPT" })).toHaveAttribute("href", "https://chatgpt.com/");
+    expect(screen.getByText(/Needs a paid ChatGPT plan and its Work mode/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Review with ChatGPT/ }));
     await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(reviewPrompt(REPORT)));
     expect(askAgentPrompt(REPORT)).toContain("inspect-business-model");

@@ -196,7 +196,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
   const { engine } = useReportEngine();
   const activate = publishUrl(report.id, { intent: "activate", engine: engine?.id });
   const [openDoc, setOpenDoc] = useState<PublishedDoc | null>(null);
-  const [businessData, instructions, discovery]: PublishedDoc[] = [
+  const [businessData, instructions, discovery, llms]: PublishedDoc[] = [
     {
       kind: "On your pages",
       title: "Business data",
@@ -221,6 +221,14 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
       href: publication.documents.catalog,
       format: "json",
     },
+    {
+      kind: "At the site's root",
+      title: "llms.txt",
+      note: "What the business is, what it offers and where, and what an agent can do, as the markdown index language models read first. Only what the site declares or you confirmed.",
+      text: publication.llms,
+      href: publication.documents.llms,
+      format: "markdown",
+    },
   ];
   // What an agent can call today: the actions published with an entry point, each one the audit's agent used.
   const usable = publication.actions.filter((action) => action.publishedAs === "action");
@@ -228,7 +236,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
     {
       title: "Agents can find it",
       note: "Your organization, the things it offers and the capabilities that exist, in machine-readable form on your pages and in the catalog registries crawl.",
-      docs: [businessData!, discovery!],
+      docs: [businessData!, discovery!, llms!],
     },
     {
       title: "Agents know the rules",

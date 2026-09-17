@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ReportRecord } from "../../shared/types/index.js";
 import type { EntityProvenance } from "../../shared/format/businessModel.js";
 import { modelView, type ModelView, type ViewEntity } from "../../shared/format/modelView.js";
@@ -66,13 +67,68 @@ export function contextEngineSummary(report: ReportRecord): ContextEngineSummary
 
 const count = (value: number, noun: string, plural = `${noun}s`) => `${value} ${value === 1 ? noun : plural}`;
 
-export function ContextEnginePreview({ summary, onExplore, host = "The site" }: { summary: ContextEngineSummary; onExplore?: () => void; host?: string }) {
+export type CardDecision = "relevant" | "not-ours";
+
+/** What the cards were told, as the assertions a review files: relevant things lead, what is not ours leaves. */
+export function cardAssertions(decisions: Record<string, CardDecision>): { primaryEntityIds?: string[]; demotedEntityIds?: string[] } {
+  const primaryEntityIds = Object.entries(decisions).filter(([, decision]) => decision === "relevant").map(([id]) => id);
+  const demotedEntityIds = Object.entries(decisions).filter(([, decision]) => decision === "not-ours").map(([id]) => id);
+  return { ...(primaryEntityIds.length > 0 ? { primaryEntityIds } : {}), ...(demotedEntityIds.length > 0 ? { demotedEntityIds } : {}) };
+}
+
+/**
+ * The model, one card per thing, each one a decision a person can make where they read it: relevant,
+ * or not ours. What the text alone suggested is the wow and the doubt at once, so it is confirmed
+ * here, not three folds down. Choices collect on the cards and are filed together, as one review.
+ */
+export function ContextEnginePreview({
+  summary,
+  onExplore,
+  host = "The site",
+  onSave,
+  keptOnEngine = false,
+}: {
+  summary: ContextEngineSummary;
+  onExplore?: () => void;
+  host?: string;
+  /** Files the choices as a review; absent, the cards only show. */
+  onSave?: (decisions: Record<string, CardDecision>) => Promise<void>;
+  keptOnEngine?: boolean;
+}) {
+  const [decisions, setDecisions] = useState<Record<string, CardDecision>>({});
+  const [showAll, setShowAll] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   // A zero says nothing a reader needs: "4 declared by the site", not "· 0 read from its text".
   const provenance = [
     [summary.declared, "declared by the site"],
     [summary.inferred, "read from its text"],
     [summary.confirmed, "confirmed in a review"],
   ].filter(([value]) => Number(value) > 0).map(([value, word]) => `${value} ${word}`);
+  const everything = [...(summary.view.business ? [summary.view.business] : []), ...summary.view.offerings, ...summary.view.places].slice(0, 30);
+  const cards = showAll ? everything : summary.preview;
+  const staged = Object.keys(decisions).length;
+
+  const decide = (id: string, decision: CardDecision) =>
+    setDecisions((current) => {
+      const next = { ...current };
+      if (next[id] === decision) delete next[id];
+      else next[id] = decision;
+      return next;
+    });
+
+  async function save() {
+    if (!onSave || staged === 0) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(decisions);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Your corrections could not be saved.");
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="engine-preview">
       {summary.decisions !== null && (
@@ -82,29 +138,60 @@ export function ContextEnginePreview({ summary, onExplore, host = "The site" }: 
         </p>
       )}
       <ul className="engine-entities" aria-label="What WordLift understood">
-        {summary.preview.map((entity) => (
-          <li key={entity.id} className={`engine-entity engine-entity-${entity.provenance}`}>
-            <span className="engine-entity-name">{entity.name}</span>
-            <span className="engine-entity-type">
-              {entity.type === "ProductLine" ? "Product line" : entityTypeLabel(entity.type)}
-              {entity.within && ` in ${entity.within}`}
-              {entity.variants > 0 && ` · ${entity.variants + 1} variants`}
-            </span>
-            <span
-              className={`engine-provenance engine-provenance-${entity.provenance}`}
-              title={entity.provenance === "human-confirmed" && summary.filedBy === "owner" ? "Confirmed by the site's verified owner." : entity.provenance === "human-confirmed" && summary.filedBy !== "owner" ? "Confirmed in a review; the reviewer has not proved the site is theirs." : PROVENANCE_HINT[entity.provenance]}
-            >
-              {PROVENANCE_WORD[entity.provenance]}
-            </span>
-          </li>
-        ))}
+        {cards.map((entity) => {
+          const decision = decisions[entity.id];
+          const confirmed = entity.provenance === "human-confirmed";
+          return (
+            <li key={entity.id} className={`engine-entity engine-entity-${entity.provenance}${decision ? ` is-${decision}` : ""}`}>
+              <span className="engine-entity-name">{entity.name}</span>
+              <span className="engine-entity-type">
+                {entity.type === "ProductLine" ? "Product line" : entityTypeLabel(entity.type)}
+                {entity.within && ` in ${entity.within}`}
+                {entity.variants > 0 && ` · ${entity.variants + 1} variants`}
+              </span>
+              <span
+                className={`engine-provenance engine-provenance-${entity.provenance}`}
+                title={entity.provenance === "human-confirmed" && summary.filedBy === "owner" ? "Confirmed by the site's verified owner." : entity.provenance === "human-confirmed" && summary.filedBy !== "owner" ? "Confirmed in a review; the reviewer has not proved the site is theirs." : PROVENANCE_HINT[entity.provenance]}
+              >
+                {PROVENANCE_WORD[entity.provenance]}
+              </span>
+              {onSave && !confirmed && (
+                <span className="engine-entity-actions" role="group" aria-label={`Is ${entity.name} right?`}>
+                  <button type="button" aria-pressed={decision === "relevant"} onClick={() => decide(entity.id, "relevant")}>Relevant</button>
+                  <button type="button" aria-pressed={decision === "not-ours"} onClick={() => decide(entity.id, "not-ours")}>Not ours</button>
+                </span>
+              )}
+            </li>
+          );
+        })}
       </ul>
+      {staged > 0 && (
+        <div className="engine-save" role="status">
+          <span>
+            {count(staged, "correction")} ready.{" "}
+            {keptOnEngine ? "Saving keeps them on your Context Engine for every later read." : "Saving creates a reviewed version of this report."}
+          </span>
+          <button type="button" className="review-cta review-cta-primary" onClick={() => void save()} disabled={saving}>
+            {saving ? "Saving…" : `Save ${count(staged, "correction")}`}
+          </button>
+          <button type="button" className="engine-save-undo" onClick={() => setDecisions({})} disabled={saving}>Undo</button>
+          {error && <span className="engine-save-error" role="alert">{error}</span>}
+        </div>
+      )}
       <p className="engine-counts">
         {/* Nothing declared is a finding about the site, said as one, not the tool hedging. */}
         {summary.declared === 0 && summary.confirmed === 0 && summary.inferred > 0
           ? `${host} declares none of these in its markup: WordLift read ${summary.inferred === 1 ? "it" : `all ${summary.inferred}`} from its text.`
           : `${provenance.join(" · ")}.`}{" "}
-        <a href="#understand" onClick={onExplore}>See everything we found, and where each came from</a>
+        {everything.length > summary.preview.length && (
+          <>
+            <button type="button" className="engine-show-all" aria-expanded={showAll} onClick={() => setShowAll((current) => !current)}>
+              {showAll ? "Show fewer" : `Show all ${everything.length}`}
+            </button>{" "}
+            ·{" "}
+          </>
+        )}
+        <a href="#understand" onClick={onExplore}>Where each came from</a>
       </p>
     </div>
   );

@@ -4,8 +4,13 @@ import { getReviewToken } from "../api/client";
 import { askAgentPrompt, reviewPrompt } from "./reviewPrompt";
 import { track } from "../engine/track";
 
+/** Where a copied prompt goes. The page's tools run in ChatGPT's Work mode today, not in a regular chat. */
+export const CHATGPT_URL = "https://chatgpt.com/";
+
 /**
- * Beside the Context Engine, the two things to do with it in ChatGPT. Review makes the model
+ * Beside the Context Engine, the two things to do with it in ChatGPT. Both need ChatGPT's Work mode,
+ * which is on paid plans: the tools on this page are reachable there and not in a regular chat, so
+ * the door says so before the click and says where to paste after it. Review makes the model
  * better: ChatGPT says what WordLift understood, asks the few questions that matter, and files the
  * answers here, where they show. Ask proves the model is usable: an agent answers about the business
  * from it. Each copies one prompt; the mechanism stays behind the page.
@@ -41,7 +46,8 @@ export function AgentDoors({ reportId, host = null, engineKey = null }: { report
     try {
       await writeClipboard(text);
       setCopied(which);
-      window.setTimeout(() => setCopied(null), 2_500);
+      // Long enough to read where to paste it, and to click through.
+      window.setTimeout(() => setCopied(null), 20_000);
     } catch {
       setFailed(true);
     }
@@ -49,16 +55,22 @@ export function AgentDoors({ reportId, host = null, engineKey = null }: { report
   return (
     <section className="agent-doors" aria-labelledby="agent-doors-title">
       <p className="agent-doors-lead">
-        <b id="agent-doors-title">Review the understanding.</b> ChatGPT tells you what WordLift understood, asks what is right, and files your answers here{host ? ", kept on your Context Engine" : ""}.
+        <b id="agent-doors-title">Review the understanding with ChatGPT.</b> It tells you what WordLift understood, asks what is right, and files your answers here{host ? ", kept on your Context Engine" : ""}. Needs a paid ChatGPT plan and its Work mode.
       </p>
       <div className="agent-doors-buttons">
         <button type="button" className="review-cta review-cta-primary" onClick={() => void copy("review")}>
-          <MessageSquare size={15} aria-hidden="true" /> {copied === "review" ? "Prompt copied. Paste it into ChatGPT" : "Review with ChatGPT"}
+          <MessageSquare size={15} aria-hidden="true" /> {copied === "review" ? "Prompt copied" : "Review with ChatGPT"}
         </button>
         <button type="button" className="review-cta" onClick={() => void copy("ask")}>
-          <Copy size={15} aria-hidden="true" /> {copied === "ask" ? "Prompt copied. Paste it into ChatGPT" : "Ask ChatGPT about this business"}
+          <Copy size={15} aria-hidden="true" /> {copied === "ask" ? "Prompt copied" : "Ask ChatGPT about this business"}
         </button>
       </div>
+      {copied && (
+        <p className="agent-doors-next" role="status">
+          Prompt copied. In ChatGPT, switch to <b>Work</b>, then paste it: the page's tools do not run in a regular chat.{" "}
+          <a href={CHATGPT_URL} target="_blank" rel="noreferrer">Open ChatGPT</a>
+        </p>
+      )}
       {failed && <p className="agent-doors-failed" role="alert">The prompt could not be copied here. Allow clipboard access, or try another browser.</p>}
     </section>
   );

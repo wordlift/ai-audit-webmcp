@@ -38,12 +38,14 @@ export interface Publication {
   /** How many human decisions the report carries; zero publishes what the audit verified, no less. */
   decided: number;
   actions: PublishedAction[];
-  documents: { pageJsonLd: string; skill: string; catalog: string };
+  documents: { pageJsonLd: string; skill: string; catalog: string; llms: string };
   /** Where a site serves the catalog: the one spelling this service writes. */
   catalogPath: string;
   jsonLd: Record<string, unknown>;
   skill: string;
   catalog: { entries: unknown[]; [key: string]: unknown };
+  /** llms.txt: the model as the markdown index language models read at a site's root. */
+  llms: string;
 }
 
 /** One readiness reading of a site: a report with a score, and what kind of report it was. */

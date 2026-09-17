@@ -144,13 +144,13 @@ describe("the first screen", () => {
     expect(screen.getByText(/WordLift built a model/)).toHaveTextContent("From 1 page of alpina.travel, WordLift built a model of this business that AI agents can use to understand it and act on it: its first Context Engine.");
     const understood = screen.getByRole("list", { name: "What WordLift understood" });
     expect(within(understood).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
-      "AlpiNest FeriendorfLodging businessDeclared by site",
+      "AlpiNest FeriendorfLodging businessDeclared by siteRelevantNot ours",
       "Samspitze 4ApartmentConfirmed",
-      "MariapfarrPlaceInferred from text",
+      "MariapfarrPlaceInferred from textRelevantNot ours",
     ]);
     // What a review said shows where the model is: the decisions, and what is not ours.
     expect(screen.getByText(/decisions added/)).toHaveTextContent("Reviewed · 3 decisions added · not ours: Somebody Else GmbH");
-    expect(screen.getByText(/declared by the site/)).toHaveTextContent("1 declared by the site · 1 read from its text · 1 confirmed in a review. See everything we found, and where each came from");
+    expect(screen.getByText(/declared by the site/)).toHaveTextContent("1 declared by the site · 1 read from its text · 1 confirmed in a review. Where each came from");
     // A draft nobody claimed says nothing about its engine in the first thirty seconds.
     expect(screen.queryByText(/Draft Context Engine/)).toBeNull();
     // Review beside the model, then the proof.
@@ -283,7 +283,7 @@ describe("the readers line", () => {
     expect(screen.getByText(/WordLift built a model/)).toHaveTextContent("From 2 pages of alpina.travel, WordLift built a model");
     const cards = screen.getByRole("list", { name: "What WordLift understood" });
     expect(cards).not.toHaveTextContent(/Andrea Volpini|Old brochure|Alpina\.travel/);
-    expect(screen.getByRole("link", { name: "See everything we found, and where each came from" })).toHaveAttribute("href", "#understand");
+    expect(screen.getByRole("link", { name: "Where each came from" })).toHaveAttribute("href", "#understand");
   });
 
   it("says the shape of the business in one line from what its markup declares, and nothing when it declares no relation", () => {

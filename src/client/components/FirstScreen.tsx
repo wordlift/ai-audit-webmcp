@@ -2,11 +2,11 @@ import { ArrowRight, Bot, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { CapabilityResult, ReportRecord } from "../../shared/types/index.js";
-import { getVisits, startReport, type ReportVisits } from "../api/client";
+import { getVisits, refineReport, startReport, type ReportVisits } from "../api/client";
 import { ActionDetailDialog } from "./ActionDetailDialog";
 import { AgentDiary } from "./AgentDiary";
 import { AgentDoors } from "./AgentDoors";
-import { ContextEnginePreview, contextEngineSummary } from "./ContextEnginePreview";
+import { ContextEnginePreview, cardAssertions, contextEngineSummary } from "./ContextEnginePreview";
 import { modelView } from "../../shared/format/modelView.js";
 import { EngineStatus } from "./EngineStatus";
 import { holds, useReportEngine } from "../engine/EngineContext";
@@ -349,7 +349,30 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
           </p>
         )}
         <EngineStatus report={report} engine={stored} />
-        {engine && <ContextEnginePreview summary={engine} host={host} onExplore={() => track(report.id, "engine_explored")} />}
+        {/* A correction always shows where it landed, even when it left nothing to show as a card. */}
+        {!engine && report.refinement && (
+          <p className="engine-reviewed" role="status">
+            <b>{report.refinement.filedBy === "owner" ? "Reviewed by the owner" : "Reviewed"}</b> · {report.refinement.decisions} {report.refinement.decisions === 1 ? "decision" : "decisions"} added
+            {(() => {
+              const notOurs = (report.contextGraph?.entities ?? []).filter((entity) => entity.humanPriority === "demoted").map((entity) => entity.name);
+              return notOurs.length > 0 ? <> · not ours: {notOurs.slice(0, 3).join(", ")}</> : null;
+            })()}
+          </p>
+        )}
+        {engine && (
+          <ContextEnginePreview
+            summary={engine}
+            host={host}
+            onExplore={() => track(report.id, "engine_explored")}
+            keptOnEngine={holds(stored)}
+            onSave={async (decisions) => {
+              // The same review the interview files, from the cards: the reviewed version opens with the corrections on it.
+              const child = await refineReport(report.id, cardAssertions(decisions), engineKey);
+              track(report.id, "model_corrected");
+              navigate(`/reports/${child.id}`);
+            }}
+          />
+        )}
         {/* Beside the model, the two things to do with it: review it, which makes it better, or ask it, which proves it is usable. */}
         {engine && <AgentDoors reportId={report.id} host={holds(stored) ? stored!.host : null} engineKey={engineKey} />}
       </div>
