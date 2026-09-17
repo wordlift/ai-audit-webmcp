@@ -836,8 +836,11 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .chip-runs-on:hover { background: color-mix(in srgb, var(--brand) 18%, white); }
 .runs-on-note { margin: 0; color: var(--muted); max-width: 72ch; }
 /* What the audit found, counted in the site's own nouns, before the score. */
-/* What the business is, in one sentence: the line a stranger reads first. */
-.first-understood { margin: 2px 0 4px; font-size: clamp(1.1rem, 2vw, 1.3rem); line-height: 1.45; color: var(--ink); max-width: 70ch; }
+/* What the business is, in one sentence: the headline a stranger reads first. */
+.first-screen h1.first-understood { font-size: clamp(1.45rem, 3vw, 2rem); line-height: 1.25; max-width: 36ch; }
+.first-context { margin: 0; color: var(--muted); font-size: 1rem; max-width: 72ch; }
+.first-context b { color: var(--ink); font-weight: 600; }
+.first-score-means { color: var(--faint); font-size: 0.85rem; }
 .first-found { margin: 0; color: var(--muted); font-size: 1rem; line-height: 1.5; }
 .first-found b { color: var(--ink); font-weight: 600; }
 .first-found-dot { color: var(--faint); }

@@ -94,7 +94,7 @@ test("the report offers the deeper read in exchange for an address", async ({ pa
   // One line on the first screen, opening in place: nobody is sent to the bottom of the page.
   const offer = page.getByRole("region", { name: /claim your context engine/i });
   await expect(offer.getByLabel(/email address/i)).toBeHidden();
-  await offer.getByRole("button", { name: /claim your context engine: keep your decisions/i }).click();
+  await offer.getByRole("button", { name: /claim your context engine, free: keep your corrections/i }).click();
   await expect(offer.getByText(/built from 4 representative pages/i)).toBeVisible();
   await expect(offer.getByText(/review decisions are kept for every later read/i)).toBeVisible();
 

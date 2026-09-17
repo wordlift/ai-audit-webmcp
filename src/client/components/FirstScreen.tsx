@@ -88,11 +88,22 @@ export function headline(capabilities: CapabilityResult[], host: string): string
   return `AI agents can do ${works} of the ${three.length} ${three.length === 1 ? "thing" : "things"} that matter on ${host}.`;
 }
 
-/** Under "Can agents use it?": how many of the things that matter an agent can do today. */
+const lowerFirst = (label: string) => (/^[A-Z][a-z]/.test(label) ? label.charAt(0).toLowerCase() + label.slice(1) : label);
+const listed = (labels: string[]) => (labels.length <= 1 ? labels[0] ?? "" : `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`);
+
+/**
+ * Under "Can agents use it?": what an agent can do today, named, and what it cannot yet. A stranger
+ * reads "can already check availability, but cannot yet book a stay", not a count of three.
+ */
 export function capabilityLine(capabilities: CapabilityResult[]): string {
   const three = actionsThatMatter(capabilities);
-  const works = three.filter((capability) => capability.state === "agent-ready").length;
-  return `${works} of the ${three.length} ${three.length === 1 ? "thing" : "things"} that matter most ${works === 1 ? "works" : "work"} today.`;
+  if (three.length === 0) return "";
+  const say = (items: CapabilityResult[]) => listed(items.map((capability) => lowerFirst(capability.label)));
+  const works = three.filter((capability) => capability.state === "agent-ready");
+  const rest = three.filter((capability) => capability.state !== "agent-ready");
+  if (works.length === 0) return `An AI agent cannot yet ${say(rest)} here.`;
+  if (rest.length === 0) return `An AI agent can already ${say(works)} here.`;
+  return `An AI agent can already ${say(works)} here, but cannot yet ${say(rest)}.`;
 }
 
 /** The line under the headline: the size of the gap, or the good news. */
@@ -164,25 +175,6 @@ function pluralNoun(count: number, label: string): string {
   return `${count} ${count === 1 ? noun : plural}`;
 }
 
-/**
- * What the audit found, before any score: the business, what it offers, where, who, counted in
- * the nouns the site uses. The moment the brief asks for is "it understood the shape of my
- * business", and a count of the right things says it faster than a score.
- */
-export function foundLine(report: ReportRecord): { pages: number; parts: string[] } | null {
-  const pages = report.contextGraph?.pages.length ?? 0;
-  if (pages === 0) return null;
-  // Counted the way the first screen shows the model: variants as one product, the site's own name not a business.
-  const { counts } = modelView(report);
-  const parts: string[] = [];
-  if (counts.businesses > 0) parts.push(pluralNoun(counts.businesses, "business"));
-  for (const { label, count } of counts.offerings.slice(0, 3)) parts.push(pluralNoun(count, label));
-  if (counts.places > 0) parts.push(pluralNoun(counts.places, "place"));
-  if (parts.length === 0) return null;
-  const expected = (report.capabilities ?? []).filter((capability) => capability.expected).length;
-  if (expected > 0) parts.push(`${expected} ${expected === 1 ? "thing" : "things"} agents should be able to do here`);
-  return { pages, parts };
-}
 
 /**
  * The shape of the business in one line: the business, one thing it offers, where that is.
@@ -271,7 +263,6 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   const three = actionsThatMatter(capabilities);
   const beyond = beyondTheThree(capabilities);
   const primary = report.classification?.primaryArchetype;
-  const found = foundLine(report);
   const settledChain = relationChain(report);
   const chain = settledChain ?? relationChain(report, "with-text");
   const chainFromText = !settledChain && Boolean(chain);
@@ -298,11 +289,18 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
     <section className="first-screen" id="step-audit" aria-labelledby="first-screen-title">
       <div className="first-screen-head">
         <p className="section-kicker"><Bot size={16} /> Audit</p>
-        {/* The model first: "it understood my business" is the moment, what agents can do is the proof after it. */}
-        <h1 id="first-screen-title">{engine ? `We built a first Context Engine for ${host}.` : headline(capabilities, host)}</h1>
+        {/* The moment is the headline: what the business is, in one sentence from what was read. What
+            a Context Engine is follows in one plain line, so nobody has to guess who built what. */}
+        <h1 id="first-screen-title" className={engine?.sentence ? "first-understood" : undefined}>
+          {engine?.sentence ?? (engine ? `WordLift built a first Context Engine for ${host}.` : headline(capabilities, host))}
+        </h1>
         {!engine && gap && <p className="first-sentence">{gap}</p>}
-        {/* The moment: what the business is, in one sentence, before any count. */}
-        {engine?.sentence && <p className="first-understood">{engine.sentence}</p>}
+        {engine && (
+          <p className="first-context">
+            WordLift read {engine.pages} {engine.pages === 1 ? "page" : "pages"} of {host} and built a first <b>Context Engine</b>: the model of the business
+            that AI agents use to understand it and act on it.
+          </p>
+        )}
         <p className="first-meta">
           {ago && <span className="read-when">{ago}</span>}
           <span className="chip-arche">{archetype}</span>
@@ -317,18 +315,6 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
             </button>
           )}
         </p>
-        {found && (
-          <p className="first-found">
-            From {found.pages} {found.pages === 1 ? "page" : "pages"}, WordLift found{" "}
-            {found.parts.map((part, index) => (
-              <span key={part}>
-                {index > 0 && <span className="first-found-dot" aria-hidden="true"> · </span>}
-                <b>{part}</b>
-              </span>
-            ))}
-            .
-          </p>
-        )}
         {chain && (
           <p className="first-chain" aria-label={chainFromText ? "How the business fits together, as read from its text" : "How the business fits together, as its markup declares it"}>
             {chain.map((step, index) => (
@@ -359,7 +345,10 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
           </>
         )}
         {score !== undefined && (
-          <p className="first-meta"><span className="first-score">Agent readiness <b>{score}</b>/100</span></p>
+          <p className="first-meta">
+            <span className="first-score">Agent readiness <b>{score}</b>/100</span>
+            <span className="first-score-means">how much of what matters here our agent actually completed when it tried</span>
+          </p>
         )}
         {report.status === "partial" && onlyFoundationMissing(report.errors) && (
           <p className="first-note">No foundation score this time: WordLift's foundation audit did not answer. Run again to include it.</p>

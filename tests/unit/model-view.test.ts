@@ -1,4 +1,4 @@
-import { modelView } from "../../src/shared/format/modelView.js";
+import { looksLikeCategory, modelView } from "../../src/shared/format/modelView.js";
 import type { ReportRecord } from "../../src/shared/types/index.js";
 
 const entity = (id: string, name: string, type: string, extra: Record<string, unknown> = {}) => ({ id, name, types: [type], alternateNames: [], sourceUrls: ["https://x/"], sameAs: [], offers: [], confidence: 0.8, ...extra });
@@ -64,7 +64,8 @@ describe("the model a stranger meets", () => {
     (graphReport.contextGraph!.pages as unknown[]) = [{ url: "https://x/", title: "Allbirds", headings: ["Tree Dasher 2", "Shop now"] }];
     const view = modelView(graphReport);
     expect(view.counts.businesses).toBe(1);
-    expect(view.offerings.map((item) => item.name)).toEqual(["Men's Runner NZ Slip On", "Tree Dasher 2", "Men's Shoes"]);
+    // A collection the text names ("Men's Shoes") is where things are filed, not one of them.
+    expect(view.offerings.map((item) => item.name)).toEqual(["Men's Runner NZ Slip On", "Tree Dasher 2"]);
     expect(view.sentence).toBe("Allbirds is a brand offering Men's Runner NZ Slip On.");
   });
 
@@ -79,6 +80,13 @@ describe("the model a stranger meets", () => {
       entity("agent", "WordLift Agent", "Service", { origin: "inferred", confidence: 0.6 }),
     ]));
     expect(software.offerings.map((item) => item.name)).toEqual(["WordLift Agent", "Data Connect", "Eyewear"]);
+  });
+
+  it("tells a collection from a thing, and says what a generic organization is by the kind of site it runs", () => {
+    for (const name of ["Men's Shoes", "New Arrivals", "Apparel & Accessories", "Performance & Rank Tracking"]) expect(looksLikeCategory(name)).toBe(true);
+    for (const name of ["Samspitze 4", "Data Connect", "WordLift Agent", "Tree Dasher 2", "AI-Powered SEO", "Runner NZ"]) expect(looksLikeCategory(name)).toBe(false);
+    const saas = { ...report("wordlift.io", [entity("org", "WordLift", "Organization", { origin: "inferred" }), entity("dc", "Data Connect", "SoftwareApplication", { origin: "inferred" })]), classification: { primaryArchetype: "saas" } } as unknown as ReportRecord;
+    expect(modelView(saas).sentence).toBe("WordLift is a software company offering Data Connect.");
   });
 
   it("keeps a platform a page mentions out of what the business offers, except on the platform's own site", () => {

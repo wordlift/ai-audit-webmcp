@@ -48,6 +48,29 @@ const PLATFORMS = new Set([
   "booking.com", "expedia", "airbnb", "tripadvisor", "trustpilot", "open api", "openapi", "api", "knowledge graph", "seo", "ai",
 ]);
 
+/** What a generic organization is, said by the kind of site it runs. */
+const ARCHETYPE_NOUNS: Record<string, string> = {
+  saas: "software company",
+  "commerce-retail": "shop",
+  "travel-hospitality": "travel business",
+  "publisher-content": "publisher",
+  "finance-insurance": "financial services company",
+};
+const GENERIC_BUSINESS_TYPES = new Set(["Organization", "Corporation", "LocalBusiness"]);
+
+/**
+ * A collection a shop or a site files things under ("Men's Shoes", "New Arrivals", "Apparel &
+ * Accessories") rather than a thing it offers: two things joined, or a short run of words ending in a
+ * plural, with no number and no brand-like capital inside a word.
+ */
+export function looksLikeCategory(name: string): boolean {
+  const words = name.trim().split(/\s+/);
+  if (/\s(&|and)\s/i.test(name)) return true;
+  if (/\d/.test(name) || words.length > 3) return false;
+  if (words.some((word) => /[a-z][A-Z]/.test(word) || /^[A-Z]{2,}$/.test(word))) return false;
+  return /[a-z]{3,}s$/.test(words[words.length - 1] ?? "");
+}
+
 /** Where a variant's own words begin: "Men's Runner NZ Slip On - Mushroom (Mushroom Sole) - Size 10". */
 const VARIANT_SEPARATOR = /\s+[-–—|/]\s+|\s*,\s*size\b|\s+\((?:size|colou?r)\b/i;
 
@@ -143,9 +166,12 @@ export function modelView(report: ReportRecord): ModelView {
   const offeringPool = [...all.filter((entity) => entityRole(entity) === "offering" && !isPlatform(entity, host)), ...productLines];
   // An inferred event is usually a headline ("Mountain days"), an inferred offer a banner ("Final Sale"):
   // each stays out unless something connects it or someone confirmed it.
-  const offeringCandidates = offeringPool.filter(
-    (entity) => !((entity.types.includes("Event") || entity.types.includes("Offer")) && entityProvenance(entity) === "inferred" && !connected.has(entity.id)),
-  );
+  const offeringCandidates = offeringPool.filter((entity) => {
+    if (entityProvenance(entity) !== "inferred" || connected.has(entity.id)) return true;
+    if (entity.types.includes("Event") || entity.types.includes("Offer")) return false;
+    // A collection the text names is where things are filed, not one of the things.
+    return !looksLikeCategory(entity.name);
+  });
   const groups = new Map<string, DomainEntity[]>();
   for (const entity of offeringCandidates) {
     const base = normalized(entity.name.split(VARIANT_SEPARATOR)[0] ?? entity.name);
@@ -218,7 +244,8 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   const where = (id: string) => relations.find((relation) => relation.from === id && relation.kind === "located-in");
   const subject = business ?? offerings[0];
   if (!subject) return null;
-  const kind = typeLabel(subject.type);
+  const archetype = report.classification?.primaryArchetype ?? "other";
+  const kind = business && GENERIC_BUSINESS_TYPES.has(subject.type) && ARCHETYPE_NOUNS[archetype] ? ARCHETYPE_NOUNS[archetype]! : typeLabel(subject.type);
   // Without a business the sentence is about the leading offering alone: it offers nothing itself.
   // What the site declares or a review confirmed speaks for the business before what the text only mentions.
   const settled = offerings.filter((offering) => offering.provenance !== "inferred");

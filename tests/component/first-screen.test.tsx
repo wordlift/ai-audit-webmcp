@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { FirstScreen, actionsThatMatter, capabilityLine, foundLine, gapLine, headline, readAgo, readersLine, relationChain, runsOnLine } from "../../src/client/components/FirstScreen";
+import { FirstScreen, actionsThatMatter, capabilityLine, gapLine, headline, readAgo, readersLine, relationChain, runsOnLine } from "../../src/client/components/FirstScreen";
 import type { CapabilityResult, ReportRecord } from "../../src/shared/types/index.js";
 
 function capability(overrides: Partial<CapabilityResult> & Pick<CapabilityResult, "actionId" | "label" | "state">): CapabilityResult {
@@ -108,7 +108,7 @@ describe("the first screen", () => {
 
   it("offers to claim the Context Engine on the first screen, opening in place, and not on a deep scan", () => {
     renderScreen();
-    const strip = screen.getByRole("button", { name: /Claim your Context Engine: keep your decisions, expand it, hear when it changes/ });
+    const strip = screen.getByRole("button", { name: /Claim your Context Engine, free: keep your corrections, read more of the site, hear when it changes/ });
     expect(strip).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByLabelText(/email address/i)).toBeNull();
     fireEvent.click(strip);
@@ -139,7 +139,9 @@ describe("the first screen", () => {
       },
     } as unknown as ReportRecord;
     renderScreen(reviewed);
-    expect(screen.getByRole("heading", { level: 1, name: "We built a first Context Engine for alpina.travel." })).toBeVisible();
+    // The headline is what the business is; what a Context Engine is follows in one plain line.
+    expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf is a lodging business offering Samspitze 4." })).toBeVisible();
+    expect(screen.getByText(/built a first/)).toHaveTextContent("WordLift read 1 page of alpina.travel and built a first Context Engine: the model of the business that AI agents use to understand it and act on it.");
     const understood = screen.getByRole("list", { name: "What WordLift understood" });
     expect(within(understood).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
       "AlpiNest FeriendorfLodging businessDeclared",
@@ -148,20 +150,20 @@ describe("the first screen", () => {
     ]);
     // What a review said shows where the model is: the decisions, and what is not ours.
     expect(screen.getByText(/decisions added/)).toHaveTextContent("Reviewed · 3 decisions added · not ours: Somebody Else GmbH");
-    expect(screen.getByText(/declared by the site/)).toHaveTextContent("1 declared by the site · 1 read from its text · 1 confirmed in a review. See everything we understood");
-    // What the business is, in one sentence, from the model's own facts.
-    expect(screen.getByText("AlpiNest Feriendorf is a lodging business offering Samspitze 4.")).toBeVisible();
+    expect(screen.getByText(/declared by the site/)).toHaveTextContent("1 declared by the site · 1 read from its text · 1 confirmed in a review. See all 3 with where each came from");
     // A draft nobody claimed says nothing about its engine in the first thirty seconds.
     expect(screen.queryByText(/Draft Context Engine/)).toBeNull();
     // Review beside the model, then the proof.
     expect(screen.getByRole("button", { name: /Review with ChatGPT/ })).toBeVisible();
     expect(screen.getByRole("heading", { level: 2, name: "Can agents use it?" })).toBeVisible();
-    expect(screen.getByText("1 of the 3 things that matter most works today. Fix the other 2.")).toBeVisible();
+    expect(screen.getByText(/An AI agent can already/)).toHaveTextContent("An AI agent can already check availability here, but cannot yet book a stay and find a property. Fix the other 2.");
+    expect(screen.getByText(/our agent actually completed/)).toBeVisible();
   });
 
   it("counts what works among the things that matter most", () => {
-    expect(capabilityLine(report.capabilities ?? [])).toBe("1 of the 3 things that matter most works today.");
-    expect(capabilityLine([capability({ actionId: "a", label: "A", state: "missing" }), capability({ actionId: "b", label: "B", state: "missing" })])).toBe("0 of the 2 things that matter most work today.");
+    expect(capabilityLine(report.capabilities ?? [])).toBe("An AI agent can already check availability here, but cannot yet book a stay and find a property.");
+    expect(capabilityLine([capability({ actionId: "a", label: "Search the site", state: "missing" }), capability({ actionId: "b", label: "Retrieve details", state: "missing" })])).toBe("An AI agent cannot yet retrieve details and search the site here.");
+    expect(capabilityLine([capability({ actionId: "a", label: "Search the site", state: "agent-ready" })])).toBe("An AI agent can already search the site here.");
   });
 
   it("says what the agent did in a person's words, never in ours", () => {
@@ -263,13 +265,13 @@ describe("the readers line", () => {
         bindings: [],
       },
     } as unknown as ReportRecord;
-    // A byline is not what the business is: people stay in the full model, out of the count a stranger reads.
-    expect(foundLine(withGraph)).toEqual({ pages: 2, parts: ["1 business", "2 apartments", "2 places", "4 things agents should be able to do here"] });
     renderScreen(withGraph);
-    expect(screen.getByText(/From 2 pages, WordLift found/)).toHaveTextContent("1 business · 2 apartments · 2 places · 4 things agents should be able to do here");
-    expect(screen.getByRole("link", { name: "See everything we understood" })).toHaveAttribute("href", "#understand");
-    // Without a graph there is nothing to count, and nothing is said.
-    expect(foundLine(report)).toBeNull();
+    // What the business is leads; a byline, the site's own name and a demoted thing are not in the sentence or the cards.
+    expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf Lungau is a lodging business offering Samspitze 5." })).toBeVisible();
+    expect(screen.getByText(/built a first/)).toHaveTextContent("WordLift read 2 pages of alpina.travel");
+    const cards = screen.getByRole("list", { name: "What WordLift understood" });
+    expect(cards).not.toHaveTextContent(/Andrea Volpini|Old brochure|Alpina\.travel/);
+    expect(screen.getByRole("link", { name: /See all \d+ with where each came from/ })).toHaveAttribute("href", "#understand");
   });
 
   it("says the shape of the business in one line from what its markup declares, and nothing when it declares no relation", () => {
