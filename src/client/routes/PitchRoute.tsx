@@ -172,8 +172,12 @@ function PitchForm() {
               {label}
               <input
                 id={`pitch-url-${index}`}
-                type="url"
-                placeholder="https://example.com"
+                type="text"
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder={index === 0 ? "prospect.com" : "competitor.com"}
                 value={urls[index] ?? ""}
                 required={index === 0}
                 onChange={(event) => setUrls((current) => current.map((value, at) => (at === index ? event.target.value : value)))}

@@ -10,6 +10,14 @@ test("landing page asks one question and takes a URL", async ({ page }) => {
   await expect(page.getByText(/checks what AI agents can actually do with it/i)).toBeVisible();
 });
 
+test("a site typed the way people type it, without https://, is audited", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Website URL").fill("alpina.travel");
+  await page.getByRole("button", { name: /audit my site/i }).click();
+  await expect(page).toHaveURL(/\/reports\//);
+  await expect(page.getByText(/its first Context Engine|AI agents can do \d+ of the \d+/i).first()).toBeVisible();
+});
+
 test("a report opens with the Context Engine, then three words, and keeps the model & evidence one click away", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Website URL").fill("https://shop.example");

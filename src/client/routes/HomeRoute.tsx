@@ -119,12 +119,19 @@ export function HomeRoute() {
         <form className="audit-form" onSubmit={submit}>
           <label htmlFor="site-url">Website URL</label>
           <div className="input-row">
+            {/* Text, not type="url": the browser's own check turns "yourbusiness.com" away for want of https://,
+                which the server adds. inputMode still brings up the address keyboard on a phone. */}
             <input
               id="site-url"
               name="url"
-              type="url"
+              type="text"
+              inputMode="url"
+              autoComplete="url"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={url}
-              placeholder="https://example.com"
+              placeholder="yourbusiness.com"
               onChange={(event) => setUrl(event.target.value)}
               required
             />
