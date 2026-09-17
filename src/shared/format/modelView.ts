@@ -259,7 +259,10 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   const settled = offerings.filter((offering) => offering.provenance !== "inferred");
   // Only what the site declares, when it declares something: a sentence that names a slogan as a product
   // loses the reader faster than one that names a single product.
-  const pool = business ? (settled.length > 0 ? settled : offerings) : [];
+  const candidates = business ? (settled.length > 0 ? settled : offerings) : [];
+  // With specific names to say, a bare one-word name ("Eyewear") stays in the cards, out of the sentence.
+  const specific = candidates.filter((offering) => offering.name.trim().split(/\s+/).length > 1 || /\d/.test(offering.name));
+  const pool = specific.length >= 2 ? specific : candidates;
   // "and 1 more" reads as a thing left out on purpose: name four when four is all there is.
   const shown = pool.slice(0, pool.length <= 4 ? 4 : 3);
   const totalOfferings = pool.length;

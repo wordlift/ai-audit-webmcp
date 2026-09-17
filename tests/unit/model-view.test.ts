@@ -106,6 +106,12 @@ describe("the model a stranger meets", () => {
     expect(six.sentence).toMatch(/and 3 more\.$/);
   });
 
+  it("keeps a bare one-word name out of the sentence when there are specific names to say", () => {
+    const view = modelView(report("wordlift.io", [entity("org", "WordLift", "Organization"), entity("a", "WordLift Agent", "Service"), entity("b", "Data Connect", "SoftwareApplication"), entity("c", "Eyewear", "Product")]));
+    expect(view.sentence).toBe("WordLift is an organization offering WordLift Agent and Data Connect.");
+    expect(view.preview.map((item) => item.name)).toContain("Eyewear");
+  });
+
   it("keeps a platform a page mentions out of what the business offers, except on the platform's own site", () => {
     const mentions = [entity("org", "WordLift", "Organization"), entity("g", "Google", "SoftwareApplication", { origin: "inferred" }), entity("dc", "Data Connect", "SoftwareApplication", { origin: "inferred" })];
     expect(modelView(report("wordlift.io", mentions)).offerings.map((item) => item.name)).toEqual(["Data Connect"]);
