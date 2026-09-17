@@ -11,7 +11,7 @@ test("a claimed Context Engine keeps a correction across a new read of the site"
   await page.getByRole("button", { name: /audit my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
   const firstUrl = page.url();
-  await expect(page.getByText(/of saas\.example and built a first Context Engine/)).toBeVisible();
+  await expect(page.getByText(/of saas\.example, WordLift built a model/)).toBeVisible();
   // A first visit says nothing about an unclaimed draft.
   await expect(page.getByText(/Draft Context Engine/)).toHaveCount(0);
 
@@ -41,7 +41,7 @@ test("a claimed Context Engine keeps a correction across a new read of the site"
   await expect(page.getByText(/Reviewed since this report/)).toBeVisible();
   await page.getByRole("button", { name: /run again/i }).click();
   await expect(page).not.toHaveURL(firstUrl);
-  await expect(page.getByText(/of saas\.example and built a first Context Engine/)).toBeVisible();
+  await expect(page.getByText(/of saas\.example, WordLift built a model/)).toBeVisible();
   await page.getByRole("link", { name: /open it/i }).click();
   await expect(page.getByText(/Your earlier review carried over to this read/)).toBeVisible();
   await expect(page.getByText(/not ours:/)).toContainText(name);

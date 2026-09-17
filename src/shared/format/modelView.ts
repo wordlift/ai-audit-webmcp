@@ -98,8 +98,8 @@ function isPlatform(entity: DomainEntity, host: string): boolean {
   return PLATFORMS.has(name) && !host.startsWith(name.replace(/\s+/g, ""));
 }
 
-function view(entity: DomainEntity, variants = 0): ViewEntity {
-  return { id: entity.id, name: entity.name, type: entity.types[0] ?? "Thing", role: entityRole(entity), provenance: entityProvenance(entity), variants };
+function view(entity: DomainEntity, variants = 0, type?: string): ViewEntity {
+  return { id: entity.id, name: entity.name, type: type ?? entity.types[0] ?? "Thing", role: entityRole(entity), provenance: entityProvenance(entity), variants };
 }
 
 const PROVENANCE_RANK: Record<EntityProvenance, number> = { "human-confirmed": 0, declared: 1, inferred: 2 };
@@ -177,6 +177,11 @@ export function modelView(report: ReportRecord): ModelView {
     const base = normalized(entity.name.split(VARIANT_SEPARATOR)[0] ?? entity.name);
     groups.set(base, [...(groups.get(base) ?? []), entity]);
   }
+  // An inferred name inside a declared one ("Runner NZ Slip On" in "Men's Runner NZ Slip On") is the declared thing read again.
+  const settledNames = offeringCandidates.filter((entity) => entityProvenance(entity) !== "inferred").map((entity) => normalized(entity.name));
+  for (const [base, members] of [...groups.entries()]) {
+    if (members.every((entity) => entityProvenance(entity) === "inferred") && settledNames.some((name) => name !== base && name.includes(base))) groups.delete(base);
+  }
   const offerings = [...groups.values()]
     .map((members) => {
       const sorted = [...members].sort((left, right) => rank(left, right));
@@ -191,7 +196,8 @@ export function modelView(report: ReportRecord): ModelView {
   const people = all.filter((entity) => entityRole(entity) === "person");
 
   const business = businessPool[0] ? view(businessPool[0]) : null;
-  const shownOfferings = offerings.slice(0, 3).map(({ entity, variants }) => view(entity, variants));
+  const typeFor = (entity: DomainEntity) => (productLines.includes(entity) ? "ProductLine" : undefined);
+  const shownOfferings = offerings.slice(0, 3).map(({ entity, variants }) => view(entity, variants, typeFor(entity)));
   const shownPlaces = places.slice(0, business || shownOfferings.length > 0 ? 2 : 4).map((entity) => view(entity));
   const preview = [...(business ? [business] : []), ...shownOfferings, ...shownPlaces].slice(0, 6);
 
@@ -203,7 +209,7 @@ export function modelView(report: ReportRecord): ModelView {
   const counted = [...(ownBusinesses.length > 0 ? ownBusinesses : businesses), ...offerings.map((item) => item.entity), ...places, ...people];
   return {
     business,
-    offerings: offerings.map(({ entity, variants }) => view(entity, variants)),
+    offerings: offerings.map(({ entity, variants }) => view(entity, variants, typeFor(entity))),
     places: places.map((entity) => view(entity)),
     preview,
     counts: {
@@ -217,7 +223,7 @@ export function modelView(report: ReportRecord): ModelView {
       inferred: counted.filter((entity) => entityProvenance(entity) === "inferred").length,
       confirmed: counted.filter((entity) => entityProvenance(entity) === "human-confirmed").length,
     },
-    sentence: sentenceFor(report, business, offerings.map(({ entity, variants }) => view(entity, variants)), relations, all),
+    sentence: sentenceFor(report, business, offerings.map(({ entity, variants }) => view(entity, variants, typeFor(entity))), relations, all),
   };
 }
 
@@ -249,7 +255,7 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   // Without a business the sentence is about the leading offering alone: it offers nothing itself.
   // What the site declares or a review confirmed speaks for the business before what the text only mentions.
   const settled = offerings.filter((offering) => offering.provenance !== "inferred");
-  const pool = business ? (settled.length > 0 ? settled : offerings) : [];
+  const pool = business ? [...settled, ...offerings.filter((offering) => offering.provenance === "inferred")] : [];
   const shown = pool.slice(0, 3);
   const totalOfferings = pool.length;
   const more = totalOfferings - shown.length;

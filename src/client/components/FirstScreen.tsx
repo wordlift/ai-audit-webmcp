@@ -92,18 +92,21 @@ const lowerFirst = (label: string) => (/^[A-Z][a-z]/.test(label) ? label.charAt(
 const listed = (labels: string[]) => (labels.length <= 1 ? labels[0] ?? "" : `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`);
 
 /**
- * Under "Can agents use it?": what an agent can do today, named, and what it cannot yet. A stranger
- * reads "can already check availability, but cannot yet book a stay", not a count of three.
+ * Under "Can agents use it?": what the site lets an agent do today, named, and what it does not yet.
+ * The site is the subject, so nobody reads a gap on the site as the tool admitting it failed.
  */
-export function capabilityLine(capabilities: CapabilityResult[]): string {
+export function capabilityLine(capabilities: CapabilityResult[], host = "This site"): string {
   const three = actionsThatMatter(capabilities);
   if (three.length === 0) return "";
-  const say = (items: CapabilityResult[]) => listed(items.map((capability) => lowerFirst(capability.label)));
+  const say = (items: CapabilityResult[], joiner = "and") => {
+    const labels = items.map((capability) => lowerFirst(capability.label));
+    return labels.length <= 1 ? labels[0] ?? "" : `${labels.slice(0, -1).join(", ")} ${joiner} ${labels[labels.length - 1]}`;
+  };
   const works = three.filter((capability) => capability.state === "agent-ready");
   const rest = three.filter((capability) => capability.state !== "agent-ready");
-  if (works.length === 0) return `An AI agent cannot yet ${say(rest)} here.`;
-  if (rest.length === 0) return `An AI agent can already ${say(works)} here.`;
-  return `An AI agent can already ${say(works)} here, but cannot yet ${say(rest)}.`;
+  if (works.length === 0) return `${host} does not yet let an AI agent ${say(rest, "or")}.`;
+  if (rest.length === 0) return `${host} already lets an AI agent ${say(works)}.`;
+  return `${host} already lets an AI agent ${say(works)}, but not yet ${say(rest, "or")}.`;
 }
 
 /** The line under the headline: the size of the gap, or the good news. */
@@ -297,8 +300,8 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         {!engine && gap && <p className="first-sentence">{gap}</p>}
         {engine && (
           <p className="first-context">
-            WordLift read {engine.pages} {engine.pages === 1 ? "page" : "pages"} of {host} and built a first <b>Context Engine</b>: the model of the business
-            that AI agents use to understand it and act on it.
+            From {engine.pages} {engine.pages === 1 ? "page" : "pages"} of {host}, WordLift built a model of this business that AI agents can use to
+            understand it and act on it: its first <b>Context Engine</b>.
           </p>
         )}
         <p className="first-meta">
@@ -306,7 +309,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
           <span className="chip-arche">{archetype}</span>
           {report.publishedWith && (
             <a className="chip-arche chip-runs-on" href={publishUrl(report.id, { engine: stored?.id })} onClick={() => track(report.id, "door_claim-context")} target="_blank" rel="noreferrer" title={`${runsOnLine(report)} ${report.publishedWith.evidence}. Own this site? Open your WordLift dashboard.`}>
-              Runs on {report.publishedWith.name}
+              Already uses {report.publishedWith.name}
             </a>
           )}
           {ago && (
@@ -327,7 +330,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
           </p>
         )}
         <EngineStatus report={report} engine={stored} />
-        {engine && <ContextEnginePreview summary={engine} onExplore={() => track(report.id, "engine_explored")} />}
+        {engine && <ContextEnginePreview summary={engine} host={host} onExplore={() => track(report.id, "engine_explored")} />}
         {/* Beside the model, the two things to do with it: review it, which makes it better, or ask it, which proves it is usable. */}
         {engine && <AgentDoors reportId={report.id} host={holds(stored) ? stored!.host : null} engineKey={engineKey} />}
         {/* Claiming is where an address is asked for: the engine expands, and the owner hears when it moves. */}
@@ -339,8 +342,13 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
           <>
             <h2 id="first-capabilities-title">Can agents use it?</h2>
             <p className="first-sentence">
-              {capabilityLine(capabilities)}
-              {gap && <> {gap}</>}
+              {capabilityLine(capabilities, host)}
+              {three.some((capability) => capability.state !== "agent-ready") && (
+                <>
+                  {" "}
+                  <a href="#step-fix">See how to fix {three.filter((capability) => capability.state !== "agent-ready").length === 1 ? "it" : "them"}</a>
+                </>
+              )}
             </p>
           </>
         )}

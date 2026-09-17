@@ -108,7 +108,7 @@ describe("the first screen", () => {
 
   it("offers to claim the Context Engine on the first screen, opening in place, and not on a deep scan", () => {
     renderScreen();
-    const strip = screen.getByRole("button", { name: /Claim your Context Engine, free: keep your corrections, read more of the site, hear when it changes/ });
+    const strip = screen.getByRole("button", { name: /Claim your Context Engine, free with your email: keep your corrections, read more of the site, hear when it changes/ });
     expect(strip).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByLabelText(/email address/i)).toBeNull();
     fireEvent.click(strip);
@@ -141,7 +141,7 @@ describe("the first screen", () => {
     renderScreen(reviewed);
     // The headline is what the business is; what a Context Engine is follows in one plain line.
     expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf is a lodging business offering Samspitze 4." })).toBeVisible();
-    expect(screen.getByText(/built a first/)).toHaveTextContent("WordLift read 1 page of alpina.travel and built a first Context Engine: the model of the business that AI agents use to understand it and act on it.");
+    expect(screen.getByText(/WordLift built a model/)).toHaveTextContent("From 1 page of alpina.travel, WordLift built a model of this business that AI agents can use to understand it and act on it: its first Context Engine.");
     const understood = screen.getByRole("list", { name: "What WordLift understood" });
     expect(within(understood).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
       "AlpiNest FeriendorfLodging businessDeclared",
@@ -156,14 +156,16 @@ describe("the first screen", () => {
     // Review beside the model, then the proof.
     expect(screen.getByRole("button", { name: /Review with ChatGPT/ })).toBeVisible();
     expect(screen.getByRole("heading", { level: 2, name: "Can agents use it?" })).toBeVisible();
-    expect(screen.getByText(/An AI agent can already/)).toHaveTextContent("An AI agent can already check availability here, but cannot yet book a stay and find a property. Fix the other 2.");
+    // The site is the subject of what agents can do, and the gap is a door to its fix.
+    expect(screen.getByText(/already lets an AI agent/)).toHaveTextContent("alpina.travel already lets an AI agent check availability, but not yet book a stay or find a property. See how to fix them");
+    expect(screen.getByRole("link", { name: "See how to fix them" })).toHaveAttribute("href", "#step-fix");
     expect(screen.getByText(/our agent actually completed/)).toBeVisible();
   });
 
   it("counts what works among the things that matter most", () => {
-    expect(capabilityLine(report.capabilities ?? [])).toBe("An AI agent can already check availability here, but cannot yet book a stay and find a property.");
-    expect(capabilityLine([capability({ actionId: "a", label: "Search the site", state: "missing" }), capability({ actionId: "b", label: "Retrieve details", state: "missing" })])).toBe("An AI agent cannot yet retrieve details and search the site here.");
-    expect(capabilityLine([capability({ actionId: "a", label: "Search the site", state: "agent-ready" })])).toBe("An AI agent can already search the site here.");
+    expect(capabilityLine(report.capabilities ?? [], "alpina.travel")).toBe("alpina.travel already lets an AI agent check availability, but not yet book a stay or find a property.");
+    expect(capabilityLine([capability({ actionId: "a", label: "Search the site", state: "missing" }), capability({ actionId: "b", label: "Retrieve details", state: "missing" })], "wordlift.io")).toBe("wordlift.io does not yet let an AI agent retrieve details or search the site.");
+    expect(capabilityLine([capability({ actionId: "a", label: "Search the site", state: "agent-ready" })], "wordlift.io")).toBe("wordlift.io already lets an AI agent search the site.");
   });
 
   it("says what the agent did in a person's words, never in ours", () => {
@@ -222,7 +224,7 @@ describe("the readers line", () => {
 
   it("names the platform the site's own data declares, beside the archetype, and says what it already delivers next to the score", () => {
     renderScreen(onWordLift);
-    const chip = screen.getByRole("link", { name: "Runs on WordLift" });
+    const chip = screen.getByRole("link", { name: "Already uses WordLift" });
     expect(chip).toHaveAttribute("href", expect.stringContaining("my.wordlift.io"));
     expect(chip).toHaveAttribute("href", expect.stringContaining(report.id));
     expect(chip).toHaveAttribute("title", expect.stringContaining("Entity ids on data.wordlift.io"));
@@ -267,8 +269,8 @@ describe("the readers line", () => {
     } as unknown as ReportRecord;
     renderScreen(withGraph);
     // What the business is leads; a byline, the site's own name and a demoted thing are not in the sentence or the cards.
-    expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf Lungau is a lodging business offering Samspitze 5." })).toBeVisible();
-    expect(screen.getByText(/built a first/)).toHaveTextContent("WordLift read 2 pages of alpina.travel");
+    expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf Lungau is a lodging business offering Samspitze 5 and Samspitze 4." })).toBeVisible();
+    expect(screen.getByText(/WordLift built a model/)).toHaveTextContent("From 2 pages of alpina.travel, WordLift built a model");
     const cards = screen.getByRole("list", { name: "What WordLift understood" });
     expect(cards).not.toHaveTextContent(/Andrea Volpini|Old brochure|Alpina\.travel/);
     expect(screen.getByRole("link", { name: "See everything we found, and where each came from" })).toHaveAttribute("href", "#understand");

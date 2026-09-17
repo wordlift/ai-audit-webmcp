@@ -21,7 +21,7 @@ test("a report opens with the Context Engine, then three words, and keeps the mo
   await expect(page.getByRole("button", { name: /review with chatgpt/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Can agents use it?" })).toBeVisible();
   await expect(page.getByRole("link", { name: /pitching to a client/i })).toHaveCount(0);
-  await expect(page.getByText(/built a first Context Engine|AI agents can do \d+ of the \d+/i).first()).toBeVisible();
+  await expect(page.getByText(/its first Context Engine|AI agents can do \d+ of the \d+/i).first()).toBeVisible();
   const three = page.getByRole("list", { name: /the actions that matter/i });
   await expect(three.getByRole("listitem")).toHaveCount(3);
   await expect(three).toContainText(/works|fix this|talk to us/i);

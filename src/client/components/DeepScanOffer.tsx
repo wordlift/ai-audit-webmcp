@@ -112,7 +112,7 @@ export function DeepScanOffer({ report, graceMs = ACCEPT_GRACE_MS, variant = "st
   return (
     <section className={`deep-scan-offer deep-scan-inline deep-scan-${variant}`} id="deep-scan" aria-label="Claim your Context Engine">
       <button type="button" className={variant === "inline" ? "deep-scan-inline-link" : "deep-scan-strip"} aria-expanded={open} onClick={() => setOpen((current) => !current)}>
-        {variant === "strip" && <ScanSearch size={16} aria-hidden="true" />} {claimed ? `Expand your Context Engine beyond ${pagesRead === 1 ? "this page" : `these ${pagesRead} pages`}` : "Claim your Context Engine, free: keep your corrections, read more of the site, hear when it changes"}
+        {variant === "strip" && <ScanSearch size={16} aria-hidden="true" />} {claimed ? `Expand your Context Engine beyond ${pagesRead === 1 ? "this page" : `these ${pagesRead} pages`}` : "Claim your Context Engine, free with your email: keep your corrections, read more of the site, hear when it changes"}
         <ArrowRight size={14} aria-hidden="true" className={open ? "is-open" : ""} />
       </button>
       {open && (

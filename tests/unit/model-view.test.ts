@@ -66,7 +66,8 @@ describe("the model a stranger meets", () => {
     expect(view.counts.businesses).toBe(1);
     // A collection the text names ("Men's Shoes") is where things are filed, not one of them.
     expect(view.offerings.map((item) => item.name)).toEqual(["Men's Runner NZ Slip On", "Tree Dasher 2"]);
-    expect(view.sentence).toBe("Allbirds is a brand offering Men's Runner NZ Slip On.");
+    // What the site declares is named first; what the text adds follows it.
+    expect(view.sentence).toBe("Allbirds is a brand offering Men's Runner NZ Slip On and Tree Dasher 2.");
   });
 
   it("reads a brand only the text names, beside a declared business, as a line it sells; and prefers specific names among equals", () => {
@@ -87,6 +88,16 @@ describe("the model a stranger meets", () => {
     for (const name of ["Samspitze 4", "Data Connect", "WordLift Agent", "Tree Dasher 2", "AI-Powered SEO", "Runner NZ"]) expect(looksLikeCategory(name)).toBe(false);
     const saas = { ...report("wordlift.io", [entity("org", "WordLift", "Organization", { origin: "inferred" }), entity("dc", "Data Connect", "SoftwareApplication", { origin: "inferred" })]), classification: { primaryArchetype: "saas" } } as unknown as ReportRecord;
     expect(modelView(saas).sentence).toBe("WordLift is a software company offering Data Connect.");
+  });
+
+  it("reads a product line as a product line, and a declared thing read again from the text as the declared thing", () => {
+    const view = modelView(report("allbirds.com", [
+      entity("brand", "Allbirds", "Brand"),
+      entity("runner", "Men's Runner NZ Slip On", "ProductGroup"),
+      entity("line", "Runner NZ", "Brand", { origin: "inferred" }),
+      entity("again", "Runner NZ Slip On", "Product", { origin: "inferred" }),
+    ]));
+    expect(view.preview.map((item) => `${item.name}:${item.type}`)).toEqual(["Allbirds:Brand", "Men's Runner NZ Slip On:ProductGroup"]);
   });
 
   it("keeps a platform a page mentions out of what the business offers, except on the platform's own site", () => {

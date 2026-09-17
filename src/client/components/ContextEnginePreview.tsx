@@ -66,7 +66,7 @@ export function contextEngineSummary(report: ReportRecord): ContextEngineSummary
 
 const count = (value: number, noun: string, plural = `${noun}s`) => `${value} ${value === 1 ? noun : plural}`;
 
-export function ContextEnginePreview({ summary, onExplore }: { summary: ContextEngineSummary; onExplore?: () => void }) {
+export function ContextEnginePreview({ summary, onExplore, host = "The site" }: { summary: ContextEngineSummary; onExplore?: () => void; host?: string }) {
   // A zero says nothing a reader needs: "4 declared by the site", not "· 0 read from its text".
   const provenance = [
     [summary.declared, "declared by the site"],
@@ -99,7 +99,10 @@ export function ContextEnginePreview({ summary, onExplore }: { summary: ContextE
         ))}
       </ul>
       <p className="engine-counts">
-        {provenance.join(" · ")}.{" "}
+        {/* Nothing declared is a finding about the site, said as one, not the tool hedging. */}
+        {summary.declared === 0 && summary.confirmed === 0 && summary.inferred > 0
+          ? `${host} declares none of these in its markup: WordLift read ${summary.inferred === 1 ? "it" : `all ${summary.inferred}`} from its text.`
+          : `${provenance.join(" · ")}.`}{" "}
         <a href="#understand" onClick={onExplore}>See everything we found, and where each came from</a>
       </p>
     </div>
