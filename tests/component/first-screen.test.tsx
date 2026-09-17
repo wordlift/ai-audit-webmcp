@@ -150,7 +150,7 @@ describe("the first screen", () => {
     ]);
     // What a review said shows where the model is: the decisions, and what is not ours.
     expect(screen.getByText(/decisions added/)).toHaveTextContent("Reviewed · 3 decisions added · not ours: Somebody Else GmbH");
-    expect(screen.getByText(/declared by the site/)).toHaveTextContent("1 declared by the site · 1 read from its text · 1 confirmed in a review. See all 3 with where each came from");
+    expect(screen.getByText(/declared by the site/)).toHaveTextContent("1 declared by the site · 1 read from its text · 1 confirmed in a review. See everything we found, and where each came from");
     // A draft nobody claimed says nothing about its engine in the first thirty seconds.
     expect(screen.queryByText(/Draft Context Engine/)).toBeNull();
     // Review beside the model, then the proof.
@@ -271,7 +271,7 @@ describe("the readers line", () => {
     expect(screen.getByText(/built a first/)).toHaveTextContent("WordLift read 2 pages of alpina.travel");
     const cards = screen.getByRole("list", { name: "What WordLift understood" });
     expect(cards).not.toHaveTextContent(/Andrea Volpini|Old brochure|Alpina\.travel/);
-    expect(screen.getByRole("link", { name: /See all \d+ with where each came from/ })).toHaveAttribute("href", "#understand");
+    expect(screen.getByRole("link", { name: "See everything we found, and where each came from" })).toHaveAttribute("href", "#understand");
   });
 
   it("says the shape of the business in one line from what its markup declares, and nothing when it declares no relation", () => {

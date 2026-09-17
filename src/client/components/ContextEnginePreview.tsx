@@ -100,7 +100,7 @@ export function ContextEnginePreview({ summary, onExplore }: { summary: ContextE
       </ul>
       <p className="engine-counts">
         {provenance.join(" · ")}.{" "}
-        <a href="#understand" onClick={onExplore}>See all {summary.entities} with where each came from</a>
+        <a href="#understand" onClick={onExplore}>See everything we found, and where each came from</a>
       </p>
     </div>
   );
