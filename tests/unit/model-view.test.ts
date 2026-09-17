@@ -83,7 +83,7 @@ describe("the model a stranger meets", () => {
   });
 
   it("tells a collection from a thing, and says what a generic organization is by the kind of site it runs", () => {
-    for (const name of ["Men's Shoes", "New Arrivals", "Apparel & Accessories", "Performance & Rank Tracking", "Wildly Comfortable", "Shop Tree Runners", "Discover More"]) expect(looksLikeCategory(name)).toBe(true);
+    for (const name of ["Men's Shoes", "New Arrivals", "Apparel & Accessories", "Performance & Rank Tracking", "Wildly Comfortable", "Shop Tree Runners", "Discover More", "Make a night of it", "Where work gets done"]) expect(looksLikeCategory(name)).toBe(true);
     for (const name of ["Samspitze 4", "Data Connect", "WordLift Agent", "Tree Dasher 2", "AI-Powered SEO", "Runner NZ"]) expect(looksLikeCategory(name)).toBe(false);
     const saas = { ...report("wordlift.io", [entity("org", "WordLift", "Organization", { origin: "inferred" }), entity("dc", "Data Connect", "SoftwareApplication", { origin: "inferred" })]), classification: { primaryArchetype: "saas" } } as unknown as ReportRecord;
     expect(modelView(saas).sentence).toBe("WordLift is a software company offering Data Connect.");

@@ -105,8 +105,10 @@ function categoryNoun(report: ReportRecord): string | null {
  */
 export function looksLikeCategory(name: string): boolean {
   const words = name.trim().split(/\s+/);
-  // A slogan, not a thing: "Wildly Comfortable", "Shop New Arrivals", "Discover More".
-  if (words.length <= 3 && (/ly$/i.test(words[0] ?? "") || /^(shop|discover|explore|browse|find|get|see|made|meet|free)$/i.test(words[0] ?? ""))) return true;
+  // A slogan, not a thing: "Wildly Comfortable", "Shop New Arrivals", "Discover More", "Make a night of it".
+  if (words.length <= 5 && (/ly$/i.test(words[0] ?? "") || /^(shop|discover|explore|browse|find|get|see|made|meet|free|make|join|book|stay|come|try|start|let's|enjoy)$/i.test(words[0] ?? ""))) return true;
+  // A run of ordinary words is a line of copy: "a night of it", "work gets done".
+  if (words.filter((word) => /^[a-z]{2,}$/.test(word) && !/^(and|of|for|the|with|by|to|in|on|a|an)$/.test(word)).length >= 2) return true;
   if (/\s(&|and)\s/i.test(name)) return true;
   // "The Hoxton, Brussels" names one place of a business, not a shelf of things.
   if (/\d/.test(name) || words.length > 3 || name.includes(",")) return false;
