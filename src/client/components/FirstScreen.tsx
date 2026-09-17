@@ -177,7 +177,6 @@ export function foundLine(report: ReportRecord): { pages: number; parts: string[
   if (counts.businesses > 0) parts.push(pluralNoun(counts.businesses, "business"));
   for (const { label, count } of counts.offerings.slice(0, 3)) parts.push(pluralNoun(count, label));
   if (counts.places > 0) parts.push(pluralNoun(counts.places, "place"));
-  if (counts.people > 0) parts.push(counts.people === 1 ? "1 person" : `${counts.people} people`);
   if (parts.length === 0) return null;
   const expected = (report.capabilities ?? []).filter((capability) => capability.expected).length;
   if (expected > 0) parts.push(`${expected} ${expected === 1 ? "thing" : "things"} agents should be able to do here`);
@@ -214,9 +213,16 @@ export function relationChain(report: ReportRecord, include: "settled" | "with-t
   }
   // No connection starts at the business: the shape of what it offers still reads, place within place.
   // "Samspitze 4 → in Mariapfarr → in Lungau".
+  const nestedIn = (id: string) => relations.filter((relation) => relation.to === id && relation.kind === "located-in").length;
   const start = entities
-    .filter((entity) => entityRole(entity) === "offering" && outgoing(entity.id, "located-in").length > 0)
-    .sort((left, right) => Number(right.humanPriority === "primary") - Number(left.humanPriority === "primary") || Number(left.origin === "inferred") - Number(right.origin === "inferred"))[0];
+    .filter((entity) => (entityRole(entity) === "offering" || entityRole(entity) === "place") && outgoing(entity.id, "located-in").length > 0)
+    .sort(
+      (left, right) =>
+        Number(entityRole(left) === "place") - Number(entityRole(right) === "place") ||
+        Number(right.humanPriority === "primary") - Number(left.humanPriority === "primary") ||
+        nestedIn(left.id) - nestedIn(right.id) ||
+        Number(left.origin === "inferred") - Number(right.origin === "inferred"),
+    )[0];
   if (!start) return null;
   const steps = [start.name];
   const seen = new Set([start.id]);

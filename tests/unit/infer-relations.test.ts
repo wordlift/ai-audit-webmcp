@@ -50,13 +50,13 @@ describe("relations read from the text", () => {
     expect(relations[0]!.evidence).toBe("IntroductionSamspitze 4 in sunny Mariapfarr, with a full kitchen.");
   });
 
-  it("needs whole names, both ends on the page, and never repeats what the markup declares", () => {
+  it("needs whole names, reads an entity found on another page of the site, and never repeats what the markup declares", () => {
     const elsewhere = entity("other", "Samspitze 5", "Apartment", ["https://alpina.travel/other/"]);
     const relations = inferRelations(
       [page("AlpiNest Feriendorf offers Samspitze 5. AlpiNest Feriendorf offers Samspitze 4. Samspitze 4 in Mariapfarrer Tal.")],
       [org, apt, town, elsewhere],
       [{ from: "org", to: "apt", kind: "offers", provenance: "declared", sourceUrl: PAGE }],
     );
-    expect(said(relations)).toEqual([]);
+    expect(said(relations)).toEqual(["org offers other"]);
   });
 });

@@ -104,7 +104,7 @@ function inAList(sentence: string, mentions: Mention[], index: number): boolean 
 
 /**
  * Relations read from the pages' text, and only where the text says them plainly: two entities the
- * graph already holds, named next to each other in one sentence on a page they were both found on,
+ * graph already holds, found anywhere on the site, named next to each other in one sentence,
  * with only the words for an allowed kind between them. Each is kept with its sentence and marked
  * inferred, never evidence, never published; a review confirms or rejects it. A relation the markup
  * already declares is not read again.
@@ -113,8 +113,9 @@ export function inferRelations(pages: SitePageSnapshot[], entities: DomainEntity
   const known = new Set(declared.map((relation) => `${relation.from}|${relation.kind}|${relation.to}`));
   const relations: EntityRelation[] = [];
   for (const page of pages) {
+    // The model's entities are the site's: one found on the apartment page is still itself when the home page names it.
     const onPage = entities
-      .filter((entity) => entity.sourceUrls.includes(page.url) && entity.name.length >= MIN_NAME)
+      .filter((entity) => entity.name.length >= MIN_NAME)
       .map((entity) => ({ entity, role: entityRole(entity) }))
       .filter(({ role }) => role === "business" || role === "offering" || role === "place");
     if (onPage.length < 2) continue;

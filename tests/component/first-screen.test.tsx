@@ -263,9 +263,10 @@ describe("the readers line", () => {
         bindings: [],
       },
     } as unknown as ReportRecord;
-    expect(foundLine(withGraph)).toEqual({ pages: 2, parts: ["1 business", "2 apartments", "2 places", "1 person", "4 things agents should be able to do here"] });
+    // A byline is not what the business is: people stay in the full model, out of the count a stranger reads.
+    expect(foundLine(withGraph)).toEqual({ pages: 2, parts: ["1 business", "2 apartments", "2 places", "4 things agents should be able to do here"] });
     renderScreen(withGraph);
-    expect(screen.getByText(/From 2 pages, WordLift found/)).toHaveTextContent("1 business · 2 apartments · 2 places · 1 person · 4 things agents should be able to do here");
+    expect(screen.getByText(/From 2 pages, WordLift found/)).toHaveTextContent("1 business · 2 apartments · 2 places · 4 things agents should be able to do here");
     expect(screen.getByRole("link", { name: "See everything we understood" })).toHaveAttribute("href", "#understand");
     // Without a graph there is nothing to count, and nothing is said.
     expect(foundLine(report)).toBeNull();

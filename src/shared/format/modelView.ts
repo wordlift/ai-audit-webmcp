@@ -89,7 +89,9 @@ export function modelView(report: ReportRecord): ModelView {
   const connected = new Set(relations.flatMap((relation) => [relation.from, relation.to]));
   const primary = (entity: DomainEntity) => entity.humanPriority === "primary";
   // A place inside another reads before the place that holds it: Mariapfarr, then Lungau.
-  const within = (entity: DomainEntity) => relations.filter((relation) => relation.from === entity.id && relation.kind === "located-in").length;
+  const within = (entity: DomainEntity) =>
+    relations.filter((relation) => relation.from === entity.id && relation.kind === "located-in").length -
+    relations.filter((relation) => relation.to === entity.id && relation.kind === "located-in").length;
   const rank = (left: DomainEntity, right: DomainEntity, weight: (entity: DomainEntity) => number = () => 0) =>
     Number(primary(right)) - Number(primary(left)) ||
     Number(connected.has(right.id)) - Number(connected.has(left.id)) ||
@@ -101,13 +103,19 @@ export function modelView(report: ReportRecord): ModelView {
 
   // The business: the one that is not just the website's name, unless nothing else is.
   const businesses = all.filter((entity) => entityRole(entity) === "business");
-  const ownBusinesses = businesses.filter((entity) => !namesTheSite(entity, host));
+  // One name, one business: an Organization and a Brand called Allbirds are Allbirds.
+  const ownBusinesses = businesses
+    .filter((entity) => !namesTheSite(entity, host))
+    .filter((entity, index, list) => list.findIndex((other) => normalized(other.name) === normalized(entity.name)) === index);
   const businessPool = (ownBusinesses.length > 0 ? ownBusinesses : businesses).sort((left, right) => rank(left, right));
 
   // Offerings, one per product: variants fold into the shortest name they share a base with.
   const offeringPool = all.filter((entity) => entityRole(entity) === "offering" && !isPlatform(entity, host));
-  // An inferred event is usually a headline ("Mountain days"); it stays out unless something connects it or someone confirmed it.
-  const offeringCandidates = offeringPool.filter((entity) => !(entity.types.includes("Event") && entityProvenance(entity) === "inferred" && !connected.has(entity.id)));
+  // An inferred event is usually a headline ("Mountain days"), an inferred offer a banner ("Final Sale"):
+  // each stays out unless something connects it or someone confirmed it.
+  const offeringCandidates = offeringPool.filter(
+    (entity) => !((entity.types.includes("Event") || entity.types.includes("Offer")) && entityProvenance(entity) === "inferred" && !connected.has(entity.id)),
+  );
   const groups = new Map<string, DomainEntity[]>();
   for (const entity of offeringCandidates) {
     const base = normalized(entity.name.split(VARIANT_SEPARATOR)[0] ?? entity.name);
@@ -191,5 +199,10 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   const placeOf = placeName ? where(place!.to) : undefined;
   const wherePhrase = placeName ? `, in ${placeName}${placeOf && names.get(placeOf.to) ? `, ${names.get(placeOf.to)}` : ""}` : "";
   const body = nouns ? `${subject.name} is ${article(kind)} offering ${nouns}${wherePhrase}.` : `${subject.name} is ${article(kind)}${wherePhrase}.`;
+  // Where nothing ties the business to a place, the places the site is about still say where, as the site's.
+  if (!placeName) {
+    const nested = relations.find((relation) => relation.kind === "located-in" && all.some((entity) => entity.id === relation.from && entityRole(entity) === "place"));
+    if (nested && names.get(nested.from) && names.get(nested.to)) return `${body} The site is about ${names.get(nested.from)}, in ${names.get(nested.to)}.`;
+  }
   return report.contextGraph ? body : null;
 }

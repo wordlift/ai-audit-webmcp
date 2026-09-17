@@ -37,6 +37,22 @@ describe("the model a stranger meets", () => {
     expect(view.sentence).toBe("AlpiNest Feriendorf Lungau is a lodging business offering Samspitze 4, in Mariapfarr, Lungau.");
   });
 
+  it("says where from the places the site is about when nothing ties the business to one, and counts a namesake business once", () => {
+    const view = modelView(report("alpina.travel", [
+      entity("org", "AlpiNest Feriendorf Lungau", "LodgingBusiness"),
+      entity("brand", "AlpiNest Feriendorf Lungau", "Brand"),
+      entity("sale", "Final Sale", "Offer", { origin: "inferred" }),
+      entity("apt", "Samspitze 4", "Apartment", { origin: "inferred" }),
+      entity("region", "Lungau", "Place", { origin: "inferred", sourceUrls: ["https://x/", "https://x/a", "https://x/b"] }),
+      entity("town", "Mariapfarr", "Place", { origin: "inferred" }),
+    ], [{ from: "town", to: "region", kind: "located-in", provenance: "inferred", sourceUrl: "https://x/" }]));
+    expect(view.counts.businesses).toBe(1);
+    expect(view.offerings.map((item) => item.name)).toEqual(["Samspitze 4"]);
+    // The place inside another reads first, however often the larger one is named.
+    expect(view.places.map((item) => item.name)).toEqual(["Mariapfarr", "Lungau"]);
+    expect(view.sentence).toBe("AlpiNest Feriendorf Lungau is a lodging business offering Samspitze 4. The site is about Mariapfarr, in Lungau.");
+  });
+
   it("keeps a platform a page mentions out of what the business offers, except on the platform's own site", () => {
     const mentions = [entity("org", "WordLift", "Organization"), entity("g", "Google", "SoftwareApplication", { origin: "inferred" }), entity("dc", "Data Connect", "SoftwareApplication", { origin: "inferred" })];
     expect(modelView(report("wordlift.io", mentions)).offerings.map((item) => item.name)).toEqual(["Data Connect"]);

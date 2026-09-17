@@ -1,6 +1,7 @@
 import { Bot, Check, LoaderCircle } from "lucide-react";
 import type { EntityRelation, ReportRecord } from "../../shared/types/index.js";
 import { businessModel } from "../../shared/format/businessModel.js";
+import { modelView } from "../../shared/format/modelView.js";
 
 /** How a relation reads in one line while the model forms: "AlpiNest → offers Samspitze 4". */
 const RELATION_WORDS: Record<EntityRelation["kind"], string> = {
@@ -36,9 +37,10 @@ export function progressSteps(report: ReportRecord): ProgressStep[] {
     steps.push({ key: "pages", state: "active", label: "Selecting representative pages" });
   } else {
     steps.push({ key: "pages", state: "done", label: `Selected ${pages} representative ${pages === 1 ? "page" : "pages"}` });
+    // Found as the first screen will show it: one product for its variants, the business not the website's name.
     const model = businessModel(report, "");
-    for (const entity of model.entities.filter((candidate) => candidate.role !== "content").slice(0, MAX_FOUND)) {
-      steps.push({ key: `entity-${entity.id}`, state: "done", label: "Found", name: entity.name });
+    for (const entity of modelView(report).preview.slice(0, MAX_FOUND)) {
+      steps.push({ key: `entity-${entity.id}`, state: "done", label: "Found", name: entity.variants > 0 ? `${entity.name} (${entity.variants + 1} variants)` : entity.name });
     }
     for (const relation of model.relationships.slice(0, MAX_CONNECTED)) {
       steps.push({ key: `relation-${relation.from}-${relation.kind}-${relation.to}`, state: "done", label: "Connected", name: `${relation.fromName} → ${RELATION_WORDS[relation.kind]} ${relation.toName}` });
@@ -87,14 +89,11 @@ export function ReportProgress({ report }: { report: ReportRecord }) {
         ))}
       </ol>
 
+      {/* One line, not a paragraph: the model forming is what the wait is for. */}
       {report.foundationAudit && (
-        <section className="progress-arrival" aria-label="Foundation audit">
-          <header>
-            <strong>{report.foundationAudit.score}/100</strong>
-            <span>Foundation score, already in</span>
-          </header>
-          <p>{report.foundationAudit.summary}</p>
-        </section>
+        <p className="progress-foundation" aria-label="Foundation audit">
+          Foundation score <strong>{report.foundationAudit.score}/100</strong>, already in.
+        </p>
       )}
 
       <p className="progress-footnote" role="status">
