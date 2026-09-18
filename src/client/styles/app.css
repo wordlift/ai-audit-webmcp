@@ -880,14 +880,14 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .engine-provenance-inferred { background: color-mix(in srgb, var(--state-unverified) 22%, white); color: var(--ink); }
 .engine-provenance-human-confirmed { background: color-mix(in srgb, var(--state-agent-ready) 20%, white); color: var(--ink); }
 /* The shape of the business, drawn: cards in columns, connections as labelled lines. */
-.model-graph { display: grid; gap: 10px; }
+.model-graph { display: grid; gap: 8px; }
 .model-graph-canvas { position: relative; }
-.model-graph-grid { display: grid; grid-auto-flow: row dense; gap: 12px 44px; align-items: start; }
+.model-graph-grid { display: grid; grid-auto-flow: row dense; gap: 10px 40px; align-items: start; }
 .model-graph-columns-1 { --graph-columns: 1; }
 .model-graph-columns-2 { --graph-columns: 2; }
 .model-graph-columns-3 { --graph-columns: 3; }
 .model-graph-grid { grid-template-columns: repeat(var(--graph-columns, 3), minmax(0, 1fr)); }
-.model-graph-caption { list-style: none; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); padding: 0 2px; }
+.model-graph-caption { list-style: none; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); padding: 0 2px; line-height: 1; margin-bottom: -2px; }
 .model-graph-edges { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .model-graph-edge { fill: none; stroke-width: 1.5; }
 .model-graph-edge-declared { stroke: var(--brand); color: var(--brand); }
@@ -905,8 +905,9 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .model-graph-relation .engine-entity-actions { margin: 0; }
 .engine-extras { padding-top: 4px; }
 @media (max-width: 720px) {
-  .model-graph-grid { grid-template-columns: 1fr; gap: 10px; }
+  .model-graph-grid { grid-template-columns: 1fr; gap: 8px; }
   .model-graph-grid > * { grid-column: auto !important; }
+  .model-graph-caption { margin-top: 6px; }
   .model-graph-label { display: none; }
 }
 /* Fix's cards carry the detail the fix needs, under the same head. */

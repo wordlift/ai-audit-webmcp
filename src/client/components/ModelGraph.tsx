@@ -134,13 +134,13 @@ export function ModelGraph({
     <div className="model-graph">
       <div ref={container} className={`model-graph-canvas model-graph-columns-${columns.length}`}>
         <ul className="engine-entities model-graph-grid" aria-label="What WordLift understood">
-          {columns.map((column, index) => (
+          {/* Each caption precedes its own cards, so a phone's single column reads in order; on a wider screen
+              dense placement lifts every caption to the first row of its column. */}
+          {columns.flatMap((column, index) => [
             <li key={`caption-${column.role}`} className="model-graph-caption" style={{ gridColumn: index + 1 }} aria-hidden="true">
               {column.caption}
-            </li>
-          ))}
-          {columns.flatMap((column, index) =>
-            entities
+            </li>,
+            ...entities
               .filter((entity) => entity.role === column.role)
               .map((entity) => (
                 <EntityCard
@@ -156,7 +156,7 @@ export function ModelGraph({
                   }}
                 />
               )),
-          )}
+          ])}
           {rest.map((entity) => (
             <EntityCard key={entity.id} entity={entity} decision={decisions[entity.id]} onDecide={onDecide} filedBy={filedBy} />
           ))}
