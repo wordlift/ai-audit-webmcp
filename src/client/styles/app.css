@@ -893,6 +893,11 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .model-graph-edge-declared { stroke: var(--brand); color: var(--brand); }
 .model-graph-edge-inferred { stroke: var(--faint); color: var(--faint); stroke-dasharray: 4 4; }
 .model-graph-edge-confirmed { stroke: var(--wl-leaf); color: var(--wl-leaf); }
+.model-graph-edge-implied { stroke: var(--faint); color: var(--faint); stroke-dasharray: 1.5 4; stroke-linecap: round; opacity: 0.8; }
+.model-graph-label-implied { color: var(--faint); border-style: dotted; }
+.model-graph-relation-implied small { color: var(--faint); font-style: italic; }
+.model-graph-columns-1 .model-graph-grid { grid-template-columns: minmax(0, 420px); }
+.engine-alone { margin: 0; color: var(--muted); font-size: 0.92rem; max-width: 66ch; }
 .model-graph-label { position: absolute; transform: translate(-50%, -50%); padding: 1px 7px; border-radius: 999px; font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; background: var(--surface); border: 1px solid var(--line-subtle); pointer-events: none; white-space: nowrap; }
 .model-graph-label-declared { color: var(--brand); border-color: color-mix(in srgb, var(--brand) 35%, white); }
 .model-graph-label-inferred { color: var(--muted); border-style: dashed; }
@@ -1033,6 +1038,9 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .remedy-works { background: color-mix(in srgb, var(--state-agent-ready) 10%, white); border-color: color-mix(in srgb, var(--state-agent-ready) 30%, white); }
 .remedy-talk { background: color-mix(in srgb, var(--state-missing) 7%, white); border-color: color-mix(in srgb, var(--state-missing) 25%, white); }
 .remedy-why { margin: 0; font-weight: 600; font-size: 1.02rem; line-height: 1.45; }
+.remedy-reason { margin: 0; padding: 8px 12px; border-radius: 8px; background: color-mix(in srgb, var(--state-unverified) 14%, white); color: var(--ink); font-size: 0.92rem; }
+.remedy-doors { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.remedy-secondary { border: 0; background: none; padding: 0; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .remedy-required { margin: 0; color: var(--muted); line-height: 1.45; }
 .remedy-facts { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 0.9rem; }
 .remedy-facts span { display: grid; gap: 2px; }

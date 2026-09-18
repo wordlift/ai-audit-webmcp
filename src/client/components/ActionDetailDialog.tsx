@@ -21,12 +21,20 @@ export type RemedyCase = "works" | "inspect" | "agent-ready" | "talk";
 export interface Remedy {
   case: RemedyCase;
   why: string;
+  /** What the audit's own call met, in the audit's words: the reason the first try failed. */
+  reason?: string;
   required: string;
-  cta: { label: string; href?: string; inspect?: boolean } | null;
+  cta: { label: string; href?: string; inspect?: boolean; test?: boolean } | null;
+}
+
+/** The reason a declared interface did not answer, from the audit's failed call, as the audit put it. */
+export function failureReason(capability: CapabilityResult): string | null {
+  const failed = capability.evidence.find((item) => item.verification === "failed" && item.audience === "agent");
+  return failed ? failed.claim : null;
 }
 
 /** The diagnosed gap and its door, one per precise state. Never a technology to choose from. */
-export function remedyFor(capability: CapabilityResult, reportId: string, engine?: string | null): Remedy {
+export function remedyFor(capability: CapabilityResult, reportId: string, engine?: string | null, canTest = false): Remedy {
   switch (capability.state) {
     case "agent-ready":
       return {
@@ -36,14 +44,18 @@ export function remedyFor(capability: CapabilityResult, reportId: string, engine
         cta: { label: "Keep it agent-ready", href: publishUrl(reportId, { action: capability.actionId, intent: "keep", engine }) },
       };
     case "unverified": {
-      const failed = capability.evidence.some((item) => item.audience === "agent" && item.verification === "failed");
+      const reason = failureReason(capability);
       return {
         case: "inspect",
-        why: failed
+        why: reason
           ? "Your site says agents can do this, but when our agent tried, the interface did not answer."
           : "Your site says agents can do this, but our agent could not complete it: what is declared could not be called.",
-        required: "The declared interface has to answer an agent's call. The evidence below says exactly what happened.",
-        cta: { label: failed ? "Inspect the failure" : "Inspect the declaration", inspect: true },
+        ...(reason ? { reason } : {}),
+        // A first call fails for reasons that are not the interface's as often as for ones that are.
+        required: canTest
+          ? "A first call can fail for reasons that have nothing to do with the interface: a slow or busy moment on the site, inputs the audit had to guess, a rate limit. Try it yourself with your own inputs. If it answers, that becomes the evidence and readiness moves."
+          : "The declared interface has to answer an agent's call. The evidence below says exactly what happened, and running the audit again tries once more.",
+        cta: canTest ? { label: "Try it yourself", test: true } : { label: reason ? "Inspect the failure" : "Inspect the declaration", inspect: true },
       };
     }
     case "human-only":
@@ -80,8 +92,10 @@ export function verifiedAgo(capability: CapabilityResult, now = Date.now()): str
 
 export function ActionDetailDialog({ reportId, report, capability, onOpenChange }: { reportId: string; report?: ReportRecord; capability: CapabilityResult | null; onOpenChange: (open: boolean) => void }) {
   const evidenceRef = useRef<HTMLElement | null>(null);
+  const testRef = useRef<HTMLDivElement | null>(null);
   const { engine } = useReportEngine();
-  const remedy = capability ? remedyFor(capability, reportId, engine?.id) : null;
+  const canTest = Boolean(report && capability && testable(report, capability));
+  const remedy = capability ? remedyFor(capability, reportId, engine?.id, canTest) : null;
   const verified = capability ? verifiedAgo(capability) : null;
   const owner = capability?.boundary ? OWN_WORDS[capability.boundary] : null;
 
@@ -97,6 +111,7 @@ export function ActionDetailDialog({ reportId, report, capability, onOpenChange 
             <section className={`remedy remedy-${remedy.case}`} aria-label="What needs to change">
               <p className="section-kicker"><Wrench size={15} /> What needs to change for agents to do this?</p>
               <p className="remedy-why">{remedy.why}</p>
+              {remedy.reason && <p className="remedy-reason">What our agent met: {remedy.reason.replace(/\.?$/, ".")}</p>}
               <p className="remedy-required">{remedy.required}</p>
               <div className="remedy-facts">
                 <span>
@@ -110,7 +125,16 @@ export function ActionDetailDialog({ reportId, report, capability, onOpenChange 
                 {verified && <span><small>Evidence</small><b>{verified}</b></span>}
               </div>
               {remedy.cta && (
-                remedy.cta.inspect ? (
+                remedy.cta.test ? (
+                  <span className="remedy-doors">
+                    <button type="button" className="fix-publish" onClick={() => testRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+                      {remedy.cta.label}
+                    </button>
+                    <button type="button" className="remedy-secondary" onClick={() => evidenceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+                      Inspect the failure
+                    </button>
+                  </span>
+                ) : remedy.cta.inspect ? (
                   <button type="button" className="fix-publish" onClick={() => evidenceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
                     {remedy.cta.label}
                   </button>
@@ -123,7 +147,11 @@ export function ActionDetailDialog({ reportId, report, capability, onOpenChange 
             </section>
 
             {/* Test it yourself: the audit's own call, with the person's inputs, when the site names something a server can reach. */}
-            {report && testable(report, capability) && <CapabilityTest key={capability.actionId} report={report} capability={capability} />}
+            {report && canTest && (
+              <div ref={testRef}>
+                <CapabilityTest key={capability.actionId} report={report} capability={capability} />
+              </div>
+            )}
 
             <h3 className="dialog-section-title">Technical detail</h3>
             <p className="dialog-description">{capability.description}</p>

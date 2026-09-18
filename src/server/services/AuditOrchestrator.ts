@@ -30,6 +30,7 @@ import { funnel } from "./funnel.js";
 import type {
   Archetype,
   CapabilityEvidence,
+  EntityRelation,
   ContentCategory,
   HumanAssertion,
   LexicalEntry,
@@ -407,22 +408,32 @@ export class AuditOrchestrator {
     });
 
     // How two things relate: a confirmation makes an inferred relation the reviewer's word, a
-    // rejection takes any relation out of the model. A relation the report does not hold is a conflict.
+    // rejection takes any relation out of the model. A reviewer may also confirm a relation the report
+    // does not hold, between two things it does (the business and what it offers, which the pages imply
+    // without saying): it joins the model as confirmed. Rejecting what is not held is a conflict.
     const relationKey = (relation: { from: string; kind: string; to: string }) => `${relation.from}|${relation.kind}|${relation.to}`;
     const parentRelations = parent.contextGraph.relations ?? [];
     const heldRelations = new Set(parentRelations.map(relationKey));
+    const asserted: EntityRelation[] = [];
     const relationDecisions = new Map(
       (assertions.relationDecisions ?? [])
         .filter((decision) => {
           if (heldRelations.has(relationKey(decision))) return true;
+          if (decision.decision === "confirm" && knownEntityIds.has(decision.from) && knownEntityIds.has(decision.to) && decision.from !== decision.to) {
+            asserted.push({ from: decision.from, to: decision.to, kind: decision.kind, provenance: "confirmed", sourceUrl: parent.canonicalUrl ?? parent.requestedUrl });
+            return true;
+          }
           conflicts.push(`No relation ${decision.kind} from ${decision.from} to ${decision.to} in this report`);
           return false;
         })
         .map((decision) => [relationKey(decision), decision.decision]),
     );
-    const relations = parentRelations
-      .filter((relation) => relationDecisions.get(relationKey(relation)) !== "reject")
-      .map((relation) => (relationDecisions.get(relationKey(relation)) === "confirm" && relation.provenance === "inferred" ? { ...relation, provenance: "confirmed" as const } : relation));
+    const relations = [
+      ...parentRelations
+        .filter((relation) => relationDecisions.get(relationKey(relation)) !== "reject")
+        .map((relation) => (relationDecisions.get(relationKey(relation)) === "confirm" && relation.provenance === "inferred" ? { ...relation, provenance: "confirmed" as const } : relation)),
+      ...asserted,
+    ].slice(0, 200);
 
     const appliedDecisions =
       relationDecisions.size +
@@ -437,7 +448,7 @@ export class AuditOrchestrator {
     }
 
     const contextGraph = refreshContextGraph(
-      { ...parent.contextGraph, entities, lexicalEntries: lexicon, ...(parent.contextGraph.relations ? { relations } : {}) },
+      { ...parent.contextGraph, entities, lexicalEntries: lexicon, ...(parent.contextGraph.relations || asserted.length > 0 ? { relations } : {}) },
       capabilities,
     );
 

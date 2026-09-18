@@ -187,17 +187,47 @@ describe("relations a review settles", () => {
     const relations = (refined.body as ReportRecord).contextGraph!.relations!;
     expect(relations.find((relation) => relation.to === b.id && relation.kind === "offers")?.provenance).toBe("confirmed");
     expect(relations.some((relation) => relation.to === c.id && relation.kind === "offers")).toBe(false);
-    expect((refined.body as ReportRecord).refinement!.conflicts).toEqual([`No relation brand from ${b.id} to ${a.id} in this report`]);
+    // A confirmation of a relation the report did not hold, between two things it does, joins the model as confirmed.
+    expect((refined.body as ReportRecord).refinement!.conflicts).toEqual([]);
+    expect(relations.find((relation) => relation.from === b.id && relation.to === a.id && relation.kind === "brand")?.provenance).toBe("confirmed");
 
     // The next read of the site reads the same sentences again; the engine settles them the same way.
     advance(60_000);
     const next = await audit(app);
     const reread = await store.put({ ...next, id: randomUUID(), contextGraph: { ...next.contextGraph!, relations: [...(next.contextGraph!.relations ?? []), ...inferred] } });
     const assertions = await orchestrator.engines!.carry(reread);
-    expect(assertions?.assertions.relationDecisions).toEqual([
-      { from: a.id, kind: "offers", to: b.id, decision: "confirm" },
-      { from: a.id, kind: "offers", to: c.id, decision: "reject" },
+    expect(assertions?.assertions.relationDecisions).toContainEqual({ from: a.id, kind: "offers", to: b.id, decision: "confirm" });
+    expect(assertions?.assertions.relationDecisions).toContainEqual({ from: a.id, kind: "offers", to: c.id, decision: "reject" });
+    // The relation the review asserted between two known things is asserted again on the next read.
+    expect(assertions?.assertions.relationDecisions).toContainEqual({ from: b.id, kind: "brand", to: a.id, decision: "confirm" });
+  });
+});
+
+describe("a relation the pages imply", () => {
+  it("joins the model as confirmed when a review asserts it between two known things, and is asserted again on the next read", async () => {
+    const { app, orchestrator, engines, advance } = harness();
+    const report = await audit(app);
+    const key = (await request(app).post(`/api/engines/for-report/${report.id}/claim`)).body.key as string;
+    const { first, second } = pick(report);
+    const held = (report.contextGraph!.relations ?? []).some((relation) => relation.from === first.id && relation.to === second.id && relation.kind === "offers");
+    expect(held).toBe(false);
+
+    const refined = await request(app)
+      .post(`/api/reports/${report.id}/refine`)
+      .set(KEY, key)
+      .send({ relationDecisions: [{ from: first.id, kind: "offers", to: second.id, decision: "confirm" }, { from: first.id, kind: "offers", to: "nobody", decision: "confirm" }, { from: first.id, kind: "brand", to: second.id, decision: "reject" }] });
+    expect(refined.status).toBe(200);
+    const relations = (refined.body as ReportRecord).contextGraph!.relations!;
+    expect(relations.find((relation) => relation.from === first.id && relation.to === second.id && relation.kind === "offers")?.provenance).toBe("confirmed");
+    expect((refined.body as ReportRecord).refinement!.conflicts).toEqual([
+      `No relation offers from ${first.id} to nobody in this report`,
+      `No relation brand from ${first.id} to ${second.id} in this report`,
     ]);
+
+    advance(60_000);
+    const next = await audit(app);
+    const carried = await engines.carry((await orchestrator.get(next.id))!);
+    expect(carried?.assertions.relationDecisions).toContainEqual({ from: first.id, kind: "offers", to: second.id, decision: "confirm" });
   });
 });
 

@@ -59,4 +59,26 @@ describe("where the knowledge comes from, in one line", () => {
     rerender(<ContextEnginePreview summary={summary({ preview: [inferred], view: { business: null, offerings: [inferred], places: [] } as never })} />);
     expect(screen.queryByRole("group", { name: /Is Samspitze 4 right/ })).toBeNull();
   });
+
+  it("draws an implied line from the business to what it offers when nothing says so, confirmable but never wrong", () => {
+    const business = { ...card("org", "37signals", "Organization", "inferred"), role: "business" as const };
+    const app = card("bc", "Basecamp", "SoftwareApplication", "inferred");
+    const onSave = vi.fn(async () => undefined);
+    render(<ContextEnginePreview summary={summary({ preview: [business, app], view: { business, offerings: [app], places: [] } as never })} onSave={onSave} />);
+    const legend = screen.getByRole("list", { name: "How it fits together" });
+    expect(legend).toHaveTextContent("37signals offers Basecamp · implied by the site's pages");
+    const group = screen.getByRole("group", { name: "Is it right that 37signals offers Basecamp?" });
+    expect(within(group).queryByRole("button", { name: "Wrong" })).toBeNull();
+    fireEvent.click(within(group).getByRole("button", { name: "Right" }));
+    expect(screen.getByRole("status")).toHaveTextContent("1 correction ready");
+    expect(cardAssertions({ cards: {}, relations: { "org|offers|bc": "confirm" } })).toEqual({ relationDecisions: [{ from: "org", kind: "offers", to: "bc", decision: "confirm" }] });
+  });
+
+  it("shows one card alone without columns, and says why there is nothing else", () => {
+    const business = { ...card("org", "Shake Shack", "Organization", "declared"), role: "business" as const };
+    render(<ContextEnginePreview summary={summary({ pages: 4, declared: 1, inferred: 0, preview: [business], view: { business, offerings: [], places: [] } as never })} onSave={vi.fn()} />);
+    expect(screen.queryByText("The business")).toBeNull();
+    expect(screen.getByText(/Only the business was found on these 4 pages/)).toHaveTextContent("nothing it offers is declared there or named in their text. Claiming reads more of the site.");
+    expect(screen.queryByRole("list", { name: "How it fits together" })).toBeNull();
+  });
 });

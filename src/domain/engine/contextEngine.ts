@@ -7,7 +7,7 @@ import type {
   EngineSnapshot,
 } from "../../shared/schemas/contextEngine.js";
 import { entityRole } from "../../shared/format/businessModel.js";
-import type { DomainEntity, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
+import type { DomainEntity, EntityRelation, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
 
 const MAX_SNAPSHOTS = 20;
 const MAX_KEYS = 80;
@@ -200,12 +200,28 @@ export function assertionsFor(report: ReportRecord, decisions: EngineDecisions):
   const terminology = decisions.terminology.map(({ term, meaning }) => ({ term, meaning }));
   const entitiesById = new Map((report.contextGraph?.entities ?? []).map((entity) => [entity.id, entity]));
   const relationVerdicts = new Map((decisions.relations ?? []).map((entry) => [entry.key, entry.decision]));
+  // A verdict on a relation the new read holds is applied to it; a confirmation of one it does not hold
+  // is asserted again wherever both ends are found, so a relation the owner added does not vanish on
+  // the next read. A rejection of what is not held has nothing to reject.
+  const heldKeys = new Set<string>();
   const relationDecisions = (report.contextGraph?.relations ?? []).flatMap((relation) => {
     const from = entitiesById.get(relation.from);
     const to = entitiesById.get(relation.to);
-    const verdict = from && to ? relationVerdicts.get(`${entityKey(from)} ${relation.kind} ${entityKey(to)}`) : undefined;
+    const key = from && to ? `${entityKey(from)} ${relation.kind} ${entityKey(to)}` : "";
+    if (key) heldKeys.add(key);
+    const verdict = key ? relationVerdicts.get(key) : undefined;
     return verdict ? [{ from: relation.from, kind: relation.kind, to: relation.to, decision: verdict }] : [];
   });
+  const idsByKey = new Map<string, string>();
+  for (const entity of report.contextGraph?.entities ?? []) if (!idsByKey.has(entityKey(entity))) idsByKey.set(entityKey(entity), entity.id);
+  for (const entry of decisions.relations ?? []) {
+    if (entry.decision !== "confirm" || heldKeys.has(entry.key)) continue;
+    // A key is "<name>|<role> <kind> <name>|<role>"; a name never holds "|", so the role boundary is safe to split on.
+    const match = /^(.+\|(?:business|offering|place|person|content)) (offers|located-in|provided-by|part-of|serves|brand) (.+)$/.exec(entry.key);
+    const from = match ? idsByKey.get(match[1]!) : undefined;
+    const to = match ? idsByKey.get(match[3]!) : undefined;
+    if (match && from && to && from !== to) relationDecisions.push({ from, kind: match[2] as EntityRelation["kind"], to, decision: "confirm" });
+  }
   const assertions: HumanAssertion = {
     ...(decisions.businessRole ? { businessRole: decisions.businessRole.value } : {}),
     ...(primaryEntityIds.length > 0 ? { primaryEntityIds } : {}),

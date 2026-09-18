@@ -14,7 +14,8 @@ export interface GraphRelation {
   from: string;
   to: string;
   kind: EntityRelation["kind"];
-  provenance: EntityRelation["provenance"];
+  /** Implied: nothing declares or says it, but the columns do; a business and what its own pages offer. */
+  provenance: EntityRelation["provenance"] | "implied";
   evidence?: string;
 }
 
@@ -43,7 +44,7 @@ interface Edge {
   label: string;
   x: number;
   y: number;
-  provenance: GraphRelation["provenance"];
+  provenance: GraphRelation["provenance"] | "confirmed";
 }
 
 function route(from: DOMRect, to: DOMRect, origin: DOMRect): { path: string; x: number; y: number } {
@@ -98,7 +99,17 @@ export function ModelGraph({
   const cards = useRef(new Map<string, HTMLLIElement>());
   const [edges, setEdges] = useState<Edge[]>([]);
   const names = new Map(entities.map((entity) => [entity.id, entity.name]));
-  const shown = relations.filter((relation) => names.has(relation.from) && names.has(relation.to));
+  const held = relations.filter((relation) => names.has(relation.from) && names.has(relation.to));
+  // One business and the things it offers with no line between them: the columns already say "offers",
+  // so the line is drawn as implied, and confirming it makes it the model's. Nothing is invented as fact.
+  const businesses = entities.filter((entity) => entity.role === "business");
+  const implied: GraphRelation[] =
+    businesses.length === 1
+      ? entities
+          .filter((entity) => entity.role === "offering" && !held.some((relation) => (relation.from === businesses[0]!.id && relation.to === entity.id) || (relation.from === entity.id && relation.to === businesses[0]!.id)))
+          .map((entity) => ({ from: businesses[0]!.id, to: entity.id, kind: "offers" as const, provenance: "implied" as const }))
+      : [];
+  const shown = [...held, ...implied];
   // A connection marked wrong leaves the drawing at once, and stays in the list so the mark can be undone.
   const drawn = shown.filter((relation) => relationDecisions[relationKey(relation)] !== "reject");
 
@@ -127,8 +138,10 @@ export function ModelGraph({
     return () => observer.disconnect();
   }, [measure]);
 
-  const columns = COLUMNS.filter((column) => entities.some((entity) => entity.role === column.role));
-  const rest = entities.filter((entity) => !COLUMNS.some((column) => column.role === entity.role));
+  // One card alone is not a diagram: no columns, no captions, and the reason there is nothing else.
+  const alone = entities.length === 1;
+  const columns = alone ? [] : COLUMNS.filter((column) => entities.some((entity) => entity.role === column.role));
+  const rest = entities.filter((entity) => alone || !COLUMNS.some((column) => column.role === entity.role));
   // With no "Where" column, the offerings, which have no lines between them, flow across the two free
   // columns instead of stacking under one caption; places keep one column, since they nest top-down.
   const spreadOfferings = columns.length === 2 && columns.some((column) => column.role === "offering") && !columns.some((column) => column.role === "place");
@@ -142,7 +155,7 @@ export function ModelGraph({
 
   return (
     <div className="model-graph">
-      <div ref={container} className={`model-graph-canvas model-graph-columns-${gridColumns}`}>
+      <div ref={container} className={`model-graph-canvas model-graph-columns-${alone ? 1 : gridColumns}`}>
         <ul className="engine-entities model-graph-grid" aria-label="What WordLift understood">
           {/* Each caption precedes its own cards, so a phone's single column reads in order; on a wider screen
               dense placement lifts every caption to the first row of its column. */}
@@ -203,13 +216,19 @@ export function ModelGraph({
                 <span>
                   <b>{names.get(relation.from)}</b> {EDGE_WORDS[relation.kind]} <b>{names.get(relation.to)}</b>
                   <small>
-                    {provenance === "declared" ? " · declared by site" : provenance === "confirmed" ? " · confirmed" : " · read from the text"}
+                    {provenance === "declared" ? " · declared by site" : provenance === "confirmed" ? " · confirmed" : provenance === "implied" ? " · implied by the site's pages" : " · read from the text"}
                   </small>
                 </span>
                 {onDecideRelation && relation.provenance === "inferred" && (
                   <span className="engine-entity-actions" role="group" aria-label={`Is it right that ${names.get(relation.from)} ${EDGE_WORDS[relation.kind]} ${names.get(relation.to)}?`} title={relation.evidence ? `Read from: “${relation.evidence}”` : undefined}>
                     <button type="button" aria-pressed={decided === "confirm"} onClick={() => onDecideRelation(key, "confirm")}>Right</button>
                     <button type="button" aria-pressed={decided === "reject"} onClick={() => onDecideRelation(key, "reject")}>Wrong</button>
+                  </span>
+                )}
+                {/* An implied line can be made the model's; there is nothing to take out of the model, so no Wrong. */}
+                {onDecideRelation && relation.provenance === "implied" && (
+                  <span className="engine-entity-actions" role="group" aria-label={`Is it right that ${names.get(relation.from)} ${EDGE_WORDS[relation.kind]} ${names.get(relation.to)}?`} title="The site's pages put these together; nothing on them says so in words. Right makes it part of the model.">
+                    <button type="button" aria-pressed={decided === "confirm"} onClick={() => onDecideRelation(key, "confirm")}>Right</button>
                   </span>
                 )}
               </li>

@@ -167,6 +167,12 @@ export function ContextEnginePreview({
         onDecideRelation={onSave ? decideRelation : undefined}
         filedBy={summary.filedBy}
       />
+      {summary.preview.length === 1 && everything.length === 1 && (
+        <p className="engine-alone">
+          Only the business was found on {summary.pages === 1 ? "this page" : `these ${summary.pages} pages`}: nothing it offers is declared there or named in their text.
+          {onSave ? " Claiming reads more of the site." : ""}
+        </p>
+      )}
       {showAll && extras.length > 0 && (
         <ul className="engine-entities engine-extras" aria-label="Everything else WordLift found">
           {extras.map((entity) => (
