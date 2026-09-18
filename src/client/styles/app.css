@@ -1107,7 +1107,8 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .own-it-option + .own-it-option { margin-left: -1px; }
 .own-it-option:hover { color: var(--ink); }
 .own-it-option.is-chosen { color: var(--brand); font-weight: 600; background: color-mix(in srgb, var(--brand) 10%, white); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 35%, white); }
-.own-it-option input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+/* The radio fills its pill, unseen but there: a click, a tap, a tab and a test all land on it. */
+.own-it-option input { appearance: none; position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .own-it-option:focus-within { outline: 2px solid var(--focus); outline-offset: 1px; }
 .own-it-means { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.4; }
 .own-it-partner { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; max-width: 560px; }
