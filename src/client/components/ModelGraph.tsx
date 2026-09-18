@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import type { ViewEntity } from "../../shared/format/modelView.js";
 import type { EntityRelation } from "../../shared/types/index.js";
 import { EntityCard, type CardDecision } from "./EntityCard";
@@ -129,27 +129,37 @@ export function ModelGraph({
 
   const columns = COLUMNS.filter((column) => entities.some((entity) => entity.role === column.role));
   const rest = entities.filter((entity) => !COLUMNS.some((column) => column.role === entity.role));
+  // With no "Where" column, the offerings, which have no lines between them, flow across the two free
+  // columns instead of stacking under one caption; places keep one column, since they nest top-down.
+  const spreadOfferings = columns.length === 2 && columns.some((column) => column.role === "offering") && !columns.some((column) => column.role === "place");
+  const gridColumns = spreadOfferings ? 3 : columns.length;
+  const placement = (role: ViewEntity["role"], index: number, nth: number): CSSProperties => {
+    void index;
+    const start = columns.findIndex((column) => column.role === role) + 1;
+    if (spreadOfferings && role === "offering") return { gridColumn: start + (nth % 2) };
+    return { gridColumn: start };
+  };
 
   return (
     <div className="model-graph">
-      <div ref={container} className={`model-graph-canvas model-graph-columns-${columns.length}`}>
+      <div ref={container} className={`model-graph-canvas model-graph-columns-${gridColumns}`}>
         <ul className="engine-entities model-graph-grid" aria-label="What WordLift understood">
           {/* Each caption precedes its own cards, so a phone's single column reads in order; on a wider screen
               dense placement lifts every caption to the first row of its column. */}
           {columns.flatMap((column, index) => [
-            <li key={`caption-${column.role}`} className="model-graph-caption" style={{ gridColumn: index + 1 }} aria-hidden="true">
+            <li key={`caption-${column.role}`} className="model-graph-caption" style={spreadOfferings && column.role === "offering" ? { gridColumn: `${index + 1} / span 2` } : { gridColumn: index + 1 }} aria-hidden="true">
               {column.caption}
             </li>,
             ...entities
               .filter((entity) => entity.role === column.role)
-              .map((entity) => (
+              .map((entity, nth) => (
                 <EntityCard
                   key={entity.id}
                   entity={entity}
                   decision={decisions[entity.id]}
                   onDecide={onDecide}
                   filedBy={filedBy}
-                  style={{ gridColumn: index + 1 }}
+                  style={placement(column.role, index, nth)}
                   cardRef={(element) => {
                     if (element) cards.current.set(entity.id, element);
                     else cards.current.delete(entity.id);
