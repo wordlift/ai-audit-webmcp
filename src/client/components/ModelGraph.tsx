@@ -142,25 +142,25 @@ export function ModelGraph({
   const alone = entities.length === 1;
   const columns = alone ? [] : COLUMNS.filter((column) => entities.some((entity) => entity.role === column.role));
   const rest = entities.filter((entity) => alone || !COLUMNS.some((column) => column.role === entity.role));
-  // With no "Where" column, the offerings, which have no lines between them, flow across the two free
-  // columns instead of stacking under one caption; places keep one column, since they nest top-down.
-  const spreadOfferings = columns.length === 2 && columns.some((column) => column.role === "offering") && !columns.some((column) => column.role === "place");
-  const gridColumns = spreadOfferings ? 3 : columns.length;
+  // Every role keeps one column, so a line from the business never crosses another card. A column of
+  // three or more cards sets them one line each instead, so the diagram costs the fold nothing extra.
+  const gridColumns = columns.length;
+  const tallest = Math.max(0, ...columns.map((column) => entities.filter((entity) => entity.role === column.role).length));
+  const compact = tallest >= 3;
   const placement = (role: ViewEntity["role"], index: number, nth: number): CSSProperties => {
     void index;
-    const start = columns.findIndex((column) => column.role === role) + 1;
-    if (spreadOfferings && role === "offering") return { gridColumn: start + (nth % 2) };
-    return { gridColumn: start };
+    void nth;
+    return { gridColumn: columns.findIndex((column) => column.role === role) + 1 };
   };
 
   return (
     <div className="model-graph">
       <div ref={container} className={`model-graph-canvas model-graph-columns-${alone ? 1 : gridColumns}`}>
-        <ul className="engine-entities model-graph-grid" aria-label="What WordLift understood">
+        <ul className={`engine-entities model-graph-grid${compact ? " model-graph-compact" : ""}`} aria-label="What WordLift understood">
           {/* Each caption precedes its own cards, so a phone's single column reads in order; on a wider screen
               dense placement lifts every caption to the first row of its column. */}
           {columns.flatMap((column, index) => [
-            <li key={`caption-${column.role}`} className="model-graph-caption" style={spreadOfferings && column.role === "offering" ? { gridColumn: `${index + 1} / span 2` } : { gridColumn: index + 1 }} aria-hidden="true">
+            <li key={`caption-${column.role}`} className="model-graph-caption" style={{ gridColumn: index + 1 }} aria-hidden="true">
               {column.caption}
             </li>,
             ...entities

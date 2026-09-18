@@ -893,6 +893,12 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .model-graph-edge-declared { stroke: var(--brand); color: var(--brand); }
 .model-graph-edge-inferred { stroke: var(--faint); color: var(--faint); stroke-dasharray: 4 4; }
 .model-graph-edge-confirmed { stroke: var(--wl-leaf); color: var(--wl-leaf); }
+/* A tall column: one line per card, the tag and the decision to the right. */
+.model-graph-compact .engine-entity { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; padding: 6px 12px; }
+.model-graph-compact .engine-entity-name { flex: 0 1 auto; }
+.model-graph-compact .engine-entity-type { flex: 1 1 auto; font-size: 0.8rem; }
+.model-graph-compact .engine-provenance { margin-left: auto; }
+.model-graph-compact .engine-entity-actions { margin-top: 0; }
 .model-graph-edge-implied { stroke: var(--faint); color: var(--faint); stroke-dasharray: 1.5 4; stroke-linecap: round; opacity: 0.8; }
 .model-graph-label-implied { color: var(--faint); border-style: dotted; }
 .model-graph-relation-implied small { color: var(--faint); font-style: italic; }
