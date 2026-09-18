@@ -1127,7 +1127,12 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .own-it-action { font-weight: 600; display: inline-flex; align-items: center; gap: 10px; }
 .own-it-word { color: var(--ink); }
 .own-it-error { margin: 0; color: var(--state-missing); }
-@media (max-width: 640px) { .own-it-options { width: 100%; } .own-it-option { flex: 1 1 auto; justify-content: center; padding: 7px 8px; } }
+/* A phone: the four answers as two rows of two, each pill the same width. */
+@media (max-width: 640px) {
+  .own-it-options { display: grid; grid-template-columns: 1fr 1fr; width: 100%; border-radius: 12px; overflow: hidden; }
+  .own-it-option { justify-content: center; padding: 8px 6px; border-radius: 0; margin: 0 !important; }
+  .own-it-option.is-chosen { border-radius: 10px; }
+}
 .boundary-partner { color: var(--muted); font-size: 0.85rem; }
 
 /* Activate: the strip on the report, and the screen one click away. */
