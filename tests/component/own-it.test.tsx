@@ -130,11 +130,12 @@ describe("own it, lightly", () => {
     };
     renderPanel(refined);
     const said = screen.getByRole("list", { name: /what you said/i });
+    // Each row says the action, what agents can do with it today, and what was said about who runs it.
     const items = within(said).getAllByRole("listitem").map((item) => item.textContent);
     expect(items).toEqual([
-      "Create checkoutA partner runs it: Lungau Lodging",
-      "Check availabilityOurs",
-      "Retrieve detailsNot answered",
+      "Create checkout Fix thisA partner runs it: Lungau Lodging",
+      "Check availability WorksOurs",
+      "Retrieve details Talk to usNot answered",
     ]);
     expect(screen.queryByRole("group")).toBeNull();
 

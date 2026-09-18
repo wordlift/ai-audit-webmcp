@@ -27,7 +27,7 @@ import { groupEntities } from "./UnderstandPanel";
  */
 export type PlainWord = "works" | "fix" | "talk";
 
-const WORD_LABEL: Record<PlainWord, string> = { works: "Works", fix: "Fix this", talk: "Talk to us" };
+export const WORD_LABEL: Record<PlainWord, string> = { works: "Works", fix: "Fix this", talk: "Talk to us" };
 
 /** Works: verified by invocation. Fix this: declared or human-only. Talk to us: nothing to build on. */
 export function plainWord(capability: CapabilityResult): PlainWord | null {

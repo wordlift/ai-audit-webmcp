@@ -448,10 +448,6 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .deep-scan-inline .deep-scan-form { margin-top: 10px; }
 
 /* Own it: the entity questions one fold below the three. */
-.own-it-more { border: 1px solid var(--line-subtle); border-radius: 12px; padding: 10px 16px; }
-.own-it-more > summary { cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-.own-it-more[open] > summary { margin-bottom: 10px; }
-.own-it-more .own-it-question { border: 0; padding: 0; }
 
 /* Activate: the engineers' fold and the closing door. */
 .engineers-fold { border: 1px solid var(--line-subtle); border-radius: 16px; background: var(--surface); padding: 14px 22px; }
@@ -1096,37 +1092,41 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .fix-publish:hover { background: var(--brand-hover); }
 
 /* Own it: three questions, one minute, one immutable child report. */
-.own-it { display: grid; gap: 14px; padding: clamp(22px, 4vw, 36px); background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 18px; }
+.own-it { display: grid; gap: 12px; padding: clamp(22px, 4vw, 36px); background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 18px; }
 .own-it h2 { margin: 0; font-size: 1.35rem; }
 .own-it-lead { margin: 0; color: var(--muted); max-width: 66ch; }
-.own-it-form { display: grid; gap: 12px; }
-.own-it-question { margin: 0; padding: 12px 16px 14px; border: 1px solid var(--line-subtle); border-radius: 12px; display: grid; gap: 8px; }
-.own-it-question legend { font-weight: 600; padding: 0 6px; }
-.own-it-options { display: flex; flex-wrap: wrap; gap: 8px; }
-.own-it-option { border: 1px solid var(--line-subtle); border-radius: 999px; }
-/* The things we found, each with three words to say about it. */
-.own-it-entity-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.own-it-entity-list li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 16px; }
-.own-it-entity { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
-.own-it-entity small { color: var(--muted); }
-.own-it-owned { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 22px; color: var(--ink); }
-.own-it-owned small { display: block; color: var(--muted); font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; }
-.own-it-option.is-chosen { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 8%, white); }
-.own-it-option label { display: flex; align-items: center; gap: 8px; padding: 7px 14px 7px 10px; font-weight: 600; font-size: 0.92rem; cursor: pointer; }
-.own-it-option input { margin: 0; }
+/* One row per action: what it is and what agents can do today on the left, the four answers as one control on the right. */
+.own-it-form { display: grid; gap: 0; }
+.own-it-question { margin: 0; padding: 12px 0; border: 0; border-top: 1px solid var(--line-subtle); display: grid; gap: 8px; }
+.own-it-question:last-of-type { border-bottom: 1px solid var(--line-subtle); }
+.own-it-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; }
+.own-it-row-name { display: inline-flex; align-items: center; gap: 10px; flex: 1 1 18ch; }
+.own-it-row-name b { font-weight: 600; }
+.own-it-options { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line-subtle); border-radius: 999px; background: var(--surface); }
+.own-it-option { position: relative; display: inline-flex; align-items: center; padding: 6px 13px; font-size: 0.88rem; font-weight: 500; color: var(--muted); cursor: pointer; border-radius: 999px; transition: background 120ms, color 120ms; }
+.own-it-option + .own-it-option { margin-left: -1px; }
+.own-it-option:hover { color: var(--ink); }
+.own-it-option.is-chosen { color: var(--brand); font-weight: 600; background: color-mix(in srgb, var(--brand) 10%, white); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 35%, white); }
+.own-it-option input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+.own-it-option:focus-within { outline: 2px solid var(--focus); outline-offset: 1px; }
 .own-it-means { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.4; }
-.own-it-partner { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+.own-it-partner { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; max-width: 560px; }
 .own-it-partner label { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
 .own-it-partner input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
-.own-it-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; color: var(--muted); font-size: 0.9rem; }
-.own-it-actions button[type="submit"] { padding: 10px 14px; border: 0; border-radius: 10px; background: var(--brand); color: var(--wl-neutral-0); font: inherit; font-weight: 600; cursor: pointer; }
-.own-it-actions button[type="submit"]:disabled { opacity: 0.5; cursor: default; }
-.own-it-actions button[type="button"], .own-it-change { background: none; border: 0; padding: 0; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; justify-self: start; }
-.own-it-answers { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.own-it-answers li { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; padding: 10px 14px; border: 1px solid var(--line-subtle); border-radius: 10px; }
-.own-it-action { font-weight: 600; }
-.own-it-word { color: var(--muted); }
+/* The save bar: quiet until an answer is picked, then the same bar the cards use. */
+.own-it-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 8px; padding: 10px 14px; border-radius: 10px; color: var(--muted); font-size: 0.92rem; background: var(--wl-neutral-100); }
+.own-it-actions.is-ready { background: color-mix(in srgb, var(--state-agent-ready) 10%, white); color: var(--ink); }
+.own-it-actions > span { flex: 1 1 32ch; }
+.own-it-actions .review-cta { padding: 8px 14px; }
+.own-it-actions .review-cta:disabled { opacity: 0.45; cursor: default; }
+.own-it-keep, .own-it-change { background: none; border: 0; padding: 0; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
+.own-it-answers { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.own-it-answers li { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; padding: 10px 0; border-top: 1px solid var(--line-subtle); }
+.own-it-answers li:last-child { border-bottom: 1px solid var(--line-subtle); }
+.own-it-action { font-weight: 600; display: inline-flex; align-items: center; gap: 10px; }
+.own-it-word { color: var(--ink); }
 .own-it-error { margin: 0; color: var(--state-missing); }
+@media (max-width: 640px) { .own-it-options { width: 100%; } .own-it-option { flex: 1 1 auto; justify-content: center; padding: 7px 8px; } }
 .boundary-partner { color: var(--muted); font-size: 0.85rem; }
 
 /* Activate: the strip on the report, and the screen one click away. */

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import type { ActionBoundary, CapabilityResult, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
 import { refineReport } from "../api/client";
 import { engineHostFor, engineKeyFor } from "../engine/engineKeys";
-import { actionsThatMatter } from "./FirstScreen";
+import { WORD_LABEL, actionsThatMatter, plainWord } from "./FirstScreen";
 
 /**
  * "Own it", lightly: one question per action of the three, answered in a minute. The answers go
@@ -103,8 +103,7 @@ export function OwnIt({ report }: { report: ReportRecord }) {
     <section className="own-it" id="own-it" aria-labelledby="own-it-title">
       <h2 id="own-it-title">Who actually performs these actions?</h2>
       <p className="own-it-lead">
-        These answers determine what your site tells AI agents they can do. They do not change the readiness score; only working
-        interfaces do.
+        What your site tells AI agents about each action starts here. Nothing here moves readiness; only an interface that answers does.
       </p>
 
       {!editing ? (
@@ -112,9 +111,12 @@ export function OwnIt({ report }: { report: ReportRecord }) {
           <ul className="own-it-answers" aria-label="What you said">
             {three.map((capability) => {
               const human = capability.boundarySource === "human-provided" && capability.boundary ? capability.boundary : null;
+              const word = plainWord(capability) ?? "fix";
               return (
                 <li key={capability.actionId}>
-                  <span className="own-it-action">{capability.label}</span>
+                  <span className="own-it-action">
+                    {capability.label} <span className={`plain-word plain-word-${word}`}>{WORD_LABEL[word]}</span>
+                  </span>
                   <span className="own-it-word">
                     {human ? OWN_WORDS[human] : "Not answered"}
                     {human === "partner-handoff" && capability.boundaryPartner ? `: ${capability.boundaryPartner.name}` : ""}
@@ -129,15 +131,21 @@ export function OwnIt({ report }: { report: ReportRecord }) {
         <form className="own-it-form" onSubmit={(event) => void save(event)}>
           {three.map((capability) => {
             const current = answers[capability.actionId]!;
+            const word = plainWord(capability) ?? "fix";
             return (
               <fieldset key={capability.actionId} className="own-it-question">
-                <legend>{capability.label}</legend>
-                <div className="own-it-options">
-                  {OPTIONS.map((option) => {
-                    const id = `own-${capability.actionId}-${option.value}`;
-                    return (
-                      <div key={option.value} className={`own-it-option${current.boundary === option.value ? " is-chosen" : ""}`}>
-                        <label htmlFor={id}>
+                {/* The legend names the group for a screen reader; the row shows the action with its state today. */}
+                <legend className="sr-only">{capability.label}</legend>
+                <div className="own-it-row">
+                  <span className="own-it-row-name" aria-hidden="true">
+                    <b>{capability.label}</b>
+                    <span className={`plain-word plain-word-${word}`}>{WORD_LABEL[word]}</span>
+                  </span>
+                  <div className="own-it-options">
+                    {OPTIONS.map((option) => {
+                      const id = `own-${capability.actionId}-${option.value}`;
+                      return (
+                        <label key={option.value} htmlFor={id} className={`own-it-option${current.boundary === option.value ? " is-chosen" : ""}`}>
                           <input
                             id={id}
                             type="radio"
@@ -148,9 +156,9 @@ export function OwnIt({ report }: { report: ReportRecord }) {
                           />
                           {option.label}
                         </label>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
                 {current.boundary && (
                   <p className="own-it-means">{OPTIONS.find((option) => option.value === current.boundary)?.means}</p>
@@ -170,12 +178,14 @@ export function OwnIt({ report }: { report: ReportRecord }) {
               </fieldset>
             );
           })}
-          <div className="own-it-actions">
-            <button type="submit" disabled={saving || !anything}>{saving ? "Saving…" : "Save my answers"}</button>
-            {said.length > 0 && <button type="button" onClick={() => setEditing(false)}>Keep what I said</button>}
+          <div className={`own-it-actions${anything ? " is-ready" : ""}`} role={anything ? "status" : undefined}>
             <span>
-              Your answers create a new version of this report{engineKeyFor(engineHostFor(report)) ? " and are kept on your Context Engine for every later read" : ""}. The score stays where the evidence put it.
+              {anything
+                ? `${decisions.length} ${decisions.length === 1 ? "answer" : "answers"} ready. Saving creates a new version of this report${engineKeyFor(engineHostFor(report)) ? ", kept on your Context Engine for every later read" : ""}.`
+                : "Pick an answer for each action you know. Your answers create a new version of this report; the score stays where the evidence put it."}
             </span>
+            <button type="submit" className="review-cta review-cta-primary" disabled={saving || !anything}>{saving ? "Saving…" : "Save my answers"}</button>
+            {said.length > 0 && <button type="button" className="own-it-keep" onClick={() => setEditing(false)}>Keep what I said</button>}
           </div>
           {error && <p role="alert" className="own-it-error">{error}</p>}
         </form>
