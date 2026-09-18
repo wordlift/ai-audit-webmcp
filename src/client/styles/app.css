@@ -879,6 +879,45 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .engine-provenance-declared { background: color-mix(in srgb, var(--brand) 10%, white); color: var(--brand); }
 .engine-provenance-inferred { background: color-mix(in srgb, var(--state-unverified) 22%, white); color: var(--ink); }
 .engine-provenance-human-confirmed { background: color-mix(in srgb, var(--state-agent-ready) 20%, white); color: var(--ink); }
+/* The shape of the business, drawn: cards in columns, connections as labelled lines. */
+.model-graph { display: grid; gap: 10px; }
+.model-graph-canvas { position: relative; }
+.model-graph-grid { display: grid; grid-auto-flow: row dense; gap: 12px 44px; align-items: start; }
+.model-graph-columns-1 { --graph-columns: 1; }
+.model-graph-columns-2 { --graph-columns: 2; }
+.model-graph-columns-3 { --graph-columns: 3; }
+.model-graph-grid { grid-template-columns: repeat(var(--graph-columns, 3), minmax(0, 1fr)); }
+.model-graph-caption { list-style: none; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); padding: 0 2px; }
+.model-graph-edges { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.model-graph-edge { fill: none; stroke-width: 1.5; }
+.model-graph-edge-declared { stroke: var(--brand); color: var(--brand); }
+.model-graph-edge-inferred { stroke: var(--faint); color: var(--faint); stroke-dasharray: 4 4; }
+.model-graph-edge-confirmed { stroke: var(--wl-leaf); color: var(--wl-leaf); }
+.model-graph-label { position: absolute; transform: translate(-50%, -50%); padding: 1px 7px; border-radius: 999px; font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; background: var(--surface); border: 1px solid var(--line-subtle); pointer-events: none; white-space: nowrap; }
+.model-graph-label-declared { color: var(--brand); border-color: color-mix(in srgb, var(--brand) 35%, white); }
+.model-graph-label-inferred { color: var(--muted); border-style: dashed; }
+.model-graph-label-confirmed { color: var(--wl-moss); border-color: color-mix(in srgb, var(--wl-leaf) 50%, white); }
+.model-graph-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.88rem; color: var(--muted); }
+.model-graph-relation { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.model-graph-relation b { color: var(--ink); font-weight: 600; }
+.model-graph-relation small { color: var(--faint); }
+.model-graph-relation-confirmed small { color: var(--wl-moss); }
+.model-graph-relation .engine-entity-actions { margin: 0; }
+.engine-extras { padding-top: 4px; }
+@media (max-width: 720px) {
+  .model-graph-grid { grid-template-columns: 1fr; gap: 10px; }
+  .model-graph-grid > * { grid-column: auto !important; }
+  .model-graph-label { display: none; }
+}
+/* Fix's cards carry the detail the fix needs, under the same head. */
+.understand-cards { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.engine-entity-detailed { grid-template-rows: auto auto auto; }
+.engine-entity-detail { grid-column: 1 / -1; display: grid; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line-subtle); font-size: 0.86rem; color: var(--muted); }
+.engine-entity-where { color: var(--faint); }
+.engine-entity-relations { color: var(--ink); }
+.understand-declared { margin: 0; color: var(--muted); }
+.understand-declared b { color: var(--ink); }
+.understand-declared a { color: var(--brand); font-weight: 600; }
 .engine-counts { margin: 0; color: var(--muted); font-size: 0.92rem; }
 .engine-counts-provenance { color: var(--faint); }
 .engine-counts a { color: var(--brand); font-weight: 600; }

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import type { ReportRecord } from "../../shared/types/index.js";
-import type { EntityProvenance } from "../../shared/format/businessModel.js";
 import { modelView, type ModelView, type ViewEntity } from "../../shared/format/modelView.js";
-import { entityTypeLabel } from "./UnderstandPanel";
+import { EntityCard, type CardDecision } from "./EntityCard";
+import { ModelGraph, type GraphRelation, type RelationDecision } from "./ModelGraph";
 
 /**
  * The Context Engine as a person reads it on the first screen: the handful of things the business
@@ -11,18 +11,6 @@ import { entityTypeLabel } from "./UnderstandPanel";
  * precise map, with terms, actions, interfaces and evidence, stays in the model & evidence fold.
  */
 const MAX_PREVIEW = 6;
-
-export const PROVENANCE_WORD: Record<EntityProvenance, string> = {
-  declared: "Declared by site",
-  inferred: "Inferred from text",
-  "human-confirmed": "Confirmed",
-};
-
-const PROVENANCE_HINT: Record<EntityProvenance, string> = {
-  declared: "The website explicitly identifies this in its markup.",
-  inferred: "WordLift found this in the content; the website does not declare it.",
-  "human-confirmed": "Confirmed in a review of this Context Engine.",
-};
 
 export interface ContextEngineSummary {
   pages: number;
@@ -67,35 +55,60 @@ export function contextEngineSummary(report: ReportRecord): ContextEngineSummary
 
 const count = (value: number, noun: string, plural = `${noun}s`) => `${value} ${value === 1 ? noun : plural}`;
 
-export type CardDecision = "relevant" | "not-ours";
+export type { CardDecision } from "./EntityCard";
 
-/** What the cards were told, as the assertions a review files: relevant things lead, what is not ours leaves. */
-export function cardAssertions(decisions: Record<string, CardDecision>): { primaryEntityIds?: string[]; demotedEntityIds?: string[] } {
-  const primaryEntityIds = Object.entries(decisions).filter(([, decision]) => decision === "relevant").map(([id]) => id);
-  const demotedEntityIds = Object.entries(decisions).filter(([, decision]) => decision === "not-ours").map(([id]) => id);
-  return { ...(primaryEntityIds.length > 0 ? { primaryEntityIds } : {}), ...(demotedEntityIds.length > 0 ? { demotedEntityIds } : {}) };
+/** Every decision staged on the model, cards and connections alike, as one save. */
+export interface StagedDecisions {
+  cards: Record<string, CardDecision>;
+  relations: Record<string, RelationDecision>;
+}
+
+/** What the model was told, as the assertions a review files: relevant things lead, what is not ours leaves, connections are settled. */
+export function cardAssertions(staged: StagedDecisions | Record<string, CardDecision>): { primaryEntityIds?: string[]; demotedEntityIds?: string[]; relationDecisions?: Array<{ from: string; kind: GraphRelation["kind"]; to: string; decision: RelationDecision }> } {
+  const cards = "cards" in staged && typeof staged.cards === "object" ? (staged as StagedDecisions).cards : (staged as Record<string, CardDecision>);
+  const relations = "relations" in staged && typeof staged.relations === "object" ? (staged as StagedDecisions).relations : {};
+  const primaryEntityIds = Object.entries(cards).filter(([, decision]) => decision === "relevant").map(([id]) => id);
+  const demotedEntityIds = Object.entries(cards).filter(([, decision]) => decision === "not-ours").map(([id]) => id);
+  const relationDecisions = Object.entries(relations).map(([key, decision]) => {
+    const [from, kind, to] = key.split("|") as [string, GraphRelation["kind"], string];
+    return { from, kind, to, decision };
+  });
+  return {
+    ...(primaryEntityIds.length > 0 ? { primaryEntityIds } : {}),
+    ...(demotedEntityIds.length > 0 ? { demotedEntityIds } : {}),
+    ...(relationDecisions.length > 0 ? { relationDecisions } : {}),
+  };
+}
+
+/** The connections between the things shown, as the diagram draws them. */
+export function graphRelations(report: ReportRecord): GraphRelation[] {
+  return (report.contextGraph?.relations ?? []).map((relation) => ({ from: relation.from, to: relation.to, kind: relation.kind, provenance: relation.provenance, ...(relation.evidence ? { evidence: relation.evidence } : {}) }));
 }
 
 /**
- * The model, one card per thing, each one a decision a person can make where they read it: relevant,
- * or not ours. What the text alone suggested is the wow and the doubt at once, so it is confirmed
- * here, not three folds down. Choices collect on the cards and are filed together, as one review.
+ * The model, drawn: the business, what it offers, where, and the connections between them, each
+ * card a decision a person can make where they read it. What the text alone suggested is the wow
+ * and the doubt at once, so it is confirmed here, not three folds down. Choices collect on the cards
+ * and the connections, and are filed together as one review.
  */
 export function ContextEnginePreview({
   summary,
+  relations = [],
   onExplore,
   host = "The site",
   onSave,
   keptOnEngine = false,
 }: {
   summary: ContextEngineSummary;
+  relations?: GraphRelation[];
   onExplore?: () => void;
   host?: string;
   /** Files the choices as a review; absent, the cards only show. */
-  onSave?: (decisions: Record<string, CardDecision>) => Promise<void>;
+  onSave?: (decisions: StagedDecisions) => Promise<void>;
   keptOnEngine?: boolean;
 }) {
   const [decisions, setDecisions] = useState<Record<string, CardDecision>>({});
+  const [relationDecisions, setRelationDecisions] = useState<Record<string, RelationDecision>>({});
   const [showAll, setShowAll] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,8 +119,9 @@ export function ContextEnginePreview({
     [summary.confirmed, "confirmed in a review"],
   ].filter(([value]) => Number(value) > 0).map(([value, word]) => `${value} ${word}`);
   const everything = [...(summary.view.business ? [summary.view.business] : []), ...summary.view.offerings, ...summary.view.places].slice(0, 30);
-  const cards = showAll ? everything : summary.preview;
-  const staged = Object.keys(decisions).length;
+  const shownIds = new Set(summary.preview.map((entity) => entity.id));
+  const extras = everything.filter((entity) => !shownIds.has(entity.id));
+  const staged = Object.keys(decisions).length + Object.keys(relationDecisions).length;
 
   const decide = (id: string, decision: CardDecision) =>
     setDecisions((current) => {
@@ -116,13 +130,20 @@ export function ContextEnginePreview({
       else next[id] = decision;
       return next;
     });
+  const decideRelation = (key: string, decision: RelationDecision) =>
+    setRelationDecisions((current) => {
+      const next = { ...current };
+      if (next[key] === decision) delete next[key];
+      else next[key] = decision;
+      return next;
+    });
 
   async function save() {
     if (!onSave || staged === 0) return;
     setSaving(true);
     setError(null);
     try {
-      await onSave(decisions);
+      await onSave({ cards: decisions, relations: relationDecisions });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Your corrections could not be saved.");
       setSaving(false);
@@ -137,34 +158,22 @@ export function ContextEnginePreview({
           {summary.notOurs.length > 0 && <> · not ours: {summary.notOurs.slice(0, 3).join(", ")}</>}
         </p>
       )}
-      <ul className="engine-entities" aria-label="What WordLift understood">
-        {cards.map((entity) => {
-          const decision = decisions[entity.id];
-          const confirmed = entity.provenance === "human-confirmed";
-          return (
-            <li key={entity.id} className={`engine-entity engine-entity-${entity.provenance}${decision ? ` is-${decision}` : ""}`}>
-              <span className="engine-entity-name">{entity.name}</span>
-              <span className="engine-entity-type">
-                {entity.type === "ProductLine" ? "Product line" : entityTypeLabel(entity.type)}
-                {entity.within && ` in ${entity.within}`}
-                {entity.variants > 0 && ` · ${entity.variants + 1} variants`}
-              </span>
-              <span
-                className={`engine-provenance engine-provenance-${entity.provenance}`}
-                title={entity.provenance === "human-confirmed" && summary.filedBy === "owner" ? "Confirmed by the site's verified owner." : entity.provenance === "human-confirmed" && summary.filedBy !== "owner" ? "Confirmed in a review; the reviewer has not proved the site is theirs." : PROVENANCE_HINT[entity.provenance]}
-              >
-                {PROVENANCE_WORD[entity.provenance]}
-              </span>
-              {onSave && !confirmed && (
-                <span className="engine-entity-actions" role="group" aria-label={`Is ${entity.name} right?`}>
-                  <button type="button" aria-pressed={decision === "relevant"} onClick={() => decide(entity.id, "relevant")}>Relevant</button>
-                  <button type="button" aria-pressed={decision === "not-ours"} onClick={() => decide(entity.id, "not-ours")}>Not ours</button>
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+      <ModelGraph
+        entities={summary.preview}
+        relations={relations}
+        decisions={decisions}
+        onDecide={onSave ? decide : undefined}
+        relationDecisions={relationDecisions}
+        onDecideRelation={onSave ? decideRelation : undefined}
+        filedBy={summary.filedBy}
+      />
+      {showAll && extras.length > 0 && (
+        <ul className="engine-entities engine-extras" aria-label="Everything else WordLift found">
+          {extras.map((entity) => (
+            <EntityCard key={entity.id} entity={entity} decision={decisions[entity.id]} onDecide={onSave ? decide : undefined} filedBy={summary.filedBy} />
+          ))}
+        </ul>
+      )}
       {staged > 0 && (
         <div className="engine-save" role="status">
           <span>
@@ -174,7 +183,7 @@ export function ContextEnginePreview({
           <button type="button" className="review-cta review-cta-primary" onClick={() => void save()} disabled={saving}>
             {saving ? "Saving…" : `Save ${count(staged, "correction")}`}
           </button>
-          <button type="button" className="engine-save-undo" onClick={() => setDecisions({})} disabled={saving}>Undo</button>
+          <button type="button" className="engine-save-undo" onClick={() => { setDecisions({}); setRelationDecisions({}); }} disabled={saving}>Undo</button>
           {error && <span className="engine-save-error" role="alert">{error}</span>}
         </div>
       )}
@@ -184,7 +193,7 @@ export function ContextEnginePreview({
           ? `${host} declares none of these in its markup: WordLift read ${summary.inferred === 1 ? "it" : `all ${summary.inferred}`} from its text.`
           : `${provenance.join(" · ")}.`}{" "}
         {onSave && <span className="engine-counts-hint">Mark each one Relevant or Not ours. </span>}
-        {everything.length > summary.preview.length && (
+        {extras.length > 0 && (
           <>
             <button type="button" className="engine-show-all" aria-expanded={showAll} onClick={() => setShowAll((current) => !current)}>
               {showAll ? "Show fewer" : `Show all ${everything.length}`}
@@ -192,7 +201,7 @@ export function ContextEnginePreview({
             ·{" "}
           </>
         )}
-        <a href="#understand" onClick={onExplore}>Where each came from</a>
+        <a href="#full-audit" onClick={(event) => { onExplore?.(); const fold = document.getElementById("full-audit") as HTMLDetailsElement | null; if (fold) fold.open = true; void event; }}>Full model &amp; evidence</a>
       </p>
     </div>
   );

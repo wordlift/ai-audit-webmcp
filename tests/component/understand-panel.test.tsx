@@ -2,7 +2,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { actionsWithoutInterface, publishUrl, sampleJsonLd, talkToUsUrl } from "../../src/client/components/FixPanel";
-import { UnderstandPanel, entityTypeLabel, groupEntities, linksFor, whereFound } from "../../src/client/components/UnderstandPanel";
+import { UnderstandPanel, entityTypeLabel, groupEntities, linksFor, relationPhrases, whereFound } from "../../src/client/components/UnderstandPanel";
 import type { CapabilityResult, DomainEntity, ReportRecord } from "../../src/shared/types/index.js";
 
 function capability(overrides: Partial<CapabilityResult> & Pick<CapabilityResult, "actionId" | "label" | "state">): CapabilityResult {
@@ -69,26 +69,25 @@ const base: ReportRecord = {
 };
 
 describe("what an agent understands", () => {
-  it("leads with the fix, with what agents currently understand open beneath it as the evidence", () => {
+  it("leads with the fix, lists only what exists in the text in the same card as the first screen, and says the declared ones in one line", () => {
     render(<UnderstandPanel report={base} />);
     expect(screen.getByRole("heading", { name: /fix what agents cannot understand/i })).toBeVisible();
-    expect(screen.getByText(/Agents found 3 important things on these pages\./)).toHaveTextContent("1 is already machine-readable. 2 exist only in the text.");
-    const detail = screen.getByText(/what agents currently understand/i).closest("details")!;
-    expect(detail).toHaveAttribute("open");
+    expect(screen.getByText(/Agents found 3 important things on these pages\./)).toHaveTextContent("1 is declared by the site, so agents already read it. 2 exist only in the text.");
 
-    const [reads, textOnly] = screen.getAllByRole("list");
-    // The chips say what they are before they say which: an action the reader has not met yet needs the label.
-    expect(within(reads!).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["AlpiNestLodging businesshome pageAnswers forCheck availabilityIn the site's words“Alpine stays”"]);
-    expect(screen.getByText("Check availability")).toHaveAttribute("title", expect.stringMatching(/^Check availability: /));
-    // The owner's primary entity leads the text-only group, whatever its confidence.
-    expect(within(textOnly!).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
-      "LungauPlace/lungau/apartments/samspitze-4-mariapfarrWikidata Q696371",
-      "Samspitze 4Apartment/lungau/apartments/samspitze-4-mariapfarr",
-    ]);
-    // A demoted entity is not on the first screen at all.
+    // The owner's primary entity leads, whatever its confidence; each card carries the detail the fix needs.
+    const textOnly = screen.getByRole("list", { name: "Only in the text" });
+    const cards = within(textOnly).getAllByRole("listitem");
+    expect(cards.map((card) => within(card).getByText(/^(Lungau|Samspitze 4)$/).textContent)).toEqual(["Lungau", "Samspitze 4"]);
+    expect(cards[0]).toHaveTextContent("Confirmed");
+    expect(cards[0]).toHaveTextContent("Read on /lungau/apartments/samspitze-4-mariapfarr");
+    expect(cards[0]).toHaveTextContent("Wikidata Q696371");
+    expect(cards[1]).toHaveTextContent("Inferred from text");
+    // No decision is taken here: that is the first screen's job, once.
+    expect(within(textOnly).queryByRole("group")).toBeNull();
+    // What the site declares is said once, not listed again.
+    expect(screen.getByText(/Declared by the site:/).closest("p")).toHaveTextContent("Declared by the site: AlpiNest.");
+    // A demoted entity is nowhere.
     expect(screen.queryByText("Footer menu")).toBeNull();
-    // Nothing a person reads here says "inferred" or "declared": the words are a person's. The sample's ids may.
-    expect(screen.queryAllByText(/inferred|declared/i).filter((element) => element.tagName !== "PRE")).toEqual([]);
   });
 
   it("publishes the text-only ones with one button carrying the report id, and keeps the markup behind a fold", () => {
@@ -106,15 +105,14 @@ describe("what an agent understands", () => {
     expect(sample.offers[0]).toEqual({ "@type": "Offer", price: "128", priceCurrency: "EUR", availability: "https://schema.org/InStock" });
   });
 
-  it("shows on each row what the map links to the entity: its actions and the site's words for it", () => {
+  it("knows what the map links to an entity: its actions and the site's words for it", () => {
     render(<UnderstandPanel report={base} />);
-    const row = screen.getByText("AlpiNest").closest("li")!;
-    const links = within(row).getByLabelText(/what the map links to alpinest/i);
-    expect(links).toHaveTextContent("Check availability");
-    expect(links).toHaveTextContent("“Alpine stays”");
+    const links = linksFor(declared, base);
+    expect(links.actions.map((action) => action.label)).toEqual(["Check availability"]);
+    expect(links.terms).toEqual(["Alpine stays"]);
     // The entity's own name is not a word the site uses for it, and neither is the page's headline.
-    expect(links).not.toHaveTextContent("“AlpiNest”");
-    expect(links).not.toHaveTextContent("Mountain days");
+    expect(links.terms).not.toContain("AlpiNest");
+    expect(links.terms.join(" ")).not.toContain("Mountain days");
     expect(screen.getByRole("link", { name: /open the full map/i })).toHaveAttribute("href", "#full-audit");
     expect(linksFor(inferred, base)).toEqual({ actions: [], terms: [], wikidata: null });
     // A Wikidata link the extractor was sure of is shown, and only when it exists.
@@ -125,8 +123,8 @@ describe("what an agent understands", () => {
   it("says so when everything is already published, and offers nothing to publish", () => {
     render(<UnderstandPanel report={{ ...base, contextGraph: { ...base.contextGraph!, entities: [declared] } }} />);
     expect(screen.getByRole("heading", { name: /agents understand your business/i })).toBeVisible();
-    expect(screen.getByText(/Agents found 1 important thing on these pages\./)).toHaveTextContent("All of it is already machine-readable.");
-    expect(screen.getByText(/Everything the pages describe is already machine-readable/)).toBeVisible();
+    expect(screen.getByText(/Agents found 1 important thing on these pages\./)).toHaveTextContent("All of it is declared by the site.");
+    expect(screen.queryByRole("list", { name: "Only in the text" })).toBeNull();
     expect(screen.queryByRole("link", { name: /publish/i })).toBeNull();
   });
 
@@ -175,7 +173,8 @@ describe("the Fix helpers the pitch and Activate share", () => {
       },
     };
     render(<UnderstandPanel report={related} />);
-    expect(screen.getByText("offers Samspitze 4")).toHaveClass("entity-relations");
-    expect(screen.getByText("offered by AlpiNest · in Lungau")).toHaveClass("entity-relations");
+    expect(relationPhrases(declared, related)).toEqual(["offers Samspitze 4"]);
+    const card = screen.getByText("Samspitze 4").closest("li")!;
+    expect(within(card).getByText("offered by AlpiNest · in Lungau")).toHaveClass("engine-entity-relations");
   });
 });

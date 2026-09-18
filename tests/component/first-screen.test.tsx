@@ -150,7 +150,7 @@ describe("the first screen", () => {
     ]);
     // What a review said shows where the model is: the decisions, and what is not ours.
     expect(screen.getByText(/decisions added/)).toHaveTextContent("Reviewed · 3 decisions added · not ours: Somebody Else GmbH");
-    expect(screen.getByText(/declared by the site/)).toHaveTextContent("1 declared by the site · 1 read from its text · 1 confirmed in a review. Mark each one Relevant or Not ours. Where each came from");
+    expect(screen.getByText(/declared by the site/)).toHaveTextContent("1 declared by the site · 1 read from its text · 1 confirmed in a review. Mark each one Relevant or Not ours. Full model & evidence");
     // A draft nobody claimed says nothing about its engine in the first thirty seconds.
     expect(screen.queryByText(/Draft Context Engine/)).toBeNull();
     // Review beside the model, then the proof.
@@ -293,7 +293,7 @@ describe("the readers line", () => {
     expect(screen.getByText(/WordLift built a model/)).toHaveTextContent("From 2 pages of alpina.travel, WordLift built a model");
     const cards = screen.getByRole("list", { name: "What WordLift understood" });
     expect(cards).not.toHaveTextContent(/Andrea Volpini|Old brochure|Alpina\.travel/);
-    expect(screen.getByRole("link", { name: "Where each came from" })).toHaveAttribute("href", "#understand");
+    expect(screen.getByRole("link", { name: "Full model & evidence" })).toHaveAttribute("href", "#full-audit");
   });
 
   it("says the shape of the business in one line from what its markup declares, and nothing when it declares no relation", () => {
@@ -311,9 +311,13 @@ describe("the readers line", () => {
     ] } } as unknown as ReportRecord;
     expect(relationChain(declared)).toEqual(["AlpiNest Feriendorf Lungau", "offers Samspitze 4", "in Mariapfarr"]);
     renderScreen(declared);
-    // The sentence already says it: "... offering Samspitze 4, in Mariapfarr." The line would say it twice.
+    // The connections are drawn between the cards, and said in a list a reader who cannot see them reads.
     expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf Lungau is a lodging business offering Samspitze 4, in Mariapfarr." })).toBeVisible();
-    expect(screen.queryByLabelText(/How the business fits together/)).toBeNull();
+    const legend = screen.getByRole("list", { name: "How it fits together" });
+    expect(within(legend).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "AlpiNest Feriendorf Lungau offers Samspitze 4 · declared by site",
+      "Samspitze 4 in Mariapfarr · declared by site",
+    ]);
     // Only the business's own place when the offering has none.
     const orgPlace = { ...declared, contextGraph: { ...graph, relations: [{ from: "org", to: "town", kind: "located-in", provenance: "declared", sourceUrl: "https://www.alpina.travel/" }] } } as unknown as ReportRecord;
     expect(relationChain(orgPlace)).toEqual(["AlpiNest Feriendorf Lungau", "in Mariapfarr"]);

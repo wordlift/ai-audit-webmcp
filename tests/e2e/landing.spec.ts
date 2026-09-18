@@ -33,10 +33,9 @@ test("a report opens with the Context Engine, then three words, and keeps the mo
   const three = page.getByRole("list", { name: /the actions that matter/i });
   await expect(three.getByRole("listitem")).toHaveCount(3);
   await expect(three).toContainText(/works|fix this|talk to us/i);
-  // Understand follows: every entity the audit read, named plainly, with where it was found.
+  // The model, one card per thing, on the first screen; Fix names what needs fixing.
   await expect(page.getByRole("heading", { name: /fix what agents cannot understand|agents understand your business/i })).toBeVisible();
-  await expect(page.locator(".entity-row").filter({ hasText: "Trail Jacket" })).toBeVisible();
-  await expect(page.locator(".entity-row").filter({ hasText: "Trail Jacket" })).toContainText("Product");
+  await expect(page.getByRole("list", { name: "What WordLift understood" }).getByRole("listitem").filter({ hasText: "Trail Jacket" }).first()).toContainText("Product");
   // The full audit says what it is before it opens, and the precise names stay behind it.
   await expect(page.getByText(/Evidence, entities, terminology, actions, governance/i)).toBeVisible();
   await expect(page.getByRole("heading", { name: /commerce \/ retail/i })).toBeHidden();

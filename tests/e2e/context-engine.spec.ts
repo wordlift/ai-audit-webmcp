@@ -22,13 +22,12 @@ test("a claimed Context Engine keeps a correction across a new read of the site"
   await offer.getByRole("button", { name: /claim & expand/i }).click();
   await expect(page.getByText("Your Context Engine · claimed, ownership not verified")).toBeVisible();
 
-  // Correct the model: one thing we found is not theirs.
-  await page.locator("summary", { hasText: "Also tell us what matters" }).click();
-  const question = page.getByRole("radiogroup", { name: /^Is .+ yours\?$/ }).first();
-  const label = (await question.getAttribute("aria-label")) ?? "";
-  const name = label.replace(/^Is /, "").replace(/ yours\?$/, "");
-  await question.getByLabel("Not ours", { exact: true }).check();
-  await page.getByRole("button", { name: /save my answers/i }).click();
+  // Correct the model where it is read: one card is not theirs.
+  const cards = page.getByRole("list", { name: "What WordLift understood" });
+  const group = cards.getByRole("group", { name: /^Is .+ right\?$/ }).first();
+  const name = ((await group.getAttribute("aria-label")) ?? "").replace(/^Is /, "").replace(/ right\?$/, "");
+  await group.getByRole("button", { name: "Not ours" }).click();
+  await page.getByRole("button", { name: "Save 1 correction" }).click();
   await expect(page).not.toHaveURL(firstUrl);
 
   // The correction shows where the model is, and the engine keeps it.

@@ -1,7 +1,10 @@
 import { ArrowUpRight, Copy } from "lucide-react";
 import { useState } from "react";
 import type { DomainEntity, ReportRecord } from "../../shared/types/index.js";
+import { entityProvenance, entityRole } from "../../shared/format/businessModel.js";
+import type { ViewEntity } from "../../shared/format/modelView.js";
 import { plainWord, type PlainWord } from "./FirstScreen";
+import { EntityCard, type CardDetail } from "./EntityCard";
 import { publishUrl, sampleJsonLd } from "./FixPanel";
 import { useReportEngine } from "../engine/EngineContext";
 import { track } from "../engine/track";
@@ -15,12 +18,7 @@ import { track } from "../engine/track";
 /** Five per column keeps the sell above the fold; the rest is one click away in the full audit. */
 const MAX_PER_GROUP = 5;
 
-/** "LodgingBusiness" → "Lodging business": the schema.org type in words a person reads. */
-export function entityTypeLabel(type: string | undefined): string {
-  if (!type) return "Thing";
-  const words = type.replace(/^https?:\/\/schema\.org\//, "").replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2");
-  return words.charAt(0).toUpperCase() + words.slice(1).toLowerCase();
-}
+export { entityTypeLabel } from "./EntityCard";
 
 /** The page an entity was read from, as a short path a person recognises. */
 export function whereFound(entity: DomainEntity): string {
@@ -81,12 +79,6 @@ export function linksFor(entity: DomainEntity, report: ReportRecord, limit = 3):
   return { actions, terms, wikidata: wikidataLink(entity) };
 }
 
-function openFullMap() {
-  const fold = document.getElementById("full-audit") as HTMLDetailsElement | null;
-  if (fold) fold.open = true;
-  document.querySelector(".context-engine")?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
 export interface EntityGroups {
   /** Declared in the pages' markup: agents already read these. */
   published: DomainEntity[];
@@ -112,58 +104,6 @@ function openFullAudit() {
   if (fold) fold.open = true;
 }
 
-/** What the chip's colour says about the action today, for the reader who hovers. */
-const PLAIN_WORDS: Record<string, string> = { works: "an AI agent can do this today", fix: "fix this, agents cannot do it yet", talk: "talk to us, there is no interface for it", none: "not expected of this kind of site" };
-
-function EntityList({ entities, tone, report }: { entities: DomainEntity[]; tone: "published" | "text"; report: ReportRecord }) {
-  const shown = entities.slice(0, MAX_PER_GROUP);
-  const more = entities.length - shown.length;
-  return (
-    <>
-      <ul className="entity-list">
-        {shown.map((entity) => {
-          const links = linksFor(entity, report);
-          return (
-            <li key={entity.id} className={`entity-row entity-row-${tone}`}>
-              <span className="entity-name">{entity.name}</span>
-              <span className="entity-type">{entityTypeLabel(entity.types[0])}</span>
-              {whereFound(entity) && <span className="entity-where">{whereFound(entity)}</span>}
-              {relationPhrases(entity, report).length > 0 && (
-                <span className="entity-relations" aria-label={`How ${entity.name} relates to the rest of the business`}>
-                  {relationPhrases(entity, report).join(" · ")}
-                </span>
-              )}
-              {(links.actions.length > 0 || links.terms.length > 0 || links.wikidata) && (
-                <span className="entity-links" aria-label={`What the map links to ${entity.name}`}>
-                  {links.actions.length > 0 && <small className="entity-links-label">Answers for</small>}
-                  {links.actions.map((action) => (
-                    <span key={action.actionId} className={`entity-link entity-link-${action.word ?? "none"}`} title={`${action.label}: ${PLAIN_WORDS[action.word ?? "none"]}`}>{action.label}</span>
-                  ))}
-                  {links.terms.length > 0 && <small className="entity-links-label">In the site's words</small>}
-                  {links.terms.map((term) => (
-                    <span key={term} className="entity-link entity-link-term">“{term}”</span>
-                  ))}
-                  {/* The link to the world's record of the thing closes the row: it is about the entity, not an action. */}
-                  {links.wikidata && (
-                    <a className="entity-link entity-link-wikidata" href={links.wikidata.url} target="_blank" rel="noreferrer">
-                      Wikidata {links.wikidata.id}
-                    </a>
-                  )}
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      {more > 0 && (
-        <p className="entity-more">
-          <a href="#full-audit" onClick={openFullAudit}>{more} more in the model &amp; evidence</a>
-        </p>
-      )}
-    </>
-  );
-}
-
 export function UnderstandPanel({ report }: { report: ReportRecord }) {
   const [copied, setCopied] = useState(false);
   const { engine } = useReportEngine();
@@ -185,6 +125,11 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
   }
 
   const fixable = textOnly.length > 0;
+  const toView = (entity: DomainEntity): ViewEntity => ({ id: entity.id, name: entity.name, type: entity.types[0] ?? "Thing", role: entityRole(entity), provenance: entityProvenance(entity), variants: 0 });
+  const detailFor = (entity: DomainEntity): CardDetail => {
+    const links = linksFor(entity, report);
+    return { where: whereFound(entity) || undefined, relations: relationPhrases(entity, report), actions: links.actions, terms: links.terms, wikidata: links.wikidata };
+  };
   return (
     <section id="understand" className={`understand ${fixable ? "understand-fixable" : ""}`} aria-labelledby="understand-title">
       <h2 id="understand-title">{fixable ? "Fix what agents cannot understand" : "Agents understand your business"}</h2>
@@ -193,10 +138,10 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
         {" "}
         {fixable ? (
           <>
-            {published.length === 0 ? "None" : published.length} {published.length === 1 ? "is" : "are"} already machine-readable. {textOnly.length} {textOnly.length === 1 ? "exists" : "exist"} only in the text.
+            {published.length === 0 ? "None" : published.length} {published.length === 1 ? "is" : "are"} declared by the site, so agents already read {published.length === 1 ? "it" : "them"}. {textOnly.length} {textOnly.length === 1 ? "exists" : "exist"} only in the text.
           </>
         ) : (
-          <>All of {total === 1 ? "it is" : "them are"} already machine-readable.</>
+          <>All of {total === 1 ? "it is" : "them are"} declared by the site.</>
         )}
       </p>
 
@@ -209,50 +154,39 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
         </p>
       )}
 
-      {/* Open by default: the lists are the evidence for the fix, and a person wants to see them. */}
-      <details className="understand-detail" open>
-        <summary>What agents currently understand</summary>
-        <div className="entity-groups">
-          <div className="entity-group">
-            <h3>
-              <span className="plain-word plain-word-works">Agents read these</span>
-              <span className="entity-count">{published.length}</span>
-            </h3>
-            {published.length > 0 ? (
-              <EntityList entities={published} tone="published" report={report} />
-            ) : (
-              <p className="entity-empty">Nothing on these pages is machine-readable yet.</p>
-            )}
-          </div>
-          <div className="entity-group">
-            <h3>
-              <span className="plain-word plain-word-fix">Only in your text</span>
-              <span className="entity-count">{textOnly.length}</span>
-            </h3>
-            {textOnly.length > 0 ? (
-              <EntityList entities={textOnly} tone="text" report={report} />
-            ) : (
-              <p className="entity-empty">Everything the pages describe is already machine-readable.</p>
-            )}
-          </div>
-        </div>
-        <p className="entity-more understand-footnote">
-          Each row shows the actions the entity answers for, in the colour of what agents can do today, and the words the site uses for it.{" "}
-          <a href="#full-audit" onClick={openFullMap}>Open the full map</a>, where entities, terms and actions are drawn together.
+      {/* Only what needs fixing is listed here, in the same card as the first screen, with the detail the fix
+          needs: the page it was read from, its connections, the actions it answers for, the site's words. What
+          the site already declares is one line; the decision about each thing is made on the first screen. */}
+      {fixable && (
+        <ul className="engine-entities understand-cards" aria-label="Only in the text">
+          {textOnly.slice(0, MAX_PER_GROUP).map((entity) => (
+            <EntityCard key={entity.id} entity={toView(entity)} detail={detailFor(entity)} />
+          ))}
+        </ul>
+      )}
+      {fixable && textOnly.length > MAX_PER_GROUP && (
+        <p className="entity-more">
+          <a href="#full-audit" onClick={openFullAudit}>{textOnly.length - MAX_PER_GROUP} more in the model &amp; evidence</a>
         </p>
-        {sample && sampleText && (
-          <details className="fix-sample-fold">
-            <summary>See the markup for one of them</summary>
-            <figure className="fix-sample">
-              <figcaption>
-                <span>Sample · {sample.name} · from {whereFound(sample) || "the site"}</span>
-                <button type="button" onClick={() => void copy()}><Copy size={13} /> {copied ? "Copied" : "Copy"}</button>
-              </figcaption>
-              <pre>{sampleText}</pre>
-            </figure>
-          </details>
-        )}
-      </details>
+      )}
+      {published.length > 0 && (
+        <p className="understand-declared">
+          <b>Declared by the site:</b> {published.slice(0, 8).map((entity) => entity.name).join(", ")}{published.length > 8 ? ` and ${published.length - 8} more` : ""}.
+          {" "}<a href="#full-audit" onClick={openFullAudit}>Open the full map</a>, where entities, terms and actions are drawn together.
+        </p>
+      )}
+      {sample && sampleText && (
+        <details className="fix-sample-fold">
+          <summary>See the markup for one of them</summary>
+          <figure className="fix-sample">
+            <figcaption>
+              <span>Sample · {sample.name} · from {whereFound(sample) || "the site"}</span>
+              <button type="button" onClick={() => void copy()}><Copy size={13} /> {copied ? "Copied" : "Copy"}</button>
+            </figcaption>
+            <pre>{sampleText}</pre>
+          </figure>
+        </details>
+      )}
     </section>
   );
 }

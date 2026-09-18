@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import type { DomainEntity, ActionBoundary, CapabilityResult, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
-import { entityRole, RELATION_PHRASES } from "../../shared/format/businessModel.js";
+import type { ActionBoundary, CapabilityResult, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
 import { refineReport } from "../api/client";
 import { engineHostFor, engineKeyFor } from "../engine/engineKeys";
 import { actionsThatMatter } from "./FirstScreen";
@@ -9,7 +8,8 @@ import { actionsThatMatter } from "./FirstScreen";
 /**
  * "Own it", lightly: one question per action of the three, answered in a minute. The answers go
  * through the same refinement as the full interview an agent runs in ChatGPT or Claude, as
- * `actionDecisions` alone, and land in an immutable child report. Nothing here moves readiness:
+ * `actionDecisions` alone, and land in an immutable child report. What the model holds, and how it
+ * fits together, is decided on the first screen's cards and diagram, not here. Nothing here moves readiness:
  * a decision says who is responsible; only an interface that answers says it works.
  */
 export type OwnAnswer = ActionBoundary;
@@ -67,84 +67,19 @@ function initialAnswers(capabilities: CapabilityResult[]): OwnAnswers {
   );
 }
 
-/** The things WordLift read that a person can own or disown: the business, what it offers, where. Never a page, never a person. */
-export function entityChoices(report: ReportRecord, limit = 8): DomainEntity[] {
-  const order: Record<string, number> = { business: 0, offering: 1, place: 2 };
-  return (report.contextGraph?.entities ?? [])
-    .filter((entity) => entity.humanPriority !== "demoted" && entityRole(entity) in order)
-    .sort((left, right) => order[entityRole(left)]! - order[entityRole(right)]! || Number(left.origin === "inferred") - Number(right.origin === "inferred") || right.confidence - left.confidence)
-    .slice(0, limit);
-}
-
-type EntityAnswer = "primary" | "demoted" | "";
-const ENTITY_OPTIONS: ReadonlyArray<{ value: EntityAnswer; label: string }> = [
-  { value: "primary", label: "Matters" },
-  { value: "demoted", label: "Not ours" },
-  { value: "", label: "As read" },
-];
-
-type RelationAnswer = "confirm" | "reject" | "";
-const RELATION_OPTIONS: ReadonlyArray<{ value: RelationAnswer; label: string }> = [
-  { value: "confirm", label: "Right" },
-  { value: "reject", label: "Wrong" },
-  { value: "", label: "Not sure" },
-];
-
-export interface RelationChoice {
-  key: string;
-  from: string;
-  kind: NonNullable<HumanAssertion["relationDecisions"]>[number]["kind"];
-  to: string;
-  phrase: string;
-  evidence?: string;
-}
-
-/** The connections read from the text, between things still in the model: the ones a person can settle in a click. */
-export function relationChoices(report: ReportRecord, limit = 4): RelationChoice[] {
-  const names = new Map((report.contextGraph?.entities ?? []).filter((entity) => entity.humanPriority !== "demoted").map((entity) => [entity.id, entity.name]));
-  return (report.contextGraph?.relations ?? [])
-    .filter((relation) => relation.provenance === "inferred" && names.has(relation.from) && names.has(relation.to))
-    .slice(0, limit)
-    .map((relation) => ({
-      key: `${relation.from}|${relation.kind}|${relation.to}`,
-      from: relation.from,
-      kind: relation.kind,
-      to: relation.to,
-      phrase: `${names.get(relation.from)} ${RELATION_PHRASES[relation.kind]} ${names.get(relation.to)}`,
-      ...(relation.evidence ? { evidence: relation.evidence } : {}),
-    }));
-}
-
-/** The type in a person's words: "Lodging business", "Apartment", "Place". */
-function typeWord(type: string | undefined): string {
-  if (!type) return "Thing";
-  return type.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, (first) => first.toUpperCase());
-}
 
 export function OwnIt({ report }: { report: ReportRecord }) {
   const navigate = useNavigate();
   const three = actionsThatMatter(report.capabilities ?? []);
   const said = answeredAlready(three);
-  const choices = entityChoices(report, 5);
-  const connections = relationChoices(report);
-  const [relationAnswers, setRelationAnswers] = useState<Record<string, RelationAnswer>>({});
-  const owned = (report.contextGraph?.entities ?? []).filter((entity) => entity.humanPriority);
-  const [editing, setEditing] = useState(said.length === 0 && owned.length === 0);
+  const [editing, setEditing] = useState(said.length === 0);
   const [answers, setAnswers] = useState<OwnAnswers>(() => initialAnswers(three));
-  const [entityAnswers, setEntityAnswers] = useState<Record<string, EntityAnswer>>(() => Object.fromEntries(choices.map((entity) => [entity.id, entity.humanPriority === "primary" ? "primary" : ""])));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (three.length === 0) return null;
 
   const decisions = decisionsFrom(answers);
-  // Only what changed: an entity the report already lists as primary is not said again.
-  const primaryEntityIds = choices.filter((entity) => entityAnswers[entity.id] === "primary" && entity.humanPriority !== "primary").map((entity) => entity.id);
-  const demotedEntityIds = choices.filter((entity) => entityAnswers[entity.id] === "demoted").map((entity) => entity.id);
-  const relationDecisions = connections.flatMap((connection) => {
-    const answer = relationAnswers[connection.key];
-    return answer ? [{ from: connection.from, kind: connection.kind, to: connection.to, decision: answer }] : [];
-  });
-  const anything = decisions.length > 0 || primaryEntityIds.length > 0 || demotedEntityIds.length > 0 || relationDecisions.length > 0;
+  const anything = decisions.length > 0;
 
   const answer = (actionId: string, patch: Partial<OwnAnswers[string]>) =>
     setAnswers((current) => ({ ...current, [actionId]: { ...current[actionId]!, ...patch } }));
@@ -156,12 +91,7 @@ export function OwnIt({ report }: { report: ReportRecord }) {
     setError(null);
     try {
       // The same call the interview ends with; here it carries the decisions made on this page alone.
-      const child = await refineReport(report.id, {
-        ...(decisions.length > 0 ? { actionDecisions: decisions } : {}),
-        ...(primaryEntityIds.length > 0 ? { primaryEntityIds } : {}),
-        ...(demotedEntityIds.length > 0 ? { demotedEntityIds } : {}),
-        ...(relationDecisions.length > 0 ? { relationDecisions } : {}),
-      }, engineKeyFor(engineHostFor(report)));
+      const child = await refineReport(report.id, { actionDecisions: decisions }, engineKeyFor(engineHostFor(report)));
       navigate(`/reports/${child.id}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Your answers could not be saved.");
@@ -193,12 +123,6 @@ export function OwnIt({ report }: { report: ReportRecord }) {
               );
             })}
           </ul>
-          {owned.length > 0 && (
-            <p className="own-it-owned" aria-label="What you said about the things we found">
-              {owned.some((entity) => entity.humanPriority === "primary") && <span><small>Matters</small> {owned.filter((entity) => entity.humanPriority === "primary").map((entity) => entity.name).join(", ")}</span>}
-              {owned.some((entity) => entity.humanPriority === "demoted") && <span><small>Not yours</small> {owned.filter((entity) => entity.humanPriority === "demoted").map((entity) => entity.name).join(", ")}</span>}
-            </p>
-          )}
           <button type="button" className="own-it-change" onClick={() => setEditing(true)}>Change my answers</button>
         </>
       ) : (
@@ -246,69 +170,6 @@ export function OwnIt({ report }: { report: ReportRecord }) {
               </fieldset>
             );
           })}
-          {(choices.length > 0 || connections.length > 0) && (
-            <details className="own-it-more">
-            <summary>Also tell us what matters <span className="entity-count">{choices.length + connections.length}</span></summary>
-            <fieldset className="own-it-question own-it-entities">
-              <legend>What we found. Is it yours?</legend>
-              <p className="own-it-means">Mark what matters most, and what is not yours. What you leave stays as read; the rest of what we found is in the model & evidence. Nothing here moves readiness.</p>
-              <ul className="own-it-entity-list">
-                {choices.map((entity) => (
-                  <li key={entity.id}>
-                    <span className="own-it-entity">
-                      <b>{entity.name}</b>
-                      <small>{typeWord(entity.types[0])}{entity.origin === "inferred" ? " · read from the text" : ""}</small>
-                    </span>
-                    <span className="own-it-options" role="radiogroup" aria-label={`Is ${entity.name} yours?`}>
-                      {ENTITY_OPTIONS.map((option) => {
-                        const id = `own-entity-${entity.id}-${option.value || "as-read"}`;
-                        const chosen = (entityAnswers[entity.id] ?? "") === option.value;
-                        return (
-                          <div key={option.value} className={`own-it-option${chosen ? " is-chosen" : ""}`}>
-                            <label htmlFor={id}>
-                              <input id={id} type="radio" name={`own-entity-${entity.id}`} value={option.value} checked={chosen} onChange={() => setEntityAnswers((current) => ({ ...current, [entity.id]: option.value }))} />
-                              {option.label}
-                            </label>
-                          </div>
-                        );
-                      })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </fieldset>
-            {connections.length > 0 && (
-              <fieldset className="own-it-question own-it-entities">
-                <legend>How it fits together. Is this right?</legend>
-                <p className="own-it-means">We read these from your pages' text; your site does not declare them. Right keeps them in the model as confirmed; wrong takes them out.</p>
-                <ul className="own-it-entity-list">
-                  {connections.map((connection) => (
-                    <li key={connection.key}>
-                      <span className="own-it-entity">
-                        <b>{connection.phrase}</b>
-                        {connection.evidence && <small>“{connection.evidence}”</small>}
-                      </span>
-                      <span className="own-it-options" role="radiogroup" aria-label={`Is it right that ${connection.phrase}?`}>
-                        {RELATION_OPTIONS.map((option) => {
-                          const id = `own-relation-${connection.key}-${option.value || "unsure"}`;
-                          const chosen = (relationAnswers[connection.key] ?? "") === option.value;
-                          return (
-                            <div key={option.value} className={`own-it-option${chosen ? " is-chosen" : ""}`}>
-                              <label htmlFor={id}>
-                                <input id={id} type="radio" name={`own-relation-${connection.key}`} value={option.value} checked={chosen} onChange={() => setRelationAnswers((current) => ({ ...current, [connection.key]: option.value }))} />
-                                {option.label}
-                              </label>
-                            </div>
-                          );
-                        })}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </fieldset>
-            )}
-            </details>
-          )}
           <div className="own-it-actions">
             <button type="submit" disabled={saving || !anything}>{saving ? "Saving…" : "Save my answers"}</button>
             {said.length > 0 && <button type="button" onClick={() => setEditing(false)}>Keep what I said</button>}

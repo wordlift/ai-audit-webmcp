@@ -27,9 +27,8 @@ test("the eight enterprise questions are each two clicks from the report", async
   await page.goto(`/reports/${childId}`);
   await page.locator(".first-screen").waitFor();
 
-  // 7. What is inferred versus explicitly declared? No click: the two groups are on the page.
-  await expect(page.getByText(/agents read these/i)).toBeVisible();
-  await expect(page.getByText(/only in your text/i)).toBeVisible();
+  // 7. What is inferred versus explicitly declared? No click: every card on the first screen says which.
+  await expect(page.getByRole("list", { name: "What WordLift understood" }).getByText(/declared by site/i).first()).toBeVisible();
 
   // 1, 2, 3, 4 and 8: one click on the action. The dialog says what it applies to, who owns it and
   // why, with the decision's provenance, which interfaces implement it, and what evidence supports it.

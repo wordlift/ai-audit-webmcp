@@ -6,7 +6,7 @@ import { getVisits, refineReport, startReport, type ReportVisits } from "../api/
 import { ActionDetailDialog } from "./ActionDetailDialog";
 import { AgentDiary } from "./AgentDiary";
 import { AgentDoors } from "./AgentDoors";
-import { ContextEnginePreview, cardAssertions, contextEngineSummary } from "./ContextEnginePreview";
+import { ContextEnginePreview, cardAssertions, contextEngineSummary, graphRelations } from "./ContextEnginePreview";
 import { modelView, siteKind } from "../../shared/format/modelView.js";
 import { EngineStatus } from "./EngineStatus";
 import { holds, useReportEngine } from "../engine/EngineContext";
@@ -15,7 +15,7 @@ import { DeepScanOffer } from "./DeepScanOffer";
 import { publishUrl } from "./FixPanel";
 import { entityRole } from "../../shared/format/businessModel.js";
 import { explainReportError, onlyFoundationMissing, unreadableReason } from "../../shared/format/explainError.js";
-import { entityTypeLabel, groupEntities } from "./UnderstandPanel";
+import { groupEntities } from "./UnderstandPanel";
 
 /**
  * The first screen of a report shows the Context Engine first and what agents can do with it second.
@@ -278,8 +278,6 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   const three = actionsThatMatter(capabilities);
   const beyond = beyondTheThree(capabilities);
   const primary = report.classification?.primaryArchetype;
-  const settledChain = relationChain(report);
-  const fullChain = settledChain ?? relationChain(report, "with-text");
   const archetype = siteKind(report);
   const score = report.score?.value;
   const ago = readAgo(report.collectedAt, now());
@@ -287,11 +285,6 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
   const engine = contextEngineSummary(report);
   // A site that could not be read has no model and no proof: the page says that, not a score of nothing.
   const unreadable = !engine ? unreadableReason(report.errors) : null;
-  // The line of how it fits together says again what the sentence already says when the sentence names the places.
-  // Once the sentence says where ("..., in Mariapfarr, Lungau."), the line only repeats it.
-  const sentenceSaysWhere = Boolean(engine?.sentence && fullChain && fullChain.slice(1).some((step) => step.startsWith("in ") && engine.sentence!.includes(step.slice(3))));
-  const chain = fullChain && !sentenceSaysWhere && !(engine?.sentence && fullChain.slice(1).every((step) => engine.sentence!.includes(step.replace(/^(in|offers) /, "")))) ? fullChain : null;
-  const chainFromText = !settledChain && Boolean(chain);
   const { engine: stored, key: engineKey } = useReportEngine();
 
   async function runAgain() {
@@ -345,17 +338,6 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
             </button>
           )}
         </p>
-        {chain && (
-          <p className="first-chain" aria-label={chainFromText ? "How the business fits together, as read from its text" : "How the business fits together, as its markup declares it"}>
-            {chain.map((step, index) => (
-              <span key={step}>
-                {index > 0 && <span className="first-chain-arrow" aria-hidden="true"> → </span>}
-                <span className={index === 0 ? "first-chain-head" : undefined}>{step}</span>
-              </span>
-            ))}
-            {chainFromText && <span className="first-chain-inferred" title="Read from a sentence on the site, not declared in its markup. Review it to confirm."> · read from the text</span>}
-          </p>
-        )}
         <EngineStatus report={report} engine={stored} />
         {/* A correction always shows where it landed, even when it left nothing to show as a card. */}
         {!engine && report.refinement && (
@@ -370,6 +352,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         {engine && (
           <ContextEnginePreview
             summary={engine}
+            relations={graphRelations(report)}
             host={host}
             onExplore={() => track(report.id, "engine_explored")}
             keptOnEngine={holds(stored)}

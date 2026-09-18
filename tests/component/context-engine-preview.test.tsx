@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ContextEnginePreview, cardAssertions, type ContextEngineSummary } from "../../src/client/components/ContextEnginePreview";
 
 const summary = (counts: Partial<ContextEngineSummary>): ContextEngineSummary =>
@@ -27,6 +27,7 @@ describe("where the knowledge comes from, in one line", () => {
     render(
       <ContextEnginePreview
         summary={summary({ declared: 1, inferred: 3, preview: [business, apartment], view: { business, offerings: [apartment, event], places: [town] } as never })}
+        relations={[{ from: "org", to: "apt", kind: "offers", provenance: "inferred", evidence: "AlpiNest offers Samspitze 4." }]}
         host="alpina.travel"
         onSave={onSave}
       />,
@@ -38,10 +39,16 @@ describe("where the knowledge comes from, in one line", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show all 4" }));
     expect(screen.getByText("Place in Lungau")).toBeVisible();
     fireEvent.click(screen.getByRole("group", { name: "Is Mountain days right?" }).querySelectorAll("button")[1]!);
-    expect(screen.getByRole("status")).toHaveTextContent("2 corrections ready. Saving creates a reviewed version of this report.");
-    fireEvent.click(screen.getByRole("button", { name: "Save 2 corrections" }));
-    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ apt: "relevant", ev: "not-ours" }));
-    expect(cardAssertions({ apt: "relevant", ev: "not-ours" })).toEqual({ primaryEntityIds: ["apt"], demotedEntityIds: ["ev"] });
+    // A connection read from the text is settled on the same save.
+    fireEvent.click(within(screen.getByRole("group", { name: "Is it right that AlpiNest offers Samspitze 4?" })).getByRole("button", { name: "Right" }));
+    expect(screen.getByRole("status")).toHaveTextContent("3 corrections ready. Saving creates a reviewed version of this report.");
+    fireEvent.click(screen.getByRole("button", { name: "Save 3 corrections" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ cards: { apt: "relevant", ev: "not-ours" }, relations: { "org|offers|apt": "confirm" } }));
+    expect(cardAssertions({ cards: { apt: "relevant", ev: "not-ours" }, relations: { "org|offers|apt": "confirm" } })).toEqual({
+      primaryEntityIds: ["apt"],
+      demotedEntityIds: ["ev"],
+      relationDecisions: [{ from: "org", kind: "offers", to: "apt", decision: "confirm" }],
+    });
   });
 
   it("offers no decision on a thing already confirmed, and none at all without a way to save", () => {
