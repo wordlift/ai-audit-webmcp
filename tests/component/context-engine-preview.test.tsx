@@ -71,6 +71,7 @@ describe("where the knowledge comes from, in one line", () => {
     expect(within(group).queryByRole("button", { name: "Wrong" })).toBeNull();
     fireEvent.click(within(group).getByRole("button", { name: "Right" }));
     expect(screen.getByRole("status")).toHaveTextContent("1 correction ready");
+    expect(legend).toHaveTextContent("37signals offers Basecamp · confirmed");
     expect(cardAssertions({ cards: {}, relations: { "org|offers|bc": "confirm" } })).toEqual({ relationDecisions: [{ from: "org", kind: "offers", to: "bc", decision: "confirm" }] });
   });
 

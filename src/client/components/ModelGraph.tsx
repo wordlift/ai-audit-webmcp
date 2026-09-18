@@ -207,7 +207,28 @@ export function ModelGraph({
       {/* What the lines say, for a reader who cannot see them, and the decisions on the ones read from the text. */}
       {shown.length > 0 && (
         <ul className="model-graph-legend" aria-label="How it fits together">
-          {shown.map((relation) => {
+          {/* The implied lines are one row and one decision: the business offers these, or the columns lied. */}
+          {implied.length > 0 && (() => {
+            const business = names.get(implied[0]!.from);
+            const keys = implied.map(relationKey);
+            const allConfirmed = keys.every((key) => relationDecisions[key] === "confirm");
+            const offered = implied.map((relation) => names.get(relation.to) ?? "");
+            const said = offered.length <= 1 ? offered[0] ?? "" : `${offered.slice(0, -1).join(", ")} and ${offered[offered.length - 1]}`;
+            return (
+              <li className={`model-graph-relation model-graph-relation-${allConfirmed ? "confirmed" : "implied"}`}>
+                <span>
+                  <b>{business}</b> offers <b>{said}</b>
+                  <small>{allConfirmed ? " · confirmed" : " · implied by the site's pages"}</small>
+                </span>
+                {onDecideRelation && (
+                  <span className="engine-entity-actions" role="group" aria-label={`Is it right that ${business} offers ${said}?`} title="The site's pages put these together; nothing on them says so in words. Right makes it part of the model.">
+                    <button type="button" aria-pressed={allConfirmed} onClick={() => keys.filter((key) => allConfirmed || relationDecisions[key] !== "confirm").forEach((key) => onDecideRelation(key, "confirm"))}>Right</button>
+                  </span>
+                )}
+              </li>
+            );
+          })()}
+          {held.map((relation) => {
             const key = relationKey(relation);
             const decided = relationDecisions[key];
             const provenance = decided === "confirm" ? "confirmed" : relation.provenance;
@@ -223,12 +244,6 @@ export function ModelGraph({
                   <span className="engine-entity-actions" role="group" aria-label={`Is it right that ${names.get(relation.from)} ${EDGE_WORDS[relation.kind]} ${names.get(relation.to)}?`} title={relation.evidence ? `Read from: “${relation.evidence}”` : undefined}>
                     <button type="button" aria-pressed={decided === "confirm"} onClick={() => onDecideRelation(key, "confirm")}>Right</button>
                     <button type="button" aria-pressed={decided === "reject"} onClick={() => onDecideRelation(key, "reject")}>Wrong</button>
-                  </span>
-                )}
-                {/* An implied line can be made the model's; there is nothing to take out of the model, so no Wrong. */}
-                {onDecideRelation && relation.provenance === "implied" && (
-                  <span className="engine-entity-actions" role="group" aria-label={`Is it right that ${names.get(relation.from)} ${EDGE_WORDS[relation.kind]} ${names.get(relation.to)}?`} title="The site's pages put these together; nothing on them says so in words. Right makes it part of the model.">
-                    <button type="button" aria-pressed={decided === "confirm"} onClick={() => onDecideRelation(key, "confirm")}>Right</button>
                   </span>
                 )}
               </li>
