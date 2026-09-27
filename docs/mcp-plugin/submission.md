@@ -13,7 +13,7 @@ behavior that is not live at the endpoint below.
 | Category | Productivity |
 | Website | https://wordlift.io |
 | Support | https://wordlift.io/contact-us/ |
-| Privacy policy | https://beta.audit.wordlift.io/privacy (the AI Audit policy; it supplements https://wordlift.io/privacy-policy/) |
+| Privacy policy | https://beta.audit.wordlift.io/privacy (WordLift AI Audit policy v1.1; it supplements https://wordlift.io/privacy-policy/) |
 | Terms | https://wordlift.io/terms-of-service/ |
 | MCP server | `https://beta.audit.wordlift.io/mcp` (Streamable HTTP, stateless, no authentication) |
 | Domain verification | `https://beta.audit.wordlift.io/.well-known/openai-apps-challenge` — set `OPENAI_APPS_CHALLENGE` before deploying |
@@ -43,6 +43,26 @@ No demo credentials are needed to review the server.
 Nothing deletes or overwrites anything: a refinement always creates a new immutable report and
 leaves the machine draft untouched at its own URL. Every result also carries
 `untrustedContentHint: true`, because findings quote text collected from third-party websites.
+
+## Privacy review map
+
+The privacy policy now explicitly maps the live MCP inputs, outputs, recipients, retention and user
+controls. For review, the remote MCP surface behaves as follows:
+
+| Tool | Inputs sent by the client | Data returned to the client |
+| --- | --- | --- |
+| `audit-website` | Public URL; optional archetype and depth; email only for a deep scan | Running status/phase or finished findings; report id and URL; archetype; scores; summarized pages/entities/access findings/priorities; claim token for later refinement |
+| `get-audit-report` | Report id | Current status/phase or the same finished audit result once complete |
+| `inspect-terms-of-action` | Report id | Inferred role, entities/priorities, terminology, actions, evidence, readiness and boundaries |
+| `explain-capability` | Report id and action id | Selected action, human/agent ability, supporting evidence, recommendation and contract URL when available |
+| `explain-foundation-audit` | Report id | Normalized foundation findings, quick wins, scores, provenance and supporting data points |
+| `refine-terms-of-action` | Report id, claim token, and the reviewer's confirmed role/entity/terminology/action decisions | New child-report URL, changes applied and any assertions that could not be applied |
+
+The MCP server does **not** receive the user's full chat transcript. It receives only the fields of
+the selected tool call. The tool result is returned to the calling client (for example ChatGPT), so
+the assistant provider receives that result as part of the user's interaction. The privacy policy
+identifies assistant/MCP providers as a recipient category and explains that conversation-side
+retention is governed by the provider's own policy and controls.
 
 ## Starter prompts
 
@@ -104,28 +124,35 @@ leaves the machine draft untouched at its own URL. Every result also carries
 
 ## Data handling
 
-- Reports contain normalized findings and short snippets. Never raw HTML, cookies, headers,
-  credentials, or private account identifiers.
+- Reports contain normalized findings and short snippets, not raw HTML, cookies, caller headers or
+  private account identifiers.
 - A deep scan's email address is stored apart from the report, keyed by report id, with the same
-  expiry, and is masked wherever it is read back. It is used for one thing: submitting the finished
-  report to WordLift's existing AI Audit lead form, under the privacy policy linked above.
-- Reports expire after 30 days (Firestore TTL).
+  30-day audit-store expiry. On completion it is also submitted to WordLift's HubSpot form together
+  with the audited URL, score, report URL and source surface so the report can be delivered and the
+  audit can be followed up under the privacy policy.
+- Reports expire after 30 days (Firestore TTL). Claim-token hashes expire with the report. Raw page
+  content is discarded after evidence extraction. Server logs are retained for 30 days.
+- Every MCP response is returned to the calling assistant/MCP client; the privacy policy explicitly
+  discloses this recipient and the result categories for each tool.
 - Errors returned to callers are typed and generic; provider internals stay on the server.
 
-## Release notes (initial submission)
+## Release notes (privacy resubmission)
 
 WordLift AI Audit reads a public website the way an AI agent would and returns evidence-backed
 Terms of Action: the kind of business it is, the actions an agent should be able to perform, which
 of those humans and agents can perform today, and the evidence behind every claim. Readiness is
 earned by successful invocation, never by a declaration.
 
-This is the first release. It exposes six tools over a stateless Streamable HTTP MCP server and one
-skill that walks a site's owner through correcting the machine's reading — inspect, interview,
-confirm, refine — recording their judgment as a new immutable report.
+Privacy policy v1.1 adds an explicit tool-by-tool disclosure of inputs and returned data, names the
+assistant/MCP client provider as a recipient of tool results, documents the Alpina demo inputs and
+recipient, clarifies retention outside WordLift after a result is returned, and expands user
+controls. No audit behavior or data collection was expanded by this privacy update.
 
 ## Before the form
 
-- [ ] `OPENAI_APPS_CHALLENGE` deployed and the well-known path returns the token.
-- [ ] `.app.json` created from `.app.json.example` with the id from Developer mode registration.
-- [ ] Every positive and negative case above run against production, not a local server.
-- [ ] Logo and screenshots added under `plugins/ai-audit/assets/`.
+- [ ] Deploy the branch containing privacy policy v1.1 and confirm `https://beta.audit.wordlift.io/privacy` shows **Effective 27 September 2026 · Version 1.1**.
+- [ ] Confirm `OPENAI_APPS_CHALLENGE` is deployed and the well-known path returns the token.
+- [ ] Confirm `.app.json` contains the id from Developer mode registration.
+- [ ] Run every positive and negative case above against production, not a local server.
+- [ ] In Developer mode, inspect the raw/nested response for each of the six MCP tools and confirm it matches the Privacy review map above and contains no unnecessary PII, telemetry or internal diagnostics.
+- [ ] Re-submit from the OpenAI Platform dashboard using the same public privacy-policy URL.
