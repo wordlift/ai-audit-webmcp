@@ -27,6 +27,17 @@ export interface RemoteTool {
   call(service: AuditToolService, args: unknown): Promise<ToolAnswer<unknown>>;
 }
 
+/**
+ * The shared in-page definition names the browser refinement tool. The anonymous remote surface
+ * intentionally does not publish that tool, so its description must not instruct a model to call
+ * something that is absent from tools/list.
+ */
+const REMOTE_INSPECT_TERMS_TOOL: ToolDefinition = withRequiredReportId({
+  ...INSPECT_SERVICE_MAP_TOOL,
+  description:
+    "Read the machine-generated Terms of Action for an audit report before proposing corrections. Returns the inferred operating role, every entity with its id and machine priority, the business terminology, and every action with its actionId, evidence, current readiness, and boundary. Use this first when a user wants to review or correct the machine's reading; the public remote plugin can then produce a confirmed correction plan but does not persist a human refinement.",
+});
+
 export const REMOTE_TOOLS: readonly RemoteTool[] = [
   {
     definition: AUDIT_WEBSITE_TOOL,
@@ -37,7 +48,7 @@ export const REMOTE_TOOLS: readonly RemoteTool[] = [
     call: (service, args) => service.getAuditReport(args),
   },
   {
-    definition: withRequiredReportId(INSPECT_SERVICE_MAP_TOOL),
+    definition: REMOTE_INSPECT_TERMS_TOOL,
     call: (service, args) => service.inspectTermsOfAction(args),
   },
   {
