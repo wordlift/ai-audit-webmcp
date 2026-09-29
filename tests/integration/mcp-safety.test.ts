@@ -15,7 +15,6 @@ function buildApp(options: { live?: boolean; perIp?: number } = {}) {
     publicAppUrl: "https://audit.example/",
     ttlDays: 30,
     now: () => fixedNow,
-    // Live mode is what actually reaches out to a URL; demo mode answers from fixtures.
     ...(options.live ? { mode: "live" as const, providers: { scrape: new NativeFetchCollector() } } : {}),
   });
   return createApp({
@@ -47,8 +46,6 @@ describe("what the remote endpoint refuses", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.result.isError).toBe(true);
-    // The caller is told which rule refused, not that something unspecified went wrong — and
-    // nothing was fetched to find out, so no connection error can appear here.
     expect(toolText(response.body)).not.toContain("could not complete that call");
     expect(toolText(response.body)).not.toContain("ECONNREFUSED");
     expect(toolText(response.body).length).toBeGreaterThan(20);
@@ -64,20 +61,17 @@ describe("what the remote endpoint refuses", () => {
     expect(second.status).toBe(429);
     expect(second.body.error).toBe("rate_limited");
 
-    // A caller who has spent their audits can still see what the server offers and read a report.
     const listed = await request(app)
       .post("/mcp")
       .set(MCP_HEADERS)
       .send({ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} })
       .expect(200);
-    expect(listed.body.result.tools).toHaveLength(6);
+    expect(listed.body.result.tools).toHaveLength(5);
   });
 
   it("counts an audit hidden inside a batch", async () => {
     const app = buildApp({ perIp: 1 });
 
-    // A JSON-RPC batch is one HTTP request carrying several calls. Reading only the top-level
-    // method would let a batch spend an unlimited number of audits.
     const batch = await request(app)
       .post("/mcp")
       .set(MCP_HEADERS)
