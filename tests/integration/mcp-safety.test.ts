@@ -1,6 +1,7 @@
 import request from "supertest";
 import { loadActionModel } from "../../src/domain/action-model/loadModel.js";
 import { createApp } from "../../src/server/app.js";
+import { MemoryClaimStore } from "../../src/server/adapters/claims/index.js";
 import { FixtureProvider } from "../../src/server/adapters/fixtures/FixtureProvider.js";
 import { MemoryReportStore } from "../../src/server/adapters/store/MemoryReportStore.js";
 import { NativeFetchCollector } from "../../src/server/adapters/scrape/NativeFetch.js";
@@ -19,6 +20,7 @@ function buildApp(options: { live?: boolean; perIp?: number } = {}) {
   });
   return createApp({
     orchestrator,
+    claims: new MemoryClaimStore(() => fixedNow),
     rateLimits: options.perIp ? { perIp: options.perIp, global: 1_000, windowMs: 60_000 } : { enabled: false },
   });
 }
@@ -56,6 +58,9 @@ describe("what the remote endpoint refuses", () => {
 
     const first = await request(app).post("/mcp").set(MCP_HEADERS).send(call("audit-website", { url: "https://alpina.travel/" }));
     expect(first.body.result.isError).toBeFalsy();
+    // Even when a ClaimStore exists at app level, the public MCP transport must not emit a bearer
+    // credential in either model-readable text or structuredContent.
+    expect(JSON.stringify(first.body)).not.toMatch(/claimToken/i);
 
     const second = await request(app).post("/mcp").set(MCP_HEADERS).send(call("audit-website", { url: "https://shop.example/" }, 2));
     expect(second.status).toBe(429);
@@ -67,6 +72,7 @@ describe("what the remote endpoint refuses", () => {
       .send({ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} })
       .expect(200);
     expect(listed.body.result.tools).toHaveLength(5);
+    expect(JSON.stringify(listed.body.result.tools)).not.toMatch(/refine-terms-of-action|claimToken/i);
   });
 
   it("counts an audit hidden inside a batch", async () => {
