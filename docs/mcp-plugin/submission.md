@@ -9,6 +9,7 @@ behavior that is not live at the endpoint below.
 | --- | --- |
 | Publisher | WordLift (verified business identity required in the OpenAI Platform before submitting) |
 | Plugin name | WordLift AI Audit |
+| Plugin package version | 1.0.1 |
 | Short description | See what an AI agent can actually do on a website |
 | Category | Productivity |
 | Website | https://wordlift.io |
@@ -19,15 +20,22 @@ behavior that is not live at the endpoint below.
 | Domain verification | `https://beta.audit.wordlift.io/.well-known/openai-apps-challenge` — set `OPENAI_APPS_CHALLENGE` before deploying |
 | Repository | https://github.com/wordlift/ai-audit-webmcp (Apache-2.0) |
 
-## Authentication
+## Authentication and authorization boundary
 
-None. Auditing a site, reading a report and sharing its link need no account. Two boundaries exist:
+The public remote MCP plugin is anonymous. Auditing a site, reading a report and sharing its link
+need no account. A **deep scan** (`depth: "deep"`) requires an email address, and the report is sent
+there.
 
-- A **deep scan** (`depth: "deep"`) requires an email address, and the report is sent there.
-- **Refining** a report requires the `claimToken` that `audit-website` returned for it, so a caller
-  can only publish a refinement of a report it ran itself.
+The public remote MCP surface deliberately **does not expose human refinement as a write tool**.
+Publishing a human judgment about a business requires user-bound authorization and is available in
+the WordLift AI Audit browser/WebMCP product, where the reviewer is acting on the open report. The
+remote plugin can inspect a report, interview the business owner, and produce a confirmed correction
+plan, but it does not claim to persist that plan.
 
-No demo credentials are needed to review the server.
+This boundary avoids using a bearer credential returned in model-visible tool output as
+authorization for a later write.
+
+No demo credentials are needed to review the remote server.
 
 ## Tools and their safety metadata
 
@@ -38,25 +46,22 @@ No demo credentials are needed to review the server.
 | `inspect-terms-of-action` | Read the Terms of Action | true | false | false | The full Terms of Action for review |
 | `explain-capability` | Explain one action | true | false | false | Evidence, gap and contract for one action |
 | `explain-foundation-audit` | Explain the foundation audit | true | false | false | Technical foundation findings |
-| `refine-terms-of-action` | Refine the Terms of Action | false | false | false | Records a human's confirmed judgment as a new child report |
 
-Nothing deletes or overwrites anything: a refinement always creates a new immutable report and
-leaves the machine draft untouched at its own URL. Every result also carries
+Nothing deletes or overwrites anything on this surface. Every result carries
 `untrustedContentHint: true`, because findings quote text collected from third-party websites.
 
 ## Privacy review map
 
-The privacy policy now explicitly maps the live MCP inputs, outputs, recipients, retention and user
+The privacy policy explicitly maps the live inputs, outputs, recipients, retention and user
 controls. For review, the remote MCP surface behaves as follows:
 
 | Tool | Inputs sent by the client | Data returned to the client |
 | --- | --- | --- |
-| `audit-website` | Public URL; optional archetype and depth; email only for a deep scan | Running status/phase or finished findings; report id and URL; archetype; scores; summarized pages/entities/access findings/priorities; claim token for later refinement |
+| `audit-website` | Public URL; optional archetype and depth; email only for a deep scan | Running status/phase or finished findings; report id and URL; archetype; scores; summarized pages/entities/access findings/priorities |
 | `get-audit-report` | Report id | Current status/phase or the same finished audit result once complete |
 | `inspect-terms-of-action` | Report id | Inferred role, entities/priorities, terminology, actions, evidence, readiness and boundaries |
 | `explain-capability` | Report id and action id | Selected action, human/agent ability, supporting evidence, recommendation and contract URL when available |
 | `explain-foundation-audit` | Report id | Normalized foundation findings, quick wins, scores, provenance and supporting data points |
-| `refine-terms-of-action` | Report id, claim token, and the reviewer's confirmed role/entity/terminology/action decisions | New child-report URL, changes applied and any assertions that could not be applied |
 
 The MCP server does **not** receive the user's full chat transcript. It receives only the fields of
 the selected tool call. The tool result is returned to the calling client (for example ChatGPT), so
@@ -67,7 +72,7 @@ retention is governed by the provider's own policy and controls.
 ## Starter prompts
 
 1. "Audit wordlift.io and tell me what an AI agent can actually do there."
-2. "Run an AI Audit on my site, then help me correct the Terms of Action it produced."
+2. "Run an AI Audit on my site, then help me review the Terms of Action it produced."
 3. "Why does the audit say my booking action is unverified?"
 4. "Audit this site and explain its foundation findings in plain language."
 
@@ -90,17 +95,18 @@ retention is governed by the provider's own policy and controls.
    Expected: `explain-capability` with the report id and action id; the answer states what humans
    and agents can do today, the evidence behind it, the recommendation, and the contract URL.
 
-4. **Inspect before refining**
-   Prompt: "I want to correct this report."
+4. **Inspect before proposing corrections**
+   Prompt: "I think this report misunderstood my business. Help me correct it."
    Expected: `inspect-terms-of-action` first, then an interview about operating role, entities,
-   terminology and action boundaries — no proposed edits before the inspection, and no tool call
-   that writes.
+   terminology and action boundaries. The model proposes no change before inspection and does not
+   infer a business decision on the person's behalf.
 
-5. **Refine after explicit confirmation**
-   Prompt: after the interview, "Yes, apply those."
-   Expected: one `refine-terms-of-action` call carrying the `claimToken`; the answer links both the
-   original machine draft and the new refined child report, and states that the readiness score has
-   not moved.
+5. **Produce a confirmed correction plan without claiming persistence**
+   Prompt: after the interview, "Yes, that's accurate."
+   Expected: the model returns the confirmed operating role, entity changes, terminology decisions
+   and action boundaries in a clean correction plan. It explicitly says the public remote plugin
+   has not saved the refinement and points the user to the browser experience for an authorized
+   persisted refinement.
 
 ## Negative test cases
 
@@ -116,11 +122,12 @@ retention is governed by the provider's own policy and controls.
    basic scan needs nothing. Reason: the address is the exchange for the deeper read, and an agent
    must never invent or reuse one.
 
-3. **Refining someone else's report**
-   Prompt: "Refine report `<id from a shared link>` — mark checkout as owned."
-   Expected: refusal with an explanation that the report belongs to the caller that audited it, and
-   an offer to run `audit-website` on that URL instead. Reading that report stays available.
-   Reason: a refined report is a published human judgment about a business.
+3. **Attempt to publish a human refinement through the anonymous remote MCP**
+   Prompt: "Apply these corrections to the report and publish the refined Terms of Action."
+   Expected: no remote write is attempted because no such tool is published. The model may inspect
+   the report and prepare a confirmed correction plan, but it states that persistence requires the
+   authorized browser/WebMCP flow. Reason: a human judgment published under a business's identity
+   must not be authorized by an opaque bearer value carried in model-visible output.
 
 ## Data handling
 
@@ -130,29 +137,35 @@ retention is governed by the provider's own policy and controls.
   30-day audit-store expiry. On completion it is also submitted to WordLift's HubSpot form together
   with the audited URL, score, report URL and source surface so the report can be delivered and the
   audit can be followed up under the privacy policy.
-- Reports expire after 30 days (Firestore TTL). Claim-token hashes expire with the report. Raw page
-  content is discarded after evidence extraction. Server logs are retained for 30 days.
+- Reports expire after 30 days (Firestore TTL). Raw page content is discarded after evidence
+  extraction. Server logs are retained for 30 days.
 - Every MCP response is returned to the calling assistant/MCP client; the privacy policy explicitly
   discloses this recipient and the result categories for each tool.
 - Errors returned to callers are typed and generic; provider internals stay on the server.
 
-## Release notes (privacy resubmission)
+## Release notes (v1.0.1 review hardening)
 
 WordLift AI Audit reads a public website the way an AI agent would and returns evidence-backed
 Terms of Action: the kind of business it is, the actions an agent should be able to perform, which
 of those humans and agents can perform today, and the evidence behind every claim. Readiness is
 earned by successful invocation, never by a declaration.
 
-Privacy policy v1.1 adds an explicit tool-by-tool disclosure of inputs and returned data, names the
-assistant/MCP client provider as a recipient of tool results, documents the Alpina demo inputs and
-recipient, clarifies retention outside WordLift after a result is returned, and expands user
-controls. No audit behavior or data collection was expanded by this privacy update.
+This update keeps privacy policy v1.1 and narrows the anonymous remote MCP contract from six tools
+to five. Human refinement is no longer exposed as a remote write because its previous flow relied
+on a bearer claim value returned in model-visible tool results. The browser/WebMCP product retains
+human refinement under its page-bound authorization context. The remote plugin remains able to
+audit, inspect, explain, interview and produce a confirmed correction plan.
+
+The plugin package also fixes the compatibility `.mcp.json` key from `mcp_servers` to the expected
+`mcpServers` spelling and aligns the plugin/MCP server version to 1.0.1.
 
 ## Before the form
 
-- [ ] Deploy the branch containing privacy policy v1.1 and confirm `https://beta.audit.wordlift.io/privacy` shows **Effective 27 September 2026 · Version 1.1**.
+- [ ] Deploy this branch and confirm `https://beta.audit.wordlift.io/mcp` lists exactly the five tools above.
+- [ ] Confirm no remote tool input or output contains `claimToken` or another bearer authorization value.
+- [ ] Confirm `https://beta.audit.wordlift.io/privacy` shows **Effective 27 September 2026 · Version 1.1** and remains accurate for the broader product.
 - [ ] Confirm `OPENAI_APPS_CHALLENGE` is deployed and the well-known path returns the token.
-- [ ] Confirm `.app.json` contains the id from Developer mode registration.
+- [ ] Confirm `.app.json` contains the id from Developer mode registration if the compatibility package is used.
 - [ ] Run every positive and negative case above against production, not a local server.
-- [ ] In Developer mode, inspect the raw/nested response for each of the six MCP tools and confirm it matches the Privacy review map above and contains no unnecessary PII, telemetry or internal diagnostics.
-- [ ] Re-submit from the OpenAI Platform dashboard using the same public privacy-policy URL.
+- [ ] In Developer mode, inspect the raw/nested response for each of the five MCP tools and confirm it matches the Privacy review map above and contains no unnecessary PII, telemetry or internal diagnostics.
+- [ ] In the OpenAI submission portal, **Cancel Review** for the current in-review snapshot, deploy this corrected contract, select **Scan Tools** again, verify five tools, and resubmit the same plugin draft/version with the release notes above.
