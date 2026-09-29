@@ -1,8 +1,8 @@
 # WordLift AI Audit plugin
 
 Bundles the remote MCP server at `https://beta.audit.wordlift.io/mcp` with the skill that knows
-how to use it: audit a site, read the machine's Terms of Action, interview the business, and record
-their judgment as a new immutable report.
+how to use it: audit a site, read the machine's Terms of Action, inspect the evidence, and help the
+business review what the machine inferred.
 
 ```text
 plugins/ai-audit/
@@ -10,7 +10,7 @@ plugins/ai-audit/
 │   └── plugin.json      Manifest and directory listing metadata
 ├── skills/
 │   └── review-ai-audit/
-│       └── SKILL.md     The audit → inspect → interview → confirm → refine workflow
+│       └── SKILL.md     The audit → inspect → interview → confirm workflow
 ├── .mcp.json            The remote server this plugin connects to
 └── .app.json.example    Shape of the app mapping; see below
 ```
@@ -27,7 +27,7 @@ server has been registered in ChatGPT Developer mode:
 `.app.json` is deliberately not committed with a fake id: an installed plugin pointing at an app
 that does not exist fails in a way that looks like a server outage.
 
-## What the server offers
+## What the public remote server offers
 
 | Tool | Title | What it does | Write? |
 | --- | --- | --- | --- |
@@ -36,7 +36,11 @@ that does not exist fails in a way that looks like a server outage.
 | `inspect-terms-of-action` | Read the Terms of Action | The full Terms of Action, for review | Read |
 | `explain-capability` | Explain one action | Evidence, gap and contract for one action | Read |
 | `explain-foundation-audit` | Explain the foundation audit | The technical foundation findings | Read |
-| `refine-terms-of-action` | Refine the Terms of Action | Records a human's confirmed judgment as a child report | Creates a report |
 
 Auditing and reading are free and anonymous. A deep scan asks for an email address and sends the
-report there. Refining a report requires the `claimToken` that `audit-website` returned for it.
+report there.
+
+Publishing a human refinement is deliberately not exposed by the anonymous remote MCP endpoint.
+That operation requires user-bound authorization and remains available in the WordLift AI Audit
+browser/WebMCP experience, where the reviewer is acting on the open report. The remote plugin can
+still inspect a report and produce a confirmed correction plan without claiming that it was saved.
