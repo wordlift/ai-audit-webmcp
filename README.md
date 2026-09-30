@@ -2,7 +2,7 @@
 
 **The machine reads the website. The human knows the business. ChatGPT compiles both into governed Terms of Action.**
 
-WordLift AI Audit takes any public URL, classifies the site, reads the representative pages, extracts the business entities and language, compiles the actions an agent should be able to perform, and verifies — by calling them — which interfaces actually support those actions. The result is a **machine-generated draft**: a human then reviews it through ChatGPT — correcting the business role, promoting the entities that matter, teaching vocabulary, and deciding who owns each action — and `refine-terms-of-action` compiles those decisions into immutable **human-refined Terms of Action**. The draft keeps working on its own; refinement adds the knowledge only a human has.
+WordLift AI Audit takes any public URL, classifies the site, reads the representative pages, extracts the business entities and language, compiles the actions an agent should be able to perform, and verifies — by calling them — which interfaces actually support those actions. The result is a **machine-generated draft**: in the browser/WebMCP product, a human can then review it through ChatGPT — correcting the business role, promoting the entities that matter, teaching vocabulary, and deciding who owns each action — and `refine-terms-of-action` compiles those decisions into immutable **human-refined Terms of Action**. The draft keeps working on its own; refinement adds the knowledge only a human has.
 
 **Terms of Action are the business declaration:** what the business owns, what it only describes, what it hands off to partners, and what is not applicable. The **Action Graph** remains the machine-readable artifact that encodes those terms for agents.
 
@@ -42,14 +42,14 @@ The application is itself a WebMCP surface. It registers tools through the WebMC
 - `explain-capability` — one action: the entities it applies to, its interfaces, evidence, governance, recommendation, and contract.
 - `explain-foundation-audit` — the WordLift foundation audit of the open report: score, dimensions, findings, quick wins.
 - `inspect-terms-of-action` — the read half of the human loop, and the first call in the protocol: the machine-generated **Terms of Action** — inferred operating role, every entity with its id and machine priority, terminology, and every action with its evidence, readiness, and boundary — everything an agent needs to interview the business owner.
-- `refine-terms-of-action` — the write half: after the interview, it submits the reviewer's structured decisions (business role, primary entities, terminology, confirm/reject/boundary per action) and returns a new immutable report containing the **human-refined Terms of Action**. Human decisions can never mark an action agent-ready — readiness always requires invocation evidence.
+- `refine-terms-of-action` — the browser/WebMCP write half: after the interview, it submits the reviewer's structured decisions (business role, primary entities, terminology, confirm/reject/boundary per action) and returns a new immutable report containing the **human-refined Terms of Action**. Human decisions can never mark an action agent-ready — readiness always requires invocation evidence.
 - `check-alpina-availability` — a contained read-only adapter for one allowlisted endpoint, kept as a technical proof of how a verified interface earns `sidecar-enabled` in an immutable child revision. Turning that pattern into a product is future WordLift work, outside this audit.
 
-The report tools register the moment `/reports/:id` loads — before the report itself has rendered — on the top-level document, against `document.modelContext` (with `navigator.modelContext` aliased for Chrome's preview). The intended agent protocol is explicit in the descriptions: **inspect → interview → explain where unclear → refine**. A self-test badge on every report names the registered site tools, and tells readers without WebMCP to open the report in the ChatGPT desktop app's built-in browser.
+The report tools register the moment `/reports/:id` loads — before the report itself has rendered — on the top-level document, against `document.modelContext` (with `navigator.modelContext` aliased for Chrome's preview). The intended in-page protocol is explicit in the descriptions: **inspect → interview → explain where unclear → refine**. A self-test badge on every report names the registered site tools, and tells readers without WebMCP to open the report in the ChatGPT desktop app's built-in browser.
 
 Tool identifiers are implementation contracts; the product concept they inspect and refine is **Terms of Action**.
 
-## The same tools, without a browser
+## The public remote MCP surface
 
 The audit also answers as a remote MCP server, so an agent that never opens the page can use it:
 
@@ -57,15 +57,23 @@ The audit also answers as a remote MCP server, so an agent that never opens the 
 https://beta.audit.wordlift.io/mcp     Streamable HTTP, stateless, no authentication
 ```
 
-It offers the six audit tools — the Alpina sidecar stays a browser demo. Both surfaces read one set
-of tool definitions (`src/shared/tools/definitions.ts`) and compose their answers with one
-application service (`src/server/services/AuditToolService.ts`), so a remote caller and an agent
-standing on the page cannot be told different things about the same report. The difference a remote
-caller forces is stated rather than forked: with no open page to infer scope from, every
-report-scoped tool must be handed its `reportId`.
+The public remote surface deliberately exposes **five** tools: `audit-website`, `get-audit-report`,
+`inspect-terms-of-action`, `explain-capability`, and `explain-foundation-audit`. The Alpina sidecar
+stays a browser demo, and `refine-terms-of-action` stays out of anonymous remote MCP because
+publishing a human judgment requires user-bound authorization. The remote plugin can still inspect
+a report, interview the business owner, and produce a confirmed correction plan; it simply does not
+claim that the plan was persisted.
 
-`plugins/ai-audit/` packages that endpoint with the skill that knows the order the workflow depends
-on — audit, inspect, interview, confirm, refine.
+The public MCP transport is constructed without a `ClaimStore`, so `audit-website` does not return a
+`claimToken` or any equivalent bearer authorization value in model-visible text or
+`structuredContent`.
+
+Both surfaces read one set of tool definitions (`src/shared/tools/definitions.ts`) and compose their
+answers with one application service (`src/server/services/AuditToolService.ts`). With no open page
+to infer scope from, every report-scoped remote tool must be handed its `reportId`.
+
+`plugins/ai-audit/` packages that endpoint with the skill that knows the public workflow — audit,
+inspect, interview, confirm — while keeping readiness grounded in evidence.
 
 ## What it costs
 
@@ -79,9 +87,8 @@ a public document with a shareable link — and it is masked wherever it is read
 sent through the same HubSpot form the WordLift AI Audit already uses, so one person is one contact
 whichever audit they arrived through.
 
-Refining a report is the one thing not open to everyone: a remote audit hands its caller a
-`claimToken`, and only a caller holding it can publish a refinement of that report. Reading stays
-free to anyone with the link.
+Reading and review through the public remote MCP remain anonymous. Persisting a human refinement is
+an authorized browser/WebMCP action, not an anonymous remote MCP operation.
 
 ## Run locally
 
@@ -110,7 +117,7 @@ npm run test:e2e        # Playwright; builds and serves the app itself
 | --- | --- |
 | `action-model/v0.1.0/` | Versioned data: actions, archetype journeys, category and behavior mappings |
 | `src/domain/` | Pure compilation: classification, context graph, evidence detection, state derivation, scoring, contracts |
-| `src/server/` | Express API, the MCP endpoint, providers (WordLift audit, native-fetch or ScrapingBee collection, Google NLP), stores (reports, deep-scan leads, report claims), the alpina sidecar, security (URL policy, sanitization, rate limits) |
+| `src/server/` | Express API, the MCP endpoint, providers (WordLift audit, native-fetch or ScrapingBee collection, Google NLP), stores, the alpina sidecar, security (URL policy, sanitization, rate limits) |
 | `src/client/` | React app, report UI, WebMCP tools |
 | `src/shared/` | Zod schemas (the report contract), the tool definitions every transport publishes, and the agent-facing summaries |
 | `plugins/ai-audit/` | The public plugin: the remote MCP connection and the review skill |

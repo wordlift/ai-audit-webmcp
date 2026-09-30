@@ -1,7 +1,7 @@
 {
   "name": "wordlift-ai-audit",
-  "version": "0.1.0",
-  "description": "Audit a website from an AI agent's perspective and refine its Terms of Action with the business that owns it.",
+  "version": "1.0.1",
+  "description": "Audit a website from an AI agent's perspective and review its evidence-backed Terms of Action.",
   "author": {
     "name": "WordLift",
     "email": "hello@wordlift.io",
@@ -16,7 +16,7 @@
   "interface": {
     "displayName": "WordLift AI Audit",
     "shortDescription": "See what an AI agent can actually do on a website",
-    "longDescription": "WordLift AI Audit reads a public website the way an agent would and returns evidence-backed Terms of Action: what kind of business it is, the actions an agent should be able to perform, which of those humans and agents can perform today, and the evidence behind every claim. Readiness is earned by successful invocation, never by a declaration. The included skill walks the site's owner through correcting the machine's reading — inspect, interview, confirm — and records their judgment as a new immutable report.",
+    "longDescription": "WordLift AI Audit reads a public website the way an agent would and returns evidence-backed Terms of Action: what kind of business it is, the actions an agent should be able to perform, which of those humans and agents can perform today, and the evidence behind every claim. Readiness is earned by successful invocation, never by a declaration. The included skill walks the site's owner through inspecting and reviewing the machine's reading while keeping readiness grounded in evidence.",
     "developerName": "WordLift",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
@@ -25,7 +25,7 @@
     "termsOfServiceURL": "https://wordlift.io/terms-of-service/",
     "defaultPrompt": [
       "Audit wordlift.io and tell me what an AI agent can actually do there.",
-      "Run an AI Audit on my site, then help me correct the Terms of Action it produced.",
+      "Run an AI Audit on my site, then help me review the Terms of Action it produced.",
       "Why does the audit say my booking action is unverified?",
       "Audit this site and explain its foundation findings in plain language."
     ],

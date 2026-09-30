@@ -4,17 +4,21 @@ import { REMOTE_TOOLS } from "../../src/server/mcp/tools.js";
 const published = REMOTE_TOOLS.map((tool) => tool.definition);
 
 describe("published MCP tool definitions", () => {
-  it("publishes exactly this contract", () => {
-    expect(published).toMatchSnapshot();
+  it("publishes exactly the five public review tools", () => {
+    expect(published.map((tool) => tool.name)).toEqual([
+      "audit-website",
+      "get-audit-report",
+      "inspect-terms-of-action",
+      "explain-capability",
+      "explain-foundation-audit",
+    ]);
   });
 
   it("never calls a report-creating tool read-only", () => {
-    for (const name of ["audit-website", "refine-terms-of-action"]) {
-      const tool = published.find((candidate) => candidate.name === name);
-      expect(tool?.annotations.readOnlyHint, `${name} creates a report`).toBe(false);
-      expect(tool?.annotations.destructiveHint, `${name} destroys nothing`).toBe(false);
-      expect(tool?.annotations.idempotentHint, `${name} creates a new report each call`).toBe(false);
-    }
+    const tool = published.find((candidate) => candidate.name === "audit-website");
+    expect(tool?.annotations.readOnlyHint, "audit-website creates a report").toBe(false);
+    expect(tool?.annotations.destructiveHint, "audit-website destroys nothing").toBe(false);
+    expect(tool?.annotations.idempotentHint, "audit-website creates a new report each call").toBe(false);
   });
 
   it("marks the reads read-only and says which of them leave the service", () => {
@@ -25,9 +29,13 @@ describe("published MCP tool definitions", () => {
       "get-audit-report",
       "inspect-terms-of-action",
     ]);
-    // Reads answer from the stored report; only an audit goes out to a stranger's website.
     for (const tool of reads) expect(tool.annotations.openWorldHint).toBe(false);
     expect(published.find((tool) => tool.name === "audit-website")?.annotations.openWorldHint).toBe(true);
+  });
+
+  it("does not expose the human-refinement bearer flow remotely", () => {
+    expect(published.some((tool) => tool.name === "refine-terms-of-action")).toBe(false);
+    expect(JSON.stringify(published)).not.toMatch(/claimToken/i);
   });
 
   it("keeps every result marked as carrying untrusted website content", () => {
