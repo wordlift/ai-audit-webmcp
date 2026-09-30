@@ -18,10 +18,21 @@ describe("the published plugin", () => {
     expect(manifest.version).toBe("1.0.1");
     expect(manifest.skills).toBe("./skills/");
     expect(manifest.mcpServers).toBe("./.mcp.json");
-    for (const field of ["websiteURL", "privacyPolicyURL", "termsOfServiceURL"]) {
+    for (const field of ["websiteURL", "supportURL", "privacyPolicyURL", "termsOfServiceURL"]) {
       expect(String(listing[field]), `${field} must be a public https URL`).toMatch(/^https:\/\//);
     }
-    expect((listing.defaultPrompt as string[]).length).toBeGreaterThanOrEqual(4);
+
+    expect(String(listing.displayName).length).toBeLessThanOrEqual(30);
+    expect(String(listing.shortDescription).length).toBeLessThanOrEqual(30);
+
+    const prompts = listing.defaultPrompt as string[];
+    expect(prompts.length).toBeGreaterThan(0);
+    expect(prompts.length).toBeLessThanOrEqual(3);
+    for (const prompt of prompts) expect(prompt.length).toBeLessThanOrEqual(128);
+
+    expect(listing.logo).toBe("./assets/icon.svg");
+    expect(listing.composerIcon).toBe("./assets/icon.svg");
+    expect(read("assets/icon.svg")).toMatch(/viewBox="0 0 400 400"/);
   });
 
   it("points at the production endpoint over https", () => {
