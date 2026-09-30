@@ -15,19 +15,19 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "WordLift AI Audit",
-    "shortDescription": "See what an AI agent can actually do on a website",
+    "shortDescription": "See what AI agents can do",
     "longDescription": "WordLift AI Audit reads a public website the way an agent would and returns evidence-backed Terms of Action: what kind of business it is, the actions an agent should be able to perform, which of those humans and agents can perform today, and the evidence behind every claim. Readiness is earned by successful invocation, never by a declaration. The included skill walks the site's owner through inspecting and reviewing the machine's reading while keeping readiness grounded in evidence.",
     "developerName": "WordLift",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
     "websiteURL": "https://wordlift.io",
+    "supportURL": "https://wordlift.io/contact-form/",
     "privacyPolicyURL": "https://beta.audit.wordlift.io/privacy",
     "termsOfServiceURL": "https://wordlift.io/terms-of-service/",
     "defaultPrompt": [
       "Audit wordlift.io and tell me what an AI agent can actually do there.",
       "Run an AI Audit on my site, then help me review the Terms of Action it produced.",
-      "Why does the audit say my booking action is unverified?",
-      "Audit this site and explain its foundation findings in plain language."
+      "Why does the audit say my booking action is unverified?"
     ],
     "brandColor": "#0A2E5C"
   }
