@@ -33,6 +33,13 @@ describe("published MCP tool definitions", () => {
     expect(published.find((tool) => tool.name === "audit-website")?.annotations.openWorldHint).toBe(true);
   });
 
+  it("declares an output schema for every structured public result", () => {
+    for (const tool of published) {
+      expect(tool.outputSchema, `${tool.name} returns structuredContent and needs outputSchema`).toBeDefined();
+      expect(tool.outputSchema.type, `${tool.name} output must be an object`).toBe("object");
+    }
+  });
+
   it("does not expose the human-refinement bearer flow remotely", () => {
     expect(published.some((tool) => tool.name === "refine-terms-of-action")).toBe(false);
     expect(JSON.stringify(published)).not.toMatch(/claimToken/i);
