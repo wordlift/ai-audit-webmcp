@@ -115,8 +115,15 @@ describe("remote MCP server", () => {
       const { reportId } = structured<{ reportId: string }>(audited);
 
       const inspected = await client.callTool({ name: "inspect-terms-of-action", arguments: { reportId } });
-      const actions = structured<{ actions: Array<{ actionId: string }> }>(inspected).actions;
+      const inspection = structured<{ actions: Array<{ actionId: string }>; nextStep: string }>(inspected);
+      const inspectText = (inspected.content as Array<{ text: string }>)[0].text;
+      const actions = inspection.actions;
       expect(actions.length).toBeGreaterThan(0);
+      expect(inspection.nextStep).toContain("confirmed correction plan");
+      expect(inspection.nextStep).toContain("browser experience");
+      expect(inspection.nextStep).not.toContain("refine-terms-of-action");
+      expect(inspectText).toContain("confirmed correction plan");
+      expect(inspectText).not.toContain("refine-terms-of-action");
 
       const before = await orchestrator.get(reportId);
       const attemptedWrite = await client.callTool({
