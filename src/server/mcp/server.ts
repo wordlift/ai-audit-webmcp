@@ -29,6 +29,7 @@ export function buildAuditMcpServer(service: AuditToolService): Server {
       title: tool.definition.title,
       description: tool.definition.description,
       inputSchema: tool.definition.inputSchema,
+      outputSchema: tool.definition.outputSchema,
       annotations: tool.definition.annotations,
     })),
   }));
