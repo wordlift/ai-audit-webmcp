@@ -29,6 +29,8 @@
       "Run an AI Audit on my site, then help me review the Terms of Action it produced.",
       "Why does the audit say my booking action is unverified?"
     ],
-    "brandColor": "#0A2E5C"
+    "brandColor": "#0A2E5C",
+    "composerIcon": "./assets/icon.svg",
+    "logo": "./assets/icon.svg"
   }
 }
