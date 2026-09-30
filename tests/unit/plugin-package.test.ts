@@ -14,7 +14,7 @@ describe("the published plugin", () => {
   it("declares itself the way the directory reads it", () => {
     const listing = manifest.interface as Record<string, unknown>;
 
-    expect(manifest.name).toBe("wordlift-ai-audit");
+    expect(manifest.name).toBe("app-6a9c46c87bc481918a5d0bed1edbff0d");
     expect(manifest.version).toBe("1.0.1");
     expect(manifest.skills).toBe("./skills/");
     expect(manifest.mcpServers).toBe("./.mcp.json");
