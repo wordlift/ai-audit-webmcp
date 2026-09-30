@@ -38,6 +38,17 @@ const REMOTE_INSPECT_TERMS_TOOL: ToolDefinition = withRequiredReportId({
     "Read the machine-generated Terms of Action for an audit report before proposing corrections. Returns the inferred operating role, every entity with its id and machine priority, the business terminology, and every action with its actionId, evidence, current readiness, and boundary. Use this first when a user wants to review or correct the machine's reading; the public remote plugin can then produce a confirmed correction plan but does not persist a human refinement.",
 });
 
+/**
+ * The shared definition is also used by the in-page browser surface, where "open report" is
+ * meaningful. The remote MCP always addresses reports explicitly by reportId, so keep the public
+ * contract transport-accurate for directory reviewers and models.
+ */
+const REMOTE_FOUNDATION_AUDIT_TOOL: ToolDefinition = withRequiredReportId({
+  ...EXPLAIN_FOUNDATION_AUDIT_TOOL,
+  description:
+    "Return the complete safe WordLift foundation audit for the report identified by reportId, including every normalized audit dimension, findings, quick wins, scores, provenance, and detailed data points.",
+});
+
 export const REMOTE_TOOLS: readonly RemoteTool[] = [
   {
     definition: AUDIT_WEBSITE_TOOL,
@@ -56,7 +67,7 @@ export const REMOTE_TOOLS: readonly RemoteTool[] = [
     call: (service, args) => service.explainCapability(args),
   },
   {
-    definition: withRequiredReportId(EXPLAIN_FOUNDATION_AUDIT_TOOL),
+    definition: REMOTE_FOUNDATION_AUDIT_TOOL,
     call: (service, args) => service.explainFoundationAudit(args),
   },
 ];
