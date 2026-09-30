@@ -17,7 +17,7 @@ describe("GET /api/health", () => {
       revision: "local",
       release: "development",
       mode: "demo",
-      surfaces: { mcp: null, deepScans: false, reportDelivery: null, claimedRefinement: false },
+      surfaces: { mcp: null, deepScans: false, reportDelivery: null, browserRefinement: false },
       platformEgress: null,
     });
     expect(response.headers["x-powered-by"]).toBeUndefined();
@@ -36,7 +36,7 @@ describe("GET /api/health", () => {
       mcp: "/mcp",
       deepScans: true,
       reportDelivery: null,
-      claimedRefinement: true,
+      browserRefinement: true,
     });
   });
 });
