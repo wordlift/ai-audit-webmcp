@@ -94,7 +94,9 @@ export function createApp(options: AppOptions = {}): Express {
         mcp: options.orchestrator ? "/mcp" : null,
         deepScans: Boolean(options.leads),
         reportDelivery: options.leadDelivery?.name ?? null,
-        claimedRefinement: Boolean(options.claims),
+        // This is a browser/WebMCP capability only. The anonymous remote MCP transport below is
+        // deliberately created without a ClaimStore and therefore cannot publish refinements.
+        browserRefinement: Boolean(options.claims),
       },
       platformEgress: options.platformEgress?.summary() ?? null,
     });
