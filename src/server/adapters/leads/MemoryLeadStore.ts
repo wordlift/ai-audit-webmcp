@@ -1,4 +1,4 @@
-import { deepScanLeadSchema, type DeepScanLead, type LeadStore } from "./LeadStore.js";
+import { deepScanLeadSchema, type DeepScanLead, type LeadStore, type WatchPatch } from "./LeadStore.js";
 
 export class MemoryLeadStore implements LeadStore {
   readonly #leads = new Map<string, DeepScanLead>();
@@ -9,7 +9,7 @@ export class MemoryLeadStore implements LeadStore {
     const lead = deepScanLeadSchema.parse(input);
     // The same person asking twice for the same report is one lead, not two.
     const existing = this.#leads.get(lead.reportId);
-    const stored = existing ? { ...lead, confirmedAt: existing.confirmedAt, deliveredAt: existing.deliveredAt } : lead;
+    const stored = existing ? { ...existing, ...lead, confirmedAt: existing.confirmedAt, deliveredAt: existing.deliveredAt } : lead;
     this.#leads.set(lead.reportId, stored);
     return structuredClone(stored);
   }
@@ -35,6 +35,23 @@ export class MemoryLeadStore implements LeadStore {
 
   async markDelivered(reportId: string, at: string): Promise<DeepScanLead | null> {
     return this.#mark(reportId, { deliveredAt: at });
+  }
+
+  async watchable(limit = 50): Promise<DeepScanLead[]> {
+    const now = this.now();
+    return [...this.#leads.values()]
+      .filter((lead) => lead.deliveredAt && !lead.unsubscribedAt && new Date(lead.expiresAt) > now)
+      .sort((left, right) => (left.watchedAt ?? "").localeCompare(right.watchedAt ?? "") || left.requestedAt.localeCompare(right.requestedAt))
+      .slice(0, limit)
+      .map((lead) => structuredClone(lead));
+  }
+
+  async markWatched(reportId: string, patch: WatchPatch): Promise<DeepScanLead | null> {
+    return this.#mark(reportId, patch);
+  }
+
+  async markUnsubscribed(reportId: string, at: string): Promise<DeepScanLead | null> {
+    return this.#mark(reportId, { unsubscribedAt: at });
   }
 
   async #mark(reportId: string, patch: Partial<DeepScanLead>): Promise<DeepScanLead | null> {

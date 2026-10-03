@@ -17,8 +17,10 @@ describe("GET /api/health", () => {
       revision: "local",
       release: "development",
       mode: "demo",
-      surfaces: { mcp: null, deepScans: false, reportDelivery: null, browserRefinement: false },
+      surfaces: { mcp: null, deepScans: false, reportDelivery: null, browserRefinement: false, contextEngines: false },
       platformEgress: null,
+      markup: null,
+      observe: null,
     });
     expect(response.headers["x-powered-by"]).toBeUndefined();
   });
@@ -37,6 +39,7 @@ describe("GET /api/health", () => {
       deepScans: true,
       reportDelivery: null,
       browserRefinement: true,
+      contextEngines: false,
     });
   });
 });

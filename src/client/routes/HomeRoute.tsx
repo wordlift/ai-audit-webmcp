@@ -1,14 +1,7 @@
-import { ArrowRight, Bot, Braces, ScanSearch, Sparkles, Tags } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError, getReport, startReport } from "../api/client";
-
-const journey = [
-  { label: "Read the pages that matter", icon: ScanSearch },
-  { label: "Draft entities, language & actions", icon: Tags },
-  { label: "Refine with ChatGPT", icon: Bot },
-  { label: "Compile Terms of Action", icon: Braces },
-];
 
 /** Real phase durations for a live audit, which takes about a minute end to end. */
 const PHASES = [
@@ -17,32 +10,6 @@ const PHASES = [
   { label: "Mapping actions and interfaces", holdMs: 12_000 },
   { label: "Checking agent readiness", holdMs: Number.POSITIVE_INFINITY },
 ];
-
-/**
- * Cosmetic. A live audit fetches the page, its scripts, its discovery documents and any MCP
- * endpoint it advertises, which takes a while; these keep the wait feeling like work. The real
- * phase and the elapsed seconds are shown alongside, so nothing here overstates progress.
- */
-const SCAN_WORDS = [
-  "Sniffing",
-  "Probing",
-  "Parsing",
-  "Crawling",
-  "Enumerating",
-  "Fingerprinting",
-  "Triangulating",
-  "Interrogating",
-  "Disambiguating",
-  "Cross-referencing",
-  "Untangling",
-  "Auscultating",
-  "Sifting",
-  "Divining",
-  "Corroborating",
-  "Distilling",
-];
-
-const WORD_MS = 2_200;
 
 /**
  * Public sites verified to complete on the live deployment, one per archetype; the sample hosts
@@ -67,14 +34,13 @@ export function HomeRoute() {
   const navigate = useNavigate();
   const [url, setUrl] = useState("");
   const [phaseIndex, setPhaseIndex] = useState<number | null>(null);
-  const [wordIndex, setWordIndex] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<"demo" | "live" | null>(null);
+  // The live sites show at once; only a demo deployment swaps them, once its health check says so.
+  const [mode, setMode] = useState<"demo" | "live">("live");
   const timers = useRef<number[]>([]);
   const tickers = useRef<number[]>([]);
   const phase = phaseIndex === null ? null : PHASES[phaseIndex].label;
-  const word = SCAN_WORDS[wordIndex % SCAN_WORDS.length];
 
   const stopClocks = () => {
     timers.current.forEach((timer) => window.clearTimeout(timer));
@@ -109,7 +75,6 @@ export function HomeRoute() {
       return window.setTimeout(() => setPhaseIndex(index + 1), elapsed);
     });
     tickers.current = [
-      window.setInterval(() => setWordIndex((index) => index + 1), WORD_MS),
       window.setInterval(() => setSeconds((value) => value + 1), 1_000),
     ];
   }
@@ -118,7 +83,6 @@ export function HomeRoute() {
     setUrl(target);
     setError(null);
     setPhaseIndex(0);
-    setWordIndex(0);
     setSeconds(0);
     startClocks();
     try {
@@ -127,7 +91,7 @@ export function HomeRoute() {
       // progress from there. A request refused outright still surfaces here.
       await Promise.race([ready, waitUntilVisible(reportId)]);
       ready.catch(() => undefined);
-      navigate(`/reports/${reportId}`);
+      navigate(`/reports/${reportId}`, { state: { started: true } });
     } catch (caught) {
       setPhaseIndex(null);
       setError(caught instanceof Error ? caught.message : "The audit could not be completed");
@@ -146,31 +110,36 @@ export function HomeRoute() {
   return (
     <section className="home-page">
       <div className="hero" aria-labelledby="hero-title">
-        <div className="eyebrow"><Sparkles size={16} /> Built for the agentic web</div>
-        <h1 id="hero-title">Teach ChatGPT how your business should work <span>for agents.</span></h1>
+        <div className="eyebrow"><Sparkles size={16} /> Free · no account · public websites</div>
+        <h1 id="hero-title">Turn your website into a Context Engine <span>for AI agents</span></h1>
         <p className="hero-copy">
-          AI Audit reads your website and drafts its entities, language, actions and boundaries.
-          You add the business knowledge only a human has. ChatGPT recompiles both into the business's
-          Terms of Action: what it owns, what it only describes, and what it hands off.
+          Paste a URL. WordLift builds a first model of your business from its pages, shows what the site declares and what it
+          only says in its content, and checks what AI agents can actually do with it.
         </p>
         <form className="audit-form" onSubmit={submit}>
           <label htmlFor="site-url">Website URL</label>
           <div className="input-row">
+            {/* Text, not type="url": the browser's own check turns "yourbusiness.com" away for want of https://,
+                which the server adds. inputMode still brings up the address keyboard on a phone. */}
             <input
               id="site-url"
               name="url"
-              type="url"
+              type="text"
+              inputMode="url"
+              autoComplete="url"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={url}
-              placeholder="https://example.com"
+              placeholder="yourbusiness.com"
               onChange={(event) => setUrl(event.target.value)}
               required
             />
             <button type="submit" disabled={Boolean(phase)}>
-              {phase ? "Drafting the Terms" : "Audit and refine my site"} <ArrowRight size={18} />
+              {phase ? "Reading your site" : "Audit my site"} <ArrowRight size={18} />
             </button>
           </div>
-          <p>No account required. Public websites only.</p>
-          {mode && (
+          {(
             <div className="try-sites" aria-label="Suggested sites">
               <span className="try-sites-label">
                 {mode === "demo" ? "Demo mode — pick a sample site:" : "No site handy? Try one of these:"}
@@ -190,25 +159,14 @@ export function HomeRoute() {
           )}
           {phase && (
             <div className="progress-message">
-              {/* Only the real phase is announced: the rotating word would talk over a screen reader. */}
-              <span className="sr-only" role="status">{phase}</span>
               <span className="progress-dot" aria-hidden="true" />
-              <span className="progress-word" aria-hidden="true">{word}…</span>
-              <span className="progress-detail" aria-hidden="true">
-                {phase} · {seconds}s
-              </span>
+              <span className="progress-detail" role="status">{phase}</span>
+              <span className="progress-detail" aria-hidden="true">{seconds}s</span>
             </div>
           )}
           {error && <p className="form-error" role="alert">{error}</p>}
         </form>
       </div>
-      <section className="journey-preview" aria-label="Audit stages">
-        {journey.map(({ label, icon: Icon }, index) => (
-          <article key={label}>
-            <span>{index + 1}</span><Icon aria-hidden="true" /><h2>{label}</h2>
-          </article>
-        ))}
-      </section>
     </section>
   );
 }

@@ -3,9 +3,7 @@ import type { CapabilityResult, ReadinessScore } from "../../shared/types/index.
 export function scoreReadiness(capabilities: CapabilityResult[]): ReadinessScore {
   const expected = capabilities.filter((capability) => capability.expected);
   const expectedWeight = expected.reduce((sum, capability) => sum + capability.importance, 0);
-  const verified = expected.filter((capability) =>
-    capability.state === "agent-ready" || capability.state === "sidecar-enabled",
-  );
+  const verified = expected.filter((capability) => capability.state === "agent-ready");
   const verifiedWeight = verified.reduce((sum, capability) => sum + capability.importance, 0);
   return {
     value: expectedWeight === 0 ? 0 : Math.round((100 * verifiedWeight) / expectedWeight),

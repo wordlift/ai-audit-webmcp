@@ -435,10 +435,24 @@ export interface RemoteTool {
   call(service: AuditToolService, args: unknown): Promise<ToolAnswer<unknown>>;
 }
 
+/**
+ * The public remote contract is the one the app directory reviewed. The browser and HTTP API may
+ * ask for a fresh crawl; the remote surface always takes the server's reuse default, so `fresh`
+ * is neither advertised here nor honoured if a caller sends it anyway.
+ */
+const { fresh: _browserOnlyFresh, ...REMOTE_AUDIT_PROPERTIES } = AUDIT_WEBSITE_TOOL.inputSchema.properties as Record<string, unknown>;
+
 const REMOTE_AUDIT_WEBSITE_TOOL: RemoteToolDefinition = {
   ...AUDIT_WEBSITE_TOOL,
+  inputSchema: { ...AUDIT_WEBSITE_TOOL.inputSchema, properties: REMOTE_AUDIT_PROPERTIES },
   outputSchema: AUDIT_OUTPUT_SCHEMA,
 };
+
+function withoutFresh(args: unknown): unknown {
+  if (!args || typeof args !== "object" || Array.isArray(args)) return args;
+  const { fresh: _ignored, ...rest } = args as Record<string, unknown>;
+  return rest;
+}
 
 const REMOTE_GET_AUDIT_REPORT_TOOL: RemoteToolDefinition = {
   ...withRequiredReportId(GET_AUDIT_REPORT_TOOL),
@@ -477,7 +491,7 @@ const REMOTE_FOUNDATION_AUDIT_TOOL: RemoteToolDefinition = {
 export const REMOTE_TOOLS: readonly RemoteTool[] = [
   {
     definition: REMOTE_AUDIT_WEBSITE_TOOL,
-    call: (service, args) => service.auditWebsite(args),
+    call: (service, args) => service.auditWebsite(withoutFresh(args)),
   },
   {
     definition: REMOTE_GET_AUDIT_REPORT_TOOL,

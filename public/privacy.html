@@ -214,6 +214,7 @@
         <li>IP address and user agent, used for abuse prevention, rate limiting and server logs.</li>
         <li>Request path, status, timing and error name in server logs. Logs do not contain deep-scan email addresses or raw audited page content.</li>
         <li>Which surface initiated a deep scan (<code>web</code>, <code>webmcp</code>, or <code>mcp</code>) so we can distinguish delivery sources.</li>
+        <li>Reader counts: how many times a report was read each day, by kind of reader (a named crawler, an AI agent acting from a hosted assistant, or a person), and how many times an agent activated a capability on the audited site. The kind is decided from the address and the user agent and only the count is kept; no address, user agent or identity is stored, and the counts expire with the report.</li>
       </ul>
       <p>
         Rate-limit counters live in memory for about ten minutes. Server logs are retained for 30 days.
@@ -312,7 +313,17 @@
             <tr>
               <td>Google Cloud Natural Language API</td>
               <td>Classifies the topic of an audited site</td>
+              <td>Text excerpts from audited public pages; not your deep-scan email address. Sent under Google's paid API terms, which do not use them to train models</td>
+            </tr>
+            <tr>
+              <td>WordLift Content Analysis, running on Modal Labs, Inc. infrastructure in WordLift's own deployment</td>
+              <td>Recognises the entities an audited page names, so the audit can say what agents understand about the business. It returns only names that appear in the text it was sent</td>
               <td>Text excerpts from audited public pages; not your deep-scan email address</td>
+            </tr>
+            <tr>
+              <td>Google Gemini API (Google LLC)</td>
+              <td>Reads entity names from an audited page only when WordLift Content Analysis fails or times out</td>
+              <td>Text excerpts from audited public pages; not your deep-scan email address. Sent under Google's paid API terms, which do not use them to train models</td>
             </tr>
             <tr>
               <td>ScrapingBee SAS</td>
@@ -361,6 +372,13 @@
         consent or unsubscribe at any time. The email address is never written into the public audit report or
         returned in a report link, and service responses that read it back mask the address.
       </p>
+      <p>
+        Once a deep-scan report has been sent, WordLift reads the same site again about once a week and writes
+        to you only when something changed: the readiness score moved, a capability stopped or started
+        answering, a crawler or Google read the report for the first time, or an agent's request to the site
+        failed. Every such note carries one link that stops the notes and the re-reads together; the report
+        stays where it is.
+      </p>
 
       <h2 id="transfers">7. International transfers</h2>
       <p>
@@ -381,6 +399,8 @@
             <tr><td>Deep-scan email address in the audit store</td><td>The same 30 days as its report</td></tr>
             <tr><td>Claim-token hash</td><td>The same 30 days as its report</td></tr>
             <tr><td>Raw fetched page content</td><td>Not retained after evidence extraction</td></tr>
+            <tr><td>Reader and activation counts</td><td>The same 30 days as their report</td></tr>
+            <tr><td>A site's Context Engine: the business decisions people confirmed about that site, hashed review keys and ownership verification state, with no email address or identity</td><td>Kept for the site until its verified owner or you ask WordLift to delete it, so confirmed decisions carry into later audits</td></tr>
             <tr><td>Rate-limit counters</td><td>About 10 minutes, in memory only</td></tr>
             <tr><td>Server logs</td><td>30 days</td></tr>
             <tr><td>HubSpot contact record</td><td>Until you unsubscribe, withdraw consent or ask WordLift to delete it, subject to legal requirements</td></tr>

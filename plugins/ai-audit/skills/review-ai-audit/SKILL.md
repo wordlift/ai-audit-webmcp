@@ -75,7 +75,8 @@ Write back exactly what you would change, grouped so a person can check it:
 - the operating role, in their words;
 - entities to promote or demote, by name and id;
 - terminology entries, term by term, with the meaning they gave;
-- each action decision: confirm or reject, with its boundary and a one-line rationale.
+- each action decision: confirm or reject, with its boundary and a one-line rationale, and for a
+  partner handoff the partner's name and site when they know it.
 
 Then ask for explicit confirmation that this is an accurate record of their judgment. If they
 change something, show the corrected list and ask again.

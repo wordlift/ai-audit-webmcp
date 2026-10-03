@@ -4,6 +4,7 @@ import { createAgentSurfaceRouter } from "./routes/agentSurface.js";
 import { createAlpinaRouter } from "./routes/alpina.js";
 import { createMcpRouter } from "./routes/mcp.js";
 import { createReportsRouter } from "./routes/reports.js";
+import { createEnginesRouter } from "./routes/engines.js";
 import {
   createAuditRateLimiters,
   createMcpRateLimiters,
@@ -13,10 +14,17 @@ import {
 import type { ClaimStore } from "./adapters/claims/index.js";
 import type { LeadDelivery, LeadStore } from "./adapters/leads/index.js";
 import type { AuditOrchestrator } from "./services/AuditOrchestrator.js";
+import type { MarkupProvider } from "./adapters/markup/MarkupProvider.js";
 import type { PlatformEgress } from "./security/platformEgress.js";
+import type { VisitLedger } from "./services/VisitLedger.js";
 import { AuditToolService, type AuditToolServiceOptions } from "./services/AuditToolService.js";
 import { DeepScanDelivery } from "./services/DeepScanDelivery.js";
+import { Observer, type ObserveOptions } from "./services/Observer.js";
+import { createObserveRouter } from "./routes/observe.js";
+import type { PublishedSiteStore } from "./adapters/published/PublishedSiteStore.js";
 import { DeepScanGate } from "./services/DeepScanGate.js";
+import type { UrlPolicyOptions } from "./security/urlPolicy.js";
+import { CapabilityTestService } from "./services/CapabilityTest.js";
 import { AlpinaAvailabilitySidecar } from "./sidecars/alpina/adapter.js";
 
 export interface AppOptions {
@@ -38,7 +46,13 @@ export interface AppOptions {
    * one address's budget; absent, every address is limited as itself.
    */
   platformEgress?: PlatformEgress;
+  /** The markup provider, for the health endpoint's running cost estimate only. */
+  markup?: MarkupProvider;
+  /** Counts who reads a report and who activates a capability, by class and by day. Absent means nothing is counted. */
+  visits?: VisitLedger;
   toolService?: AuditToolServiceOptions;
+  /** URL policy and timeout for a person's own calls on a site's tools; tests inject a resolver. */
+  capabilityTest?: UrlPolicyOptions & { timeoutMs?: number };
   /** Where a deep scan's email address is filed. Absent means deep scans are unavailable here. */
   leads?: LeadStore;
   /** Legacy claim storage used by non-public service harnesses; never exposed through public MCP. */
@@ -46,6 +60,15 @@ export interface AppOptions {
   /** How a deep scan's report reaches the address that bought it. Absent means it queues only. */
   leadDelivery?: LeadDelivery;
   reportTtlDays?: number;
+  /**
+   * Observe: re-read the sites whose owners gave an address, and write only when something moved.
+   * Absent means no cadence runs here; it needs the orchestrator, the lead store and a delivery.
+   */
+  observe?: ObserveOptions;
+  /** The sites that publish through us, read by the entry source at /feed/ai-catalog.json. */
+  published?: PublishedSiteStore;
+  /** False on a preview deployment: every response carries noindex and robots are told to stay out. */
+  indexable?: boolean;
 }
 
 /**
@@ -69,11 +92,15 @@ export function createApp(options: AppOptions = {}): Express {
   app.disable("x-powered-by");
   if (options.trustProxy) app.set("trust proxy", 1);
 
+  const indexable = options.indexable ?? true;
   app.use((_request, response, next) => {
     for (const [header, value] of Object.entries(SECURITY_HEADERS)) response.setHeader(header, value);
+    if (!indexable) response.setHeader("x-robots-tag", "noindex, nofollow");
     next();
   });
   app.use(express.json({ limit: "256kb" }));
+  // Who is reading, counted before anything answers: a class and a day, never an address.
+  if (options.visits) app.use(options.visits.middleware());
 
   app.get("/.well-known/openai-apps-challenge", (_request, response) => {
     if (!options.appsChallenge) {
@@ -82,6 +109,20 @@ export function createApp(options: AppOptions = {}): Express {
     }
     response.type("text/plain").send(options.appsChallenge);
   });
+
+  // The number that comes to you: bounded by the addresses held, started only when asked to.
+  const observer =
+    options.observe && options.orchestrator && options.leads && options.leadDelivery
+      ? new Observer({
+          ...options.observe,
+          orchestrator: options.orchestrator,
+          leads: options.leads,
+          delivery: options.leadDelivery,
+          ...(options.visits ? { visits: options.visits } : {}),
+        })
+      : null;
+  observer?.start();
+  if (options.leads) app.use("/api/observe", createObserveRouter(options.leads, undefined, observer));
 
   app.get("/api/health", (_request, response) => {
     response.status(200).json({
@@ -97,8 +138,13 @@ export function createApp(options: AppOptions = {}): Express {
         // This is a browser/WebMCP capability only. The anonymous remote MCP transport below is
         // deliberately created without a ClaimStore and therefore cannot publish refinements.
         browserRefinement: Boolean(options.claims),
+        contextEngines: Boolean(options.orchestrator?.engines),
       },
       platformEgress: options.platformEgress?.summary() ?? null,
+      // What the markup stand-in has cost since this instance started: the estimate, live.
+      markup: options.markup ? { provider: options.markup.name, model: options.markup.model, ...options.markup.totals() } : null,
+      // Whether sites are re-read on their owners' behalf here, and what this instance has sent.
+      observe: observer?.summary() ?? null,
     });
   });
 
@@ -110,21 +156,23 @@ export function createApp(options: AppOptions = {}): Express {
       delivery: options.leadDelivery,
       publicReportUrl: (reportId) => (options.orchestrator as AuditOrchestrator).reportUrl(reportId),
       loadReport: (reportId) => (options.orchestrator as AuditOrchestrator).get(reportId),
+      engineFor: async (report) => (await options.orchestrator?.engines?.forReport(report)) ?? null,
     });
     app.get("/api/demo/alpina", async (_request, response) => response.json(await options.orchestrator?.pinnedAlpina()));
     const writeLimiters: RequestHandler[] = createAuditRateLimiters(
       options.writeRateLimits ?? { ...options.rateLimits, perIp: 40, global: 800 },
     );
+    if (options.orchestrator.engines) app.use("/api/engines", createEnginesRouter(options.orchestrator, options.orchestrator.engines, writeLimiters));
     app.use(
       "/api/reports",
-      createReportsRouter(options.orchestrator, limiters, deepScan, writeLimiters, delivery),
+      createReportsRouter(options.orchestrator, limiters, deepScan, writeLimiters, delivery, options.visits, new CapabilityTestService(options.orchestrator, options.capabilityTest)),
     );
     const sidecarLimiters: RequestHandler[] = createAuditRateLimiters(
       options.sidecarRateLimits ?? { ...options.rateLimits, perIp: 30, global: 600 },
     );
     app.use(
       "/api/sidecars/alpina",
-      createAlpinaRouter(options.alpinaSidecar ?? new AlpinaAvailabilitySidecar(), options.orchestrator, sidecarLimiters),
+      createAlpinaRouter(options.alpinaSidecar ?? new AlpinaAvailabilitySidecar(), options.orchestrator, sidecarLimiters, options.visits),
     );
 
     // The public remote transport is intentionally anonymous and review-only after audit. Do not
@@ -159,7 +207,16 @@ export function createApp(options: AppOptions = {}): Express {
     response.status(404).json({ error: "not_found", message: "Unknown API endpoint" });
   });
 
-  app.use(createAgentSurfaceRouter({ orchestrator: options.orchestrator, staticDirectory: options.staticDirectory }));
+  // Discovery documents and the prerendered report shell answer before the SPA fallback, so a
+  // reader that does not run scripts gets the report rather than an empty shell.
+  app.use(
+    createAgentSurfaceRouter({
+      orchestrator: options.orchestrator,
+      staticDirectory: options.staticDirectory,
+      indexable,
+      ...(options.published ? { published: options.published } : {}),
+    }),
+  );
 
   if (options.staticDirectory) {
     app.use(express.static(options.staticDirectory));

@@ -70,6 +70,11 @@ export const AUDIT_WEBSITE_TOOL = {
         description:
           "Where to send a deep scan's report. Required when depth is \"deep\". Ask the person for their address — never guess one, and never reuse an address from elsewhere in the conversation without asking.",
       },
+      fresh: {
+        type: "boolean",
+        description:
+          "Read the site again even if it was audited in the last day. By default a recent audit of the same site at the same depth is reused, so a second look costs nothing; set this to re-verify after a change.",
+      },
     },
     required: ["url"],
     additionalProperties: false,
@@ -233,6 +238,22 @@ export const REFINE_SERVICE_MAP_TOOL = {
         },
         description: "Judgments about the machine's own vocabulary (at most 40 entries).",
       },
+      relationDecisions: {
+        type: "array",
+        maxItems: 80,
+        items: {
+          type: "object",
+          properties: {
+            from: { type: "string", description: "The entity id the relation starts from, as inspect-business-model lists it." },
+            kind: { type: "string", enum: ["offers", "located-in", "provided-by", "part-of", "serves", "brand"] },
+            to: { type: "string", description: "The entity id the relation points to." },
+            decision: { type: "string", enum: ["confirm", "reject"], description: "confirm makes a relation read from the text the reviewer's word; reject takes any relation out of the model." },
+          },
+          required: ["from", "kind", "to", "decision"],
+          additionalProperties: false,
+        },
+        description: "Judgments about how two entities relate (at most 80): confirm the relations read from the text that are right, reject the ones that are wrong.",
+      },
       actionDecisions: {
         type: "array",
         maxItems: 80,
@@ -247,6 +268,16 @@ export const REFINE_SERVICE_MAP_TOOL = {
               description: "Who is responsible: the site itself, a partner it hands off to, information only, or nobody.",
             },
             rationale: { type: "string", description: "Why, in one or two sentences." },
+            partner: {
+              type: "object",
+              properties: {
+                name: { type: "string", description: "The partner's name." },
+                url: { type: "string", description: "The partner's website, when it has one." },
+              },
+              required: ["name"],
+              additionalProperties: false,
+              description: "For a partner handoff: who runs the action. Published as its provider.",
+            },
           },
           required: ["actionId", "decision"],
           additionalProperties: false,
@@ -295,6 +326,50 @@ export const CHECK_ALPINA_AVAILABILITY_TOOL = {
     destructiveHint: false,
     idempotentHint: true,
     openWorldHint: true,
+    untrustedContentHint: true,
+  },
+} as const satisfies ToolDefinition;
+
+export const INSPECT_BUSINESS_MODEL_TOOL = {
+  name: "inspect-business-model",
+  title: "Read the business model",
+  description:
+    "Read the business as the audit modelled it from the pages it read: the business, what it offers, where, who, each entity marked declared (from the site's own markup), inferred (read from its text, a candidate, never evidence) or human-confirmed, with the actions each entity answers for and whether an agent can perform them today. Call this to answer what a company sells, which entities matter, which are only inferred, and what an agent can do here. Read-only; built from a handful of pages, not the whole business.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      reportId: { type: "string", description: "Optional identifier of the report currently open in the page." },
+    },
+    additionalProperties: false,
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+    untrustedContentHint: true,
+  },
+} as const satisfies ToolDefinition;
+
+export const EXPLAIN_ENTITY_TOOL = {
+  name: "explain-entity",
+  title: "Explain one entity",
+  description:
+    "One entity of the business model in full: its type, whether it was declared in the site's markup or inferred from its text, the pages it was seen on, its offers and links, the actions it answers for with their readiness, and the evidence behind each. Look it up by entityId from inspect-business-model, or by the name a person would use. Read-only.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      reportId: { type: "string", description: "Optional identifier of the report currently open in the page." },
+      entityId: { type: "string", description: "The entity's id, as inspect-business-model lists it." },
+      name: { type: "string", description: "The entity's name, or one of its other names, when the id is not to hand." },
+    },
+    additionalProperties: false,
+  },
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
     untrustedContentHint: true,
   },
 } as const satisfies ToolDefinition;

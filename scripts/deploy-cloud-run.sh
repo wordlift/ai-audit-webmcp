@@ -14,11 +14,38 @@
 #     --project "$PROJECT"
 #
 # Usage: scripts/deploy-cloud-run.sh [project-id] [region]
+#
+# Preview: PREVIEW=1 deploys the checked-out branch to a separate service on its own run.app URL,
+# with nothing shared with production: reports in "preview_" Firestore collections of their own, no
+# HubSpot form, no directory challenge, no weekly re-reads, robots told to stay out and every
+# response marked noindex. The WordLift API and ScrapingBee keys are the same accounts; the audits
+# a preview runs cost what production's do. Production's service, domain and Firestore are untouched.
+#
+#   PREVIEW=1 SCRAPE_PROVIDER=scrapingbee MARKUP_PROVIDER=content-analysis scripts/deploy-cloud-run.sh "$PROJECT" us-west1
 set -euo pipefail
 
 PROJECT="${1:-${GOOGLE_CLOUD_PROJECT:-ai-audit-wordlift}}"
 REGION="${2:-us-west1}"
-SERVICE="ai-audit-webmcp"
+PREVIEW="${PREVIEW:-}"
+if [ -n "$PREVIEW" ]; then
+  SERVICE="${SERVICE:-ai-audit-webmcp-preview}"
+  # Reports persist across preview deploys in Firestore collections of their own, "preview_" in
+  # front of every name, so a report someone is reviewing with an agent survives the next push.
+  STORE="firestore"
+  MAX_INSTANCES=1
+  PREVIEW_ENV="##PUBLIC_INDEXABLE=false##OBSERVE_INTERVAL_DAYS=0##FIRESTORE_COLLECTION_PREFIX=preview_"
+  # A preview never writes to HubSpot or serves the directory's token, whatever the shell has exported.
+  unset HUBSPOT_PORTAL_ID HUBSPOT_FORM_GUID OPENAI_APPS_CHALLENGE
+  if [ -n "${PUBLIC_APP_URL:-}" ]; then
+    echo "A preview keeps its own run.app URL; PUBLIC_APP_URL is ignored." >&2
+    unset PUBLIC_APP_URL
+  fi
+else
+  SERVICE="${SERVICE:-ai-audit-webmcp}"
+  STORE="firestore"
+  MAX_INSTANCES=5
+  PREVIEW_ENV=""
+fi
 RELEASE_SHA="${BUILD_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)}"
 
 # Rendered collection reads JSON-LD that only exists after scripts run. Enable it with
@@ -28,6 +55,36 @@ SCRAPE="${SCRAPE_PROVIDER:-native-fetch}"
 SECRETS="WORDLIFT_API_KEY=AI_AUDIT_WEBMCP_WORDLIFT_KEY:latest"
 if [ "$SCRAPE" = "scrapingbee" ]; then
   SECRETS="$SECRETS,SCRAPINGBEE_API_KEY=SCRAPINGBEE_API_KEY:latest"
+fi
+
+# The entities behind Fix. MARKUP_PROVIDER=content-analysis is WordLift's own Content Analysis
+# v3, authenticated with the WordLift key already mounted; MARKUP_PROVIDER=gemini is the stand-in
+# it replaced, through the Gemini API and the GEMINI_API_KEY secret. /api/health reports totals.
+MARKUP="${MARKUP_PROVIDER:-none}"
+MARKUP_ENV=""
+if [ "$MARKUP" = "content-analysis" ]; then
+  # Every page of a basic scan: the service costs nothing per call, and a page that declares
+  # some entities is exactly where the ones it does not declare are.
+  MARKUP_ENV="##MARKUP_PROVIDER=content-analysis##MARKUP_ON_BASIC=${MARKUP_ON_BASIC:-all}"
+  if [ -n "${CONTENT_ANALYSIS_URL:-}" ]; then
+    MARKUP_ENV="${MARKUP_ENV}##CONTENT_ANALYSIS_URL=${CONTENT_ANALYSIS_URL}"
+  fi
+  # Gemini behind it, for names only, when Content Analysis does not answer: MARKUP_FALLBACK=gemini.
+  if [ "${MARKUP_FALLBACK:-none}" = "gemini" ]; then
+    SECRETS="$SECRETS,GEMINI_API_KEY=GEMINI_API_KEY:latest"
+    MARKUP_ENV="${MARKUP_ENV}##MARKUP_FALLBACK=gemini##GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}"
+  fi
+elif [ "$MARKUP" = "gemini" ]; then
+  SECRETS="$SECRETS,GEMINI_API_KEY=GEMINI_API_KEY:latest"
+  MARKUP_ENV="##MARKUP_PROVIDER=gemini##GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}##MARKUP_ON_BASIC=${MARKUP_ON_BASIC:-thin}"
+fi
+
+# Observe's daily tick comes from Cloud Scheduler behind a token held in Secret Manager. Export
+# OBSERVE_TICK_TOKEN_SECRET=<secret name> to mount it; see OPERATIONS.md for the job.
+OBSERVE_ENV=""
+if [ -n "${OBSERVE_TICK_TOKEN_SECRET:-}" ]; then
+  SECRETS="$SECRETS,OBSERVE_TICK_TOKEN=${OBSERVE_TICK_TOKEN_SECRET}:latest"
+  OBSERVE_ENV="##OBSERVE_TICK_MINUTES=${OBSERVE_TICK_MINUTES:-0}"
 fi
 
 # The app directory verifies this domain by fetching a token from /.well-known. Export
@@ -53,7 +110,7 @@ PROJECT_NUMBER="$(gcloud projects describe "$PROJECT" --format='value(projectNum
 # Share links are baked into stored reports, so a custom domain must survive a redeploy.
 PUBLIC_URL="${PUBLIC_APP_URL:-https://${SERVICE}-${PROJECT_NUMBER}.${REGION}.run.app}"
 
-echo "Deploying ${SERVICE} to ${PROJECT} (${REGION})"
+echo "Deploying ${SERVICE} to ${PROJECT} (${REGION})${PREVIEW:+ as a preview: preview_ collections, noindex, nothing sent}"
 echo "Public URL will be ${PUBLIC_URL}"
 
 gcloud run deploy "$SERVICE" \
@@ -64,9 +121,9 @@ gcloud run deploy "$SERVICE" \
   --timeout 300 \
   --memory 1Gi \
   --cpu 1 \
-  --max-instances 5 \
+  --max-instances "$MAX_INSTANCES" \
   --concurrency 20 \
-  --set-env-vars "^##^NODE_ENV=production##AUDIT_PROVIDER=wordlift##AI_AUDIT_BASE_URL=https://api.wordlift.io##SCRAPE_PROVIDER=${SCRAPE}##CLASSIFIER_PROVIDER=google-nlp##REPORT_STORE=firestore##GOOGLE_CLOUD_PROJECT=${PROJECT}##PUBLIC_APP_URL=${PUBLIC_URL}##REPORT_TTL_DAYS=30##BUILD_SHA=${RELEASE_SHA}${CHALLENGE_ENV}${HUBSPOT_ENV}" \
+  --set-env-vars "^##^NODE_ENV=production##AUDIT_PROVIDER=wordlift##AI_AUDIT_BASE_URL=https://api.wordlift.io##SCRAPE_PROVIDER=${SCRAPE}##CLASSIFIER_PROVIDER=google-nlp##REPORT_STORE=${STORE}##GOOGLE_CLOUD_PROJECT=${PROJECT}##PUBLIC_APP_URL=${PUBLIC_URL}##REPORT_TTL_DAYS=30##BUILD_SHA=${RELEASE_SHA}${CHALLENGE_ENV}${HUBSPOT_ENV}${MARKUP_ENV}${OBSERVE_ENV}${PREVIEW_ENV}" \
   --set-secrets "$SECRETS"
 
 echo

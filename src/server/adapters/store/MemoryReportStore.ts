@@ -24,6 +24,16 @@ export class MemoryReportStore implements ReportStore {
     return structuredClone(report);
   }
 
+  async findRecent(requestedUrl: string, since: Date, limit = 10): Promise<ReportRecord[]> {
+    const now = this.now();
+    return [...this.#records.values()]
+      .filter((report) => report.requestedUrl === requestedUrl && report.createdAt >= since.toISOString())
+      .filter((report) => new Date(report.expiresAt) > now)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .slice(0, limit)
+      .map((report) => structuredClone(report));
+  }
+
   async update(input: ReportRecord): Promise<ReportRecord> {
     const report = parseStoredReport(input, this.maximumBytes);
     const existing = this.#records.get(report.id);

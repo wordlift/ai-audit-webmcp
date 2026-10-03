@@ -6,8 +6,12 @@ import { ReportRequestError } from "../errors.js";
 import { UrlPolicyError } from "../security/urlPolicy.js";
 import type { AuditOrchestrator } from "../services/AuditOrchestrator.js";
 import type { DeepScanDelivery } from "../services/DeepScanDelivery.js";
+import type { VisitLedger } from "../services/VisitLedger.js";
 import { DeepScanGate } from "../services/DeepScanGate.js";
+import type { CapabilityTestService } from "../services/CapabilityTest.js";
 import { ToolCallError } from "../services/toolErrors.js";
+import { funnel } from "../services/funnel.js";
+import { doorIntent, isPageEvent } from "../../shared/format/funnel.js";
 
 /**
  * The address a deep scan is sent to arrives with the request and stops here: it is handed to the
@@ -25,12 +29,30 @@ const createReportBodySchema = createReportRequestSchema.extend({
   surface: z.enum(["web", "webmcp"]).optional(),
 });
 
+const capabilityTestInputSchema = z
+  .object({
+    interfaceId: z.string().min(1).max(600),
+    arguments: z.record(z.string().max(80), z.union([z.string().max(2_000), z.number().finite(), z.boolean()])).default({}),
+    save: z.boolean().optional(),
+  })
+  .strict();
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
 export function createReportsRouter(
   orchestrator: AuditOrchestrator,
   auditLimiters: RequestHandler[] = [],
   deepScan: DeepScanGate = new DeepScanGate(null),
   writeLimiters: RequestHandler[] = [],
   delivery?: DeepScanDelivery,
+  visits?: VisitLedger,
+  capabilityTests?: CapabilityTestService,
 ): Router {
   const router = Router();
 
@@ -56,6 +78,23 @@ export function createReportsRouter(
     }
   });
 
+  // A funnel step only the page sees: counted beside the report's readers, logged by name, and a
+  // door to WordLift kept on the site's engine as the reason someone arrived. Never rate limited,
+  // never an error the page has to handle.
+  router.post("/:reportId/events", ...writeLimiters, async (request, response) => {
+    const name = (request.body as { name?: unknown } | undefined)?.name;
+    const report = isPageEvent(name) ? await orchestrator.get(param(request.params.reportId)) : null;
+    if (!report || !isPageEvent(name)) {
+      response.status(204).end();
+      return;
+    }
+    visits?.record(report.id, `event:${name}`);
+    funnel(name, report.id);
+    const intent = doorIntent(name);
+    if (intent) await orchestrator.engines?.noteIntent(report, intent).catch(() => undefined);
+    response.status(204).end();
+  });
+
   router.get("/:reportId", async (request, response) => {
     const report = await orchestrator.get(request.params.reportId);
     if (!report) {
@@ -73,9 +112,58 @@ export function createReportsRouter(
     }
   });
 
+  // A review filed with the holder's key of the site's Context Engine is kept there too, so the next
+  // read of the site carries it. Without a key the review is what it always was: a revision of this report.
   router.post("/:reportId/refine", ...writeLimiters, async (request, response) => {
     try {
-      response.json(await orchestrator.refine(param(request.params.reportId), request.body));
+      const reportId = param(request.params.reportId);
+      const engines = orchestrator.engines;
+      const key = request.get("x-context-engine-key");
+      const parent = engines && key ? await orchestrator.get(reportId) : null;
+      const role = engines && parent ? await engines.roleFor(parent, key) : null;
+      const child = await orchestrator.refine(reportId, request.body, role ? { filedBy: role } : {});
+      // The child is stored whatever the engine does next: a failure to keep the decisions says so in
+      // a header, never as a failed save of a review that was saved.
+      const kept = engines && parent && role && child.refinement
+        ? await engines.file(parent, child, child.refinement.assertions, role).catch((error: unknown) => {
+            console.error("engine_file_failed", error instanceof Error ? error.name : "unknown");
+            return 0;
+          })
+        : 0;
+      if (kept > 0) {
+        funnel("review_filed", parent!.id, { role: role! });
+        response.setHeader("x-context-engine", "filed");
+      } else if (key) {
+        response.setHeader("x-context-engine", "not-filed");
+      }
+      response.json(child);
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
+  // A person's own call on one capability's interface: what can be called, then one call, with
+  // the inputs the audit would not invent. Evidence only on request, as a new version of the report.
+  router.get("/:reportId/capabilities/:actionId/test", ...writeLimiters, async (request, response) => {
+    if (!capabilityTests) {
+      response.status(404).json({ error: "not_available", message: "Capability tests are not available here." });
+      return;
+    }
+    try {
+      response.json(await capabilityTests.list(param(request.params.reportId), param(request.params.actionId)));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
+  router.post("/:reportId/capabilities/:actionId/test", ...writeLimiters, async (request, response) => {
+    if (!capabilityTests) {
+      response.status(404).json({ error: "not_available", message: "Capability tests are not available here." });
+      return;
+    }
+    try {
+      const input = capabilityTestInputSchema.parse(request.body ?? {});
+      response.json(await capabilityTests.run(param(request.params.reportId), param(request.params.actionId), input));
     } catch (error) {
       sendError(response, error);
     }
@@ -84,6 +172,73 @@ export function createReportsRouter(
   router.post("/:reportId/reverify", ...auditLimiters, async (request, response) => {
     try {
       response.json(await orchestrator.reverify(param(request.params.reportId)));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
+  // Who read this report, by class and by day, and which agents activated a capability on its
+  // site. Counts only, and reading them is never rate limited and never counted as a visit.
+  router.get("/:reportId/visits", async (request, response) => {
+    const report = await orchestrator.get(request.params.reportId);
+    if (!report) {
+      response.status(404).json({ error: "report_not_found", message: "Report not found or expired" });
+      return;
+    }
+    // The readiness readings travel with the ledger: one read for everything Observe shows.
+    const history = await orchestrator.history(report);
+    if (!visits) {
+      response.json({ reportId: report.id, since: report.createdAt, days: [], activations: [], history });
+      return;
+    }
+    const site = hostOf(report.canonicalUrl ?? report.requestedUrl);
+    const [days, activations] = await Promise.all([visits.visits(report.id), visits.activations(site)]);
+    response.json({
+      reportId: report.id,
+      since: report.createdAt,
+      days: days.map((row) => ({ day: row.day, counts: row.counts })),
+      activations,
+      history,
+    });
+  });
+
+  // Activate: what this report publishes, as one model and as the three documents a site serves.
+  // The plugin reads the model; a person, a crawler, or the audit itself reads the documents.
+  router.get("/:reportId/publish", async (request, response) => {
+    try {
+      response.json(await orchestrator.publish(param(request.params.reportId)));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+  router.get("/:reportId/publish/page.jsonld", async (request, response) => {
+    try {
+      const publication = await orchestrator.publish(param(request.params.reportId));
+      response.type("application/ld+json").send(JSON.stringify(publication.jsonLd, null, 2));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+  router.get("/:reportId/publish/skill.md", async (request, response) => {
+    try {
+      const publication = await orchestrator.publish(param(request.params.reportId));
+      response.type("text/markdown; charset=utf-8").send(publication.skill);
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+  router.get("/:reportId/publish/llms.txt", async (request, response) => {
+    try {
+      const publication = await orchestrator.publish(param(request.params.reportId));
+      response.type("text/plain; charset=utf-8").send(publication.llms);
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+  router.get("/:reportId/publish/ai-catalog.json", async (request, response) => {
+    try {
+      const publication = await orchestrator.publish(param(request.params.reportId));
+      response.type("application/json").send(JSON.stringify(publication.catalog, null, 2));
     } catch (error) {
       sendError(response, error);
     }
@@ -135,6 +290,10 @@ export function sendError(response: Response, error: unknown) {
     return;
   }
   const message = error instanceof Error ? error.message : "Unexpected report error";
+  if (error && typeof error === "object" && (error as { status?: unknown }).status === 404) {
+    response.status(404).json({ error: "report_not_found", message });
+    return;
+  }
   if (/not found|expired/i.test(message)) {
     response.status(404).json({ error: "report_not_found", message });
     return;

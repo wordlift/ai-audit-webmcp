@@ -6,8 +6,10 @@ import type {
   ContentCategory,
   ContextGraph,
   DomainEntity,
+  EntityRelation,
 } from "../../shared/types/index.js";
 import { DEEP_SCAN_PAGES } from "../../shared/format/deepScan.js";
+import { inferRelations } from "./inferRelations.js";
 
 const ENTITY_ACTIONS: Record<string, string[]> = {
   Organization: ["site.browse", "site.search", "source.verify", "inquiry.submit", "policy.explain"],
@@ -52,7 +54,10 @@ export function compileContextGraph(
   canonicalUrl: string,
   archetype?: keyof typeof BUSINESS_TYPES,
 ): ContextGraph {
-  const entities = mergeEntities(pages, canonicalUrl, new Set(BUSINESS_TYPES[archetype ?? "other"] ?? []));
+  const { entities, idMap } = mergeEntities(pages, canonicalUrl, new Set(BUSINESS_TYPES[archetype ?? "other"] ?? []));
+  const declared = compileRelations(pages, entities, idMap);
+  // What the text says plainly, beside what the markup declares; inferred, with its sentence.
+  const relations = [...declared, ...inferRelations(pages, entities, declared)].slice(0, 200);
   const actionIdsByEntity = actionMapForEntities(entities, capabilities);
   const interfaces = capabilities.flatMap((capability) =>
     capability.evidence.map((evidence) => interfaceFrom(evidence, capability, entities, actionIdsByEntity)),
@@ -73,7 +78,32 @@ export function compileContextGraph(
     lexicalEntries: compileLexicalEntries(auditedPages, categories, entities),
     interfaces: dedupeInterfaces(interfaces),
     bindings: bindings.slice(0, 240),
+    ...(relations.length > 0 ? { relations } : {}),
   };
+}
+
+/**
+ * The relations the pages declared, on the entities the merge kept: an id the merge folded into a
+ * namesake follows it, an end the graph does not hold drops the relation, and a relation stated on
+ * two pages is one relation.
+ */
+function compileRelations(pages: SitePageSnapshot[], entities: DomainEntity[], idMap: Map<string, string>): EntityRelation[] {
+  const known = new Set(entities.map((entity) => entity.id));
+  const seen = new Set<string>();
+  const relations: EntityRelation[] = [];
+  for (const page of pages) {
+    for (const relation of page.relations ?? []) {
+      const from = idMap.get(relation.from) ?? relation.from;
+      const to = idMap.get(relation.to) ?? relation.to;
+      if (from === to || !known.has(from) || !known.has(to)) continue;
+      const key = `${from}|${relation.kind}|${to}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      relations.push({ from, to, kind: relation.kind, provenance: "declared", sourceUrl: relation.sourceUrl });
+      if (relations.length >= 200) return relations;
+    }
+  }
+  return relations;
 }
 
 export function appliesToForAction(context: ContextGraph, actionId: string) {
@@ -151,36 +181,55 @@ function compileBindings(
   ).slice(0, 240);
 }
 
-function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, businessTypes: Set<string> = new Set()): DomainEntity[] {
+function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, businessTypes: Set<string> = new Set()): { entities: DomainEntity[]; idMap: Map<string, string> } {
   const byId = new Map<string, DomainEntity>();
+  // Where each sighting's id ended up, so what the pages say about an id follows it into the merge.
+  const idMap = new Map<string, string>();
   // The same real-world thing often carries a different @id on each page that embeds it — and
-  // often a different type set too: Organization here, Organization+Brand there. A sighting
-  // merges into an earlier entity when the names match and at least one type is shared; only a
-  // genuine namesake of a different kind stays separate.
+  // often a different type set too: Organization here, Organization+Brand there. A declared
+  // sighting merges into an earlier entity when the names match and at least one type is shared;
+  // only a genuine namesake of a different kind stays separate. An inferred sighting yields to any
+  // namesake: what a model read into the text never stands beside what a page declares, nor beside
+  // what the model already read under another label, as a second entity of the same name.
   const idsByName = new Map<string, string[]>();
   for (const page of pages) {
     for (const extracted of page.entities) {
       const name = extracted.name.trim().toLowerCase();
+      const inferred = extracted.origin === "inferred";
       let id = extracted.id;
       if (!byId.has(id)) {
-        const match = (idsByName.get(name) ?? []).find((candidateId) =>
-          byId.get(candidateId)?.types.some((type) => extracted.types.includes(type)),
-        );
+        const candidates = idsByName.get(name) ?? [];
+        const match = inferred
+          ? candidates[0]
+          : candidates.find((candidateId) => byId.get(candidateId)?.types.some((type) => extracted.types.includes(type)));
         if (match) id = match;
       }
+      idMap.set(extracted.id, id);
       const known = idsByName.get(name) ?? [];
       if (!known.includes(id)) idsByName.set(name, [...known, id]);
       const existing = byId.get(id);
+      // One declared sighting makes an entity declared; only an entity every page merely implies
+      // stays inferred, at lower confidence, as a candidate rather than a fact.
+      const origin: DomainEntity["origin"] =
+        existing?.origin === "markup" || (existing && !existing.origin) || extracted.origin !== "inferred" ? "markup" : "inferred";
+      // An inferred sighting of a known entity adds only where it was seen: no type, no link, no
+      // description and no offer a model read into the text ever joins what a page declared.
+      const addsFacts = !inferred || !existing;
+      // Between two inferred sightings, what the linker said of the name travels: the Wikidata link
+      // one page's mention earned is the entity's, whichever page came first. Types and offers stay
+      // as first read: one name, one thing.
+      const addsLinks = addsFacts || existing?.origin === "inferred";
       const next: DomainEntity = {
         id,
-        types: unique([...(existing?.types ?? []), ...extracted.types]).slice(0, 12),
+        types: unique([...(existing?.types ?? []), ...(addsFacts ? extracted.types : [])]).slice(0, 12),
         name: existing?.name ?? extracted.name,
-        alternateNames: unique([...(existing?.alternateNames ?? []), ...extracted.alternateNames]).slice(0, 20),
-        description: existing?.description ?? extracted.description,
+        alternateNames: unique([...(existing?.alternateNames ?? []), ...(addsLinks ? extracted.alternateNames : [])]).slice(0, 20),
+        description: existing?.description ?? (addsLinks ? extracted.description : undefined),
         sourceUrls: unique([...(existing?.sourceUrls ?? []), extracted.sourceUrl]).slice(0, 12),
-        sameAs: unique([...(existing?.sameAs ?? []), ...extracted.sameAs]).slice(0, 12),
-        offers: [...(existing?.offers ?? []), ...extracted.offers].slice(0, 12),
-        confidence: 0.95,
+        sameAs: unique([...(existing?.sameAs ?? []), ...(addsLinks ? extracted.sameAs : [])]).slice(0, 12),
+        offers: [...(existing?.offers ?? []), ...(addsFacts ? extracted.offers : [])].slice(0, 12),
+        confidence: origin === "inferred" ? 0.6 : 0.95,
+        ...(origin === "inferred" ? { origin } : {}),
       };
       byId.set(id, next);
     }
@@ -200,9 +249,10 @@ function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, business
       confidence: pages.length > 0 ? 0.8 : 0.6,
     });
   }
-  return [...byId.values()]
+  const entities = [...byId.values()]
     .sort((left, right) => entityRank(left, businessTypes) - entityRank(right, businessTypes) || left.name.localeCompare(right.name))
     .slice(0, 80);
+  return { entities, idMap };
 }
 
 function compileLexicalEntries(

@@ -35,6 +35,37 @@ const pages: SitePageSnapshot[] = [
   page("https://alpina.travel/faq", "policy", []),
 ];
 
+describe("declared relations in the graph", () => {
+  it("keeps the relations the pages declared, follows an id the merge folded into a namesake, drops an end the graph lacks, and says each once", () => {
+    const withRelations: SitePageSnapshot[] = [
+      {
+        ...page("https://alpina.travel/", "entry", [entity("https://alpina.travel/#org", "Organization", "Alpina.travel"), entity("https://alpina.travel/#stay", "LodgingBusiness", "AlpiNest"), entity("urn:wordlift:entity:place:mariapfarr", "Place", "Mariapfarr")]),
+        relations: [
+          { from: "https://alpina.travel/#org", to: "https://alpina.travel/#stay", kind: "offers", sourceUrl: "https://alpina.travel/" },
+          { from: "https://alpina.travel/#stay", to: "urn:wordlift:entity:place:mariapfarr", kind: "located-in", sourceUrl: "https://alpina.travel/" },
+          { from: "https://alpina.travel/#stay", to: "https://alpina.travel/#nowhere", kind: "located-in", sourceUrl: "https://alpina.travel/" },
+        ],
+      },
+      {
+        // The same stay under another id on another page: the merge folds it, and its relation follows.
+        ...page("https://alpina.travel/property", "detail", [entity("https://alpina.travel/property#stay", "LodgingBusiness", "AlpiNest"), entity("urn:wordlift:entity:place:mariapfarr", "Place", "Mariapfarr")]),
+        relations: [
+          { from: "https://alpina.travel/property#stay", to: "urn:wordlift:entity:place:mariapfarr", kind: "located-in", sourceUrl: "https://alpina.travel/property" },
+        ],
+      },
+    ];
+    const context = compileContextGraph(withRelations, [], [capability], "https://alpina.travel/");
+    expect(context.relations).toEqual([
+      { from: "https://alpina.travel/#org", to: "https://alpina.travel/#stay", kind: "offers", provenance: "declared", sourceUrl: "https://alpina.travel/" },
+      { from: "https://alpina.travel/#stay", to: "urn:wordlift:entity:place:mariapfarr", kind: "located-in", provenance: "declared", sourceUrl: "https://alpina.travel/" },
+    ]);
+  });
+
+  it("carries no relations key at all when no page declared any", () => {
+    expect(compileContextGraph(pages, [], [capability], "https://alpina.travel/").relations).toBeUndefined();
+  });
+});
+
 describe("context graph", () => {
   it("connects representative pages, domain entities, lexical meaning, actions and interfaces", () => {
     const context = compileContextGraph(

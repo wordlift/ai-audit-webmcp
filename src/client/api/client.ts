@@ -1,4 +1,6 @@
 import { reportRecordSchema, runningReportResponseSchema } from "../../shared/schemas/report.js";
+import type { Publication, ScoreReading } from "../../shared/types/activate.js";
+import type { ContextEngineView, EngineClaimResult } from "../../shared/schemas/contextEngine.js";
 import type { Archetype, HumanAssertion, ReportRecord, ScanDepth } from "../../shared/types/index.js";
 
 const POLL_INTERVAL_MS = 1_500;
@@ -34,6 +36,8 @@ export interface CreateReportOptions {
   email?: string;
   /** Which surface asked, so the page's form and an agent driving the page stay distinguishable. */
   surface?: "web" | "webmcp";
+  /** Read the site again even if it was read in the last day; the explicit re-verify. */
+  fresh?: boolean;
   requestId?: string;
   signal?: AbortSignal;
   /** Overridable so tests do not wait on real timers. */
@@ -56,6 +60,7 @@ async function postReport(url: string, requestId: string, options: CreateReportO
       ...(options.depth ? { depth: options.depth } : {}),
       ...(options.email ? { email: options.email } : {}),
       ...(options.surface ? { surface: options.surface } : {}),
+      ...(options.fresh ? { fresh: true } : {}),
     }),
     signal: options.signal,
   });
@@ -146,17 +151,62 @@ export async function recompileReport(reportId: string, archetype: Archetype): P
   return reportRecordSchema.parse(body);
 }
 
-/** Applies a reviewer's structured judgment as an immutable child revision. */
-export async function refineReport(reportId: string, assertions: HumanAssertion): Promise<ReportRecord> {
+/**
+ * Applies a reviewer's structured judgment as an immutable child revision. When this browser holds
+ * the site's Context Engine, the key travels with it and the engine keeps the decisions too.
+ */
+export async function refineReport(reportId: string, assertions: HumanAssertion, engineKey?: string | null): Promise<ReportRecord> {
   const { body } = await requestJson(`/api/reports/${reportId}/refine`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...(engineKey ? { [ENGINE_KEY_HEADER]: engineKey } : {}) },
     body: JSON.stringify(assertions),
   });
   return reportRecordSchema.parse(body);
 }
 
+const ENGINE_KEY_HEADER = "x-context-engine-key";
+const withKey = (key: string | null | undefined): Record<string, string> => (key ? { [ENGINE_KEY_HEADER]: key } : {});
+
+/** The site's Context Engine as anyone may read it, and what this browser's key stands for on it. */
+export async function getEngine(reportId: string, key?: string | null): Promise<EngineWithStanding> {
+  const { body } = await requestJson(`/api/engines/for-report/${reportId}`, { headers: withKey(key) });
+  // A proxy or a page under test may answer with something else; that is no engine.
+  const engine = body as Partial<EngineWithStanding> | null;
+  if (!engine || typeof engine.host !== "string" || !engine.owner || !Array.isArray(engine.snapshots) || !engine.decisions) throw new Error("Not a Context Engine");
+  return engine as EngineWithStanding;
+}
+
+export async function claimEngine(reportId: string): Promise<EngineClaimResult> {
+  const { body } = await requestJson(`/api/engines/for-report/${reportId}/claim`, { method: "POST" });
+  return body as EngineClaimResult;
+}
+
+export async function getEngineVerification(host: string, key: string): Promise<EngineVerification> {
+  const { body } = await requestJson(`/api/engines/${encodeURIComponent(host)}/verification`, { headers: withKey(key) });
+  return body as EngineVerification;
+}
+
+export async function verifyEngine(host: string, key: string): Promise<ContextEngineView> {
+  const { body } = await requestJson(`/api/engines/${encodeURIComponent(host)}/verify`, { method: "POST", headers: withKey(key) });
+  return body as ContextEngineView;
+}
+
+export async function getReviewToken(host: string, key: string): Promise<{ token: string; expiresAt: string }> {
+  const { body } = await requestJson(`/api/engines/${encodeURIComponent(host)}/review-token`, { method: "POST", headers: withKey(key) });
+  return body as { token: string; expiresAt: string };
+}
+
+export type EngineStanding = "none" | "pending" | "reviewer" | "owner";
+export type EngineWithStanding = ContextEngineView & { standing: EngineStanding };
+export interface EngineVerification {
+  code: string;
+  metaTag: string;
+  wellKnownUrl: string;
+}
+
 export interface AlpinaAvailabilityInput {
+  /** Who is asking: a person on the page, or an agent in the page. Attribution, not authorization. */
+  surface?: "web" | "webmcp";
   reportId?: string;
   propertyId?: string;
   checkIn: string;
@@ -190,6 +240,44 @@ export interface AlpinaAvailabilityResponse {
   reportUpdateError?: string;
 }
 
+/** What a person can call on one capability, live from the site's own server, each with its input schema and whether it is safe to call. */
+export interface TestableInterface {
+  id: string;
+  name: string;
+  protocol: "mcp" | "sidecar" | "http-get";
+  endpoint: string;
+  safe: boolean;
+  note?: string;
+  description?: string;
+  inputSchema?: Record<string, unknown>;
+}
+
+export interface CapabilityTestOutcome {
+  /** "errored": the server answered, with an error of its own. "failed": no answer came. */
+  outcome: "answered" | "errored" | "failed";
+  latencyMs: number;
+  answer: string;
+  error?: string;
+  request: { endpoint: string; tool: string; arguments: Record<string, unknown> };
+  testedAt: string;
+  updatedReportId?: string;
+  updatedReportUrl?: string;
+}
+
+export async function prepareCapabilityTest(reportId: string, actionId: string): Promise<{ interfaces: TestableInterface[] }> {
+  const { body } = await requestJson(`/api/reports/${reportId}/capabilities/${encodeURIComponent(actionId)}/test`);
+  return body as { interfaces: TestableInterface[] };
+}
+
+export async function runCapabilityTest(reportId: string, actionId: string, input: { interfaceId: string; arguments: Record<string, unknown>; save?: boolean }): Promise<CapabilityTestOutcome> {
+  const { body } = await requestJson(`/api/reports/${reportId}/capabilities/${encodeURIComponent(actionId)}/test`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return body as CapabilityTestOutcome;
+}
+
 /** Read-only availability lookup through the approved server-side sidecar. */
 export async function checkAlpinaAvailability(input: AlpinaAvailabilityInput): Promise<AlpinaAvailabilityResponse> {
   const { body } = await requestJson("/api/sidecars/alpina/availability", {
@@ -198,6 +286,30 @@ export async function checkAlpinaAvailability(input: AlpinaAvailabilityInput): P
     body: JSON.stringify(input),
   });
   return body as AlpinaAvailabilityResponse;
+}
+
+export interface ReportVisits {
+  reportId: string;
+  since: string;
+  days: Array<{ day: string; counts: Record<string, number> }>;
+  activations: Array<{ day: string; tool: string; surface: string; outcome: string; count: number }>;
+  /** The site's readiness readings still in the store, newest first. */
+  history?: ScoreReading[];
+}
+
+/** What the site publishes from a report: one model, three documents. */
+export async function getPublication(reportId: string): Promise<Publication> {
+  const { body } = await requestJson(`/api/reports/${reportId}/publish`, { method: "GET" });
+  if (!body || typeof body !== "object" || !Array.isArray((body as Publication).actions)) throw new Error("Not a publication");
+  return body as Publication;
+}
+
+/** Who has read this report, by class and by day. Counts only. */
+export async function getVisits(reportId: string): Promise<ReportVisits> {
+  const { body } = await requestJson(`/api/reports/${reportId}/visits`, { method: "GET" });
+  // A page under test, or a proxy, may answer with something else; the line is then left out.
+  if (!body || typeof body !== "object" || !Array.isArray((body as ReportVisits).days)) throw new Error("Not a visits ledger");
+  return body as ReportVisits;
 }
 
 export function contractPath(reportId: string, actionId: string): string {

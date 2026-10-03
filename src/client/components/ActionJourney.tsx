@@ -60,6 +60,6 @@ export function ActionJourney({
 
 function StateLegend() {
   return <div className="state-legend" aria-label="Capability states">{[
-    ["agent-ready", "Agent ready"], ["sidecar-enabled", "Sidecar enabled"], ["unverified", "Unverified"], ["human-only", "Human only"], ["missing", "Missing"],
+    ["agent-ready", "Agent ready"], ["unverified", "Unverified"], ["human-only", "Human only"], ["missing", "Missing"],
   ].map(([state, label]) => <span key={state}><i className={`state-dot state-${state}`} />{label}</span>)}</div>;
 }

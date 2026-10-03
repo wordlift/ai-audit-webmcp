@@ -35,8 +35,23 @@ inputs differ.
 | `HUBSPOT_FORM_GUID` | — | The form a deep scan's report is delivered through |
 | `HUBSPOT_REGION` | `na1` | `eu1` for an EU-hosted portal: it has its own submission host |
 | `HUBSPOT_SOURCE_FIELD` | — | A form property recording which surface a lead came from. Create it on the form before setting this |
+| `HUBSPOT_SIGNAL_FIELDS` | — | Qualification signals into form properties, `signal=property` pairs, e.g. `claimed=wl_claimed,top_gaps=wl_top_gaps`. Same rule: only properties the form already has |
 | `PLATFORM_EGRESS_RANGES` | — | Extra hosted-assistant egress ranges, `platform=cidr` entries separated by commas. Anthropic's range and a snapshot of OpenAI's are built in |
 | `PLATFORM_EGRESS_REFRESH_MINUTES` | `360` | How often OpenAI's published connector ranges are re-read at runtime. `0` keeps the built-in snapshot |
+| `AUDIT_DAILY_BUDGET` | `2000` | Audits the whole service runs in a day, whoever asks; past it audits answer "at capacity" until tomorrow and reads go on. `0` removes the ceiling. Per instance, like the other limits |
+| `MARKUP_PROVIDER` | `none` | `content-analysis` extracts the entities a page is about with WordLift's Content Analysis v3, authenticated with `WORDLIFT_API_KEY`; `gemini` is the stand-in it replaced |
+| `CONTENT_ANALYSIS_URL` | the Modal deployment | Where Content Analysis v3 answers |
+| `CONTENT_ANALYSIS_CONFIDENCE` | `0.45` | The floor an extracted entity must reach to be kept, set low for reach; the name rules keep the noise out. A Wikidata link needs a disambiguation score of 0.7 |
+| `MARKUP_FALLBACK` | `none` | `gemini` steps in for a page only when Content Analysis fails or does not answer in time, and for names only: a candidate is kept solely when its exact name is in the page's text, with no description, link or offer. Needs `GEMINI_API_KEY` |
+| `GEMINI_API_KEY` | — | Secret Manager in production; required when the provider is `gemini` |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | The model behind the stand-in |
+| `MARKUP_ON_BASIC` | `thin` | Which pages of a basic scan are sent: `thin` (those that declare no entities), `all`, or `none`. A deep scan sends every page. The deploy script passes `all` with Content Analysis, which costs nothing per call |
+| `GEMINI_INPUT_USD_PER_MILLION`, `GEMINI_OUTPUT_USD_PER_MILLION` | `0.3`, `2.5` | List prices used for the estimate on `/api/health` and in the `markup_generated` log line |
+| `OBSERVE_INTERVAL_DAYS` | `7` | How often a site whose owner gave a deep-scan address is read again. `0` never re-reads and never writes |
+| `OBSERVE_TICK_MINUTES` | `60` | How often the due list is checked |
+| `OBSERVE_PER_TICK` | `5` | How many sites one check may re-read: with the interval, the ceiling on what Observe can cost |
+| `OBSERVE_TICK_TOKEN` | — | The token Cloud Scheduler presents at `POST /api/observe/tick`. Secret Manager in production; absent, the endpoint refuses everyone. With a scheduler, set `OBSERVE_TICK_MINUTES=0` so the in-process timer stands down |
+| `PUBLIC_INDEXABLE` | `true` | `false` on a preview: robots are told to stay out and every response carries `X-Robots-Tag: noindex, nofollow` |
 
 Live mode fails fast at startup if a required credential is missing.
 
@@ -135,6 +150,221 @@ no form configured, deep scans still run and still record what they owe; nothing
 `GET /api/health` names the delivery system in `surfaces.reportDelivery`, or `null` when none is
 configured.
 
+### The number that comes to you
+
+A site whose owner gave a deep-scan address, and whose report was delivered, is read again every
+`OBSERVE_INTERVAL_DAYS` days, at the depth it was first read, as an explicit re-verify: a new
+report, a new reading. Each check re-reads at most `OBSERVE_PER_TICK` sites, so the cost per week
+is bounded by the number of delivered addresses, not by traffic. These re-reads call the
+orchestrator directly and are not counted against the HTTP daily budget; the ceiling is the
+address count, which `pending` and `watchable` on the lead store make visible.
+
+A note goes out only when something moved, never on a timer alone: the score changed; a capability
+that answered last time did not, with the audit's reason ("availability failed today, here is why");
+one started answering; the first crawler read the report; Google's first verified read; an agent's
+failed activation since the last read, by tool and reason. The first crawler and Google's first read
+are told once each. Nothing moved, nothing sent, and the lead's `watchedAt` still advances.
+
+The note travels through the same HubSpot form as the report, with the page context
+`WordLift AI Audit — what moved` so a workflow can route it, and `audit_summary` carrying the lines
+and two links: the new report, and the one link that stops the notes,
+`/api/observe/unsubscribe/:reportId/:key`. The key is derived from the report id and the address,
+so a report's public link alone cannot silence its owner. Clicking it sets `unsubscribedAt` on the
+lead: no further re-read, no further note; the report stays where it is. HubSpot's own unsubscribe
+governs HubSpot's sending as before; this link governs what this service does.
+
+`GET /api/health` reports `observe` with the interval, whether a scheduler token is set, and how
+many sites this instance re-read and how many notes it sent since it started.
+
+#### Scheduling the tick
+
+Cloud Run scales to zero and throttles the CPU between requests, so the in-process timer fires
+only while something else keeps an instance awake. The reliable form is a Cloud Scheduler job
+calling `POST /api/observe/tick` once a day with the token, which runs one tick: at most
+`OBSERVE_PER_TICK` sites due by `OBSERVE_INTERVAL_DAYS`, the notes for those that moved, and the
+tick's outcomes in the answer. Create the token once, mount it on deploy, and create the job:
+
+```bash
+openssl rand -hex 24 | gcloud secrets create OBSERVE_TICK_TOKEN --data-file=- --project ai-audit-wordlift
+OBSERVE_TICK_TOKEN_SECRET=OBSERVE_TICK_TOKEN scripts/deploy-cloud-run.sh ai-audit-wordlift us-west1   # with the usual variables
+gcloud scheduler jobs create http ai-audit-observe-tick --project ai-audit-wordlift --location us-west1 \
+  --schedule "17 6 * * *" --time-zone "Europe/Rome" --http-method POST \
+  --uri "https://beta.audit.wordlift.io/api/observe/tick" \
+  --headers "x-observe-token=$(gcloud secrets versions access latest --secret OBSERVE_TICK_TOKEN --project ai-audit-wordlift)" \
+  --attempt-deadline 600s
+```
+
+A daily job with a weekly interval per site spreads the re-reads over the week, five a day at most.
+The token is compared in constant time; a wrong or missing token answers 401, a deployment without
+Observe answers 404. The job's request is counted by nothing and rate limited by nothing.
+
+## One crawl per site per day, and the bill
+
+A site read in the last day is not read again for the next caller. `POST /api/reports` and the
+`audit-website` tool mint a new report with its own id and claim, built from the newest completed
+machine draft of the same site at the same depth: `reusedFrom` names it and `collectedAt` says when
+the site was actually read. Refined reports, partial ones and failed ones are never a source.
+`fresh: true` on either surface reads the site again; that is the explicit re-verify.
+
+The lookup needs a Firestore composite index, declared in `firestore.indexes.json`. Until it exists
+the query throws, which the orchestrator reads as "nothing to reuse" and logs as
+`report_reuse_unavailable`; audits keep running, at full cost:
+
+```bash
+gcloud firestore indexes composite create --project ai-audit-wordlift \
+  --collection-group=reports \
+  --field-config=field-path=requestedUrl,order=ascending \
+  --field-config=field-path=createdAt,order=descending
+```
+
+`AUDIT_DAILY_BUDGET` is the ceiling on what a day can cost; the billing alert is the check that the
+ceiling is right. Create it once, on the billing account the project is attached to:
+
+```bash
+gcloud billing budgets create --billing-account=<BILLING_ACCOUNT_ID> \
+  --display-name="ai-audit-webmcp" --budget-amount=<EUR-PER-MONTH> \
+  --filter-projects=projects/ai-audit-wordlift \
+  --threshold-rule=percent=0.5 --threshold-rule=percent=0.9 --threshold-rule=percent=1.0
+```
+
+## The entities behind Fix: Content Analysis v3
+
+With `MARKUP_PROVIDER=content-analysis`, each page a scan qualifies is sent as readable text to
+WordLift's Content Analysis v3 (`POST /analyze/text`, `Authorization: Key <WordLift key>`), a
+multilingual named-entity recogniser with Wikidata linking on WordLift's own infrastructure. It is
+asked for the things a business is made of by name, with a label set (organisation, person, place,
+product, service, offer, apartment, hotel, attraction, event, brand), and what it finds enters the
+page's entities marked `inferred`, by the same rules as the Gemini stand-in: never evidence, never
+readiness. An entity below the confidence floor, a role noun ("Guests") or a generic phrase is left
+aside and counted in the issues; a Wikidata link is kept only when the linker's own score reaches
+0.7, because at the floor it links a village in Lungau to an Italian comune. A call takes about
+fourteen seconds and pages run in parallel; the service meters nothing, so `/api/health` counts
+characters in and entities out and no cost.
+
+## Generated markup, the Gemini stand-in, and what it costs
+
+With `MARKUP_PROVIDER=gemini`, each page a scan qualifies is sent to Gemini 2.5 Flash as readable
+text — title, description, headings and the bounded body the collector already keeps, never raw
+HTML — and the JSON-LD that comes back is read by the same rules as declared markup, then added to
+the page's entities marked `inferred`. Inferred entities appear in the context graph with an
+"Inferred" chip and in the refinement interview as candidates; they never enter the evidence and
+never move a readiness score. The report carries `markup` with the counts the Fix finding needs
+(entities inferred and not declared) and never the cost.
+
+The cost is a log line per audit, `markup_generated provider model pages failed in out usd`, and a
+running total on `GET /api/health` under `markup`. At list price a page is roughly 3,000 input and
+600 output tokens, about \$0.0025; a basic scan sends only pages that declare nothing, so at most
+four, about \$0.01; a deep scan sends all twelve, about \$0.03. At the daily budget's ceiling of
+2,000 audits that is \$20 to \$60 a day, and the real number is on the health endpoint.
+
+The model is one file, `src/server/adapters/markup/GeminiMarkup.ts`, behind `MarkupProvider`.
+WordLift's HTML-to-JSON-LD service replaces it there; the validator in `jsonLd.ts`, which refuses
+nodes without a type or a name, non-schema.org types and non-URLs, stays in front of whichever
+model answers, and is where a SHACL pass goes once the shapes exist.
+
+## The ledger: who reads a report, and who acts
+
+Every read of a report — the page, its JSON, a contract — and of what we publish for agents is
+counted by class and by day: a crawler by name, an agent by the platform it acts from, or a
+person. The class is decided from the address and the user agent and then forgotten; only the
+count is stored, in `visits`, one document per report per day, expiring with the report. Every
+sidecar call is counted the same way in `activations`, one document per site per day, by tool,
+surface (`web`, `webmcp`, `api`, `mcp`, `audit`) and outcome. Both are read at
+`GET /api/reports/:id/visits`, which is never rate limited and never counted.
+
+A "Googlebot" is Google only from Google's published ranges, read at startup and daily from the
+three files Google publishes; from anywhere else it is counted as `crawler:claimed-googlebot`.
+Counts are batched in memory and written every fifteen seconds, so a burst is one write.
+
+The two collections need the same TTL policy the reports have, created once:
+
+```bash
+gcloud firestore fields ttls update expiresAt --collection-group=visits --enable-ttl --project ai-audit-wordlift
+gcloud firestore fields ttls update expiresAt --collection-group=activations --enable-ttl --project ai-audit-wordlift
+gcloud firestore fields ttls update expiresAt --collection-group=publishedSites --enable-ttl --project ai-audit-wordlift
+```
+
+## The funnel: what is counted, and where
+
+Every lead delivery and every "what moved" note ends its summary with qualification signals:
+archetype, whether the site runs on WordLift, the counts of declared, inferred and confirmed
+entities and of relationships, expected and agent-ready actions, the top three gaps by action id,
+and the engine's status, whether it was reviewed, claimed, owner-verified, and which doors to
+WordLift were opened from it. Counts and states only, never the business's content. To file any of
+them into a HubSpot property, create the property on the form first, then name it in
+`HUBSPOT_SIGNAL_FIELDS` (the signal names are in `src/domain/engine/signals.ts`); a property the
+form does not have makes HubSpot refuse the whole submission.
+
+The funnel's steps are logged as one JSON line each, `{"event":"funnel","name":...,"reportId":...}`,
+so a log-based metric per name counts them without anything else to run:
+
+- from the server: `audit_completed`, `review_filed`, `review_carried`, `engine_claimed`, `owner_verified`;
+- from the page, through `POST /api/reports/:id/events`: `engine_explored`, `review_prompt_copied`,
+  `ask_prompt_copied`, `capability_opened`, `ownership_started`, and `door_<intent>` for every door
+  to the dashboard. A door is also kept on the site's engine as the reason someone arrived.
+
+```bash
+gcloud logging metrics create funnel_steps --project ai-audit-wordlift \
+  --description="AI Audit funnel steps by name" \
+  --log-filter='resource.type="cloud_run_revision" AND jsonPayload.event="funnel"' \
+  --label-extractors='name=EXTRACT(jsonPayload.name)'
+```
+
+An active Context Engine is one with `activeAt` in the period: claimed, reviewed, verified, or a
+door opened from it, not merely read.
+
+## Context Engines: one per site, above its reports
+
+Every finished read of a site is recorded on its Context Engine in `contextEngines` (one document
+per host, prefixed like every collection). A report expires after thirty days; the engine does
+not, because it holds what people decided about the site's model, and a new read gets those
+decisions back as a reviewed revision (`refinement.carried`). There is no TTL policy on this
+collection, and none should be added.
+
+The document holds hashes only: the claim's key, pending claims, and day-long review tokens. The
+key itself is handed to the claimant once and lives in their browser; `GET /api/engines/for-report/:id`
+returns a view without any of it. A decision persists only when the refine request carries the
+holder's key or a review token in `x-context-engine-key`; without one, a review is a revision of
+its report and nothing more. A review token travels to ChatGPT in the report link's fragment
+(`#review=`), which browsers never send to a server, so it is in no request log.
+
+Ownership is proved by the site: `POST /api/engines/:host/verify` reads
+`https://<host>/.well-known/wordlift-verification.txt`, then the home page's
+`<meta name="wordlift-site-verification">`, through the same URL policy the audit uses. The code is
+derived from the engine and the caller's key, so finding it on the site proves both; verification
+needs no pending claim to exist, and a flood of claims cannot lock the owner out. Proving ownership
+takes the engine over, and every earlier key stops working.
+
+An engine is reached only through the host a report was asked for, never through the page's own
+canonical link, which could name any domain. Every write to it is a Firestore transaction, so a claim,
+a review, a verification and a door opened at the same moment never lose each other. Verification
+reads the host and its `www.` twin, and ignores an answer that redirected to another domain. Review
+tokens are handed out only by the key itself, never by another token, and last a day.
+
+To release an engine by hand (a verified owner who lost their browser's key, say), delete its
+document; the next audit of the site starts a fresh draft, and the decisions it held are gone.
+
+## The entry source: the sites that publish through us
+
+Registries such as Google's read Agentic Resource Discovery catalogs from each site's well-known
+path, and the spec allows a manifest at "any entry source". `GET /feed/ai-catalog.json` is ours:
+the entries of every site whose own catalog carries the Terms of Action this service writes, each
+`url` on the site's own domain. We are the sitemap index, not the directory: no ranking, no
+browsing, nothing about a site that did not publish, and the trust anchor stays the publisher's.
+When Google's publisher onboarding opens, one submission registers every customer at once.
+
+Membership is observed, never declared. Every live audit reads the site's catalog; if it lists a
+`terms-of-action` entry for that host pointing back at that host, the site is recorded in
+`publishedSites` (one document per host, the same TTL as reports); if a later audit finds the
+catalog gone or no longer ours, the site is removed, so the feed never points a registry at a
+document that is not there. The WordLift platform may write the same rows for the sites its plugin
+keeps current; the shape is the same. Entries written in Google's `urn:ai:` spelling are rewritten
+to the spec's `urn:air:` so the feed validates; an entry with nothing to follow is dropped.
+
+The service also serves its own catalog at `/.well-known/ai-catalog.json`, one entry for its MCP
+server, with the card at `/.well-known/mcp/server-card.json`: the audit answers the questions it
+asks.
+
 ## Rate-limit tiers for hosted assistants
 
 Everyone who uses the audit through claude.ai or ChatGPT arrives from that platform's published
@@ -225,6 +455,45 @@ Everything on that command line is dropped by the next deploy that forgets it:
 
 `GET /api/health` reports which of these took effect under `surfaces`, so a redeploy that dropped
 one is visible without reading the service configuration.
+
+### Preview a branch without touching production
+
+A branch can be tried on a separate Cloud Run service with nothing shared with production:
+
+```bash
+git checkout docs/activation-plan
+PREVIEW=1 SCRAPE_PROVIDER=scrapingbee MARKUP_PROVIDER=gemini scripts/deploy-cloud-run.sh "$PROJECT" us-west1
+```
+
+`PREVIEW=1` deploys to `ai-audit-webmcp-preview` on its own `run.app` URL (`SERVICE` overrides
+the name) and refuses the production shape: reports, visits, claims, leads and published sites
+are written to Firestore collections of their own, `preview_` in front of every name
+(`FIRESTORE_COLLECTION_PREFIX`), so a report someone is reviewing with an agent survives the next
+deploy and nothing touches the production collections; no HubSpot form and no
+directory token are passed even when the shell has them exported, so no contact is created and no
+email is sent; `OBSERVE_INTERVAL_DAYS=0`, so no site is re-read on anyone's behalf;
+`PUBLIC_INDEXABLE=false`, so robots are told to stay out and every response carries noindex; and
+`PUBLIC_APP_URL` is ignored, so the brand's domain stays where it is. The production service, its
+domain mapping and its data are untouched, and the preview is deleted with
+`gcloud run services delete ai-audit-webmcp-preview`.
+
+What a preview does share is the WordLift API key, the ScrapingBee key and, with
+`MARKUP_PROVIDER=gemini`, the Gemini key: each audit it runs costs what a production audit costs,
+and `/api/health` on the preview shows the Gemini running total. Rate limits and the daily budget
+apply per instance as on production. A deep scan on a preview records the address in
+`preview_deepScanLeads` and sends nothing.
+
+The `preview_` collections need the same TTL policy as production's, once per project, or they
+outlive the preview:
+
+```bash
+for c in preview_reports preview_deepScanLeads preview_publishedSites; do
+  gcloud firestore fields ttls update expiresAt --collection-group="$c" --enable-ttl --project "$PROJECT"
+done
+```
+
+Deleting the preview service leaves its collections behind; delete them from the console, or let
+the TTL drain them.
 
 The service runs one container with the SPA and the API. The request timeout is 300 seconds because
 a live audit takes 30–60 seconds and is handled synchronously; a client that disconnects recovers

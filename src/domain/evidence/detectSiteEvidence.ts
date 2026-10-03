@@ -1,11 +1,13 @@
 import type { SiteSnapshot } from "../../server/adapters/scrape/ScrapeProvider.js";
-import type { CapabilityEvidence } from "../../shared/types/index.js";
+import type { AgentDiscovery, CapabilityEvidence } from "../../shared/types/index.js";
 import { actionForDeclaredName, SCHEMA_ACTION_MAP } from "./schemaActions.js";
 
 export interface SiteDetection {
   evidence: CapabilityEvidence[];
   /** Behavioral signals for archetype inference, for example `path:booking`. */
   signals: string[];
+  /** Whether agents can find this site, and whether it tells them how to behave. */
+  agentDiscovery?: AgentDiscovery;
 }
 
 interface PathRule {
@@ -46,6 +48,8 @@ const DOCUMENT_DECLARATIONS: Partial<Record<SiteSnapshot["discovery"][number]["k
   "agent-skills": "The site publishes an agent-skills index",
   "api-catalog": "The site publishes an API catalogue for agents",
   "mcp-server-card": "The site publishes an MCP server card naming its transports",
+  "ai-catalog": "The site publishes an agent catalog at .well-known, the envelope agent registries crawl",
+  ard: "The site publishes an agent catalog at .well-known, the envelope agent registries crawl",
 };
 
 /** Documents that name the operations an agent could call. */
@@ -293,6 +297,8 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
         kind: "api-result",
         sourceUrl: search.url,
         claim: `An agent executed the site's declared SearchAction template with "${search.query}" and the site returned results for it`,
+        // The template travels with the evidence: it is what Activate publishes as the entry point.
+        snippet: search.template,
         confidence: 1,
         verification: "invoked",
       });
@@ -304,6 +310,7 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
         kind: "api-result",
         sourceUrl: search.url,
         claim: `The site's declared SearchAction template did not answer when an agent executed it${search.note ? `: ${search.note}` : ""}`,
+        snippet: search.template,
         confidence: 0.9,
         verification: "failed",
       });
@@ -317,10 +324,58 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
         kind: "api-result",
         sourceUrl: search.url,
         claim: "The declared SearchAction template answered, but results could not be confirmed without executing site scripts",
+        // The template travels here too: a person can run it with their own query from the report.
+        snippet: search.template,
         confidence: 0.7,
         verification: "declared",
       });
     }
+  }
+
+  // Declared entry points, used or deliberately not. Only a call that answered earns readiness.
+  for (const probe of snapshot.entryPoints ?? []) {
+    const id = `entry-point-${probe.actionId}-${probe.actionType}`.slice(0, 160);
+    if (probe.invoked && probe.ok) {
+      signals.add("agent:entry-point");
+      add({
+        id,
+        actionId: probe.actionId,
+        audience: "agent",
+        kind: "api-result",
+        sourceUrl: probe.url,
+        claim: `An agent executed the site's declared ${probe.actionType} entry point and it answered`,
+        snippet: probe.template,
+        confidence: 1,
+        verification: "invoked",
+      });
+      continue;
+    }
+    if (probe.invoked) {
+      add({
+        id,
+        actionId: probe.actionId,
+        audience: "agent",
+        kind: "api-result",
+        sourceUrl: probe.url,
+        claim: `The site's declared ${probe.actionType} entry point did not answer when an agent executed it${probe.note ? `: ${probe.note}` : ""}`,
+        snippet: probe.template,
+        confidence: 0.9,
+        verification: "failed",
+      });
+      continue;
+    }
+    add({
+      id,
+      actionId: probe.actionId,
+      audience: "agent",
+      kind: "structured-data",
+      sourceUrl: probe.sourceUrl,
+      claim: `A ${probe.actionType} entry point is declared for this action; the audit did not call it${probe.note ? `: ${probe.note}` : ""}`,
+      // A read the audit could not fill is exactly what a person can: the template travels with it. A write never does.
+      ...(probe.read ? { snippet: probe.template } : {}),
+      confidence: 0.8,
+      verification: "declared",
+    });
   }
 
   for (const probe of snapshot.mcpEndpoints) {
@@ -328,14 +383,22 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
       // A broken declaration needs a declaration: the endpoint opened a session and then failed,
       // or the server card names it as a transport. A merely linked path that never spoke MCP —
       // a blog post the endpoint pattern happened to match — made no claim, so nothing is said.
-      if (!probe.sessionOpened && !cardEndpoints.has(normalizeEndpoint(probe.url))) continue;
+      // An endpoint the catalog or the site's own instructions name is declared just as surely.
+      const declared = probe.source === "catalog" || probe.source === "skill" || probe.source === "server-card";
+      if (!probe.sessionOpened && !declared && !cardEndpoints.has(normalizeEndpoint(probe.url))) continue;
+      const failure = probe.error ? `: ${probe.error}` : "";
       add({
         id: `mcp-endpoint-failed-${probe.url}`.slice(0, 160),
         actionId: "site.search",
         audience: "agent",
         kind: "discovery",
         sourceUrl: probe.url,
-        claim: `This linked MCP endpoint did not complete a handshake${probe.error ? `: ${probe.error}` : ""}`,
+        claim:
+          probe.source === "skill"
+            ? `The site's instructions for agents name this MCP endpoint, but it did not complete a handshake${failure}: the memory promises what the site does not do`
+            : probe.source === "catalog"
+              ? `The site's agent catalog names this MCP endpoint, but it did not complete a handshake${failure}`
+              : `This linked MCP endpoint did not complete a handshake${failure}`,
         confidence: 0.9,
         verification: "failed",
       });
@@ -492,7 +555,22 @@ export function detectSiteEvidence(snapshot: SiteSnapshot, collectedAt: string):
     }
   }
 
-  return { evidence, signals: [...signals].sort() };
+  // Where agents would look first, and what they would find. On a site that answers every path
+  // with its HTML page, absence proves nothing, and the summary says so rather than accusing.
+  const catalog = snapshot.discovery.find((document) => (document.kind === "ai-catalog" || document.kind === "ard") && document.found);
+  const skillEntry = catalog?.entries?.find((entry) => entry.type === "application/ai-skill+md");
+  const memoryDocument = snapshot.discovery.find(
+    (document) => (document.kind === "skill" || document.kind === "agent-skills") && document.found,
+  );
+  const memoryUrl = memoryDocument?.url ?? skillEntry?.url;
+  const agentDiscovery: AgentDiscovery = {
+    catalog: catalog ? "found" : snapshot.softNotFound ? "unknown" : "missing",
+    ...(catalog ? { catalogUrl: catalog.url } : {}),
+    memory: memoryUrl ? "found" : snapshot.softNotFound ? "unknown" : "missing",
+    ...(memoryUrl ? { memoryUrl } : {}),
+  };
+
+  return { evidence, signals: [...signals].sort(), agentDiscovery };
 }
 
 /**

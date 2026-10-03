@@ -11,6 +11,8 @@ import { recommendationFor, rankPriorities } from "../../domain/action-model/ran
 import { scoreReadiness } from "../../domain/action-model/scoreReadiness.js";
 import { appliesToForAction, compileContextGraph, refreshContextGraph } from "../../domain/context/compileContextGraph.js";
 import { detectSiteEvidence } from "../../domain/evidence/detectSiteEvidence.js";
+import type { AgentDiscovery, MarkupSummary } from "../../shared/types/index.js";
+import type { MarkupProvider } from "../adapters/markup/MarkupProvider.js";
 import { detectWordLift, type WordLiftMarker } from "../../domain/evidence/detectWordLift.js";
 import { inferArchetype } from "../../domain/classification/inferArchetype.js";
 import {
@@ -19,9 +21,16 @@ import {
   refineReportRequestSchema,
 } from "../../shared/schemas/report.js";
 import { pagesForDepth } from "../../shared/format/deepScan.js";
+import { compilePublication, type Publication } from "../../domain/publish/publication.js";
+import type { ScoreReading } from "../../shared/types/activate.js";
+import { publishedSiteIn } from "../../domain/publish/feed.js";
+import type { PublishedSiteStore } from "../adapters/published/PublishedSiteStore.js";
+import type { ContextEngines } from "./ContextEngines.js";
+import { funnel } from "./funnel.js";
 import type {
   Archetype,
   CapabilityEvidence,
+  EntityRelation,
   ContentCategory,
   HumanAssertion,
   LexicalEntry,
@@ -33,7 +42,7 @@ import type { AuditEvidenceBundle, AuditProvider } from "../adapters/audit/Audit
 import { auditErrorToReportError } from "../adapters/audit/WordLiftAudit.js";
 import type { ClassifierProvider } from "../adapters/classify/ClassifierProvider.js";
 import { FixtureProvider, type FixtureAudit } from "../adapters/fixtures/FixtureProvider.js";
-import type { ScrapeProvider, SitePageSnapshot, SiteSnapshot } from "../adapters/scrape/ScrapeProvider.js";
+import type { DiscoveryDocument, ScrapeProvider, SitePageSnapshot, SiteSnapshot } from "../adapters/scrape/ScrapeProvider.js";
 import type { ReportStore } from "../adapters/store/ReportStore.js";
 import { ReportRequestError } from "../errors.js";
 import { sanitizeEvidence } from "../security/sanitizeEvidence.js";
@@ -48,8 +57,28 @@ export interface OrchestratorOptions {
     audit?: AuditProvider;
     scrape?: ScrapeProvider;
     classify?: ClassifierProvider;
+    /** Infers the markup a page should have from its text; absent means Fix has no second source. */
+    markup?: MarkupProvider;
   };
+  /**
+   * Which pages of a basic scan get their markup inferred: only the pages that declare no
+   * entities (the default, so cost follows value), every page, or none. A deep scan always
+   * reads every page.
+   */
+  markupOnBasic?: "thin" | "all" | "none";
+  /**
+   * How long a crawl of a site serves later requests for the same site at the same depth. Zero
+   * reads the site every time. The default is a day: the same site audited twice in an afternoon
+   * is one crawl, and "fresh" on the request is the explicit re-verify.
+   */
+  reuseWindowMs?: number;
+  /** Where the sites that publish through us are kept, for the entry source. Absent means none is kept. */
+  published?: PublishedSiteStore;
+  /** The Context Engines every finished read is recorded on, and whose decisions a new read carries. Absent means none. */
+  engines?: ContextEngines;
 }
+
+const DEFAULT_REUSE_WINDOW_MS = 24 * 60 * 60 * 1_000;
 
 export const PINNED_ALPINA_REPORT_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -67,6 +96,10 @@ interface CompiledInputs {
   evidenceTruncated: boolean;
   pages: SitePageSnapshot[];
   wordlift?: WordLiftMarker;
+  agentDiscovery?: AgentDiscovery;
+  /** The discovery documents as fetched: what the feed reads a site's catalog from. A fixture has none. */
+  discovery?: DiscoveryDocument[];
+  markup?: Omit<MarkupSummary, "inferredEntities" | "declaredEntities">;
 }
 
 export class AuditOrchestrator {
@@ -94,6 +127,17 @@ export class AuditOrchestrator {
     const running = this.baseRecord(request.requestId, target.toString(), this.now(), undefined, request.depth);
     await this.store.put(running);
 
+    // A site read in the last day is not read again for the next caller: the crawl is reused, and
+    // the report and its claim are minted for this request. "fresh" is the explicit re-verify, and
+    // an archetype override asks for a different reading, which a stored one cannot give.
+    const source =
+      request.fresh || request.archetypeOverride
+        ? null
+        : await this.recentReport(target.toString(), request.depth ?? "basic", request.requestId);
+    if (source) {
+      return this.settled(await this.store.finalize(this.deriveFrom(running, source)));
+    }
+
     // Progress is visible before the audit finishes: each patch replaces the running record, so
     // a reader polling the report watches it fill in. A failed update never fails the audit.
     let latest = running;
@@ -110,7 +154,7 @@ export class AuditOrchestrator {
         request.archetypeOverride ?? undefined,
         onProgress,
       );
-      return await this.store.finalize(finalReport);
+      return this.settled(await this.store.finalize({ ...finalReport, collectedAt: running.createdAt }));
     } catch (error) {
       // A record left `running` traps every retry of this requestId in polling until it expires,
       // so the failure itself becomes the terminal state before the error reaches the caller.
@@ -121,6 +165,99 @@ export class AuditOrchestrator {
 
   async get(id: string): Promise<ReportRecord | null> {
     return this.store.get(id);
+  }
+
+  get engines(): ContextEngines | undefined {
+    return this.options.engines;
+  }
+
+  /**
+   * A finished read, recorded on its site's Context Engine; when the engine keeps decisions, they
+   * are applied to this read as a reviewed revision of it. The read itself is returned unchanged:
+   * the machine draft stays what the crawl said, and the engine points at the reviewed one.
+   */
+  private async settled(report: ReportRecord): Promise<ReportRecord> {
+    funnel("audit_completed", report.id, { status: report.status });
+    const engines = this.options.engines;
+    if (!engines) return report;
+    await engines.record(report);
+    try {
+      const carried = await engines.carry(report);
+      if (carried) {
+        const child = await this.refine(report.id, carried.assertions, { carried: true, filedBy: carried.filedBy });
+        await engines.record(child);
+        funnel("review_carried", child.id);
+      }
+    } catch (error) {
+      // Nothing a stored decision no longer fits may fail the audit it was meant to improve.
+      if (!(error instanceof ReportRequestError)) console.error("engine_carry_failed", error instanceof Error ? error.name : "unknown");
+    }
+    return report;
+  }
+
+  /** A revision recorded on its engine, and returned as it is. */
+  private async noted(report: ReportRecord): Promise<ReportRecord> {
+    await this.options.engines?.record(report);
+    return report;
+  }
+
+  /**
+   * The newest completed machine draft of the same site at the same depth within the reuse window,
+   * or null. A revision of any kind — refined, recompiled, verified through a sidecar — is someone's
+   * report about the site rather than a crawl of it and is never a source; a partial one is a sketch
+   * the next caller deserves better than; a failed one has nothing to give. A store that
+   * cannot answer — an index not yet built — means a fresh crawl, never a failed audit.
+   */
+  private async recentReport(requestedUrl: string, depth: ScanDepth, excludeId: string): Promise<ReportRecord | null> {
+    const windowMs = this.options.reuseWindowMs ?? DEFAULT_REUSE_WINDOW_MS;
+    if (windowMs <= 0) return null;
+    const since = new Date(this.now().getTime() - windowMs);
+    let candidates: ReportRecord[];
+    try {
+      candidates = await this.store.findRecent(requestedUrl, since, 10);
+    } catch (error) {
+      console.error("report_reuse_unavailable", error instanceof Error ? error.name : "unknown");
+      return null;
+    }
+    return (
+      candidates.find(
+        (report) =>
+          report.id !== excludeId &&
+          report.status === "completed" &&
+          report.mode === this.mode &&
+          (report.scanDepth ?? "basic") === depth &&
+          // A revision — a refinement, a recompile, a sidecar's verified child — is someone's
+          // report about the site, not a crawl of it. Only a machine draft from a crawl is reused.
+          !report.parentReportId &&
+          !report.refinement &&
+          Boolean(report.capabilities?.length) &&
+          new Date(report.collectedAt ?? report.createdAt) >= since,
+      ) ?? null
+    );
+  }
+
+  /** A new report from an existing crawl: its own id and claim, the source's reading of the site. */
+  private deriveFrom(base: ReportRecord, source: ReportRecord): ReportRecord {
+    return {
+      ...base,
+      status: "completed",
+      phase: "complete",
+      canonicalUrl: source.canonicalUrl,
+      completedAt: this.now().toISOString(),
+      collectedAt: source.collectedAt ?? source.createdAt,
+      reusedFrom: source.id,
+      classification: source.classification,
+      foundationAudit: source.foundationAudit,
+      publishedWith: source.publishedWith,
+      contextGraph: source.contextGraph,
+      capabilities: structuredClone(source.capabilities),
+      score: source.score,
+      priorities: source.priorities,
+      agentDiscovery: source.agentDiscovery,
+      markup: source.markup,
+      errors: source.errors,
+      evidenceTruncated: source.evidenceTruncated,
+    };
   }
 
   /** Stable, dated fixture for judges; live audits remain available from the same URL-first flow. */
@@ -185,7 +322,7 @@ export class AuditOrchestrator {
       errors: parent.errors,
       evidenceTruncated: parent.evidenceTruncated,
     };
-    return this.store.createRevision(parent.id, child);
+    return this.noted(await this.store.createRevision(parent.id, child));
   }
 
   /**
@@ -194,7 +331,7 @@ export class AuditOrchestrator {
    * can mark an action agent-ready — readiness still requires invocation evidence. Assertions
    * that reference nothing in the report are returned as conflicts instead of being applied.
    */
-  async refine(parentId: string, input: unknown): Promise<ReportRecord> {
+  async refine(parentId: string, input: unknown, origin: { carried?: boolean; filedBy?: "reviewer" | "owner" } = {}): Promise<ReportRecord> {
     const assertions = refineReportRequestSchema.parse(input);
     const parent = await this.required(parentId);
     if (!parent.capabilities || !parent.classification || !parent.contextGraph) {
@@ -264,12 +401,42 @@ export class AuditOrchestrator {
         next.boundary = decision.boundary;
         next.boundarySource = "human-provided";
         if (decision.rationale) next.boundaryRationale = decision.rationale;
+        if (decision.partner) next.boundaryPartner = decision.partner;
       }
       next.expectationSource = [...new Set([...next.expectationSource, "human:decision"])].slice(0, 20);
       return next;
     });
 
+    // How two things relate: a confirmation makes an inferred relation the reviewer's word, a
+    // rejection takes any relation out of the model. A reviewer may also confirm a relation the report
+    // does not hold, between two things it does (the business and what it offers, which the pages imply
+    // without saying): it joins the model as confirmed. Rejecting what is not held is a conflict.
+    const relationKey = (relation: { from: string; kind: string; to: string }) => `${relation.from}|${relation.kind}|${relation.to}`;
+    const parentRelations = parent.contextGraph.relations ?? [];
+    const heldRelations = new Set(parentRelations.map(relationKey));
+    const asserted: EntityRelation[] = [];
+    const relationDecisions = new Map(
+      (assertions.relationDecisions ?? [])
+        .filter((decision) => {
+          if (heldRelations.has(relationKey(decision))) return true;
+          if (decision.decision === "confirm" && knownEntityIds.has(decision.from) && knownEntityIds.has(decision.to) && decision.from !== decision.to) {
+            asserted.push({ from: decision.from, to: decision.to, kind: decision.kind, provenance: "confirmed", sourceUrl: parent.canonicalUrl ?? parent.requestedUrl });
+            return true;
+          }
+          conflicts.push(`No relation ${decision.kind} from ${decision.from} to ${decision.to} in this report`);
+          return false;
+        })
+        .map((decision) => [relationKey(decision), decision.decision]),
+    );
+    const relations = [
+      ...parentRelations
+        .filter((relation) => relationDecisions.get(relationKey(relation)) !== "reject")
+        .map((relation) => (relationDecisions.get(relationKey(relation)) === "confirm" && relation.provenance === "inferred" ? { ...relation, provenance: "confirmed" as const } : relation)),
+      ...asserted,
+    ].slice(0, 200);
+
     const appliedDecisions =
+      relationDecisions.size +
       (assertions.businessRole ? 1 : 0) +
       promoted.length +
       demoted.length +
@@ -280,7 +447,10 @@ export class AuditOrchestrator {
       throw new ReportRequestError("No assertion in the request applies to this report.", 400);
     }
 
-    const contextGraph = refreshContextGraph({ ...parent.contextGraph, entities, lexicalEntries: lexicon }, capabilities);
+    const contextGraph = refreshContextGraph(
+      { ...parent.contextGraph, entities, lexicalEntries: lexicon, ...(parent.contextGraph.relations || asserted.length > 0 ? { relations } : {}) },
+      capabilities,
+    );
 
     // Applicability follows the human's map: a demoted entity no longer answers for an action,
     // and a promoted one answers first.
@@ -310,6 +480,8 @@ export class AuditOrchestrator {
         conflicts: conflicts.slice(0, 30),
         provenance: "human-provided",
         appliedAt: this.now().toISOString(),
+        ...(origin.carried ? { carried: true } : {}),
+        ...(origin.filedBy ? { filedBy: origin.filedBy } : {}),
       },
       score: scoreReadiness(capabilities),
       priorities: rankPriorities(capabilities),
@@ -328,12 +500,64 @@ export class AuditOrchestrator {
       null,
       parent.classification?.override,
     );
-    return this.store.createRevision(parent.id, child);
+    return this.noted(await this.store.createRevision(parent.id, child));
   }
 
   async contract(reportId: string, actionId: string) {
     const report = await this.required(reportId);
     return report.capabilities?.find((capability) => capability.actionId === actionId)?.contract ?? null;
+  }
+
+  /**
+   * Activate: the three documents a site publishes from this report, page JSON-LD, skill and
+   * catalog, from one model. A report with no decisions still publishes what the audit verified.
+   */
+  async publish(reportId: string): Promise<Publication> {
+    const report = await this.required(reportId);
+    if (report.status === "running" || report.status === "failed" || !report.capabilities) {
+      throw new ReportRequestError("That report has nothing to publish yet.", 409);
+    }
+    return compilePublication(report, {
+      reportUrl: this.reportUrl(report.id),
+      apiUrl: new URL(`/api/reports/${report.id}`, this.options.publicAppUrl).toString(),
+      sidecarEndpoints: this.sidecarEndpoints(report),
+      now: () => this.now(),
+    });
+  }
+
+  /**
+   * The readiness readings of one site still in the store, newest first: the movement Observe
+   * shows. The report itself is always one of them; a store that cannot answer yields it alone.
+   */
+  async history(report: ReportRecord): Promise<ScoreReading[]> {
+    const since = new Date(this.now().getTime() - this.options.ttlDays * 24 * 60 * 60 * 1_000);
+    let siblings: ReportRecord[] = [];
+    try {
+      siblings = await this.store.findRecent(report.requestedUrl, since, 50);
+    } catch (error) {
+      console.error("report_history_unavailable", error instanceof Error ? error.name : "unknown");
+    }
+    const readings = siblings.some((sibling) => sibling.id === report.id) ? siblings : [report, ...siblings];
+    return readings
+      .filter((reading) => reading.score && (reading.status === "completed" || reading.status === "partial"))
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .map((reading) => ({
+        reportId: reading.id,
+        createdAt: reading.createdAt,
+        score: reading.score!.value,
+        kind: reading.refinement ? "refinement" : reading.reusedFrom ? "reused" : "audit",
+      }));
+  }
+
+  /** Where WordLift runs an interface for a site: the one approved sidecar, on its one site. */
+  private sidecarEndpoints(report: ReportRecord): Record<string, string> {
+    let host: string;
+    try {
+      host = new URL(report.canonicalUrl ?? report.requestedUrl).hostname.replace(/^www\./, "");
+    } catch {
+      return {};
+    }
+    return host === "alpina.travel" ? { "availability.check": new URL("/api/sidecars/alpina/availability", this.options.publicAppUrl).toString() } : {};
   }
 
   reportUrl(id: string): string {
@@ -384,7 +608,7 @@ export class AuditOrchestrator {
       errors: parent.errors,
       evidenceTruncated: parent.evidenceTruncated || merged.truncated,
     };
-    return this.store.createRevision(parent.id, child);
+    return this.noted(await this.store.createRevision(parent.id, child));
   }
 
   /** Stores a terminal failed revision of a running report, with a caller-safe message. */
@@ -422,6 +646,8 @@ export class AuditOrchestrator {
     onProgress?: ProgressListener,
   ): Promise<ReportRecord> {
     const inputs = await this.collectLiveInputs(target, onProgress, base.scanDepth);
+    // Whether this site publishes through us is read off the same crawl, and never delays the audit.
+    void this.recordPublished(inputs.discovery ?? [], inputs.canonicalUrl, base.id).catch(() => undefined);
 
     if (inputs.evidence.length === 0 && !inputs.foundation) {
       return {
@@ -450,31 +676,36 @@ export class AuditOrchestrator {
       ? providers.scrape.collect(target, { maxPages: pagesForDepth(scanDepth) })
       : Promise.resolve(null);
     const auditPromise = providers.audit ? providers.audit.audit(target) : Promise.resolve(null);
+    const publish = (patch: Partial<ReportRecord>) => (onProgress ? onProgress(patch).catch(() => undefined) : Promise.resolve());
 
-    // Each provider's arrival is published as soon as it lands — the page shows the entities
-    // while the foundation audit is still thinking, and vice versa. The progress jobs sit inside
-    // the same allSettled, so every partial is persisted before the final report overwrites it.
-    const progressJobs: Array<Promise<unknown>> = [];
-    if (onProgress) {
-      progressJobs.push(
-        scrapePromise
-          .then((snapshot) =>
-            snapshot
-              ? onProgress({
-                  phase: "mapping",
-                  canonicalUrl: snapshot.canonicalUrl,
-                  contextGraph: compileContextGraph(snapshot.pages, [], [], snapshot.canonicalUrl),
-                })
-              : undefined,
-          )
-          .catch(() => undefined),
-        auditPromise
-          .then((audit) => (audit?.foundation ? onProgress({ foundationAudit: audit.foundation }) : undefined))
-          .catch(() => undefined),
-      );
-    }
+    // Understanding starts the moment the pages land, never waiting on the foundation audit: what
+    // the markup declares is published at once, then the extractor reads the text page by page and
+    // each page's entities and connections are published as that page is read. The wait is the
+    // model forming. Evidence is read from what the collector found before any entity is inferred:
+    // what a model reads into the text can never become a claim about the site.
+    const understandingPromise = scrapePromise.then(async (landed) => {
+      if (!landed) return null;
+      const graphNow = () => compileContextGraph(landed.pages, [], [], landed.canonicalUrl);
+      await publish({ phase: "mapping", canonicalUrl: landed.canonicalUrl, contextGraph: graphNow() });
+      const detected = detectSiteEvidence(landed, collectedAt);
+      const classified = providers.classify
+        ? await providers.classify.classify({ text: landed.text, url: landed.canonicalUrl })
+        : { categories: [], model: "behavior-only" as const };
+      // The kind of site from what the pages and their categories say; the foundation audit's signals
+      // still decide the archetype the report compiles with, once it lands.
+      const kind = inferArchetype(this.model, classified.categories, detected.signals).primaryArchetype;
+      const inferred = providers.markup
+        ? await this.inferMarkup(landed, providers.markup, scanDepth, kind, (read, of) => publish({ contextGraph: graphNow(), textRead: { read, of } }))
+        : undefined;
+      return { detection: detected, classification: classified, markup: inferred };
+    });
 
-    const [snapshotResult, auditResult] = await Promise.allSettled([scrapePromise, auditPromise, ...progressJobs]);
+    // The foundation score is published when it lands, beside whatever the model has by then.
+    const progressJobs: Array<Promise<unknown>> = [
+      auditPromise.then((landed) => (landed?.foundation ? publish({ foundationAudit: landed.foundation }) : undefined)).catch(() => undefined),
+    ];
+
+    const [snapshotResult, auditResult, understandingResult] = await Promise.allSettled([scrapePromise, auditPromise, understandingPromise, ...progressJobs]);
 
     let snapshot: SiteSnapshot | null = null;
     if (snapshotResult.status === "fulfilled") {
@@ -495,10 +726,15 @@ export class AuditOrchestrator {
       errors.push(auditErrorToReportError(auditResult.reason));
     }
 
-    const detection = snapshot ? detectSiteEvidence(snapshot, collectedAt) : { evidence: [], signals: [] };
-    const classification = snapshot && providers.classify
-      ? await providers.classify.classify({ text: snapshot.text, url: snapshot.canonicalUrl })
-      : { categories: [], model: "behavior-only", failureReason: snapshot ? undefined : "No page text was collected." };
+    if (snapshot && understandingResult.status === "rejected") throw understandingResult.reason;
+    const understanding = understandingResult.status === "fulfilled" ? understandingResult.value : null;
+    const detection = understanding?.detection ?? { evidence: [], signals: [] };
+    const classification: { categories: ContentCategory[]; model: string; failureReason?: string } = understanding?.classification ?? {
+      categories: [],
+      model: "behavior-only",
+      failureReason: snapshot ? undefined : "No page text was collected.",
+    };
+    const markup = understanding?.markup;
 
     if (classification.failureReason) {
       errors.push(failure("classifier_unavailable", "understanding", classification.failureReason, false));
@@ -535,7 +771,91 @@ export class AuditOrchestrator {
       evidenceTruncated: sanitized.truncated || Boolean(snapshot?.truncated),
       pages: snapshot?.pages ?? [],
       wordlift: snapshot?.wordlift,
+      agentDiscovery: detection.agentDiscovery,
+      discovery: snapshot?.discovery ?? [],
+      ...(markup ? { markup } : {}),
     };
+  }
+
+  /** The feed's source of truth: a site whose own catalog carries our Terms of Action is kept; one that stopped is forgotten. */
+  private async recordPublished(discovery: DiscoveryDocument[], canonicalUrl: string, reportId: string): Promise<void> {
+    const store = this.options.published;
+    if (!store || discovery.length === 0) return;
+    const now = this.now();
+    const expiresAt = new Date(now);
+    expiresAt.setUTCDate(expiresAt.getUTCDate() + this.options.ttlDays);
+    const site = publishedSiteIn(discovery, canonicalUrl, reportId, now.toISOString(), expiresAt.toISOString());
+    if (site) {
+      await store.put(site);
+      return;
+    }
+    let host: string;
+    try {
+      host = new URL(canonicalUrl).hostname.replace(/^www\./, "");
+    } catch {
+      return;
+    }
+    if (await store.get(host)) await store.remove(host);
+  }
+
+  /**
+   * Sends each page that qualifies to the markup provider and adds what comes back to the page's
+   * entities as inferred. A provider failure on one page is that page's loss, never the audit's;
+   * what it cost is logged once per audit, never stored in the public report.
+   */
+  private async inferMarkup(
+    snapshot: SiteSnapshot,
+    provider: MarkupProvider,
+    scanDepth?: ScanDepth,
+    siteType?: Archetype,
+    onPageRead?: (read: number, of: number) => Promise<unknown>,
+  ): Promise<CompiledInputs["markup"] | undefined> {
+    const onBasic = this.options.markupOnBasic ?? "thin";
+    const pages =
+      scanDepth === "deep" || onBasic === "all"
+        ? snapshot.pages
+        : onBasic === "thin"
+          ? snapshot.pages.filter((page) => page.entities.length === 0)
+          : [];
+    const chosen = pages.slice(0, pagesForDepth(scanDepth));
+    if (chosen.length === 0) return { provider: provider.name, model: provider.model, pagesGenerated: 0, pagesFailed: 0 };
+
+    // Each page's entities join the model the moment that page is read, so the progress screen can show them.
+    let read = 0;
+    const outcomes = await Promise.allSettled(
+      chosen.map(async (page) => {
+        try {
+          const outcome = await provider.generate({ url: page.url, title: page.title, description: page.description, headings: page.headings, text: page.text, ...(siteType ? { siteType } : {}) });
+          page.entities.push(...outcome.entities);
+          return outcome;
+        } finally {
+          read += 1;
+          await onPageRead?.(read, chosen.length);
+        }
+      }),
+    );
+    let generated = 0;
+    let failed = 0;
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let estimatedUsd = 0;
+    outcomes.forEach((outcome, index) => {
+      const page = chosen[index];
+      if (!page) return;
+      if (outcome.status !== "fulfilled") {
+        failed += 1;
+        console.error("markup_failed", page.url, outcome.reason instanceof Error ? outcome.reason.message : "unknown");
+        return;
+      }
+      generated += 1;
+      // What the extractor left aside, by kind and count: no name, no text, only the reasons.
+      if (outcome.value.issues.length > 0) console.log("markup_issues", page.url, outcome.value.issues.slice(0, 8).join("; "));
+      inputTokens += outcome.value.usage.inputTokens;
+      outputTokens += outcome.value.usage.outputTokens;
+      estimatedUsd += outcome.value.usage.estimatedUsd;
+    });
+    console.log("markup_generated", provider.name, provider.model, generated, failed, inputTokens, outputTokens, estimatedUsd.toFixed(5));
+    return { provider: provider.name, model: provider.model, pagesGenerated: generated, pagesFailed: failed };
   }
 
   private compileFixture(base: ReportRecord, fixture: FixtureAudit, override?: Archetype): ReportRecord {
@@ -612,6 +932,16 @@ export class AuditOrchestrator {
       capabilities,
       score: scoreReadiness(capabilities),
       priorities: rankPriorities(capabilities),
+      agentDiscovery: inputs.agentDiscovery,
+      ...(inputs.markup
+        ? {
+            markup: {
+              ...inputs.markup,
+              inferredEntities: contextGraph.entities.filter((entity) => entity.origin === "inferred").length,
+              declaredEntities: contextGraph.entities.filter((entity) => entity.origin !== "inferred").length,
+            },
+          }
+        : {}),
       errors: inputs.errors,
       evidenceTruncated: inputs.evidenceTruncated,
     };
@@ -636,7 +966,7 @@ export class AuditOrchestrator {
     );
     return graphActions.map((action) => {
       const actionEvidence = evidence.filter((item) => item.actionId === action.id);
-      // Only an approved sidecar's own verified invocation may claim `sidecar-enabled`.
+      // Only an approved sidecar's own verified invocation may say WordLift ran the interface.
       const approvedSidecar = actionEvidence.some(
         (item) => item.verification === "invoked" && item.kind === "tool-result" && item.id.startsWith("sidecar:"),
       );
