@@ -873,3 +873,67 @@ their category. They measure what AI says; we measure whether agents can act, an
 side of the problem the semantic and action infrastructure already answers.
 Sources: https://peec.ai/for-agencies, https://peec.ai/pricing,
 https://techcrunch.com/2025/11/17/as-consumers-ditch-google-for-chatgpt-peec-ai-raises-21m-to-help-brands-adapt/
+
+## Borrowed from the WebMCP Challenge field, 2026-09-26
+
+The judging closed on 2026-09-21; winners are announced on 2026-09-28. Before that, the gallery's
+2,474 entries were read at the tagline level and about sixty neighbours in depth: twenty-eight
+audit-and-readiness scanners, some thirty "any site to tools" generators, and some thirty-five
+governance and agentic-commerce entries. Six of the direct neighbours outscored our submission on
+the judges' criteria, and they did it the same way: a number on the first screen, a wider and
+tiered tool surface, and a verification the reader can repeat. What follows is what that field
+taught, as items for the branch that becomes the next beta. Each names the entry it is borrowed
+from so the borrowing stays honest. Work starts the week of 2026-09-28.
+
+- **W1. Prove shows a before and an after, not a score.** Agent Ready ran a real agent through a
+  site's raw pages and then through its tools and reported 0 of 3 tasks against 3 of 3; Overturn
+  told it as 40 of 100 before and fourteen governed tools after. The capability test inside the
+  action dialog is already the "after". Add the "before": the same three tasks attempted the way
+  a plain agent would, page by page, each failure with its reason, kept beside the invoked result.
+  Prove reads as one pair of numbers with the date. This is the sentence a stranger repeats after
+  thirty seconds.
+- **W2. One corpus line, on the pitch and beside the readiness score.** ScanWebMCP leads with 511
+  sites, Full Loop with 475 sites and 2,989 tools, Known Good with 14,351 probed. Every report is
+  already in Firestore. One aggregate sentence over the last thirty days, how many sites audited
+  and what share had at least one working action, is a benchmark, not a directory, and names no
+  site. It sits on the pitch page and under the score. The registry decisions stand.
+- **W3. Reversibility is a boundary.** Full Loop's finding across 2,989 public tools: 97 percent
+  of those that commit something offer no undo and no exit. The boundary strip says read-only or
+  transaction, side effects, confirmation, sign-in, delivery path. It does not say how the action
+  is cancelled or reversed. One optional field on the contract in the action model, `reversal`
+  with a value of undoable, cancellable within a window, or final, shown in the boundaries table
+  and carried into the skill file. Terms of Action become the one governed map that answers it.
+- **W4. Read tools carry a read-only hint; the write tool registers once a reviewer is present.**
+  WebMCP Computer, Healthy WMCP and Runbook Zero tier their catalogs as read, write and
+  approval-gated, annotate the read tools, and register the committing tool only after review.
+  Every read tool here gets the read-only annotation, and refine registers only when the claim is
+  verified. ChatGPT reads those hints to decide when to ask, so this is behaviour, not decoration.
+  Tool identifiers do not change.
+- **W5. Prove is a three-way parity check, dated and signed.** Corsen verified one contract on
+  eleven live sites with a parity verifier; Known Good checks declared against registered;
+  Trustwright signs its verdict with a key. Activate publishes three documents and the Observer
+  already watches drift. Make the check explicit: what the page declares, what the runtime
+  registers and what was last invoked agree, with the date, and the catalog carries a signed
+  "verified by WordLift on this date" claim a registry can check without asking us.
+- **W6. Every decision says who moved it, and can be taken back.** The strongest entries all say
+  the agent's tools and the person's interface go through one store, with attribution and one
+  shared undo. The Context Engine is that store already. Provenance today says machine or
+  human-provided; it does not say which agent, when, or offer a revert. Surface the actor and the
+  time on each decision, and a revert that files as its own decision.
+
+Two lessons are distribution, not code. Space Auto was the only entry live on real customer
+sites, and no feature above is worth more than alpina.travel activated for real, catalog and skill
+file on its own domain. Respira, AgentPress, PagePatch and Corsen's WooCommerce extension all chose
+WordPress as the channel; Activate through the WordLift plugin reaches an install base none of them
+has, and the plugin's own numbers move up the open list.
+
+Not borrowed: generators that turn any site into tools (the non-overlap decision of 2026-08-27
+stands), directories and rankings (the registry decision of 2026-09-06 stands), and the games and
+co-creation entries that carried the likes.
+
+Order for the week of 2026-09-28: W4 and W3 first, since they touch the frozen surfaces least
+and ship inside a day each; then W1, which needs the before-run; then W2 and W6; W5 last, because
+signing waits on a key decision. Sources: the Devpost pages of agent-ready (z9n2ad), overturn,
+scanwebmcp-com, full-loop, known-good-webmcp-verifier, webmcp-computer, healthy-wmcp,
+runbook-zero, corsen-context, trustwright, space-auto-dealership-mcp, respira, agentpress,
+pagepatch, all under https://devpost.com/software/.
