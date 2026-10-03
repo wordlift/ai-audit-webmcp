@@ -17,7 +17,7 @@ describe("GET /api/health", () => {
       revision: "local",
       release: "development",
       mode: "demo",
-      surfaces: { mcp: null, deepScans: false, reportDelivery: null, claimedRefinement: false, contextEngines: false },
+      surfaces: { mcp: null, deepScans: false, reportDelivery: null, browserRefinement: false, contextEngines: false },
       platformEgress: null,
       markup: null,
       observe: null,
@@ -38,7 +38,7 @@ describe("GET /api/health", () => {
       mcp: "/mcp",
       deepScans: true,
       reportDelivery: null,
-      claimedRefinement: true,
+      browserRefinement: true,
       contextEngines: false,
     });
   });

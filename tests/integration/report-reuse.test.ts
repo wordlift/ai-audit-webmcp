@@ -104,7 +104,7 @@ describe("one crawl per site per day", () => {
     expect(second.reusedFrom).toBeUndefined();
   });
 
-  it("gives each remote caller a report and a claim of their own", async () => {
+  it("gives each remote caller a report of their own, with no claim, and keeps a fresh crawl off the remote surface", async () => {
     const time = clock();
     const store = new MemoryReportStore(900_000, time.now);
     const orchestrator = new AuditOrchestrator(store, loadActionModel(), new FixtureProvider(), {
@@ -112,6 +112,7 @@ describe("one crawl per site per day", () => {
       ttlDays: 30,
       now: time.now,
     });
+    // A claim store is configured for the browser; the anonymous remote transport must still issue none.
     const app = createApp({ orchestrator, claims: new MemoryClaimStore(), rateLimits: { enabled: false } });
     const call = (id: number, extra: Record<string, unknown> = {}) =>
       request(app)
@@ -121,13 +122,18 @@ describe("one crawl per site per day", () => {
 
     const first = (await call(1)).body.result.structuredContent;
     const second = (await call(2)).body.result.structuredContent;
-    const fresh = (await call(3, { fresh: true })).body.result.structuredContent;
+    const askedFresh = (await call(3, { fresh: true })).body.result.structuredContent;
 
     expect(second.reportId).not.toBe(first.reportId);
-    expect(second.claimToken).not.toBe(first.claimToken);
+    for (const result of [first, second, askedFresh]) expect(JSON.stringify(result)).not.toMatch(/claim[_-]?token|bearer/i);
     const stored = await orchestrator.get(second.reportId);
     expect(stored?.reusedFrom).toBe(first.reportId);
-    const reread = await orchestrator.get(fresh.reportId);
-    expect(reread?.reusedFrom).toBeUndefined();
+    // The remote contract the app directory reviewed has no fresh input; a caller who sends one gets the reuse default.
+    const reread = await orchestrator.get(askedFresh.reportId);
+    expect(reread?.reusedFrom).toBe(first.reportId);
+
+    const listed = await request(app).post("/mcp").set(MCP_HEADERS).send({ jsonrpc: "2.0", id: 4, method: "tools/list", params: {} });
+    const audit = listed.body.result.tools.find((tool: { name: string }) => tool.name === "audit-website");
+    expect(Object.keys(audit.inputSchema.properties).sort()).toEqual(["archetype", "depth", "email", "url"]);
   });
 });

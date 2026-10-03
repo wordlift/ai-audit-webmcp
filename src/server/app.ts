@@ -55,7 +55,7 @@ export interface AppOptions {
   capabilityTest?: UrlPolicyOptions & { timeoutMs?: number };
   /** Where a deep scan's email address is filed. Absent means deep scans are unavailable here. */
   leads?: LeadStore;
-  /** Where remote report claims are filed. Absent means remote refinement is unclaimed. */
+  /** Legacy claim storage used by non-public service harnesses; never exposed through public MCP. */
   claims?: ClaimStore;
   /** How a deep scan's report reaches the address that bought it. Absent means it queues only. */
   leadDelivery?: LeadDelivery;
@@ -102,10 +102,6 @@ export function createApp(options: AppOptions = {}): Express {
   // Who is reading, counted before anything answers: a class and a day, never an address.
   if (options.visits) app.use(options.visits.middleware());
 
-  // Proof to the app directory that this domain is ours to publish from: this path answers with
-  // the token and nothing else. It is registered whether or not a token is configured, because the
-  // SPA fallback answers everything it does not — and a verifier handed an HTML page reads that as
-  // a wrong token rather than as an unconfigured one.
   app.get("/.well-known/openai-apps-challenge", (_request, response) => {
     if (!options.appsChallenge) {
       response.status(404).type("text/plain").send("No app directory verification token is configured.");
@@ -135,15 +131,15 @@ export function createApp(options: AppOptions = {}): Express {
       revision: process.env.K_REVISION ?? "local",
       release: process.env.BUILD_SHA ?? "development",
       mode: options.orchestrator?.mode ?? "demo",
-      // What a monitor needs to know is which surfaces this revision actually answers on.
       surfaces: {
         mcp: options.orchestrator ? "/mcp" : null,
         deepScans: Boolean(options.leads),
         reportDelivery: options.leadDelivery?.name ?? null,
-        claimedRefinement: Boolean(options.claims),
+        // This is a browser/WebMCP capability only. The anonymous remote MCP transport below is
+        // deliberately created without a ClaimStore and therefore cannot publish refinements.
+        browserRefinement: Boolean(options.claims),
         contextEngines: Boolean(options.orchestrator?.engines),
       },
-      // How many egress ranges each hosted platform holds: a refresh that stopped is visible here.
       platformEgress: options.platformEgress?.summary() ?? null,
       // What the markup stand-in has cost since this instance started: the estimate, live.
       markup: options.markup ? { provider: options.markup.name, model: options.markup.model, ...options.markup.totals() } : null,
@@ -163,8 +159,6 @@ export function createApp(options: AppOptions = {}): Express {
       engineFor: async (report) => (await options.orchestrator?.engines?.forReport(report)) ?? null,
     });
     app.get("/api/demo/alpina", async (_request, response) => response.json(await options.orchestrator?.pinnedAlpina()));
-    // Every child report is a stored document someone else can be shown, so the writes that make
-    // one draw on a pool of their own rather than on nothing at all.
     const writeLimiters: RequestHandler[] = createAuditRateLimiters(
       options.writeRateLimits ?? { ...options.rateLimits, perIp: 40, global: 800 },
     );
@@ -173,8 +167,6 @@ export function createApp(options: AppOptions = {}): Express {
       "/api/reports",
       createReportsRouter(options.orchestrator, limiters, deepScan, writeLimiters, delivery, options.visits, new CapabilityTestService(options.orchestrator, options.capabilityTest)),
     );
-    // The sidecar draws on its own pool: one agent conversation checks several date ranges, and
-    // none of those calls should spend the audit budget.
     const sidecarLimiters: RequestHandler[] = createAuditRateLimiters(
       options.sidecarRateLimits ?? { ...options.rateLimits, perIp: 30, global: 600 },
     );
@@ -183,20 +175,24 @@ export function createApp(options: AppOptions = {}): Express {
       createAlpinaRouter(options.alpinaSidecar ?? new AlpinaAvailabilitySidecar(), options.orchestrator, sidecarLimiters, options.visits),
     );
 
-    // The remote transport answers before the static handler and the SPA fallback, which would
-    // otherwise hand a JSON-RPC caller the application shell.
+    // The public remote transport is intentionally anonymous and review-only after audit. Do not
+    // attach a ClaimStore here: audit-website must never emit a bearer authorization value into
+    // model-visible MCP content or structuredContent.
     app.use(
       "/mcp",
       createMcpRouter(
         new AuditToolService(
           options.orchestrator,
-          { source: "mcp", claims: options.claims, claimTtlDays: options.reportTtlDays, ...options.toolService },
+          {
+            ...options.toolService,
+            source: "mcp",
+            claims: undefined,
+            claimTtlDays: options.reportTtlDays,
+          },
           deepScan,
           delivery,
         ),
         [
-          // Only the window and the enabled flag carry over: a tight per-IP audit budget must not
-          // become the budget for listing tools or reading a report.
           ...createMcpRateLimiters(
             options.mcpRateLimits ?? { windowMs: options.rateLimits?.windowMs, enabled: options.rateLimits?.enabled },
             options.platformEgress,

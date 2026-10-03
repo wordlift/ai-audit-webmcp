@@ -1,7 +1,7 @@
 {
-  "name": "wordlift-ai-audit",
-  "version": "0.1.0",
-  "description": "Audit a website from an AI agent's perspective and refine its Terms of Action with the business that owns it.",
+  "name": "app-6a9c46c87bc481918a5d0bed1edbff0d",
+  "version": "1.0.1",
+  "description": "Audit public websites for AI agent readiness and review evidence-backed Terms of Action.",
   "author": {
     "name": "WordLift",
     "email": "hello@wordlift.io",
@@ -15,20 +15,27 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "WordLift AI Audit",
-    "shortDescription": "See what an AI agent can actually do on a website",
-    "longDescription": "WordLift AI Audit reads a public website the way an agent would and returns evidence-backed Terms of Action: what kind of business it is, the actions an agent should be able to perform, which of those humans and agents can perform today, and the evidence behind every claim. Readiness is earned by successful invocation, never by a declaration. The included skill walks the site's owner through correcting the machine's reading — inspect, interview, confirm — and records their judgment as a new immutable report.",
+    "shortDescription": "Audit AI agent readiness",
+    "longDescription": "WordLift AI Audit analyzes public website data to assess how well AI agents can discover, understand, and act on a site. It returns an evidence-backed audit with the site archetype, foundation findings, verified action-readiness, priority gaps, and Terms of Action. Use it to identify which actions agents can perform today, inspect the evidence behind each finding, and review the machine's interpretation with the site owner. Human feedback can produce a confirmed correction plan, but readiness changes only when supported by invocation evidence; the public remote plugin does not persist human refinements.",
     "developerName": "WordLift",
-    "category": "Productivity",
-    "capabilities": ["Read", "Write"],
+    "category": "Data & Analytics",
+    "capabilities": [
+      "Audit public websites",
+      "Assess AI agent readiness",
+      "Explain audit evidence",
+      "Review Terms of Action"
+    ],
     "websiteURL": "https://wordlift.io",
+    "supportURL": "https://wordlift.io/contact-form/",
     "privacyPolicyURL": "https://beta.audit.wordlift.io/privacy",
     "termsOfServiceURL": "https://wordlift.io/terms-of-service/",
     "defaultPrompt": [
       "Audit wordlift.io and tell me what an AI agent can actually do there.",
-      "Run an AI Audit on my site, then help me correct the Terms of Action it produced.",
-      "Why does the audit say my booking action is unverified?",
-      "Audit this site and explain its foundation findings in plain language."
+      "Run an AI Audit on my site, then help me review the Terms of Action it produced.",
+      "Why does the audit say my booking action is unverified?"
     ],
-    "brandColor": "#0A2E5C"
+    "brandColor": "#0A2E5C",
+    "composerIcon": "./assets/icon.svg",
+    "logo": "./assets/icon.svg"
   }
 }

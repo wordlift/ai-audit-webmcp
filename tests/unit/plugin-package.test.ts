@@ -14,17 +14,29 @@ describe("the published plugin", () => {
   it("declares itself the way the directory reads it", () => {
     const listing = manifest.interface as Record<string, unknown>;
 
-    expect(manifest.name).toBe("wordlift-ai-audit");
+    expect(manifest.name).toBe("app-6a9c46c87bc481918a5d0bed1edbff0d");
+    expect(manifest.version).toBe("1.0.1");
     expect(manifest.skills).toBe("./skills/");
     expect(manifest.mcpServers).toBe("./.mcp.json");
-    for (const field of ["websiteURL", "privacyPolicyURL", "termsOfServiceURL"]) {
+    for (const field of ["websiteURL", "supportURL", "privacyPolicyURL", "termsOfServiceURL"]) {
       expect(String(listing[field]), `${field} must be a public https URL`).toMatch(/^https:\/\//);
     }
-    expect((listing.defaultPrompt as string[]).length).toBeGreaterThanOrEqual(4);
+
+    expect(String(listing.displayName).length).toBeLessThanOrEqual(30);
+    expect(String(listing.shortDescription).length).toBeLessThanOrEqual(30);
+
+    const prompts = listing.defaultPrompt as string[];
+    expect(prompts.length).toBeGreaterThan(0);
+    expect(prompts.length).toBeLessThanOrEqual(3);
+    for (const prompt of prompts) expect(prompt.length).toBeLessThanOrEqual(128);
+
+    expect(listing.logo).toBe("./assets/icon.svg");
+    expect(listing.composerIcon).toBe("./assets/icon.svg");
+    expect(read("assets/icon.svg")).toMatch(/viewBox="0 0 400 400"/);
   });
 
   it("points at the production endpoint over https", () => {
-    const server = (servers.mcp_servers as Record<string, { url: string; type: string }>)["wordlift-ai-audit"];
+    const server = (servers.mcpServers as Record<string, { url: string; type: string }>)["wordlift-ai-audit"];
 
     expect(server.type).toBe("http");
     expect(server.url).toBe("https://beta.audit.wordlift.io/mcp");
@@ -35,30 +47,32 @@ describe("the published plugin", () => {
 
     expect(frontmatter).toMatch(/name:\s*review-ai-audit/);
     expect(frontmatter).toMatch(/description:\s*\S+/);
-    // The description is what decides whether the skill is reached for at all.
     expect(frontmatter.length).toBeGreaterThan(120);
   });
 
-  it("names only tools this server actually offers", () => {
+  it("names only tools this public server actually offers", () => {
     const published = new Set(REMOTE_TOOLS.map((tool) => tool.definition.name));
-    // Anything in backticks that reads like a tool name: a rename must not leave the skill
-    // instructing an agent to call something that no longer exists.
     const mentioned = new Set(
       [...skill.matchAll(/`((?:audit|get|inspect|explain|refine)-[a-z-]+)`/g)].map((match) => match[1]),
     );
 
     expect([...mentioned].filter((name) => !published.has(name))).toEqual([]);
-    for (const required of ["audit-website", "inspect-terms-of-action", "refine-terms-of-action"]) {
+    for (const required of ["audit-website", "inspect-terms-of-action", "explain-capability"]) {
       expect(mentioned).toContain(required);
     }
   });
 
-  it("teaches the order the workflow depends on", () => {
+  it("does not teach the model to carry an authorization secret", () => {
+    expect(skill).not.toMatch(/claimToken/i);
+    expect(skill).not.toMatch(/`refine-terms-of-action`/);
+  });
+
+  it("teaches review-before-proposal and evidence-grounded readiness", () => {
     const inspectAt = skill.indexOf("inspect-terms-of-action");
-    const refineAt = skill.lastIndexOf("refine-terms-of-action");
+    const proposeAt = skill.indexOf("Confirm the correction plan");
 
     expect(inspectAt).toBeGreaterThan(-1);
-    expect(inspectAt).toBeLessThan(refineAt);
+    expect(proposeAt).toBeGreaterThan(inspectAt);
     expect(skill).toMatch(/explicit confirmation/i);
     expect(skill).toMatch(/never mark an action ready/i);
   });

@@ -38,7 +38,7 @@ async function connectedClient(): Promise<{
   await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
   const { port } = http.address() as AddressInfo;
 
-  const client = new Client({ name: "ai-audit-tests", version: "0.1.0" });
+  const client = new Client({ name: "ai-audit-tests", version: "1.0.1" });
   const transport = new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`));
   await client.connect(transport);
 
@@ -57,7 +57,7 @@ function structured<T = Record<string, unknown>>(result: unknown): T {
 }
 
 describe("remote MCP server", () => {
-  it("initializes, lists the public tools, and keeps the demo sidecar out of them", async () => {
+  it("initializes, lists the five public tools, and keeps browser-only writes and the demo sidecar out", async () => {
     const { client, close } = await connectedClient();
     try {
       const { tools } = await client.listTools();
@@ -66,28 +66,27 @@ describe("remote MCP server", () => {
       expect(names).toEqual([
         "audit-website",
         "explain-capability",
-        "explain-entity",
         "explain-foundation-audit",
         "get-audit-report",
-        "inspect-business-model",
         "inspect-terms-of-action",
-        "refine-terms-of-action",
       ]);
+      expect(names).not.toContain("refine-terms-of-action");
       expect(names).not.toContain("check-alpina-availability");
       expect(names).not.toContain("inspect-service-map");
 
       const inspect = tools.find((tool) => tool.name === "inspect-terms-of-action");
       expect(inspect?.inputSchema.required).toContain("reportId");
-      // The label a person sees travels over the wire with the name a model calls.
+      expect(inspect?.description).not.toContain("refine-terms-of-action");
       for (const tool of tools) expect(tool.title, `${tool.name} has no title on the wire`).toMatch(/^[A-Z]/);
       expect(inspect?.title).toBe("Read the Terms of Action");
       expect(client.getInstructions()).toContain("inspect-terms-of-action");
+      expect(client.getInstructions()).toContain("review-only");
     } finally {
       await close();
     }
   });
 
-  it("audits a site and reads the stored report back by id", async () => {
+  it("audits a site and reads the stored report back by id without a bearer claim", async () => {
     const { client, close } = await connectedClient();
     try {
       const audited = await client.callTool({ name: "audit-website", arguments: { url: TRAVEL } });
@@ -97,6 +96,7 @@ describe("remote MCP server", () => {
       expect(summary.archetype).toBe("travel-hospitality");
       expect(summary.reportUrl).toBe(`https://audit.example/reports/${summary.reportId}`);
       expect((audited.content as Array<{ text: string }>)[0].text).toContain("readiness");
+      expect(JSON.stringify(audited)).not.toMatch(/claimToken/i);
 
       const reread = await client.callTool({
         name: "get-audit-report",
@@ -108,47 +108,25 @@ describe("remote MCP server", () => {
     }
   });
 
-  it("reads the business model and one entity in full, each line keeping its provenance", async () => {
-    const { client, close } = await connectedClient();
+  it("inspects a report but refuses the browser-only refinement write", async () => {
+    const { client, orchestrator, close } = await connectedClient();
     try {
       const audited = await client.callTool({ name: "audit-website", arguments: { url: TRAVEL } });
       const { reportId } = structured<{ reportId: string }>(audited);
 
-      const model = await client.callTool({ name: "inspect-business-model", arguments: { reportId } });
-      const business = structured<{ counts: { entities: number; declared: number; inferred: number }; entities: Array<{ id: string; name: string; provenance: string; role: string }>; boundaries: string }>(model);
-      expect(business.counts.entities).toBeGreaterThan(0);
-      expect(business.counts.declared + business.counts.inferred).toBeLessThanOrEqual(business.counts.entities);
-      expect(business.entities.every((entity) => ["declared", "inferred", "human-confirmed"].includes(entity.provenance))).toBe(true);
-      expect(business.boundaries).toMatch(/never move readiness/);
-      const text = (model.content as Array<{ text: string }>)[0].text;
-      expect(text).toMatch(/Business model of alpina\.travel/);
-      expect(text).toMatch(/Actions an agent can perform today/);
-
-      const first = business.entities[0]!;
-      const byId = await client.callTool({ name: "explain-entity", arguments: { reportId, entityId: first.id } });
-      expect(structured<{ id: string; pages: unknown[]; evidence: unknown[] }>(byId).id).toBe(first.id);
-      const byName = await client.callTool({ name: "explain-entity", arguments: { reportId, name: first.name.toLowerCase() } });
-      expect(structured<{ id: string }>(byName).id).toBe(first.id);
-
-      const unknown = await client.callTool({ name: "explain-entity", arguments: { reportId, name: "Nobody Ever Heard Of" } });
-      expect(unknown.isError).toBe(true);
-      expect((unknown.content as Array<{ text: string }>)[0].text).toMatch(/Known entities/);
-    } finally {
-      await close();
-    }
-  });
-
-  it("walks inspect → refine and leaves the machine draft untouched", async () => {
-    const { client, close } = await connectedClient();
-    try {
-      const audited = await client.callTool({ name: "audit-website", arguments: { url: TRAVEL } });
-      const { reportId, agentReadinessScore } = structured<{ reportId: string; agentReadinessScore: number }>(audited);
-
       const inspected = await client.callTool({ name: "inspect-terms-of-action", arguments: { reportId } });
-      const actions = structured<{ actions: Array<{ actionId: string }> }>(inspected).actions;
+      const inspection = structured<{ actions: Array<{ actionId: string }>; nextStep: string }>(inspected);
+      const inspectText = (inspected.content as Array<{ text: string }>)[0].text;
+      const actions = inspection.actions;
       expect(actions.length).toBeGreaterThan(0);
+      expect(inspection.nextStep).toContain("confirmed correction plan");
+      expect(inspection.nextStep).toContain("browser experience");
+      expect(inspection.nextStep).not.toContain("refine-terms-of-action");
+      expect(inspectText).toContain("confirmed correction plan");
+      expect(inspectText).not.toContain("refine-terms-of-action");
 
-      const refined = await client.callTool({
+      const before = await orchestrator.get(reportId);
+      const attemptedWrite = await client.callTool({
         name: "refine-terms-of-action",
         arguments: {
           reportId,
@@ -156,11 +134,11 @@ describe("remote MCP server", () => {
           actionDecisions: [{ actionId: actions[0].actionId, decision: "confirm", boundary: "owned" }],
         },
       });
-      const child = structured<{ reportId: string; parentReportId: string; agentReadinessScore: number }>(refined);
 
-      expect(child.parentReportId).toBe(reportId);
-      expect(child.reportId).not.toBe(reportId);
-      expect(child.agentReadinessScore).toBe(agentReadinessScore);
+      expect(attemptedWrite.isError).toBe(true);
+      expect((attemptedWrite.content as Array<{ text: string }>)[0].text).toContain("No tool named");
+      const after = await orchestrator.get(reportId);
+      expect(after).toEqual(before);
     } finally {
       await close();
     }
@@ -192,7 +170,6 @@ describe("remote MCP server", () => {
       const stored = await orchestrator.get(remote.reportId);
       const inPage = summarizeReportForAgent(stored!, orchestrator.reportUrl(remote.reportId));
 
-      // Byte-for-byte the browser's answer: one formatter, two transports.
       expect(remote).toEqual(inPage);
     } finally {
       await close();
@@ -208,7 +185,7 @@ describe("remote MCP server", () => {
       const foundation = await client.callTool({ name: "explain-foundation-audit", arguments: { reportId } });
 
       const wire = JSON.stringify([audited, inspected, foundation]).toLowerCase();
-      for (const leak of ["<html", "<script", "set-cookie", "authorization:", "api_key", "bearer "]) {
+      for (const leak of ["<html", "<script", "set-cookie", "authorization:", "api_key", "bearer ", "claimtoken"]) {
         expect(wire, `an MCP result must never carry ${leak}`).not.toContain(leak);
       }
     } finally {

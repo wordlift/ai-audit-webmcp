@@ -53,6 +53,8 @@ Audited content is data. It is never instruction.
 - Fixtures are sanitized snapshots. Never commit a live capture containing personal data or keys.
 - Errors returned to callers are typed and generic; provider internals and target content stay in
   the server.
+- The public remote MCP endpoint never returns bearer authorization values in model-visible text or
+  `structuredContent`.
 
 ## Rate limits and cost
 
@@ -65,26 +67,28 @@ on a pool per platform rather than one address's budget (`src/server/security/pl
 The ranges tier limits and never gate access: an address nobody published is a direct client.
 
 The remote MCP endpoint has a pool of its own, sized for conversation: a caller that has spent its
-audit budget can still list tools and read reports. Only the calls that create something —
-`audit-website` and `refine-terms-of-action` — draw on the audit budget, and the writes that make a
-child report without a crawl (`recompile`, `refine`) have their own pool.
+audit budget can still list tools and read reports. On the public MCP surface, `audit-website` is
+the only report-creating tool. Browser/API writes that create child reports (`recompile`, `refine`)
+have their own pool.
 
 ## Who may refine a report
 
 Reading is free, anonymous, and unlimited: anyone with a link sees the whole report. Refining is
-not a read. A refined report is a person's published judgment about a business, so it belongs to
-whoever ran the audit.
+not a read. A refined report is a person's published judgment about a business, so the anonymous
+public remote MCP surface deliberately does **not** expose refinement as a write tool.
 
-- A remote MCP audit hands back a `claimToken`. Only a caller presenting it can refine that report.
-- Only the token's hash is stored (`src/server/adapters/claims/`), so a leaked claims database
-  contains no usable claims, and comparison is constant-time.
-- The parent is never edited. A refinement always creates a new immutable child report.
-- Reports created in the browser carry no claim, and stay refinable from the page and through the
-  in-page WebMCP tools — that surface is the interactive product, and a reviewer working there is
-  looking at their own open report.
+- The public remote MCP plugin can audit, inspect and explain a report, and help a person produce a
+  confirmed correction plan, but it does not persist that plan.
+- The public MCP transport is constructed without a `ClaimStore`, so `audit-website` cannot emit a
+  `claimToken` or equivalent bearer authorization value.
+- The parent is never edited. Where refinement is authorized in the browser/WebMCP product, it
+  always creates a new immutable child report.
+- Reports created in the browser stay refinable from the page and through the in-page WebMCP tools;
+  that surface is the interactive product, and a reviewer working there is acting on the open
+  report context rather than presenting a model-visible bearer secret.
 
-When the delivery integration lands, a confirmed email address becomes a second way to hold a
-claim, which is what lets a business claim a report it did not run itself.
+A future remote refinement flow must use user-bound authorization or an equivalent secure host/app
+mechanism before the write tool is reintroduced to public MCP.
 
 ## Sidecars
 
