@@ -28,7 +28,15 @@ support them. Declarations never earn readiness; only invoked evidence does.
 - **The report schema** in `src/shared/schemas/report.ts` is strict; new fields are optional, and a
   report stored yesterday must still parse today.
 - **Vocabulary the UI uses**: Terms of Action, Context Engine, capability map, Full WordLift audit,
-  foundation score, agent readiness. Public copy (README, Devpost, video) follows what the deployed page says.
+  foundation score, agent readiness — in the model & evidence fold, the docs and the tools. The first
+  screen of a report leads with the Context Engine, decided on 2026-09-16: what the business is and
+  offers, each thing marked **Declared** (the site's markup says so), **Inferred** (read from its
+  content) or **Confirmed** (a review said so); "verified" is reserved for an action an agent
+  actually invoked. Readiness follows as proof, in plain words decided on 2026-09-07: **works**,
+  **fix this**, **talk to us**, each mapping onto exactly one precise state (agent-ready;
+  unverified or human-only; missing), never two.
+  The boundary vocabulary — owned, handoff, informational, not applicable — stays precise and one
+  click below. Public copy (README, Devpost, video) follows what the deployed page says.
 - **Registration on both `navigator.modelContext` and `document.modelContext`** — the alias in
   `src/client/webmcp/modelContextAlias.ts` covers whichever the browser exposes; public copy names
   `navigator.modelContext`, which is what Chrome ships.
@@ -56,6 +64,8 @@ support them. Declarations never earn readiness; only invoked evidence does.
 | What production is running | `GET https://beta.audit.wordlift.io/api/health` → `release`, `mode`, `surfaces` |
 | What the tools promise, on every transport | `src/shared/tools/definitions.ts` |
 | How a tool call is answered | `src/server/services/AuditToolService.ts` |
+| What a site's Context Engine keeps across reads, and who may change it | `src/domain/engine/contextEngine.ts`, `src/server/services/ContextEngines.ts` |
+| How relations are read from a page's text | `src/domain/context/inferRelations.ts` |
 
 ## Commit messages
 

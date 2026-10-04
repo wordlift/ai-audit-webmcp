@@ -1,23 +1,32 @@
-import { ArrowLeft, Share2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Rocket, Share2 , Wrench } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { explainReportError, failureTitle, visibleErrors } from "../../shared/format/explainError.js";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { explainReportError, failureTitle, onlyFoundationMissing, unreadableReason, visibleErrors } from "../../shared/format/explainError.js";
 import type { Archetype, ReportRecord } from "../../shared/types/index.js";
 import { ApiError, getReport, recompileReport } from "../api/client";
 import { ActionJourney } from "../components/ActionJourney";
+import { BoundariesTable } from "../components/BoundariesTable";
 import { AlpinaSidecarPanel } from "../components/AlpinaSidecarPanel";
 import { ClassificationCard } from "../components/ClassificationCard";
 import { ContextEngineMap, heroEntityId } from "../components/ContextEngineMap";
-import { DeepScanOffer } from "../components/DeepScanOffer";
 import { ExecutiveSummary } from "../components/ExecutiveSummary";
+import { FirstScreen } from "../components/FirstScreen";
 import { FoundationAuditDetails } from "../components/FoundationAuditDetails";
+import { OwnIt } from "../components/OwnIt";
+import { OwnershipPanel } from "../components/OwnershipPanel";
+import { captureReviewToken } from "../engine/engineKeys";
+import { EngineProvider } from "../engine/EngineContext";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { ReportProgress } from "../components/ReportProgress";
 import { ServiceMapProvenance } from "../components/ServiceMapProvenance";
+import { StepBar } from "../components/StepBar";
+import { UnderstandPanel } from "../components/UnderstandPanel";
 import { SiteToolsBadge } from "../components/SiteToolsBadge";
 import { AlpinaAvailabilityTool } from "../webmcp/AlpinaAvailabilityTool";
 import { ExplainCapabilityTool } from "../webmcp/ExplainCapabilityTool";
 import { ExplainFoundationAuditTool } from "../webmcp/ExplainFoundationAuditTool";
+import { ExplainEntityTool } from "../webmcp/ExplainEntityTool";
+import { InspectBusinessModelTool } from "../webmcp/InspectBusinessModelTool";
 import { InspectServiceMapTool } from "../webmcp/InspectServiceMapTool";
 import { RefineServiceMapTool } from "../webmcp/RefineServiceMapTool";
 
@@ -35,10 +44,14 @@ function sidecarApplies(report: ReportRecord): boolean {
 export function ReportRoute() {
   const { reportId = "" } = useParams();
   const navigate = useNavigate();
+  // A page reached from "Audit my site" may ask for the record before the audit has filed it.
+  const justStarted = Boolean((useLocation().state as { started?: boolean } | null)?.started);
   const [report, setReport] = useState<ReportRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  // A review link from the holder carries a day-long token: kept for this tab, taken off the address.
+  useState(() => captureReviewToken());
 
   useEffect(() => {
     let cancelled = false;
@@ -60,13 +73,20 @@ export function ReportRoute() {
         if (record.status === "running") timer = window.setTimeout(load, 1_500);
       } catch (caught) {
         if (cancelled) return;
-        // Right after starting an audit the record may not exist yet; give it a moment.
-        if (caught instanceof ApiError && caught.status === 404 && notFoundRetries < 12) {
+        // Right after starting an audit the record may not exist yet; give it a moment. A link
+        // opened cold gets one retry, then the truth.
+        if (caught instanceof ApiError && caught.status === 404 && notFoundRetries < (justStarted ? 12 : 1)) {
           notFoundRetries += 1;
           timer = window.setTimeout(load, 700);
           return;
         }
-        setError(caught instanceof Error ? caught.message : "Report unavailable");
+        setError(
+          caught instanceof ApiError && caught.status === 404
+            ? "This report has expired or never existed. Reports stay for 30 days at their link; audit the site again for a new one."
+            : caught instanceof Error
+              ? caught.message
+              : "Report unavailable",
+        );
       }
     };
 
@@ -75,7 +95,7 @@ export function ReportRoute() {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
     };
-  }, [reportId]);
+  }, [reportId, justStarted]);
 
   async function override(archetype: Archetype) {
     if (!report) return;
@@ -94,6 +114,8 @@ export function ReportRoute() {
   const tools = (
     <>
       <InspectServiceMapTool reportId={reportId} report={report} />
+      <InspectBusinessModelTool reportId={reportId} report={report} />
+      <ExplainEntityTool reportId={reportId} report={report} />
       <ExplainCapabilityTool reportId={reportId} report={report} />
       <ExplainFoundationAuditTool reportId={reportId} report={report} />
       <RefineServiceMapTool reportId={reportId} report={report} />
@@ -116,52 +138,134 @@ export function ReportRoute() {
   }
 
   return (
+    <EngineProvider report={report}>
     <div className="report-page">
       {tools}
       <AlpinaAvailabilityTool reportId={report.id} enabled={sidecarApplies(report)} />
-      <nav className="report-toolbar" aria-label="Report actions">
+      {/* Three steps, the current one lit, on both pages; the toolbar's two actions ride on its right. */}
+      <StepBar reportId={report.id} page="report">
         <Link to="/"><ArrowLeft size={17} /> New audit</Link>
-        <SiteToolsBadge />
         <button type="button" onClick={share}><Share2 size={17} /> {copied ? "Copied" : "Share report"}</button>
-      </nav>
-      {report.status === "partial" && (
+      </StepBar>
+      {report.status === "partial" && !onlyFoundationMissing(report.errors) && !unreadableReason(report.errors) && (
         <div className="partial-banner" role="status">Partial report: {visibleErrors(report.errors).map(explainReportError).join(" ")}</div>
       )}
-      <ServiceMapProvenance report={report} />
-      <ExecutiveSummary report={report} />
-      {/* Keyed by report so a recompile that lands on the child report hands back a fresh form. */}
-      {report.classification && <ClassificationCard key={report.id} classification={report.classification} onOverride={override} />}
-      {report.contextGraph && report.classification && (
-        <ContextEngineMap
-          context={report.contextGraph}
-          classification={report.classification}
-          capabilities={report.capabilities ?? []}
-          selectedEntityId={selectedEntityId}
-          onSelectEntity={setSelectedEntityId}
-        />
-      )}
-      <ActionJourney
-        reportId={report.id}
-        capabilities={report.capabilities ?? []}
-        selectedEntityId={selectedEntityId}
-      />
-      {report.foundationAudit && <FoundationAuditDetails audit={report.foundationAudit} />}
-      {/* Offered after the reader has seen what the free scan found, never before it. */}
-      <DeepScanOffer report={report} />
-      {/* Labs: a contained technical proof, deliberately out of the product's primary story. */}
-      {sidecarApplies(report) && (
-        <details className="labs-fold">
-          <summary>Labs — approved-adapter reference (alpina.travel)</summary>
-          <AlpinaSidecarPanel
-            reportId={report.id}
-            verified={
-              report.capabilities?.some(
-                (capability) => capability.actionId === "availability.check" && capability.state === "sidecar-enabled",
-              ) ?? false
-            }
-          />
-        </details>
-      )}
+      {/* The Context Engine first, what agents can do with it second. Everything precise is one click below. */}
+      <FirstScreen key={`first-${report.id}`} report={report} />
+      {/* Fix makes the Context Engine authoritative, in two parts: what agents cannot read, then who runs
+          what. Both shape what Activate publishes; neither moves readiness. The ChatGPT review sits
+          beside the model, on the first screen. */}
+      <section className="step-fix" id="step-fix" aria-labelledby="step-fix-title">
+        <header className="step-head">
+          <p className="section-kicker"><Wrench size={16} /> Fix</p>
+          <h2 className="step-title" id="step-fix-title">Make your Context Engine authoritative</h2>
+          <p className="step-subtitle">What exists only in your content, and who actually performs each action. Nothing here moves readiness; evidence does.</p>
+        </header>
+        <UnderstandPanel report={report} />
+        <OwnIt key={`own-${report.id}`} report={report} />
+        <OwnershipPanel report={report} />
+      </section>
+      {/* Activate: one screen away, so the report stays three words and their fixes. */}
+      <section className="activate-strip" id="step-activate" aria-labelledby="activate-strip-title">
+        <p className="section-kicker"><Rocket size={16} /> Activate</p>
+        <h2 id="activate-strip-title">Activate your business for agents</h2>
+        <p>Publish what agents need to discover, understand and use your business, and see who reads it.</p>
+        <Link className="activate-link" to={`/reports/${report.id}/activate`}>
+          Go to Activate <ArrowRight size={15} aria-hidden="true" />
+        </Link>
+      </section>
+      <details className="full-audit" id="full-audit">
+        <summary>
+          Model &amp; evidence <span>Entities · Terminology · Actions · Terms of Action · Evidence</span>
+          <small className="full-audit-hint">
+            Evidence, entities, terminology, actions, governance and agent-readiness details: the precise layer, the way engineers,
+            agencies, auditors and agents read it.
+          </small>
+        </summary>
+        <div className="full-audit-body">
+          <div className="full-audit-tools"><SiteToolsBadge /></div>
+          {/* The seven sections of the enterprise layer, in the order a business model reads: what the
+              organisation is and offers, the words it uses, what it should let agents do, who performs
+              each action, the contract agents load, why each state was given, and what agents are handed. */}
+          <nav className="full-audit-nav" aria-label="Model and evidence sections">
+            <a href="#audit-entities">Entities</a>
+            <a href="#audit-terminology">Terminology</a>
+            <a href="#audit-actions">Actions</a>
+            <a href="#audit-boundaries">Business boundaries</a>
+            <a href="#audit-terms">Terms of Action</a>
+            <a href="#audit-evidence">Evidence &amp; provenance</a>
+          </nav>
+          <ExecutiveSummary report={report} />
+          {/* Keyed by report so a recompile that lands on the child report hands back a fresh form. */}
+          {report.classification && <ClassificationCard key={report.id} classification={report.classification} onOverride={override} />}
+
+          <section className="audit-section" id="audit-entities" aria-labelledby="audit-entities-title">
+            <h2 id="audit-entities-title" className="audit-section-title">Entities <span>what the organisation is, offers, owns and refers to</span></h2>
+            <p className="audit-section-lead" id="audit-terminology">
+              With the terminology beside them: the words this organisation uses, and what it means by them. The map below draws entities,
+              terms and actions together, declared in blue and inferred marked as such.
+            </p>
+            {report.contextGraph && report.classification && (
+              <ContextEngineMap
+                context={report.contextGraph}
+                classification={report.classification}
+                capabilities={report.capabilities ?? []}
+                selectedEntityId={selectedEntityId}
+                onSelectEntity={setSelectedEntityId}
+              />
+            )}
+          </section>
+
+          <section className="audit-section" id="audit-actions" aria-labelledby="audit-actions-title">
+            <h2 id="audit-actions-title" className="audit-section-title">Actions <span>every expected action, its state, its interface and its evidence</span></h2>
+            <ActionJourney
+              reportId={report.id}
+              capabilities={report.capabilities ?? []}
+              selectedEntityId={selectedEntityId}
+            />
+          </section>
+
+          <section className="audit-section" id="audit-boundaries">
+            <BoundariesTable report={report} />
+          </section>
+
+          <section className="audit-section" id="audit-terms" aria-labelledby="audit-terms-title">
+            <h2 id="audit-terms-title" className="audit-section-title">Terms of Action <span>the consolidated contract agents load</span></h2>
+            <p className="audit-section-lead">
+              Machine-drafted from the evidence, refined by the decisions above, and rendered as{" "}
+              <a href={`/api/reports/${report.id}/publish/skill.md`} target="_blank" rel="noreferrer">the file an agent reads before acting</a>. It states
+              boundaries and cites this report for readiness; it never claims an action works.
+            </p>
+            <ServiceMapProvenance report={report} />
+          </section>
+
+          <section className="audit-section" id="audit-evidence" aria-labelledby="audit-evidence-title">
+            <h2 id="audit-evidence-title" className="audit-section-title">Evidence &amp; provenance <span>why each readiness state was given</span></h2>
+            <p className="audit-section-lead">
+              Every action above opens on its evidence: what was observed, declared, invoked or failed, with the source, the time and the
+              provenance of each claim. Readiness moves only on a verified invocation. The foundation audit below is the technical ground.
+            </p>
+            {report.foundationAudit && <FoundationAuditDetails audit={report.foundationAudit} />}
+          </section>
+
+          {/* Labs: a contained technical proof, deliberately out of the product's primary story. */}
+          {sidecarApplies(report) && (
+            <details className="labs-fold">
+              <summary>Labs — approved-adapter reference (alpina.travel)</summary>
+              <AlpinaSidecarPanel
+                reportId={report.id}
+                verified={
+                  report.capabilities?.some(
+                    (capability) =>
+                      capability.actionId === "availability.check" && capability.state === "agent-ready" && capability.via === "sidecar",
+                  ) ?? false
+                }
+              />
+            </details>
+          )}
+        </div>
+      </details>
     </div>
+    </EngineProvider>
   );
 }

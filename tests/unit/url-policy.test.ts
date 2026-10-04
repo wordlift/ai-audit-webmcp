@@ -37,7 +37,8 @@ describe("normalizeTargetUrl", () => {
 });
 
 describe("isPublicIpAddress", () => {
-  it.each(["8.8.8.8", "93.184.216.34", "2606:2800:220:1:248:1893:25c8:1946"])("allows %s", (address) => {
+  // 192.0.66.160 is WordPress VIP: a /16 block on 192.0 once turned every site it hosts away.
+  it.each(["8.8.8.8", "93.184.216.34", "2606:2800:220:1:248:1893:25c8:1946", "192.0.66.160", "192.88.1.1", "198.51.1.1", "203.0.1.1"])("allows %s", (address) => {
     expect(isPublicIpAddress(address)).toBe(true);
   });
 
@@ -49,6 +50,9 @@ describe("isPublicIpAddress", () => {
     "169.254.169.254",
     "172.31.255.255",
     "192.0.0.1",
+    "192.0.2.10",
+    "192.88.99.1",
+    "198.51.100.7",
     "192.168.0.1",
     "198.18.0.1",
     "203.0.113.9",

@@ -26,6 +26,18 @@ export interface ExtractedEntity {
   sourceUrl: string;
   sameAs: string[];
   offers: ExtractedOffer[];
+  /** Declared in the page's markup (the default), or inferred from its text by a markup provider. */
+  origin?: "markup" | "inferred";
+}
+
+export type RelationKind = "offers" | "located-in" | "provided-by" | "part-of" | "serves" | "brand";
+
+/** A relation the page's own markup declares between two of its entities, by their ids. */
+export interface ExtractedRelation {
+  from: string;
+  to: string;
+  kind: RelationKind;
+  sourceUrl: string;
 }
 
 export interface SitePageSnapshot {
@@ -40,7 +52,11 @@ export interface SitePageSnapshot {
   forms: SiteForm[];
   jsonLdTypes: string[];
   entities: ExtractedEntity[];
+  /** What the page's markup says about how its entities relate; absent when it says nothing. */
+  relations?: ExtractedRelation[];
   pageTools: PageAgentTool[];
+  /** The entry points this page declares; collector-only, never stored in a report. */
+  entryPoints?: DeclaredEntryPoint[];
   truncated: boolean;
 }
 
@@ -56,7 +72,9 @@ export interface DiscoveryDocument {
     | "webmcp-tools"
     | "mcp-server-card"
     | "agent-card"
-    | "api-catalog";
+    | "api-catalog"
+    | "ai-catalog"
+    | "ard";
   url: string;
   /**
    * `valid` means the document exists and parses as the format it claims. Many sites answer every
@@ -66,6 +84,8 @@ export interface DiscoveryDocument {
   found: boolean;
   /** Tool or operation names declared by the document, when it lists any. */
   declaredNames: string[];
+  /** For an agent catalog: what it points at, by artifact type and URL. */
+  entries?: Array<{ identifier?: string; type: string; url?: string }>;
 }
 
 export interface AgentToolParameter {
@@ -118,6 +138,36 @@ export interface SearchActionProbe {
   note?: string;
 }
 
+/** A schema.org `potentialAction` with a target on the site's own origin, as the page declared it. */
+export interface DeclaredEntryPoint {
+  actionType: string;
+  /** The action in the model this entry point serves. */
+  actionId: string;
+  template: string;
+  httpMethod: string;
+  /** True when it is a read over GET, the only kind the audit executes. */
+  read: boolean;
+  name?: string;
+  sourceUrl: string;
+}
+
+/** What happened when an agent used a declared entry point, or why it did not try. */
+export interface EntryPointProbe {
+  actionType: string;
+  actionId: string;
+  template: string;
+  url: string;
+  sourceUrl: string;
+  status: number;
+  /** False for a write, or for an input the audit could not supply: declared, not tested. */
+  invoked: boolean;
+  /** True when it is a read over GET: something a person may call again with inputs of their own. */
+  read?: boolean;
+  /** True only when the call answered and, if a query was sent, acknowledged it. */
+  ok: boolean;
+  note?: string;
+}
+
 /**
  * The result of talking to an MCP endpoint the page links to. `initialized` means the handshake
  * completed, which is a real round trip; a listed tool is a declaration until it is called.
@@ -131,6 +181,11 @@ export interface McpEndpointProbe {
   protocolVersion: string;
   tools: McpToolProbe[];
   error?: string;
+  /**
+   * How the audit learned of the endpoint. A declared source — the server card, the catalog, the
+   * site's own instructions — makes a failed handshake a finding; a bare link makes no claim.
+   */
+  source?: "link" | "server-card" | "catalog" | "skill";
 }
 
 /**
@@ -158,6 +213,8 @@ export interface SiteSnapshot {
   mcpEndpoints: McpEndpointProbe[];
   /** The declared SearchAction template and what happened when an agent executed it. */
   searchAction?: SearchActionProbe;
+  /** Every other declared entry point and what happened when an agent used it, or why it did not. */
+  entryPoints?: EntryPointProbe[];
   /** A WordLift fingerprint the entry page itself carries (plugin path, SDK host, dataset URI). */
   wordlift?: { marker: string; sourceUrl: string };
   /**

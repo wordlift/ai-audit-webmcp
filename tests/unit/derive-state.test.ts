@@ -24,7 +24,7 @@ describe("capability state truth table", () => {
     [[evidence({ audience: "human", kind: "form", verification: "observed" })], {}, "human-only"],
     [[evidence({ verification: "declared" })], {}, "unverified"],
     [[evidence({ verification: "invoked" })], {}, "agent-ready"],
-    [[evidence({ verification: "invoked", kind: "tool-result" })], { approvedSidecar: true }, "sidecar-enabled"],
+    [[evidence({ verification: "invoked", kind: "tool-result" })], { approvedSidecar: true }, "agent-ready"],
     // A broken route alongside a working one does not undo a call the audit completed.
     [[evidence({ verification: "invoked" }), evidence({ id: "failed", verification: "failed" })], {}, "agent-ready"],
     [[evidence({ verification: "declared" }), evidence({ id: "failed", verification: "failed" })], {}, "unverified"],

@@ -7,6 +7,7 @@ import { AuditOrchestrator } from "../../src/server/services/AuditOrchestrator.j
 import { AuditToolService } from "../../src/server/services/AuditToolService.js";
 import { DeepScanDelivery } from "../../src/server/services/DeepScanDelivery.js";
 import { DeepScanGate } from "../../src/server/services/DeepScanGate.js";
+import { parseSignalFields } from "../../src/domain/engine/signals.js";
 
 const fixedNow = new Date("2026-08-27T05:00:00.000Z");
 const TRAVEL = "https://alpina.travel/";
@@ -259,6 +260,21 @@ describe("the HubSpot form", () => {
     expect(body.fields.map((field) => field.name)).toEqual(["email", "audited_url", "audit_score", "audit_summary"]);
     // The surface is still recoverable from the submission context.
     expect(JSON.stringify(body)).toContain("MCP server");
+  });
+
+  it("carries qualification signals in the summary always, and in a field only where the form has the property", async () => {
+    let body: { fields: Array<{ name: string; value: string }> } = { fields: [] };
+    const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+      body = JSON.parse(String(init?.body));
+      return new Response("{}", { status: 200 });
+    }) as unknown as typeof fetch;
+    const signals = { archetype: "travel-hospitality", runs_on_wordlift: "yes", entities: "12", declared: "7", inferred: "5", confirmed: "0", relationships: "2", expected_actions: "10", agent_ready: "1", top_gaps: "booking.reserve;property.search", engine_status: "claimed", reviewed: "yes", claimed: "yes", owner_verified: "no", intents: "monitor" };
+
+    await new HubSpotLeadDelivery({ portalId: "p", formGuid: "f", fetchImpl, signalFields: parseSignalFields("claimed=wl_claimed, top_gaps=wl_top_gaps, nonsense=wl_x, inferred=bad property") }).deliver(lead, { ...report, signals });
+
+    expect(body.fields.map((field) => field.name)).toEqual(["email", "audited_url", "audit_score", "audit_summary", "wl_claimed", "wl_top_gaps"]);
+    expect(body.fields.find((field) => field.name === "wl_top_gaps")?.value).toBe("booking.reserve;property.search");
+    expect(body.fields.find((field) => field.name === "audit_summary")?.value).toContain("inferred: 5\nconfirmed: 0");
   });
 
   it("reports a refusal by its type, never by quoting the submission back", async () => {

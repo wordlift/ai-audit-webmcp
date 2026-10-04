@@ -13,9 +13,15 @@ export interface RateLimitOptions {
    * would be a budget for the platform; this is the one that is (see platformEgress.ts).
    */
   platform?: number;
+  /**
+   * How many audits the whole service runs in a day, whoever asks. The other limits shape a burst;
+   * this one is the bill. Past it, audits answer "at capacity" until tomorrow and reads go on.
+   */
+  daily?: number;
 }
 
 const DEFAULTS = { windowMs: 10 * 60 * 1_000, perIp: 12, global: 240, platform: 120 };
+const DAY_MS = 24 * 60 * 60 * 1_000;
 
 /** How a pool is named to the person who hit it. A platform without a label is named as declared. */
 const PLATFORM_LABELS: Record<string, string> = { anthropic: "Claude", openai: "ChatGPT" };
@@ -89,6 +95,9 @@ export function createAuditRateLimiters(options: RateLimitOptions = {}, egress?:
       egress,
     }),
     globalLimiter(windowMs, options.global ?? DEFAULTS.global, "The audit service is at capacity. Try again in a few minutes."),
+    ...(options.daily && options.daily > 0
+      ? [globalLimiter(DAY_MS, options.daily, "The audit service has used today's budget. Reading reports still works; audits resume tomorrow.")]
+      : []),
   ];
 }
 

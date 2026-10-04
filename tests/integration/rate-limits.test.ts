@@ -9,7 +9,7 @@ import { AlpinaAvailabilitySidecar } from "../../src/server/sidecars/alpina/adap
 
 const fixedNow = new Date("2026-08-27T05:00:00.000Z");
 
-function testApp(rateLimits: { perIp?: number; global?: number }) {
+function testApp(rateLimits: { perIp?: number; global?: number; daily?: number }) {
   const store = new MemoryReportStore(900_000, () => fixedNow);
   const orchestrator = new AuditOrchestrator(store, loadActionModel(), new FixtureProvider(), {
     publicAppUrl: "https://audit.example/",
@@ -81,5 +81,17 @@ describe("audit rate limits", () => {
       .post("/api/sidecars/alpina/availability")
       .send({ checkIn: "2026-09-12", checkOut: "2026-09-15", adults: 2 })
       .expect(200);
+  });
+});
+
+describe("the daily budget", () => {
+  it("stops audits for the day past the budget and keeps reads working", async () => {
+    const app = testApp({ perIp: 100, global: 100, daily: 1 });
+    const report = await audit(app).expect(200);
+
+    const blocked = await audit(app).expect(429);
+    expect(blocked.body.message).toMatch(/today's budget/);
+
+    await request(app).get(`/api/reports/${report.body.id}`).expect(200);
   });
 });

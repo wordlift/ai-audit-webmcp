@@ -19,12 +19,32 @@ export const reportPhaseSchema = z.enum(["understanding", "mapping", "checking",
 export const capabilityStageSchema = z.enum(["discover", "understand-decide", "act", "manage"]);
 export const capabilityStateSchema = z.enum([
   "not-expected",
-  "sidecar-enabled",
   "agent-ready",
   "unverified",
   "human-only",
   "missing",
 ]);
+
+/** Who runs the interface an agent-ready action was verified through: the site, or a WordLift sidecar. */
+export const capabilityViaSchema = z.enum(["site", "sidecar"]);
+
+/**
+ * `sidecar-enabled` was a fifth state until September 2026. It only ever meant agent-ready with
+ * WordLift running the interface — the same outcome for an agent, a different provenance — so it
+ * is now agent-ready with `via: "sidecar"`. Reports stored with the old value still parse: the
+ * value is read as what it always was.
+ */
+const RETIRED_SIDECAR_STATE = "sidecar-enabled";
+const legacyCapabilityStateSchema = z.preprocess(
+  (value) => (value === RETIRED_SIDECAR_STATE ? "agent-ready" : value),
+  capabilityStateSchema,
+);
+function readRetiredState(value: unknown): unknown {
+  if (value && typeof value === "object" && (value as { state?: unknown }).state === RETIRED_SIDECAR_STATE) {
+    return { ...(value as Record<string, unknown>), state: "agent-ready", via: "sidecar" };
+  }
+  return value;
+}
 
 export const contentCategorySchema = z
   .object({
@@ -68,6 +88,25 @@ export const domainEntitySchema = z
     confidence: z.number().min(0).max(1),
     /** A reviewer's judgment about this entity's place in the map; absent on the machine draft. */
     humanPriority: z.enum(["primary", "demoted"]).optional(),
+    /**
+     * Declared in the page's markup (absent means declared), or inferred from the page's text by a
+     * markup provider. An inferred entity is a candidate: it appears in the map and in the
+     * refinement interview, never in the evidence, and never moves readiness.
+     */
+    origin: z.enum(["markup", "inferred"]).optional(),
+  })
+  .strict();
+
+/** What the markup provider did for this report: the Fix finding's numbers, never its cost. */
+export const markupSummarySchema = z
+  .object({
+    provider: z.string().min(1).max(80),
+    model: z.string().min(1).max(80),
+    pagesGenerated: z.number().int().nonnegative(),
+    pagesFailed: z.number().int().nonnegative(),
+    /** Entities the pages have but do not declare: what Fix would publish. */
+    inferredEntities: z.number().int().nonnegative(),
+    declaredEntities: z.number().int().nonnegative(),
   })
   .strict();
 
@@ -107,10 +146,33 @@ export const entityActionBindingSchema = z
     actionId: z.string().min(1).max(160),
     role: z.enum(["provider", "object"]),
     basis: z.array(z.enum(["archetype", "structured-data", "observed-interface"])).min(1).max(3),
-    state: capabilityStateSchema,
+    state: legacyCapabilityStateSchema,
     evidenceIds: z.array(z.string().min(1).max(160)).max(MAX_EVIDENCE_ITEMS),
     interfaceIds: z.array(z.string().min(1).max(300)).max(40),
     confidence: z.number().min(0).max(1),
+  })
+  .strict();
+
+/**
+ * How two entities relate, as the site's own markup declares it: an organisation offers an
+ * apartment, an apartment is in a place, a service is provided by a partner. Nothing here is
+ * inferred; a relation the text merely suggests never enters the graph.
+ */
+export const entityRelationKindSchema = z.enum(["offers", "located-in", "provided-by", "part-of", "serves", "brand"]);
+
+export const entityRelationSchema = z
+  .object({
+    from: z.string().min(1).max(500),
+    to: z.string().min(1).max(500),
+    kind: entityRelationKindSchema,
+    /**
+     * Declared: the site's markup says so. Inferred: one sentence on a page names both ends with the
+     * words for this kind between them, and says nothing more; never evidence. Confirmed: a review said so.
+     */
+    provenance: z.enum(["declared", "inferred", "confirmed"]),
+    sourceUrl: z.string().url().max(2_048),
+    /** For an inferred relation, the sentence that supports it, as the page wrote it. */
+    evidence: z.string().min(1).max(300).optional(),
   })
   .strict();
 
@@ -123,6 +185,8 @@ export const contextGraphSchema = z
     lexicalEntries: z.array(lexicalEntrySchema).max(100),
     interfaces: z.array(actionInterfaceSchema).max(120),
     bindings: z.array(entityActionBindingSchema).max(240),
+    /** Absent on reports compiled before relations were read; never guessed in afterwards. */
+    relations: z.array(entityRelationSchema).max(200).optional(),
   })
   .strict();
 
@@ -182,6 +246,11 @@ export const jsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
 /** Who is responsible for an action: the site itself, a partner, nobody transactionally, or nobody at all. */
 export const actionBoundarySchema = z.enum(["owned", "partner-handoff", "informational-only", "not-applicable"]);
 
+/** Who runs a handed-off action: the partner's name, and its site when it has one. */
+export const actionPartnerSchema = z
+  .object({ name: z.string().min(1).max(120), url: z.string().url().max(2_048).optional() })
+  .strict();
+
 export const governanceSchema = z
   .object({
     requiresAuthentication: z.boolean(),
@@ -215,7 +284,9 @@ export const actionContractSchema = z
   })
   .strict();
 
-export const capabilityResultSchema = z
+export const capabilityResultSchema = z.preprocess(
+  readRetiredState,
+  z
   .object({
     actionId: z.string().min(1).max(160),
     label: z.string().min(1).max(240),
@@ -226,6 +297,8 @@ export const capabilityResultSchema = z
     expected: z.boolean(),
     expectationSource: z.array(z.string().min(1).max(240)).min(1).max(20),
     state: capabilityStateSchema,
+    /** Present on agent-ready actions: who ran the interface the audit verified. */
+    via: capabilityViaSchema.optional(),
     humanSupport: z.boolean(),
     agentSupport: z.boolean(),
     appliesTo: z
@@ -247,8 +320,10 @@ export const capabilityResultSchema = z
     boundary: actionBoundarySchema.optional(),
     boundaryRationale: z.string().min(1).max(500).optional(),
     boundarySource: z.literal("human-provided").optional(),
+    boundaryPartner: actionPartnerSchema.optional(),
   })
-  .strict();
+  .strict(),
+);
 
 export const readinessScoreSchema = z
   .object({
@@ -379,6 +454,22 @@ export const humanAssertionSchema = z
             decision: z.enum(["confirm", "reject"]),
             boundary: actionBoundarySchema.optional(),
             rationale: z.string().min(1).max(500).optional(),
+            /** For a partner handoff: who runs it. Published as the action's provider. */
+            partner: actionPartnerSchema.optional(),
+          })
+          .strict(),
+      )
+      .max(80)
+      .optional(),
+    /** Judgments about how two entities relate: confirm an inferred relation, or reject any that is wrong. */
+    relationDecisions: z
+      .array(
+        z
+          .object({
+            from: z.string().min(1).max(500),
+            kind: entityRelationKindSchema,
+            to: z.string().min(1).max(500),
+            decision: z.enum(["confirm", "reject"]),
           })
           .strict(),
       )
@@ -395,6 +486,10 @@ export const refinementSchema = z
     conflicts: z.array(z.string().min(1).max(300)).max(30),
     provenance: z.literal("human-provided"),
     appliedAt: z.string().datetime(),
+    /** Applied by the Context Engine to a new read of the site, from decisions made on an earlier one. */
+    carried: z.boolean().optional(),
+    /** Whose decisions these are: a reviewer holding the engine's claim, or its verified owner. Absent: unclaimed. */
+    filedBy: z.enum(["reviewer", "owner"]).optional(),
   })
   .strict();
 
@@ -415,6 +510,20 @@ export const reportErrorSchema = z
  */
 export const scanDepthSchema = z.enum(["basic", "deep"]);
 
+/**
+ * Whether agents can find this site and how it wants them to behave: the catalog at the well-known
+ * path (the envelope agent registries crawl) and the memory a skill file carries. `unknown` is a
+ * site that answers every path with its HTML page, where absence proves nothing.
+ */
+export const agentDiscoverySchema = z
+  .object({
+    catalog: z.enum(["found", "missing", "unknown"]),
+    catalogUrl: z.string().url().max(2_048).optional(),
+    memory: z.enum(["found", "missing", "unknown"]),
+    memoryUrl: z.string().url().max(2_048).optional(),
+  })
+  .strict();
+
 export const reportRecordSchema = z
   .object({
     id: z.string().uuid(),
@@ -429,6 +538,10 @@ export const reportRecordSchema = z
     expiresAt: z.string().datetime(),
     actionModelVersion: z.string().min(1).max(40),
     scanDepth: scanDepthSchema.optional(),
+    /** When the site was read. On a report built from a recent crawl of the same site, when that crawl ran. */
+    collectedAt: z.string().datetime().optional(),
+    /** The report whose crawl this one was built from, when the site had been read within the reuse window. */
+    reusedFrom: z.string().uuid().optional(),
     classification: classificationResultSchema.optional(),
     foundationAudit: foundationAuditSummarySchema.optional(),
     /** The publishing platform the site's own structured data names — detected, never guessed. */
@@ -444,8 +557,12 @@ export const reportRecordSchema = z
     capabilities: z.array(capabilityResultSchema).max(80).optional(),
     /** Present only on a human-refined revision; the machine draft never carries one. */
     refinement: refinementSchema.optional(),
+    /** While an audit runs: how many of the pages sent to the extractor have been read. */
+    textRead: z.object({ read: z.number().int().min(0).max(100), of: z.number().int().min(1).max(100) }).strict().optional(),
     score: readinessScoreSchema.optional(),
     priorities: z.array(priorityGapSchema).max(3).optional(),
+    agentDiscovery: agentDiscoverySchema.optional(),
+    markup: markupSummarySchema.optional(),
     errors: z.array(reportErrorSchema).max(30),
     evidenceTruncated: z.boolean(),
   })
@@ -472,6 +589,8 @@ export const createReportRequestSchema = z
     archetypeOverride: archetypeSchema.nullable().optional(),
     fixtureId: z.string().min(1).max(120).nullable().optional(),
     depth: scanDepthSchema.optional(),
+    /** Read the site again even if it was read in the last day; otherwise that crawl is reused. */
+    fresh: z.boolean().optional(),
   })
   .strict();
 

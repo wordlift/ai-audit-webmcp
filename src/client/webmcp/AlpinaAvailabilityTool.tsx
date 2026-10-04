@@ -41,6 +41,7 @@ export function AlpinaAvailabilityTool({ reportId, enabled }: { reportId?: strin
       }
 
       const result = await checkAlpinaAvailability({
+        surface: "webmcp",
         reportId,
         propertyId: typeof args?.propertyId === "string" ? args.propertyId : undefined,
         checkIn: requireDate(args?.checkIn, "the arrival date"),

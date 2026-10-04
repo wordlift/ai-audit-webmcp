@@ -19,23 +19,27 @@ const report = {
   contextGraph: { pages: [{}, {}, {}, {}], entities: [], interfaces: [], lexicon: [] },
 } as unknown as ReportRecord;
 
-function renderOffer(overrides: Partial<ReportRecord> = {}) {
-  return render(
+/** Renders the offer and opens it, as a person does from the one line on the first screen. */
+function renderOffer(overrides: Partial<ReportRecord> = {}, graceMs?: number) {
+  const rendered = render(
     <MemoryRouter>
-      <DeepScanOffer report={{ ...report, ...overrides } as ReportRecord} />
+      <DeepScanOffer report={{ ...report, ...overrides } as ReportRecord} {...(graceMs === undefined ? {} : { graceMs })} />
     </MemoryRouter>,
   );
+  const strip = screen.queryByRole("button", { name: /claim your context engine/i });
+  if (strip) fireEvent.click(strip);
+  return rendered;
 }
 
 describe("DeepScanOffer", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("offers the deeper read against what the free scan actually did", () => {
+  it("offers to claim and expand the Context Engine against what the free scan actually did", () => {
     renderOffer();
 
-    expect(screen.getByText(/read 4 representative pages/i)).toBeVisible();
-    expect(screen.getByText(/up to 12 of them/i)).toBeVisible();
-    expect(screen.getByRole("button", { name: /send me the deep scan/i })).toBeDisabled();
+    expect(screen.getByText(/built from 4 representative pages\. Claim it to save it/i)).toBeVisible();
+    expect(screen.getByText(/expand it to up to 12 pages/i)).toBeVisible();
+    expect(screen.getByRole("button", { name: /claim & expand/i })).toBeDisabled();
   });
 
   it("asks for nothing on a report that already read the whole site", () => {
@@ -56,7 +60,7 @@ describe("DeepScanOffer", () => {
 
     renderOffer();
     fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "reviewer@example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /send me the deep scan/i }));
+    fireEvent.click(screen.getByRole("button", { name: /claim & expand/i }));
 
     await waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toMatchObject({
@@ -65,6 +69,46 @@ describe("DeepScanOffer", () => {
       email: "reviewer@example.com",
       surface: "web",
     });
+  });
+
+  it("claims the engine once the address is accepted, and never lets a pending key replace one this browser holds", async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem("wl-engine-key:alpina.travel", "holder_key_kept_from_before");
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      calls.push(String(url));
+      if (String(url).endsWith("/claim")) {
+        return new Response(JSON.stringify({ engine: { host: "alpina.travel" }, key: "pending_key_from_a_later_claim", standing: "pending" }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      return new Response(JSON.stringify({ ...report, status: "running", phase: "understanding" }), { status: 202, headers: { "content-type": "application/json" } });
+    }));
+
+    renderOffer();
+    fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "reviewer@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /claim & expand/i }));
+
+    await waitFor(() => expect(calls.some((url) => url.endsWith("/claim"))).toBe(true));
+    expect(calls.findIndex((url) => url === "/api/reports")).toBeLessThan(calls.findIndex((url) => url.endsWith("/claim")));
+    await waitFor(() => expect(screen.getByText(/Someone else claimed this Context Engine first/)).toBeVisible());
+    expect(window.localStorage.getItem("wl-engine-key:alpina.travel")).toBe("holder_key_kept_from_before");
+  });
+
+  it("asks for no second key from a browser that already holds the engine", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      calls.push(String(url));
+      return new Response(JSON.stringify({ ...report, status: "running", phase: "understanding" }), { status: 202, headers: { "content-type": "application/json" } });
+    }));
+    render(
+      <MemoryRouter>
+        <DeepScanOffer report={report} claimed />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /expand your context engine/i }));
+    fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "reviewer@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /^expand it$/i }));
+    await waitFor(() => expect(screen.getByText(/Expanding it now/)).toBeVisible());
+    expect(calls.some((url) => url.endsWith("/claim"))).toBe(false);
   });
 
   it("confirms with the address masked, and a link to watch the scan", async () => {
@@ -77,12 +121,28 @@ describe("DeepScanOffer", () => {
 
     renderOffer();
     fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "reviewer@example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /send me the deep scan/i }));
+    fireEvent.click(screen.getByRole("button", { name: /claim & expand/i }));
 
     // The address a reader can recognise, in a page anyone with the link can open.
     expect(await screen.findByText("re******@example.com")).toBeVisible();
     expect(screen.queryByText(/reviewer@example\.com/)).toBeNull();
     expect(screen.getByRole("link", { name: /follow it live/i })).toHaveAttribute("href", expect.stringContaining("/reports/"));
+  });
+
+  it("announces the scan as running after a moment while the server is still reading, and takes it back if the server then refuses", async () => {
+    // A live deep scan answers only when it is done; a refusal that arrives late still lands.
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => setTimeout(() => resolve(
+      new Response(JSON.stringify({ error: "rate_limited", message: "Too many audits from this address." }), { status: 429, headers: { "content-type": "application/json" } }),
+    ), 150))));
+
+    renderOffer({}, 30);
+    fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "reviewer@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /claim & expand/i }));
+    expect(await screen.findByText(/expanding it now/i)).toBeVisible();
+    expect(screen.getByRole("link", { name: /follow it live/i })).toBeVisible();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/too many audits/i);
+    expect(screen.queryByText(/expanding it now/i)).toBeNull();
   });
 
   it("says what went wrong instead of pretending the scan started", async () => {
@@ -95,9 +155,9 @@ describe("DeepScanOffer", () => {
 
     renderOffer();
     fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: "reviewer@example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /send me the deep scan/i }));
+    fireEvent.click(screen.getByRole("button", { name: /claim & expand/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/too many audits/i);
-    expect(screen.queryByText(/deep scan running/i)).toBeNull();
+    expect(screen.queryByText(/context engine claimed/i)).toBeNull();
   });
 });

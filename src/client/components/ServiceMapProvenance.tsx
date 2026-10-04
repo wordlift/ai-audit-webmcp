@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { ReportRecord } from "../../shared/types/index.js";
 import { reportPageUrl } from "../api/client";
+import { reviewPrompt } from "./reviewPrompt";
 
 export const BOUNDARY_LABELS: Record<string, string> = {
   owned: "Owned capability",
@@ -15,12 +16,7 @@ export function ServiceMapProvenance({ report }: { report: ReportRecord }) {
   const [copied, setCopied] = useState(false);
 
   async function copyReviewPrompt() {
-    const prompt = [
-      `Review the machine-generated Terms of Action on this page: ${reportPageUrl(report.id)}`,
-      "First use inspect-terms-of-action. Then interview me about the operating role, the primary entities, the terminology, and the boundary of every expected action (owned, partner handoff, informational only, or not applicable). Use explain-capability whenever evidence is unclear.",
-      "Once we have resolved the decisions, call refine-terms-of-action. Do not alter evidence-based agent readiness.",
-    ].join("\n\n");
-    await navigator.clipboard.writeText(prompt);
+    await navigator.clipboard.writeText(reviewPrompt(report.id));
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2_000);
   }

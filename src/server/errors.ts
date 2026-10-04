@@ -2,7 +2,7 @@
 export class ReportRequestError extends Error {
   constructor(
     message: string,
-    readonly status: 400 | 404 | 409 | 502 | 504 = 400,
+    readonly status: 400 | 403 | 404 | 409 | 502 | 504 = 400,
     readonly code = "report_request_invalid",
   ) {
     super(message);

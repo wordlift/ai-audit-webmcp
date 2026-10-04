@@ -11,11 +11,22 @@ const AUDIT_CODES = new Set([
   "audit_unauthorized",
 ]);
 
-/** What a stored error means for the reader, in one sentence, without the provider's vocabulary. */
+/**
+ * What a stored error means for the reader, in one sentence, without the provider's vocabulary.
+ * A partial report says what is missing and why in a person's terms; a status code or an upstream
+ * name is for the log, never for the page.
+ */
 export function explainReportError(error: ReportError): string {
   if (AUDIT_CODES.has(error.code)) {
-    const reason = error.message.replace(/\.$/, "").replace(/^The audit service/, "the audit service");
-    return `The WordLift foundation audit did not complete (${reason}), so there is no foundation score.`;
+    const because =
+      error.code === "audit_timeout"
+        ? "it took too long"
+        : error.code === "audit_rate_limited"
+          ? "the service was busy"
+          : error.code === "audit_unreachable"
+            ? "the service could not be reached"
+            : "the service did not answer";
+    return `The WordLift foundation audit did not complete because ${because}, so there is no foundation score this time. Run again to try it once more.`;
   }
   switch (error.code) {
     case "collection_timeout":
@@ -38,6 +49,24 @@ const COLLECTION_CODES = new Set(["site_blocked", "collection_timeout", "collect
 export function visibleErrors(errors: ReportError[]): ReportError[] {
   const collectionFailed = errors.some((error) => COLLECTION_CODES.has(error.code));
   return collectionFailed ? errors.filter((error) => error.code !== "classifier_unavailable") : errors;
+}
+
+/**
+ * Whether all that went wrong is the foundation audit not answering: the model and what agents can
+ * do are whole, only the foundation score is missing. That is a line beside the score, not a banner
+ * above the business.
+ */
+export function onlyFoundationMissing(errors: ReportError[]): boolean {
+  const visible = visibleErrors(errors).filter((error) => error.code !== "classifier_unavailable");
+  return visible.length > 0 && visible.every((error) => error.provider === "wordlift-ai-audit");
+}
+
+/** What stopped the site's pages from being read at all: the collector, or a destination the service refuses. */
+const UNREADABLE_CODES = new Set(["site_blocked", "collection_timeout", "collector_failed", "dns_failure", "private_network", "too_many_redirects", "response_too_large", "unsupported_port", "invalid_url"]);
+
+/** The reason a site could not be read, when that is what happened; null when its pages were read. */
+export function unreadableReason(errors: ReportError[]): ReportError | null {
+  return errors.find((error) => UNREADABLE_CODES.has(error.code)) ?? null;
 }
 
 /** A heading for a report that could not be built, chosen by what actually went wrong. */
