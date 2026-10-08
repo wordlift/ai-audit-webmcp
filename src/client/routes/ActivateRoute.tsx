@@ -7,6 +7,7 @@ import { getPublication, getReport, getVisits, type ReportVisits } from "../api/
 import { AgentSurfaces } from "../components/AgentSurfaces";
 import { StepBar } from "../components/StepBar";
 import { DocDialog, type PublishedDoc } from "../components/DocDialog";
+import { ActivateRunbook } from "../components/ActivateRunbook";
 import { publishUrl, talkToUsUrl } from "../components/FixPanel";
 import { OWN_WORDS } from "../components/OwnIt";
 import { ReportErrorState } from "../components/ReportErrorState";
@@ -272,6 +273,8 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
           <span>for a whole business, several sites, or an interface that has to be built.</span>
         </p>
       </header>
+
+      <ActivateRunbook publication={publication} onRead={setOpenDoc} />
 
       <section className="activate-section" aria-labelledby="outcomes-title">
         <h2 id="outcomes-title">What WordLift publishes</h2>

@@ -302,7 +302,7 @@ describe("the round trip", () => {
         },
       ],
     };
-    const publication = compilePublication(report, { reportUrl: "https://audit.example/reports/x", apiUrl: "https://audit.example/api/reports/x", now: () => fixedNow });
+    const publication = compilePublication(report, { reportUrl: "https://audit.example/reports/x", apiUrl: "https://audit.example/api/reports/x", serviceUrl: "https://audit.example", now: () => fixedNow });
     const check = actionsIn(publication.jsonLd).find((action) => action["@type"] === "CheckAction");
     expect(check).toMatchObject({
       "@type": "CheckAction",
@@ -346,6 +346,38 @@ describe("the publish endpoint", () => {
     expect(ardManifestSchema.parse(JSON.parse(catalog.text)).entries.length).toBeGreaterThan(0);
 
     await request(app).get(`/api/reports/${randomUUID()}/publish`).expect(404);
+  });
+
+  it("serves the runbook an agent applies, and the catalog as the site should serve it", async () => {
+    const { orchestrator } = harness();
+    const app = createApp({ orchestrator });
+    const created = await request(app).post("/api/reports").send({ requestId: randomUUID(), url: ALPINA.toString() }).expect(200);
+    const id = created.body.id as string;
+
+    const runbook = await request(app).get(`/api/reports/${id}/publish/runbook.md`).expect(200);
+    expect(runbook.headers["content-type"]).toContain("text/markdown");
+    const text = runbook.text;
+    // Where each document goes, in the site's own paths; what to fetch; how to prove it from outside.
+    expect(text).toMatch(/^# Activate alpina\.travel/);
+    for (const path of ["/.well-known/ai-catalog.json", "/.well-known/terms-of-action.md", "/llms.txt"]) expect(text).toContain(`\`${path}\``);
+    expect(text).toContain(`https://audit.example/api/reports/${id}/publish/site-catalog.json`);
+    expect(text).toContain(`<link rel="ai-catalog" href="/.well-known/ai-catalog.json">`);
+    expect(text).toContain("Agentmap: https://alpina.travel/.well-known/ai-catalog.json");
+    expect(text).toContain(`curl -sI https://alpina.travel/.well-known/ai-catalog.json`);
+    expect(text).toContain(`-X POST https://audit.example/api/reports`);
+    // The line that keeps this off the generator path.
+    expect(text).toContain("Do not add tools, endpoints or actions that are not in these documents");
+    expect(text).toContain("Do not mark anything as working");
+    expect(text).toContain(`book-a-demo/?source=ai-audit&report=${id}`);
+
+    // The site catalog points its skill entry at the site's own copy; ours still points at ours.
+    const ours = JSON.parse((await request(app).get(`/api/reports/${id}/publish/ai-catalog.json`).expect(200)).text);
+    const theirs = JSON.parse((await request(app).get(`/api/reports/${id}/publish/site-catalog.json`).expect(200)).text);
+    const skillOf = (catalog: { entries: Array<{ type: string; url?: string }> }) => catalog.entries.find((entry) => entry.type === "application/ai-skill+md")?.url;
+    expect(skillOf(ours)).toBe(`https://audit.example/api/reports/${id}/publish/skill.md`);
+    expect(skillOf(theirs)).toBe("https://alpina.travel/.well-known/terms-of-action.md");
+    expect(ardManifestSchema.parse(theirs).entries).toHaveLength(ours.entries.length);
+    expect(theirs.entries.filter((entry: { type: string }) => entry.type !== "application/ai-skill+md")).toEqual(ours.entries.filter((entry: { type: string }) => entry.type !== "application/ai-skill+md"));
   });
 
   it("is counted as a read of the report, like the page and the contracts", () => {

@@ -520,6 +520,7 @@ export class AuditOrchestrator {
     return compilePublication(report, {
       reportUrl: this.reportUrl(report.id),
       apiUrl: new URL(`/api/reports/${report.id}`, this.options.publicAppUrl).toString(),
+      serviceUrl: new URL(this.options.publicAppUrl).origin,
       sidecarEndpoints: this.sidecarEndpoints(report),
       now: () => this.now(),
     });

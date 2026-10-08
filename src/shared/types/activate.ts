@@ -38,7 +38,7 @@ export interface Publication {
   /** How many human decisions the report carries; zero publishes what the audit verified, no less. */
   decided: number;
   actions: PublishedAction[];
-  documents: { pageJsonLd: string; skill: string; catalog: string; llms: string };
+  documents: { pageJsonLd: string; skill: string; catalog: string; llms: string; runbook: string; siteCatalog: string };
   /** Where a site serves the catalog: the one spelling this service writes. */
   catalogPath: string;
   jsonLd: Record<string, unknown>;
@@ -46,6 +46,10 @@ export interface Publication {
   catalog: { entries: unknown[]; [key: string]: unknown };
   /** llms.txt: the model as the markdown index language models read at a site's root. */
   llms: string;
+  /** What an agent does to put the documents on the site, step by step, and how it proves they are there. */
+  runbook: string;
+  /** Where each document lives once it is on the site. */
+  sitePaths: { catalog: string; skill: string; llms: string };
 }
 
 /** One readiness reading of a site: a report with a score, and what kind of report it was. */

@@ -11,6 +11,7 @@ import { DeliveryRequests } from "../services/DeliveryRequests.js";
 import type { CapabilityTestService } from "../services/CapabilityTest.js";
 import { ToolCallError } from "../services/toolErrors.js";
 import { funnel } from "../services/funnel.js";
+import { catalogForSite } from "../../domain/publish/runbook.js";
 import { doorIntent, isPageEvent } from "../../shared/format/funnel.js";
 
 /**
@@ -252,6 +253,24 @@ export function createReportsRouter(
     try {
       const publication = await orchestrator.publish(param(request.params.reportId));
       response.type("application/ld+json").send(JSON.stringify(publication.jsonLd, null, 2));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+  // The runbook an agent applies to put the documents on the site, and the catalog as the site
+  // should serve it (its skill entry pointing at the site's own copy, not at ours).
+  router.get("/:reportId/publish/runbook.md", async (request, response) => {
+    try {
+      const publication = await orchestrator.publish(param(request.params.reportId));
+      response.type("text/markdown; charset=utf-8").send(publication.runbook);
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+  router.get("/:reportId/publish/site-catalog.json", async (request, response) => {
+    try {
+      const publication = await orchestrator.publish(param(request.params.reportId));
+      response.type("application/json").send(JSON.stringify(catalogForSite(publication), null, 2));
     } catch (error) {
       sendError(response, error);
     }
