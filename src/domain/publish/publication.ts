@@ -3,6 +3,7 @@ import type { ActionBoundary, CapabilityEvidence, CapabilityResult, ContextGraph
 import type { EntryProtocol, Publication, PublishedAction, PublishedAs, PublishedEntryPoint } from "../../shared/types/activate.js";
 import { ARD, ardManifestSchema, type ArdEntry, type ArdManifest } from "./ardSchema.js";
 import { llmsText } from "./llms.js";
+import { runbookMarkdown, SITE_PATHS } from "./runbook.js";
 
 export type { EntryProtocol, Publication, PublishedAction, PublishedAs, PublishedEntryPoint };
 
@@ -17,6 +18,8 @@ export interface PublicationOptions {
   reportUrl: string;
   /** The report's API root, absolute: the documents are served beneath it. */
   apiUrl: string;
+  /** The service's own origin, for the runbook's verification step. */
+  serviceUrl: string;
   /** Where WordLift runs an interface for this site, by action, for what a sidecar verified. */
   sidecarEndpoints?: Record<string, string>;
   now?: () => Date;
@@ -442,9 +445,11 @@ export function compilePublication(report: ReportRecord, options: PublicationOpt
     skill: `${options.apiUrl}/publish/skill.md`,
     catalog: `${options.apiUrl}/publish/ai-catalog.json`,
     llms: `${options.apiUrl}/publish/llms.txt`,
+    runbook: `${options.apiUrl}/publish/runbook.md`,
+    siteCatalog: `${options.apiUrl}/publish/site-catalog.json`,
   };
 
-  return {
+  const publication: Omit<Publication, "runbook"> = {
     site: origin,
     host,
     reportId: report.id,
@@ -458,5 +463,7 @@ export function compilePublication(report: ReportRecord, options: PublicationOpt
     skill: skillMarkdown(report, entities, actions, host, options, publishedAt),
     catalog: catalogFor(report, actions, host, origin, siteName, options, publishedAt),
     llms: llmsText(report, entities, actions, { origin, host, reportUrl: options.reportUrl, documents }),
+    sitePaths: SITE_PATHS,
   };
+  return { ...publication, runbook: runbookMarkdown({ ...publication, runbook: "" }, { serviceUrl: options.serviceUrl }) };
 }

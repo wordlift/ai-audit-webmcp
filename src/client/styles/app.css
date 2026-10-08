@@ -1194,6 +1194,10 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .activate-score { margin: 0; color: var(--muted); }
 .activate-score b { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
 .activate-section { display: grid; gap: 14px; padding: clamp(22px, 4vw, 36px); background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 18px; }
+.activate-runbook { border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; background: var(--surface); }
+.activate-runbook h2 { display: inline-flex; align-items: center; gap: 8px; }
+.activate-runbook code { font-size: 0.9em; }
+.activate-runbook .publish-actions { margin-top: 12px; flex-wrap: wrap; }
 .activate-section h2 { margin: 0; font-size: 1.35rem; }
 .activate-lead { margin: 0; color: var(--muted); max-width: 66ch; }
 .activate-table td { vertical-align: top; }

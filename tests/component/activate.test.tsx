@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   ActivateScreen,
   activationSummary,
@@ -51,8 +51,12 @@ const publication: Publication = {
     skill: `https://audit.example/api/reports/${REPORT_ID}/publish/skill.md`,
     catalog: `https://audit.example/api/reports/${REPORT_ID}/publish/ai-catalog.json`,
     llms: `https://audit.example/api/reports/${REPORT_ID}/publish/llms.txt`,
+    runbook: `https://audit.example/api/reports/${REPORT_ID}/publish/runbook.md`,
+    siteCatalog: `https://audit.example/api/reports/${REPORT_ID}/publish/site-catalog.json`,
   },
   catalogPath: "/.well-known/ai-catalog.json",
+  sitePaths: { catalog: "/.well-known/ai-catalog.json", skill: "/.well-known/terms-of-action.md", llms: "/llms.txt" },
+  runbook: "# Activate alpina.travel: put the published documents on the site\n",
   jsonLd: { "@context": "https://schema.org", "@graph": [] },
   skill: "---\nname: alpina.travel Terms of Action\n---\n",
   catalog: { entries: [] },
@@ -160,7 +164,8 @@ describe("the Activate screen", () => {
     for (const title of ["Business data", "Agent instructions", "Discovery", "llms.txt"]) expect(screen.getByRole("article", { name: title })).toBeVisible();
     // Each document opens in place, formatted, and the raw file stays one click away.
     expect(screen.getAllByRole("button", { name: /read the whole file/i })).toHaveLength(4);
-    expect(screen.getAllByRole("link", { name: /^raw/i })).toHaveLength(4);
+    // Four documents, and the runbook that puts them on the site.
+    expect(screen.getAllByRole("link", { name: /^raw/i })).toHaveLength(5);
     // What agents are given to read lives here, with the artifacts, not three clicks down in the full audit.
     expect(screen.getByRole("heading", { name: "What agents are given to read" })).toBeInTheDocument();
     // The door to WordLift, at the top and at the close, carries the report and the intent; the step bar's "Activate" is the page itself.
@@ -183,6 +188,21 @@ describe("the Activate screen", () => {
     expect(activations).toHaveTextContent("5 succeeded, 1 failed");
     expect(activations).toHaveTextContent("1 failure: upstream timeout");
     expect(activations).toHaveTextContent("webmcp 4 · web 2");
+  });
+
+  it("leads with the runbook for an agent that has the site's code, and the prompt names the site's paths", async () => {
+    const written: string[] = [];
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText: async (text: string) => { written.push(text); } } });
+    renderScreen(ledger);
+
+    const section = screen.getByRole("region", { name: /put it on your site with an agent/i });
+    expect(within(section).getByText(/Claude Code or Codex/)).toBeVisible();
+    fireEvent.click(within(section).getByRole("button", { name: /copy the prompt for your agent/i }));
+    await screen.findByRole("button", { name: /copied/i });
+    expect(written[0]).toContain(`https://audit.example/api/reports/${REPORT_ID}/publish/runbook.md`);
+    expect(written[0]).toContain("/.well-known/ai-catalog.json");
+    expect(written[0]).toContain("Add nothing that is not in those documents");
+    vi.unstubAllGlobals();
   });
 
   it("says what to expect when nothing has read it yet, never a row of zeros", () => {

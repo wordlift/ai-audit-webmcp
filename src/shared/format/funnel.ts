@@ -8,6 +8,7 @@ export const PAGE_EVENTS = [
   "engine_explored",
   "review_prompt_copied",
   "ask_prompt_copied",
+  "runbook_prompt_copied",
   "capability_opened",
   "ownership_started",
   "model_corrected",
