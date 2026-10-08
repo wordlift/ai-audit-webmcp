@@ -94,16 +94,20 @@ if [ -n "${OPENAI_APPS_CHALLENGE:-}" ]; then
   CHALLENGE_ENV="##OPENAI_APPS_CHALLENGE=${OPENAI_APPS_CHALLENGE}"
 fi
 
-# Deep-scan reports are delivered through the AI Audit's own HubSpot form. Export both before
-# deploying; without them a deep scan still records what it owes and sends nothing. Neither is a
-# secret — form submissions are unauthenticated — but the GUID stays out of the public repository.
+# Reports are delivered through the AI Audit's own HubSpot form. Export both before deploying;
+# without them an audit still records what it owes and sends nothing. Neither is a secret — form
+# submissions are unauthenticated — but the GUID stays out of the public repository.
 HUBSPOT_ENV=""
 if [ -n "${HUBSPOT_PORTAL_ID:-}" ] && [ -n "${HUBSPOT_FORM_GUID:-}" ]; then
   HUBSPOT_ENV="##HUBSPOT_PORTAL_ID=${HUBSPOT_PORTAL_ID}##HUBSPOT_FORM_GUID=${HUBSPOT_FORM_GUID}##HUBSPOT_REGION=${HUBSPOT_REGION:-na1}"
-  # Only once the property exists on the form: HubSpot refuses a submission naming a field it has not got.
-  if [ -n "${HUBSPOT_SOURCE_FIELD:-}" ]; then
-    HUBSPOT_ENV="${HUBSPOT_ENV}##HUBSPOT_SOURCE_FIELD=${HUBSPOT_SOURCE_FIELD}"
-  fi
+  # Each only once the property exists on the form: HubSpot refuses a submission naming a field
+  # it has not got. The source names the surface; the status says requested, then completed; the
+  # signal fields carry qualification counts.
+  for optional in HUBSPOT_SOURCE_FIELD HUBSPOT_STATUS_FIELD HUBSPOT_SIGNAL_FIELDS; do
+    if [ -n "${!optional:-}" ]; then
+      HUBSPOT_ENV="${HUBSPOT_ENV}##${optional}=${!optional}"
+    fi
+  done
 fi
 
 PROJECT_NUMBER="$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')"
