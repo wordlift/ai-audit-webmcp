@@ -2,6 +2,7 @@ import { Bot, Check, LoaderCircle } from "lucide-react";
 import type { EntityRelation, ReportRecord } from "../../shared/types/index.js";
 import { businessModel } from "../../shared/format/businessModel.js";
 import { modelView } from "../../shared/format/modelView.js";
+import { SendMeTheReport } from "./SendMeTheReport";
 
 /** How a relation reads in one line while the model forms: "AlpiNest → offers Samspitze 4". */
 const RELATION_WORDS: Record<EntityRelation["kind"], string> = {
@@ -95,6 +96,9 @@ export function ReportProgress({ report }: { report: ReportRecord }) {
           Foundation score <strong>{report.foundationAudit.score}/100</strong>, already in.
         </p>
       )}
+
+      {/* The one thing asked, asked while there is time to answer it. */}
+      <SendMeTheReport reportId={report.id} host={host} />
 
       <p className="progress-footnote" role="status">
         We read the text of every page and call what the site declares rather than counting it. This page

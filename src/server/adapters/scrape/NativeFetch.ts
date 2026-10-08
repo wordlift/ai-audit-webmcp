@@ -1,5 +1,5 @@
 import { parseHTML } from "linkedom";
-import { BASIC_SCAN_PAGES, DEEP_SCAN_PAGES } from "../../../shared/format/deepScan.js";
+import { BASIC_SCAN_PAGES, MAX_REPORT_PAGES } from "../../../shared/format/deepScan.js";
 import { safeFetch, UrlPolicyError, type UrlPolicyOptions } from "../../security/urlPolicy.js";
 import { probeMcpEndpoint } from "./mcpProbe.js";
 import {
@@ -35,7 +35,7 @@ const MAX_LINKS = 150;
 const MAX_FORMS = 20;
 const MAX_TEXT = 20_000;
 /** A site is sampled, never crawled: whatever depth a caller asks for, this is the ceiling. */
-const MAX_PAGES_CEILING = DEEP_SCAN_PAGES;
+const MAX_PAGES_CEILING = MAX_REPORT_PAGES;
 const MAX_SCRIPTS = 6;
 const MAX_SCRIPT_BYTES = 400_000;
 const MAX_MCP_ENDPOINTS = 3;

@@ -8,7 +8,7 @@ import type {
   DomainEntity,
   EntityRelation,
 } from "../../shared/types/index.js";
-import { DEEP_SCAN_PAGES } from "../../shared/format/deepScan.js";
+import { MAX_REPORT_PAGES } from "../../shared/format/deepScan.js";
 import { inferRelations } from "./inferRelations.js";
 
 const ENTITY_ACTIONS: Record<string, string[]> = {
@@ -66,7 +66,7 @@ export function compileContextGraph(
 
   const auditedPages = pages.length > 0 ? pages : [emptyPage(canonicalUrl)];
   return {
-    pages: auditedPages.slice(0, DEEP_SCAN_PAGES).map((page) => ({
+    pages: auditedPages.slice(0, MAX_REPORT_PAGES).map((page) => ({
       url: page.url,
       title: page.title,
       role: page.role,

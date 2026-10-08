@@ -2,8 +2,9 @@ import { useWebMCP } from "use-webmcp-tool";
 import { refineSummaryText, refineToolResult, type RefineToolResult } from "../../shared/format/toolResults.js";
 import { humanAssertionSchema } from "../../shared/schemas/report.js";
 import type { ReportRecord } from "../../shared/types/index.js";
-import { refineReport, reportPageUrl } from "../api/client";
-import { engineHostFor, engineKeyFor } from "../engine/engineKeys";
+import { claimEngine, refineReport, reportPageUrl } from "../api/client";
+import { keyForReview } from "../engine/engineKeys";
+import { announceEngineChange } from "../engine/useEngine";
 import { resolveOpenReport } from "./reportToolScope";
 import { REFINE_SERVICE_MAP_TOOL, REFINE_SERVICE_MAP_TOOL_ALIAS } from "./toolSchemas";
 
@@ -33,7 +34,8 @@ export function RefineServiceMapTool({ reportId, report }: { reportId: string; r
     const assertions = parsed.data;
 
     // A review run in a browser holding the site's Context Engine (or its review token) is kept there too.
-    const child = await refineReport(current.id, assertions, engineKeyFor(engineHostFor(current)));
+    const child = await refineReport(current.id, assertions, await keyForReview(current, claimEngine));
+    announceEngineChange();
     return refineToolResult(current, child, assertions, reportPageUrl(child.id));
   };
 

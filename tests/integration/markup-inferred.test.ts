@@ -127,6 +127,7 @@ describe("the model forming while the audit runs", () => {
       now: () => fixedNow,
       mode: "live",
       reuseWindowMs: 0,
+      markupOnBasic: "all",
       providers: {
         scrape: scraper,
         markup: provider,
@@ -134,7 +135,7 @@ describe("the model forming while the audit runs", () => {
       },
     });
     const requestId = randomUUID();
-    const finished = target.create({ requestId, url: "https://alpina.travel/", depth: "deep" });
+    const finished = target.create({ requestId, url: "https://alpina.travel/" });
 
     // The foundation audit is still out, and the extractor has read every page already.
     let running = await store.get(requestId);
@@ -218,7 +219,7 @@ describe("the markup a page should have", () => {
       },
       totals: () => ({ pages: calls, inputTokens: 0, outputTokens: 0, estimatedUsd: 0 }),
     };
-    const report = await audit(orchestrator(provider), "deep");
+    const report = await audit(orchestrator(provider, { markupOnBasic: "all" }));
 
     const entities = report.contextGraph?.entities ?? [];
     const valley = entities.filter((entity) => entity.name === "Lungau Valley");
@@ -229,14 +230,18 @@ describe("the markup a page should have", () => {
     expect(samspitze?.types).toEqual(["LodgingBusiness"]);
   });
 
-  it("sends only the pages that declare nothing on a basic scan, and every page on a deep one", async () => {
-    const basic = fakeMarkup();
-    await audit(orchestrator(basic.provider), "basic");
-    expect(basic.asked.map((page) => page.url)).toEqual(["https://alpina.travel/booking"]);
+  it("sends only the pages that declare nothing by default, every page when asked, and a named depth changes nothing", async () => {
+    const thin = fakeMarkup();
+    await audit(orchestrator(thin.provider), "basic");
+    expect(thin.asked.map((page) => page.url)).toEqual(["https://alpina.travel/booking"]);
 
-    const deep = fakeMarkup();
-    await audit(orchestrator(deep.provider), "deep");
-    expect(deep.asked.map((page) => page.url)).toEqual(["https://alpina.travel/", "https://alpina.travel/booking"]);
+    const named = fakeMarkup();
+    await audit(orchestrator(named.provider), "deep");
+    expect(named.asked.map((page) => page.url)).toEqual(["https://alpina.travel/booking"]);
+
+    const all = fakeMarkup();
+    await audit(orchestrator(all.provider, { markupOnBasic: "all" }), "basic");
+    expect(all.asked.map((page) => page.url)).toEqual(["https://alpina.travel/", "https://alpina.travel/booking"]);
 
     const none = fakeMarkup();
     await audit(orchestrator(none.provider, { markupOnBasic: "none" }), "basic");

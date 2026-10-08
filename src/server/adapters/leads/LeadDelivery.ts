@@ -30,8 +30,19 @@ export class LeadDeliveryError extends Error {
   }
 }
 
+/** What the lead platform may know the moment an address is given: the site, and where the report will be. */
+export interface AnnouncedReport {
+  canonicalUrl: string;
+  reportUrl: string;
+}
+
 export interface LeadDelivery {
   /** Named in logs, so an operator can tell which system was asked and refused. */
   readonly name: string;
+  /**
+   * The first of two writes: the address and the site, as soon as the address is given, so a
+   * lead exists even if the audit never lands. The second, `deliver`, carries the result.
+   */
+  announce(lead: DeepScanLead, report: AnnouncedReport): Promise<void>;
   deliver(lead: DeepScanLead, report: DeliverableReport): Promise<void>;
 }

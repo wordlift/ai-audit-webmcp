@@ -60,3 +60,26 @@ export function captureReviewToken(): void {
   }
   window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}`);
 }
+
+/**
+ * The key a review is filed under, claiming the site's Context Engine for this browser first when
+ * nobody holds it yet. A correction is the moment someone shows they care about the model; before
+ * 2026-10-08 the claim rode on an email address, which is now asked while the audit runs and may be
+ * skipped. A browser that already holds the engine keeps its key; a pending key never replaces one
+ * it holds; a server without engines answers with nothing and the review is filed unkept.
+ */
+export async function keyForReview(
+  report: { id: string; requestedUrl: string },
+  claim: (reportId: string) => Promise<{ engine: { host: string }; key: string; standing: string }>,
+): Promise<string | null> {
+  const host = engineHostFor(report);
+  const held = engineKeyFor(host);
+  if (held) return held;
+  try {
+    const result = await claim(report.id);
+    if (result.standing === "holder" || !engineKeyFor(result.engine.host)) saveEngineKey(result.engine.host, result.key);
+    return result.key;
+  } catch {
+    return null;
+  }
+}

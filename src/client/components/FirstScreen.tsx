@@ -2,7 +2,7 @@ import { ArrowRight, Bot, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { CapabilityResult, ReportRecord } from "../../shared/types/index.js";
-import { getVisits, refineReport, startReport, type ReportVisits } from "../api/client";
+import { claimEngine, getVisits, refineReport, startReport, type ReportVisits } from "../api/client";
 import { ActionDetailDialog } from "./ActionDetailDialog";
 import { AgentDiary } from "./AgentDiary";
 import { AgentDoors } from "./AgentDoors";
@@ -10,8 +10,8 @@ import { ContextEnginePreview, cardAssertions, contextEngineSummary, graphRelati
 import { modelView, siteKind } from "../../shared/format/modelView.js";
 import { EngineStatus } from "./EngineStatus";
 import { holds, useReportEngine } from "../engine/EngineContext";
-import { track } from "../engine/track";
-import { DeepScanOffer } from "./DeepScanOffer";
+import { keyForReview } from "../engine/engineKeys";
+import { announceEngineChange } from "../engine/useEngine";import { track } from "../engine/track";
 import { publishUrl } from "./FixPanel";
 import { entityRole } from "../../shared/format/businessModel.js";
 import { explainReportError, onlyFoundationMissing, unreadableReason } from "../../shared/format/explainError.js";
@@ -358,7 +358,8 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
             keptOnEngine={holds(stored)}
             onSave={async (decisions) => {
               // The same review the interview files, from the cards: the reviewed version opens with the corrections on it.
-              const child = await refineReport(report.id, cardAssertions(decisions), engineKey);
+              const child = await refineReport(report.id, cardAssertions(decisions), engineKey ?? (await keyForReview(report, claimEngine)));
+              announceEngineChange();
               track(report.id, "model_corrected");
               navigate(`/reports/${child.id}`);
             }}
@@ -413,9 +414,6 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
           })}
         </ol>
       )}
-
-      {/* Claiming comes after the proof: what the model is, what agents can do with it, then keep it. */}
-      <DeepScanOffer report={report} variant="inline" claimed={holds(stored)} />
 
       {beyond > 0 && (
         <p className="discovery-line">

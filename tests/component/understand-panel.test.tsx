@@ -158,7 +158,7 @@ describe("the Fix helpers the pitch and Activate share", () => {
     expect(sampleJsonLd(declared)).toMatchObject({ "@context": "https://schema.org", "@type": "LodgingBusiness", "@id": "https://alpina.travel/#property" });
     expect(publishUrl("abc")).toBe("https://my.wordlift.io/?source=ai-audit&report=abc");
     expect(publishUrl("abc", { action: "availability.check", intent: "agent-ready" })).toBe("https://my.wordlift.io/?source=ai-audit&report=abc&action=availability.check&intent=agent-ready");
-    expect(talkToUsUrl("abc", "checkout.create")).toBe("https://wordlift.io/book%20a%20demo/?source=ai-audit&report=abc&action=checkout.create");
+    expect(talkToUsUrl("abc", "checkout.create")).toBe("https://wordlift.io/book-a-demo/?source=ai-audit&report=abc&action=checkout.create");
   });
 
   it("says what the site's markup relates an entity to, in a few words on its row", () => {

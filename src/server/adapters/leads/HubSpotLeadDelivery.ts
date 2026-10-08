@@ -1,4 +1,4 @@
-import { LeadDeliveryError, type DeliverableReport, type LeadDelivery } from "./LeadDelivery.js";
+import { LeadDeliveryError, type AnnouncedReport, type DeliverableReport, type LeadDelivery } from "./LeadDelivery.js";
 import type { DeepScanLead } from "./LeadStore.js";
 import { leadSignalsText, type LeadSignalName } from "../../../domain/engine/signals.js";
 
@@ -39,6 +39,12 @@ export interface HubSpotOptions {
    * same reason as the source field; the signals always travel as lines at the end of the summary.
    */
   signalFields?: Partial<Record<LeadSignalName, string>>;
+  /**
+   * A form property that says how far the audit got for this contact: `requested` on the first
+   * write, `completed` on the second. Opt-in for the same reason; without it the two writes are
+   * told apart by the fields they carry (the first has no score).
+   */
+  statusField?: string;
   /** Overridable for tests; production is HubSpot's public submission host. */
   endpoint?: string;
   timeoutMs?: number;
@@ -70,29 +76,54 @@ const SOURCE_VALUES: Record<DeepScanLead["source"], string> = {
 const MOVEMENT_NAME = "WordLift AI Audit — what moved";
 
 const SOURCE_NAMES: Record<DeepScanLead["source"], string> = {
-  web: "WordLift AI Audit — deep scan (web form)",
-  webmcp: "WordLift AI Audit — deep scan (in-page agent)",
-  mcp: "WordLift AI Audit — deep scan (MCP server)",
+  web: "WordLift AI Audit — report (web form)",
+  webmcp: "WordLift AI Audit — report (in-page agent)",
+  mcp: "WordLift AI Audit — report (MCP server)",
 };
+
+/** The two writes, as the portal sees them. Stable strings, like the sources. */
+const STATUS_VALUES = { requested: "requested", completed: "completed" } as const;
 
 export class HubSpotLeadDelivery implements LeadDelivery {
   readonly name = "hubspot";
 
   constructor(private readonly options: HubSpotOptions) {}
 
+  /**
+   * The first write: the address, the site and where the report will be. HubSpot creates the
+   * contact from the address, or finds it; the second write updates the same contact's properties.
+   */
+  async announce(lead: DeepScanLead, report: AnnouncedReport): Promise<void> {
+    await this.submit(lead, report.reportUrl, "report", [
+      { name: "email", value: lead.email },
+      { name: "audited_url", value: report.canonicalUrl },
+      ...(this.options.sourceField ? [{ name: this.options.sourceField, value: SOURCE_VALUES[lead.source] }] : []),
+      ...(this.options.statusField ? [{ name: this.options.statusField, value: STATUS_VALUES.requested }] : []),
+    ]);
+  }
+
   async deliver(lead: DeepScanLead, report: DeliverableReport): Promise<void> {
-    const base = this.options.endpoint ?? SUBMISSION_HOSTS[this.options.region ?? "na1"];
-    const endpoint = `${base}/${this.options.portalId}/${this.options.formGuid}`;
-    const fields = [
+    await this.submit(lead, report.reportUrl, report.subject ?? "report", [
       { name: "email", value: lead.email },
       { name: "audited_url", value: report.canonicalUrl },
       { name: "audit_score", value: String(report.agentReadinessScore) },
       { name: "audit_summary", value: plainText(`${report.reportUrl}\n\n${report.summary}${report.signals ? `\n\n${leadSignalsText(report.signals)}` : ""}`) },
       ...(this.options.sourceField ? [{ name: this.options.sourceField, value: SOURCE_VALUES[lead.source] }] : []),
+      ...(this.options.statusField && report.subject !== "movement" ? [{ name: this.options.statusField, value: STATUS_VALUES.completed }] : []),
       ...(report.signals
         ? Object.entries(this.options.signalFields ?? {}).map(([signal, property]) => ({ name: property as string, value: report.signals![signal as LeadSignalName] }))
         : []),
-    ];
+    ]);
+  }
+
+  private async submit(
+    lead: DeepScanLead,
+    pageUri: string,
+    subject: "report" | "movement",
+    fields: Array<{ name: string; value: string }>,
+  ): Promise<void> {
+    const base = this.options.endpoint ?? SUBMISSION_HOSTS[this.options.region ?? "na1"];
+    const endpoint = `${base}/${this.options.portalId}/${this.options.formGuid}`;
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
@@ -103,7 +134,7 @@ export class HubSpotLeadDelivery implements LeadDelivery {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           fields,
-          context: { pageUri: report.reportUrl, pageName: report.subject === "movement" ? MOVEMENT_NAME : SOURCE_NAMES[lead.source] },
+          context: { pageUri, pageName: subject === "movement" ? MOVEMENT_NAME : SOURCE_NAMES[lead.source] },
         }),
         signal: controller.signal,
       });

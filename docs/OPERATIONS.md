@@ -32,7 +32,8 @@ inputs differ.
 | `ACTION_MODEL_VERSION` | `0.1.0` | Which `action-model/` version to load |
 | `OPENAI_APPS_CHALLENGE` | — | Domain-verification token served at `/.well-known/openai-apps-challenge`. Unset means the path 404s |
 | `HUBSPOT_PORTAL_ID` | — | HubSpot portal for deep-scan report delivery. Set together with the form GUID |
-| `HUBSPOT_FORM_GUID` | — | The form a deep scan's report is delivered through |
+| `HUBSPOT_FORM_GUID` | — | The form a report is delivered through |
+| `HUBSPOT_STATUS_FIELD` | — | A form property set to `requested` on the first write and `completed` on the second; only once it exists on the form |
 | `HUBSPOT_REGION` | `na1` | `eu1` for an EU-hosted portal: it has its own submission host |
 | `HUBSPOT_SOURCE_FIELD` | — | A form property recording which surface a lead came from. Create it on the form before setting this |
 | `HUBSPOT_SIGNAL_FIELDS` | — | Qualification signals into form properties, `signal=property` pairs, e.g. `claimed=wl_claimed,top_gaps=wl_top_gaps`. Same rule: only properties the form already has |
@@ -45,7 +46,7 @@ inputs differ.
 | `MARKUP_FALLBACK` | `none` | `gemini` steps in for a page only when Content Analysis fails or does not answer in time, and for names only: a candidate is kept solely when its exact name is in the page's text, with no description, link or offer. Needs `GEMINI_API_KEY` |
 | `GEMINI_API_KEY` | — | Secret Manager in production; required when the provider is `gemini` |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | The model behind the stand-in |
-| `MARKUP_ON_BASIC` | `thin` | Which pages of a basic scan are sent: `thin` (those that declare no entities), `all`, or `none`. A deep scan sends every page. The deploy script passes `all` with Content Analysis, which costs nothing per call |
+| `MARKUP_ON_BASIC` | `thin` | Which pages of a scan are sent: `thin` (those that declare no entities), `all`, or `none`. The deploy script passes `all` with Content Analysis, which costs nothing per call |
 | `GEMINI_INPUT_USD_PER_MILLION`, `GEMINI_OUTPUT_USD_PER_MILLION` | `0.3`, `2.5` | List prices used for the estimate on `/api/health` and in the `markup_generated` log line |
 | `OBSERVE_INTERVAL_DAYS` | `7` | How often a site whose owner gave a deep-scan address is read again. `0` never re-reads and never writes |
 | `OBSERVE_TICK_MINUTES` | `60` | How often the due list is checked |
@@ -77,13 +78,13 @@ npx @modelcontextprotocol/inspector
 `GET /mcp` answers 405 by design: there is no session to resume and no stream to open.
 `GET /api/health` reports which surfaces the running revision answers on.
 
-## Deep scans and report delivery
+## Report delivery
 
-The basic scan reads four representative pages and asks for nothing. A deep scan reads up to
-twelve and asks for an email address, which is where the finished report is sent.
+The scan reads five representative pages and asks for nothing. An email address, given while the
+audit runs or with the tool call, is where the finished report is sent; it buys nothing else.
 
 The address never enters the report. Reports are public documents with shareable links, so a
-private identifier has no place in one; a deep scan's address is filed in its own store, keyed by
+private identifier has no place in one; a delivery address is filed in its own store, keyed by
 report id, with the same TTL the report has:
 
 | Where | Memory mode | Firestore mode |
@@ -107,7 +108,7 @@ separable from the older audit's sign-up modal. Its fields are `email` (the only
 | Variable | Purpose |
 |---|---|
 | `HUBSPOT_PORTAL_ID` | The HubSpot portal |
-| `HUBSPOT_FORM_GUID` | The form a deep scan's report is delivered through |
+| `HUBSPOT_FORM_GUID` | The form a report is delivered through |
 | `HUBSPOT_REGION` | `eu1` for an EU-hosted portal, `na1` otherwise (default) |
 
 Both are set together or not at all; startup refuses half a configuration, because a deployment with
@@ -128,9 +129,9 @@ Four ways into the same HubSpot form, and each is identifiable without inference
 | Where the lead came from | How you know | `source` in the lead store |
 |---|---|---|
 | The older AI Audit's sign-up modal | Carries `firstname`, `lastname`, `company`, `jobtitle`, `country`; its page context is a page on `audit.wordlift.io` | not recorded here — a different service |
-| This app's deep-scan form on a report | Context `WordLift AI Audit — deep scan (web form)` | `web` |
-| An agent driving the report page (WebMCP) | Context `WordLift AI Audit — deep scan (in-page agent)` | `webmcp` |
-| The remote MCP server | Context `WordLift AI Audit — deep scan (MCP server)` | `mcp` |
+| This app's "send me the report" field while the audit runs | Context `WordLift AI Audit — report (web form)` | `web` |
+| An agent driving the report page (WebMCP) | Context `WordLift AI Audit — report (in-page agent)` | `webmcp` |
+| The remote MCP server | Context `WordLift AI Audit — report (MCP server)` | `mcp` |
 
 The context name always travels. Set `HUBSPOT_SOURCE_FIELD` to a form property — `audit_source`, say
 — and the same distinction arrives as a field with a stable value (`ai-audit-webmcp:web-form`,
@@ -143,9 +144,13 @@ told apart by a `surface` field on the request. A caller could of course claim e
 attribution, not authorization. `mcp` is not accepted there — the MCP transport makes its own claim
 on its own endpoint.
 
-Delivery never blocks an audit and never fails one. A refused or unreachable submission leaves the
-lead pending, is retried immediately once, and is retried again by the next completed deep scan. With
-no form configured, deep scans still run and still record what they owe; nothing is sent.
+The form is written twice per address: once the moment it is given (address, audited URL, source,
+and `HUBSPOT_STATUS_FIELD` = `requested` when that property exists on the form), once when the
+report lands (score, summary, link, signals, status `completed`). HubSpot matches the second to the
+contact by address. Delivery never blocks an audit and never fails one. A refused or unreachable
+submission leaves the lead pending, is retried immediately once, and is retried again by the next
+completed audit. With no form configured, audits still run and still record what they owe; nothing
+is sent.
 
 `GET /api/health` names the delivery system in `surfaces.reportDelivery`, or `null` when none is
 configured.
@@ -253,9 +258,9 @@ never move a readiness score. The report carries `markup` with the counts the Fi
 
 The cost is a log line per audit, `markup_generated provider model pages failed in out usd`, and a
 running total on `GET /api/health` under `markup`. At list price a page is roughly 3,000 input and
-600 output tokens, about \$0.0025; a basic scan sends only pages that declare nothing, so at most
-four, about \$0.01; a deep scan sends all twelve, about \$0.03. At the daily budget's ceiling of
-2,000 audits that is \$20 to \$60 a day, and the real number is on the health endpoint.
+600 output tokens, about \$0.0025; with `thin` a scan sends only pages that declare nothing, so at
+most five, about \$0.0125; with `all`, all five. At the daily budget's ceiling of 2,000 audits that
+is up to \$25 a day, and the real number is on the health endpoint.
 
 The model is one file, `src/server/adapters/markup/GeminiMarkup.ts`, behind `MarkupProvider`.
 WordLift's HTML-to-JSON-LD service replaces it there; the validator in `jsonLd.ts`, which refuses
@@ -480,8 +485,8 @@ domain mapping and its data are untouched, and the preview is deleted with
 What a preview does share is the WordLift API key, the ScrapingBee key and, with
 `MARKUP_PROVIDER=gemini`, the Gemini key: each audit it runs costs what a production audit costs,
 and `/api/health` on the preview shows the Gemini running total. Rate limits and the daily budget
-apply per instance as on production. A deep scan on a preview records the address in
-`preview_deepScanLeads` and sends nothing.
+apply per instance as on production. An address given on a preview is recorded in
+`preview_deepScanLeads` and nothing is sent.
 
 The `preview_` collections need the same TTL policy as production's, once per project, or they
 outlive the preview:
@@ -582,7 +587,7 @@ to any of these has to reach the page in the same release:
 | Server logs are kept for 30 days | Cloud Logging `_Default` bucket retention |
 | Deep-scan addresses go to HubSpot's EU data centre | `HUBSPOT_REGION=eu1` |
 | Pages are rendered by ScrapingBee and classified by Google Natural Language | `SCRAPE_PROVIDER`, `CLASSIFIER_PROVIDER` |
-| A basic scan reads four pages, a deep scan up to twelve | `MAX_PAGES` in the scrape adapters |
+| A scan reads five pages; a stored report carries at most twelve | `SCAN_PAGES` and `MAX_REPORT_PAGES` in `src/shared/format/deepScan.ts` |
 | No cookies, no analytics, no third-party scripts | `index.html` and the same-origin CSP |
 
 A removal request (section 9 of the page) is a manual delete of the report document, its

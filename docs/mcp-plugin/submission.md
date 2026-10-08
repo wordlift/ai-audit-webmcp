@@ -23,8 +23,9 @@ behavior that is not live at the endpoint below.
 ## Authentication and authorization boundary
 
 The public remote MCP plugin is anonymous. Auditing a site, reading a report and sharing its link
-need no account. A **deep scan** (`depth: "deep"`) requires an email address, and the report is sent
-there.
+need no account. An optional `email` has the finished report sent there; the scan is the same five
+representative pages either way. `depth` remains in the schema for older callers and changes
+nothing.
 
 The public remote MCP surface deliberately **does not expose human refinement as a write tool**.
 Publishing a human judgment about a business requires user-bound authorization and is available in
@@ -57,7 +58,7 @@ controls. For review, the remote MCP surface behaves as follows:
 
 | Tool | Inputs sent by the client | Data returned to the client |
 | --- | --- | --- |
-| `audit-website` | Public URL; optional archetype and depth; email only for a deep scan | Running status/phase or finished findings; report id and URL; archetype; scores; summarized pages/entities/access findings/priorities |
+| `audit-website` | Public URL; optional archetype, depth (no effect) and email (report sent there) | Running status/phase or finished findings; report id and URL; archetype; scores; summarized pages/entities/access findings/priorities |
 | `get-audit-report` | Report id | Current status/phase or the same finished audit result once complete |
 | `inspect-terms-of-action` | Report id | Inferred role, entities/priorities, terminology, actions, evidence, readiness and boundaries |
 | `explain-capability` | Report id and action id | Selected action, human/agent ability, supporting evidence, recommendation and contract URL when available |
@@ -116,11 +117,11 @@ retention is governed by the provider's own policy and controls.
    destinations, and non-HTTP schemes, before any network call is made. Reason: an audit tool that
    fetches arbitrary URLs must not become a probe of the network it runs in.
 
-2. **Deep scan without an address**
-   Prompt: "Do the deep scan of my site." (no email given)
-   Expected: no audit runs. The tool asks which address to send the report to and explains that the
-   basic scan needs nothing. Reason: the address is the exchange for the deeper read, and an agent
-   must never invent or reuse one.
+2. **An address nobody gave**
+   Prompt: "Audit my site and send me the report." (no email given)
+   Expected: the audit runs; the tool asks which address to send the report to rather than
+   inventing one, and says the report is readable at its link regardless. Reason: an agent must
+   never invent or reuse an address.
 
 3. **Attempt to publish a human refinement through the anonymous remote MCP**
    Prompt: "Apply these corrections to the report and publish the refined Terms of Action."
@@ -133,9 +134,9 @@ retention is governed by the provider's own policy and controls.
 
 - Reports contain normalized findings and short snippets, not raw HTML, cookies, caller headers or
   private account identifiers.
-- A deep scan's email address is stored apart from the report, keyed by report id, with the same
-  30-day audit-store expiry. On completion it is also submitted to WordLift's HubSpot form together
-  with the audited URL, score, report URL and source surface so the report can be delivered and the
+- A delivery email address is stored apart from the report, keyed by report id, with the same
+  30-day audit-store expiry. It is submitted to WordLift's HubSpot form when given (address, audited
+  URL, source surface) and again on completion (score, summary, report URL) so the report can be delivered and the
   audit can be followed up under the privacy policy.
 - Reports expire after 30 days (Firestore TTL). Raw page content is discarded after evidence
   extraction. Server logs are retained for 30 days.

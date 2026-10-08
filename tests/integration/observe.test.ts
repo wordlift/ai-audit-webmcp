@@ -22,6 +22,7 @@ function recordingDelivery() {
   const delivery: LeadDelivery & { sent: typeof sent } = {
     name: "recording",
     sent,
+    async announce() {},
     async deliver(lead, report) {
       sent.push({ email: lead.email, summary: report.summary, reportUrl: report.reportUrl, agentReadinessScore: report.agentReadinessScore, ...(report.subject ? { subject: report.subject } : {}) });
     },
@@ -59,9 +60,9 @@ function harness(options: { perTick?: number; intervalDays?: number } = {}) {
   return { leads, orchestrator, visits, delivery, observer, advance, now };
 }
 
-/** A deep scan someone asked for by email, delivered: the address Observe may act for. */
+/** A report someone asked to have sent by email, delivered: the address Observe may act for. */
 async function deliveredLead(h: ReturnType<typeof harness>, url = ALPINA, email = "owner@example.com"): Promise<DeepScanLead> {
-  const report = await h.orchestrator.create({ requestId: randomUUID(), url, depth: "deep" });
+  const report = await h.orchestrator.create({ requestId: randomUUID(), url });
   const at = h.now().toISOString();
   const expires = new Date(h.now().getTime() + 30 * DAY).toISOString();
   await h.leads.record({ reportId: report.id, email, reportUrl: `https://audit.example/reports/${report.id}`, source: "web", requestedAt: at, expiresAt: expires });
@@ -193,7 +194,7 @@ describe("the cadence", () => {
     const h = harness({ perTick: 2, intervalDays: 7 });
     const leads = [await deliveredLead(h, ALPINA, "one@example.com"), await deliveredLead(h, "https://shop.example/", "two@example.com"), await deliveredLead(h, "https://saas.example/", "three@example.com")];
     // An address whose report was never delivered is not acted for; neither is one that opted out.
-    const pending = await h.orchestrator.create({ requestId: randomUUID(), url: "https://publisher.example/", depth: "deep" });
+    const pending = await h.orchestrator.create({ requestId: randomUUID(), url: "https://publisher.example/" });
     await h.leads.record({ reportId: pending.id, email: "four@example.com", reportUrl: "https://audit.example/reports/x", source: "mcp", requestedAt: h.now().toISOString(), expiresAt: leads[0]!.expiresAt });
     const out = await deliveredLead(h, "https://insurance.example/", "five@example.com");
     await h.leads.markUnsubscribed(out.reportId, h.now().toISOString());

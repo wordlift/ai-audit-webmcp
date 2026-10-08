@@ -1,3 +1,4 @@
+import { talkToUsUrl } from "../../shared/format/doors.js";
 import { entityJsonLd } from "../../shared/format/entityJsonLd.js";
 import type { CapabilityResult, DomainEntity } from "../../shared/types/index.js";
 
@@ -8,7 +9,6 @@ import type { CapabilityResult, DomainEntity } from "../../shared/types/index.js
  * The report id travels with every door, and the action and the intent when there is one.
  */
 const DASHBOARD_URL = "https://my.wordlift.io/";
-const TALK_TO_US_URL = "https://wordlift.io/book%20a%20demo/";
 
 /**
  * Why someone arrives at the dashboard: to claim the Context Engine, build it into the live graph,
@@ -40,11 +40,4 @@ export function publishUrl(reportId: string, options: { action?: string; intent?
   return url.toString();
 }
 
-/** Where a gap the product cannot close by itself goes: the team, with the report and the action named. */
-export function talkToUsUrl(reportId: string, action?: string): string {
-  const url = new URL(TALK_TO_US_URL);
-  url.searchParams.set("source", "ai-audit");
-  url.searchParams.set("report", reportId);
-  if (action) url.searchParams.set("action", action);
-  return url.toString();
-}
+export { talkToUsUrl };

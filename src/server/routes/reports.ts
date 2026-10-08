@@ -5,9 +5,9 @@ import { UnknownFixtureError } from "../adapters/fixtures/FixtureProvider.js";
 import { ReportRequestError } from "../errors.js";
 import { UrlPolicyError } from "../security/urlPolicy.js";
 import type { AuditOrchestrator } from "../services/AuditOrchestrator.js";
-import type { DeepScanDelivery } from "../services/DeepScanDelivery.js";
+import type { ReportDelivery } from "../services/ReportDelivery.js";
 import type { VisitLedger } from "../services/VisitLedger.js";
-import { DeepScanGate } from "../services/DeepScanGate.js";
+import { DeliveryRequests } from "../services/DeliveryRequests.js";
 import type { CapabilityTestService } from "../services/CapabilityTest.js";
 import { ToolCallError } from "../services/toolErrors.js";
 import { funnel } from "../services/funnel.js";
@@ -18,6 +18,13 @@ import { doorIntent, isPageEvent } from "../../shared/format/funnel.js";
  * gate, which files it beside the report, and never travels on to the orchestrator that builds the
  * public document.
  */
+const deliverBodySchema = z
+  .object({
+    email: z.string().min(3).max(254),
+    surface: z.enum(["web", "webmcp"]).optional(),
+  })
+  .strict();
+
 const createReportBodySchema = createReportRequestSchema.extend({
   email: z.string().max(254).optional(),
   /**
@@ -48,9 +55,9 @@ function hostOf(url: string): string {
 export function createReportsRouter(
   orchestrator: AuditOrchestrator,
   auditLimiters: RequestHandler[] = [],
-  deepScan: DeepScanGate = new DeepScanGate(null),
+  deliveries: DeliveryRequests = new DeliveryRequests(null),
   writeLimiters: RequestHandler[] = [],
-  delivery?: DeepScanDelivery,
+  delivery?: ReportDelivery,
   visits?: VisitLedger,
   capabilityTests?: CapabilityTestService,
 ): Router {
@@ -59,20 +66,50 @@ export function createReportsRouter(
   router.post("/", ...auditLimiters, async (request, response) => {
     try {
       const { email, surface, ...audit } = createReportBodySchema.parse(request.body);
-      await deepScan.authorize({
+      await deliveries.request({
         reportId: audit.requestId,
         reportUrl: orchestrator.reportUrl(audit.requestId),
-        depth: audit.depth,
+        siteUrl: audit.url,
         email,
         source: surface ?? "web",
       });
       const report = await orchestrator.create(audit);
-      if (audit.depth === "deep" && report.status !== "running") delivery?.settle(report.id);
+      // Settled for every landed report: it costs one read of the ledger, and it is the only way
+      // an address given while the audit ran (below) is delivered to.
+      if (report.status !== "running") delivery?.settle(report.id);
       if (report.status === "running") {
         response.status(202).json({ reportId: report.id, phase: report.phase, retryUrl: `/api/reports/${report.id}` });
         return;
       }
       response.status(200).json(report);
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
+  // The address, given while the audit runs or after it landed: "send me the report". Recorded
+  // beside the report; the report itself never changes. A report that has already landed is sent
+  // at once; one still running is sent by whoever lands it.
+  router.post("/:reportId/deliver", ...writeLimiters, async (request, response) => {
+    try {
+      const reportId = param(request.params.reportId);
+      const { email, surface } = deliverBodySchema.parse(request.body);
+      const report = await orchestrator.get(reportId);
+      if (!report) {
+        response.status(404).json({ error: "Report not found", code: "report_not_found" });
+        return;
+      }
+      const decision = await deliveries.request({
+        reportId,
+        reportUrl: orchestrator.reportUrl(reportId),
+        siteUrl: report.canonicalUrl ?? report.requestedUrl,
+        email,
+        source: surface ?? "web",
+      });
+      // Read again after the write: a report that landed in between is settled here, not lost.
+      const landed = await orchestrator.get(reportId);
+      if (landed && landed.status !== "running") delivery?.settle(reportId);
+      response.status(202).json({ reportId, maskedEmail: decision.maskedEmail, status: landed?.status ?? report.status });
     } catch (error) {
       sendError(response, error);
     }

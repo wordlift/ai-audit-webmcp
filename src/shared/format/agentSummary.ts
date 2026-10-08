@@ -1,3 +1,4 @@
+import { talkToUsUrl } from "./doors.js";
 import type { CapabilityResult, ReportRecord } from "../types/index.js";
 import { explainReportError } from "./explainError.js";
 
@@ -339,6 +340,9 @@ export function auditSummaryText(result: AuditToolResult): string {
     lines.push(`Note — ${note}`);
   }
   lines.push(`Full evidence and contracts: ${result.reportUrl}`);
+  // The door, last: once the person has seen what works and what does not, the next step is a
+  // conversation, not a dashboard. An agent reads it to them; it is never a tool.
+  lines.push(`To make the missing actions work with WordLift, book a conversation: ${talkToUsUrl(result.reportId)}`);
   return lines.join("\n");
 }
 

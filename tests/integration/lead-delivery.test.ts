@@ -5,8 +5,8 @@ import { FixtureProvider } from "../../src/server/adapters/fixtures/FixtureProvi
 import { MemoryReportStore } from "../../src/server/adapters/store/MemoryReportStore.js";
 import { AuditOrchestrator } from "../../src/server/services/AuditOrchestrator.js";
 import { AuditToolService } from "../../src/server/services/AuditToolService.js";
-import { DeepScanDelivery } from "../../src/server/services/DeepScanDelivery.js";
-import { DeepScanGate } from "../../src/server/services/DeepScanGate.js";
+import { ReportDelivery } from "../../src/server/services/ReportDelivery.js";
+import { DeliveryRequests } from "../../src/server/services/DeliveryRequests.js";
 import { parseSignalFields } from "../../src/domain/engine/signals.js";
 
 const fixedNow = new Date("2026-08-27T05:00:00.000Z");
@@ -21,42 +21,67 @@ function harness(delivery?: LeadDelivery) {
     ttlDays: 30,
     now: () => fixedNow,
   });
-  const deepScan = new DeepScanDelivery({
+  const reportDelivery = new ReportDelivery({
     leads,
     delivery,
-    publicReportUrl: (id) => orchestrator.reportUrl(id),
-    loadReport: (id) => orchestrator.get(id),
+    publicReportUrl: (id: string) => orchestrator.reportUrl(id),
+    loadReport: (id: string) => orchestrator.get(id),
     now: () => fixedNow,
   });
   const service = new AuditToolService(
     orchestrator,
     { graceMs: 5_000, source: "mcp" },
-    new DeepScanGate(leads, 30, () => fixedNow),
-    deepScan,
+    new DeliveryRequests(leads, 30, () => fixedNow, reportDelivery),
+    reportDelivery,
   );
-  return { leads, orchestrator, service, deepScan };
+  return { leads, orchestrator, service, reportDelivery };
 }
 
-function recordingDelivery(): LeadDelivery & { sent: Array<Record<string, unknown>> } {
+function recordingDelivery(): LeadDelivery & { sent: Array<Record<string, unknown>>; announced: Array<Record<string, unknown>> } {
   const sent: Array<Record<string, unknown>> = [];
+  const announced: Array<Record<string, unknown>> = [];
   return {
     name: "recording",
     sent,
+    announced,
+    async announce(lead, report) {
+      announced.push({ email: lead.email, ...report });
+    },
     async deliver(lead, report) {
       sent.push({ email: lead.email, ...report });
     },
   };
 }
 
+/** A delivery that only has the second write: the first is a courtesy, the second is the debt. */
+function deliverOnly(name: string, deliver: LeadDelivery["deliver"]): LeadDelivery {
+  return { name, deliver, async announce() {} };
+}
+
 /** Settling happens after the answer, so a test waits for the queue to drain rather than the call. */
 const settled = () => new Promise<void>((resolve) => setTimeout(resolve, 20));
 
-describe("sending a deep scan's report", () => {
-  it("sends the report to the address that bought it, once", async () => {
+describe("sending the report to the address that asked for it", () => {
+  it("writes twice: the address as soon as it is given, the result once the report lands", async () => {
     const delivery = recordingDelivery();
     const { service, leads } = harness(delivery);
 
-    const answer = await service.auditWebsite({ url: TRAVEL, depth: "deep", email: ADDRESS });
+    const answer = await service.auditWebsite({ url: TRAVEL, email: ADDRESS });
+    await settled();
+
+    expect(delivery.announced).toEqual([
+      { email: ADDRESS, canonicalUrl: expect.stringContaining("alpina.travel"), reportUrl: `https://audit.example/reports/${answer.structured.reportId}` },
+    ]);
+    expect(delivery.sent).toHaveLength(1);
+    expect(delivery.sent[0]).toMatchObject({ email: ADDRESS, agentReadinessScore: expect.any(Number) });
+    expect(await leads.get(answer.structured.reportId)).toMatchObject({ announcedAt: fixedNow.toISOString(), deliveredAt: fixedNow.toISOString() });
+  });
+
+  it("sends the report to the address that asked for it, once", async () => {
+    const delivery = recordingDelivery();
+    const { service, leads } = harness(delivery);
+
+    const answer = await service.auditWebsite({ url: TRAVEL, email: ADDRESS });
     await settled();
 
     expect(delivery.sent).toHaveLength(1);
@@ -68,7 +93,7 @@ describe("sending a deep scan's report", () => {
     expect(await leads.pending()).toEqual([]);
   });
 
-  it("sends nothing for a basic scan", async () => {
+  it("sends nothing when no address was given", async () => {
     const delivery = recordingDelivery();
     const { service } = harness(delivery);
 
@@ -76,28 +101,26 @@ describe("sending a deep scan's report", () => {
     await settled();
 
     expect(delivery.sent).toEqual([]);
+    expect(delivery.announced).toEqual([]);
   });
 
   it("keeps the debt while the delivery system is down, and pays it once it is back", async () => {
     let healthy = false;
     const sent: string[] = [];
-    const flaky: LeadDelivery = {
-      name: "flaky",
-      async deliver(lead) {
-        if (!healthy) throw new Error("HubSpot could not be reached");
-        sent.push(lead.email);
-      },
-    };
+    const flaky = deliverOnly("flaky", async (lead) => {
+      if (!healthy) throw new Error("HubSpot could not be reached");
+      sent.push(lead.email);
+    });
     const { service, leads } = harness(flaky);
 
-    const first = await service.auditWebsite({ url: TRAVEL, depth: "deep", email: ADDRESS });
+    const first = await service.auditWebsite({ url: TRAVEL, email: ADDRESS });
     await settled();
     expect(sent).toEqual([]);
     expect((await leads.pending()).map((lead) => lead.reportId)).toEqual([first.structured.reportId]);
 
-    // The next completed deep scan settles its own report and retries what was still owed.
+    // The next completed audit settles its own report and retries what was still owed.
     healthy = true;
-    await service.auditWebsite({ url: "https://shop.example/", depth: "deep", email: "second@example.com" });
+    await service.auditWebsite({ url: "https://shop.example/", email: "second@example.com" });
     await settled();
 
     expect(sent).toContain(ADDRESS);
@@ -108,17 +131,14 @@ describe("sending a deep scan's report", () => {
   it("retries once immediately when a single submission fails", async () => {
     let attempts = 0;
     const sent: string[] = [];
-    const flaky: LeadDelivery = {
-      name: "one-bad-attempt",
-      async deliver(lead) {
-        attempts += 1;
-        if (attempts === 1) throw new Error("HubSpot could not be reached");
-        sent.push(lead.email);
-      },
-    };
+    const flaky = deliverOnly("one-bad-attempt", async (lead) => {
+      attempts += 1;
+      if (attempts === 1) throw new Error("HubSpot could not be reached");
+      sent.push(lead.email);
+    });
     const { service, leads } = harness(flaky);
 
-    await service.auditWebsite({ url: TRAVEL, depth: "deep", email: ADDRESS });
+    await service.auditWebsite({ url: TRAVEL, email: ADDRESS });
     await settled();
 
     expect(sent).toEqual([ADDRESS]);
@@ -128,20 +148,23 @@ describe("sending a deep scan's report", () => {
   it("never lets a delivery failure reach the caller", async () => {
     const exploding: LeadDelivery = {
       name: "exploding",
+      async announce() {
+        throw new Error("boom");
+      },
       async deliver() {
         throw new Error("boom");
       },
     };
     const { service } = harness(exploding);
 
-    await expect(service.auditWebsite({ url: TRAVEL, depth: "deep", email: ADDRESS })).resolves.toBeTruthy();
+    await expect(service.auditWebsite({ url: TRAVEL, email: ADDRESS })).resolves.toBeTruthy();
     await settled();
   });
 
   it("records what is owed when no delivery system is configured", async () => {
     const { service, leads } = harness(undefined);
 
-    const answer = await service.auditWebsite({ url: TRAVEL, depth: "deep", email: ADDRESS });
+    const answer = await service.auditWebsite({ url: TRAVEL, email: ADDRESS });
     await settled();
 
     expect((await leads.pending())[0]).toMatchObject({ reportId: answer.structured.reportId, email: ADDRESS });
@@ -237,15 +260,45 @@ describe("the HubSpot form", () => {
     }
 
     expect(captured.map((entry) => entry.pageName)).toEqual([
-      "WordLift AI Audit — deep scan (web form)",
-      "WordLift AI Audit — deep scan (in-page agent)",
-      "WordLift AI Audit — deep scan (MCP server)",
+      "WordLift AI Audit — report (web form)",
+      "WordLift AI Audit — report (in-page agent)",
+      "WordLift AI Audit — report (MCP server)",
     ]);
     expect(captured.map((entry) => entry.fields.at(-1)?.value)).toEqual([
       "ai-audit-webmcp:web-form",
       "ai-audit-webmcp:in-page-agent",
       "ai-audit-webmcp:mcp-server",
     ]);
+  });
+
+  it("writes the address first with what it knows, and the status only where the form has the property", async () => {
+    const captured: Array<Array<{ name: string; value: string }>> = [];
+    const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+      captured.push(JSON.parse(String(init?.body)).fields);
+      return new Response("{}", { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const withStatus = new HubSpotLeadDelivery({ portalId: "p", formGuid: "f", sourceField: "audit_source", statusField: "audit_status", fetchImpl });
+    await withStatus.announce(lead, { canonicalUrl: report.canonicalUrl, reportUrl: report.reportUrl });
+    await withStatus.deliver(lead, report);
+    // The first write carries no score and no summary: there is no report yet. The second is the same contact, by address.
+    expect(captured[0]).toEqual([
+      { name: "email", value: ADDRESS },
+      { name: "audited_url", value: "https://alpina.travel/" },
+      { name: "audit_source", value: "ai-audit-webmcp:mcp-server" },
+      { name: "audit_status", value: "requested" },
+    ]);
+    expect(captured[1]!.map((field) => field.name)).toEqual(["email", "audited_url", "audit_score", "audit_summary", "audit_source", "audit_status"]);
+    expect(captured[1]!.at(-1)).toEqual({ name: "audit_status", value: "completed" });
+
+    // A note about what moved is not a completion, and names no status.
+    await withStatus.deliver(lead, { ...report, subject: "movement" });
+    expect(captured[2]!.map((field) => field.name)).not.toContain("audit_status");
+
+    captured.length = 0;
+    const without = new HubSpotLeadDelivery({ portalId: "p", formGuid: "f", fetchImpl });
+    await without.announce(lead, { canonicalUrl: report.canonicalUrl, reportUrl: report.reportUrl });
+    expect(captured[0]!.map((field) => field.name)).toEqual(["email", "audited_url"]);
   });
 
   it("omits the source field until the portal has one, because a missing field fails the whole submission", async () => {

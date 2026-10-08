@@ -107,7 +107,7 @@
 
     <main>
       <h1>Privacy Policy</h1>
-      <p class="meta">WordLift AI Audit · Effective 27 September 2026 · Version 1.1</p>
+      <p class="meta">WordLift AI Audit · Effective 8 October 2026 · Version 1.2</p>
 
       <p>
         This policy explains what WordLift AI Audit collects, what each tool can return, why the data is used,
@@ -120,7 +120,7 @@
         <strong>In short</strong>
         <ul>
           <li>The service needs no WordLift account. It sets no cookies and runs no advertising or analytics scripts.</li>
-          <li>A basic audit needs a public website URL. A deep scan also needs an email address so the report can be delivered.</li>
+          <li>An audit needs a public website URL. If you want the finished report sent to you, it also needs an email address; the audit runs the same without one.</li>
           <li>Audit and refinement reports are public-by-link documents and are automatically deleted from WordLift storage after 30 days.</li>
           <li>When you use the remote MCP server through ChatGPT, Claude, or another assistant, the inputs selected for a tool call are sent to WordLift and the tool result is sent back to that assistant provider as part of your interaction.</li>
           <li>We do not sell personal data. WordLift does not use personal data from this service to train machine-learning models.</li>
@@ -159,8 +159,8 @@
             </tr>
             <tr>
               <td>Email address</td>
-              <td>Deep scans only</td>
-              <td>Stored separately from the public report and used to deliver and follow up on the requested deep-scan report as described in section 6.</td>
+              <td>Only if you ask for the report to be sent to you</td>
+              <td>Stored separately from the public report and used to deliver and follow up on the requested report as described in section 6.</td>
             </tr>
             <tr>
               <td>Report ID</td>
@@ -193,8 +193,8 @@
 
       <h3>3.2 Public information collected from the website you ask us to audit</h3>
       <p>
-        An audit reads public pages of the site you name: four representative pages for a basic scan, up to
-        twelve for a deep scan, plus public structured data and discovery documents (for example files under
+        An audit reads public pages of the site you name: five representative pages, plus public structured
+        data and discovery documents (for example files under
         <code>/.well-known/</code>). Where a site declares a search or agent interface, the audit may invoke it
         to verify that it works. Pages are fetched without your cookies or credentials.
       </p>
@@ -212,8 +212,8 @@
       <h3>3.3 Technical and security data</h3>
       <ul>
         <li>IP address and user agent, used for abuse prevention, rate limiting and server logs.</li>
-        <li>Request path, status, timing and error name in server logs. Logs do not contain deep-scan email addresses or raw audited page content.</li>
-        <li>Which surface initiated a deep scan (<code>web</code>, <code>webmcp</code>, or <code>mcp</code>) so we can distinguish delivery sources.</li>
+        <li>Request path, status, timing and error name in server logs. Logs do not contain email addresses or raw audited page content.</li>
+        <li>Which surface asked for a report to be sent (<code>web</code>, <code>webmcp</code>, or <code>mcp</code>) so we can distinguish delivery sources.</li>
         <li>Reader counts: how many times a report was read each day, by kind of reader (a named crawler, an AI agent acting from a hosted assistant, or a person), and how many times an agent activated a capability on the audited site. The kind is decided from the address and the user agent and only the count is kept; no address, user agent or identity is stored, and the counts expire with the report.</li>
       </ul>
       <p>
@@ -288,7 +288,7 @@
           <tbody>
             <tr><td>Run the audit or lookup you requested and return the result to your browser, API client or AI assistant</td><td>Performance of a contract or steps taken at your request (art. 6(1)(b))</td></tr>
             <tr><td>Create and publish the report at its shareable link</td><td>Performance of a contract or steps taken at your request (art. 6(1)(b))</td></tr>
-            <tr><td>Send a deep-scan report to the address you provided and follow up about that audit and relevant WordLift services</td><td>Your consent (art. 6(1)(a)); you can withdraw it at any time</td></tr>
+            <tr><td>Send the report to the address you provided and follow up about that audit and relevant WordLift services</td><td>Your consent (art. 6(1)(a)); you can withdraw it at any time</td></tr>
             <tr><td>Protect the service from abuse, unsafe network destinations and operational failures</td><td>Our legitimate interest in security and reliability (art. 6(1)(f))</td></tr>
             <tr><td>Understand service usage from reports and logs in aggregate and improve the service</td><td>Our legitimate interest in product improvement (art. 6(1)(f))</td></tr>
             <tr><td>Meet legal obligations</td><td>Legal obligation (art. 6(1)(c))</td></tr>
@@ -313,22 +313,22 @@
             <tr>
               <td>Google Cloud Natural Language API</td>
               <td>Classifies the topic of an audited site</td>
-              <td>Text excerpts from audited public pages; not your deep-scan email address. Sent under Google's paid API terms, which do not use them to train models</td>
+              <td>Text excerpts from audited public pages; not your email address. Sent under Google's paid API terms, which do not use them to train models</td>
             </tr>
             <tr>
               <td>WordLift Content Analysis, running on Modal Labs, Inc. infrastructure in WordLift's own deployment</td>
               <td>Recognises the entities an audited page names, so the audit can say what agents understand about the business. It returns only names that appear in the text it was sent</td>
-              <td>Text excerpts from audited public pages; not your deep-scan email address</td>
+              <td>Text excerpts from audited public pages; not your email address</td>
             </tr>
             <tr>
               <td>Google Gemini API (Google LLC)</td>
               <td>Reads entity names from an audited page only when WordLift Content Analysis fails or times out</td>
-              <td>Text excerpts from audited public pages; not your deep-scan email address. Sent under Google's paid API terms, which do not use them to train models</td>
+              <td>Text excerpts from audited public pages; not your email address. Sent under Google's paid API terms, which do not use them to train models</td>
             </tr>
             <tr>
               <td>ScrapingBee SAS</td>
               <td>Renders public pages that require JavaScript</td>
-              <td>The public page URL to render; not your deep-scan email address</td>
+              <td>The public page URL to render; not your email address</td>
             </tr>
             <tr>
               <td>WordLift AI Audit API at api.wordlift.io</td>
@@ -337,7 +337,7 @@
             </tr>
             <tr>
               <td>HubSpot, Inc.</td>
-              <td>Delivers deep-scan reports and manages WordLift contact follow-up</td>
+              <td>Delivers reports to the address you gave and manages WordLift contact follow-up</td>
               <td>Your email address, audited URL, readiness score, report link and source surface</td>
             </tr>
             <tr>
@@ -360,12 +360,13 @@
       </p>
       <p>We may disclose personal data to authorities when legally required. We do not sell personal data.</p>
 
-      <h2 id="deep-scans">6. Deep scans, email and follow-up</h2>
+      <h2 id="deep-scans">6. Email delivery and follow-up</h2>
       <p>
-        A basic scan does not require an email address. A deep scan requires an address so the finished report
-        can be delivered. When the report completes, WordLift submits that address to HubSpot together with the
-        audited URL, readiness score, report link and source surface. HubSpot sends the report on WordLift's
-        behalf and stores the address as a WordLift contact.
+        An audit does not require an email address. If you ask for the report to be sent to you, WordLift
+        submits that address to HubSpot in two steps: as soon as you give it, together with the audited URL and
+        the surface you asked from; and when the report completes, together with the readiness score, a summary
+        and the report link. HubSpot sends the report on WordLift's behalf and stores the address as a WordLift
+        contact.
       </p>
       <p>
         WordLift may follow up about the audit findings and WordLift services relevant to them. You can withdraw
@@ -373,7 +374,7 @@
         returned in a report link, and service responses that read it back mask the address.
       </p>
       <p>
-        Once a deep-scan report has been sent, WordLift reads the same site again about once a week and writes
+        Once a report has been sent, WordLift reads the same site again about once a week and writes
         to you only when something changed: the readiness score moved, a capability stopped or started
         answering, a crawler or Google read the report for the first time, or an agent's request to the site
         failed. Every such note carries one link that stops the notes and the re-reads together; the report
@@ -382,7 +383,7 @@
 
       <h2 id="transfers">7. International transfers</h2>
       <p>
-        WordLift's current production configuration stores reports, deep-scan addresses and logs in Google Cloud
+        WordLift's current production configuration stores reports, delivery addresses and logs in Google Cloud
         in the United States. Where EEA personal data is transferred outside the EEA, WordLift relies on
         applicable transfer mechanisms such as the EU-US Data Privacy Framework for certified recipients and/or
         the European Commission's Standard Contractual Clauses in provider data-processing terms. ScrapingBee
@@ -396,7 +397,7 @@
           <thead><tr><th>Data</th><th>WordLift retention</th></tr></thead>
           <tbody>
             <tr><td>Audit report and normalized evidence, including refined reports</td><td>30 days from creation, then deleted automatically</td></tr>
-            <tr><td>Deep-scan email address in the audit store</td><td>The same 30 days as its report</td></tr>
+            <tr><td>Delivery email address in the audit store</td><td>The same 30 days as its report</td></tr>
             <tr><td>Claim-token hash</td><td>The same 30 days as its report</td></tr>
             <tr><td>Raw fetched page content</td><td>Not retained after evidence extraction</td></tr>
             <tr><td>Reader and activation counts</td><td>The same 30 days as their report</td></tr>
@@ -418,7 +419,7 @@
       <h2 id="controls">9. Your controls and rights</h2>
       <p>You can limit what you share with WordLift AI Audit by choosing the workflow that fits your request:</p>
       <ul>
-        <li>Use a basic scan if you do not want to provide an email address.</li>
+        <li>Leave the email field empty if you do not want to provide an address; the audit runs the same.</li>
         <li>Do not include personal data in refinement text unless you want it published in the resulting report.</li>
         <li>Use the WordLift website directly instead of an AI assistant if you do not want the tool result returned into an assistant conversation.</li>
         <li>Use your assistant provider's controls to manage or delete conversations and to manage any model-improvement setting the provider offers.</li>

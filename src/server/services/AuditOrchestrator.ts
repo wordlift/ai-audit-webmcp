@@ -124,7 +124,8 @@ export class AuditOrchestrator {
       throw new ReportRequestError("Fixture selection is only available in demo mode.", 400);
     }
 
-    const running = this.baseRecord(request.requestId, target.toString(), this.now(), undefined, request.depth);
+    // `depth` on the request is accepted and ignored: there is one scan, and a new record carries no depth.
+    const running = this.baseRecord(request.requestId, target.toString(), this.now(), undefined, undefined);
     await this.store.put(running);
 
     // A site read in the last day is not read again for the next caller: the crawl is reused, and
@@ -133,7 +134,7 @@ export class AuditOrchestrator {
     const source =
       request.fresh || request.archetypeOverride
         ? null
-        : await this.recentReport(target.toString(), request.depth ?? "basic", request.requestId);
+        : await this.recentReport(target.toString(), request.requestId);
     if (source) {
       return this.settled(await this.store.finalize(this.deriveFrom(running, source)));
     }
@@ -202,13 +203,13 @@ export class AuditOrchestrator {
   }
 
   /**
-   * The newest completed machine draft of the same site at the same depth within the reuse window,
+   * The newest completed machine draft of the same site within the reuse window,
    * or null. A revision of any kind — refined, recompiled, verified through a sidecar — is someone's
    * report about the site rather than a crawl of it and is never a source; a partial one is a sketch
    * the next caller deserves better than; a failed one has nothing to give. A store that
    * cannot answer — an index not yet built — means a fresh crawl, never a failed audit.
    */
-  private async recentReport(requestedUrl: string, depth: ScanDepth, excludeId: string): Promise<ReportRecord | null> {
+  private async recentReport(requestedUrl: string, excludeId: string): Promise<ReportRecord | null> {
     const windowMs = this.options.reuseWindowMs ?? DEFAULT_REUSE_WINDOW_MS;
     if (windowMs <= 0) return null;
     const since = new Date(this.now().getTime() - windowMs);
@@ -225,7 +226,6 @@ export class AuditOrchestrator {
           report.id !== excludeId &&
           report.status === "completed" &&
           report.mode === this.mode &&
-          (report.scanDepth ?? "basic") === depth &&
           // A revision — a refinement, a recompile, a sidecar's verified child — is someone's
           // report about the site, not a crawl of it. Only a machine draft from a crawl is reused.
           !report.parentReportId &&
@@ -812,7 +812,7 @@ export class AuditOrchestrator {
   ): Promise<CompiledInputs["markup"] | undefined> {
     const onBasic = this.options.markupOnBasic ?? "thin";
     const pages =
-      scanDepth === "deep" || onBasic === "all"
+      onBasic === "all"
         ? snapshot.pages
         : onBasic === "thin"
           ? snapshot.pages.filter((page) => page.entities.length === 0)

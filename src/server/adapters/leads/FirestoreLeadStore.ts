@@ -26,7 +26,7 @@ export class FirestoreLeadStore implements LeadStore {
     const snapshot = await reference.get();
     const existing = snapshot.exists ? deepScanLeadSchema.parse(snapshot.data()) : null;
     const stored = existing
-      ? { ...existing, ...lead, confirmedAt: existing.confirmedAt, deliveredAt: existing.deliveredAt }
+      ? { ...existing, ...lead, announcedAt: existing.announcedAt, confirmedAt: existing.confirmedAt, deliveredAt: existing.deliveredAt }
       : lead;
     await reference.set(stored);
     return stored;
@@ -46,6 +46,10 @@ export class FirestoreLeadStore implements LeadStore {
       .map((document) => deepScanLeadSchema.parse(document.data()))
       .filter((lead) => !lead.deliveredAt && new Date(lead.expiresAt) > now)
       .slice(0, limit);
+  }
+
+  async markAnnounced(reportId: string, at: string): Promise<DeepScanLead | null> {
+    return this.#mark(reportId, { announcedAt: at });
   }
 
   async markConfirmed(reportId: string, at: string): Promise<DeepScanLead | null> {

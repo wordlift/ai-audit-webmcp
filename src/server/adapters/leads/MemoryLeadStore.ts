@@ -9,7 +9,9 @@ export class MemoryLeadStore implements LeadStore {
     const lead = deepScanLeadSchema.parse(input);
     // The same person asking twice for the same report is one lead, not two.
     const existing = this.#leads.get(lead.reportId);
-    const stored = existing ? { ...existing, ...lead, confirmedAt: existing.confirmedAt, deliveredAt: existing.deliveredAt } : lead;
+    const stored = existing
+      ? { ...existing, ...lead, announcedAt: existing.announcedAt, confirmedAt: existing.confirmedAt, deliveredAt: existing.deliveredAt }
+      : lead;
     this.#leads.set(lead.reportId, stored);
     return structuredClone(stored);
   }
@@ -29,6 +31,9 @@ export class MemoryLeadStore implements LeadStore {
       .map((lead) => structuredClone(lead));
   }
 
+  async markAnnounced(reportId: string, at: string): Promise<DeepScanLead | null> {
+    return this.#mark(reportId, { announcedAt: at });
+  }
   async markConfirmed(reportId: string, at: string): Promise<DeepScanLead | null> {
     return this.#mark(reportId, { confirmedAt: at });
   }
