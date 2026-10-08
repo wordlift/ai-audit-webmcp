@@ -440,9 +440,15 @@ environment, so the two settings that must survive every redeploy are passed eve
 ```bash
 git checkout main && git pull --ff-only
 SCRAPE_PROVIDER=scrapingbee PUBLIC_APP_URL=https://beta.audit.wordlift.io \
-  HUBSPOT_PORTAL_ID=... HUBSPOT_FORM_GUID=... OPENAI_APPS_CHALLENGE=... \
+  MARKUP_PROVIDER=content-analysis MARKUP_FALLBACK=gemini \
+  HUBSPOT_PORTAL_ID=... HUBSPOT_FORM_GUID=... HUBSPOT_REGION=eu1 \
+  HUBSPOT_SOURCE_FIELD=... HUBSPOT_STATUS_FIELD=... OPENAI_APPS_CHALLENGE=... \
   scripts/deploy-cloud-run.sh "$PROJECT" us-west1
 ```
+
+The HubSpot region and the three optional form properties (`HUBSPOT_SOURCE_FIELD`,
+`HUBSPOT_STATUS_FIELD`, `HUBSPOT_SIGNAL_FIELDS`) are forwarded only when set, and only the ones
+set survive: read the live service's environment before a redeploy rather than retyping them.
 
 Everything on that command line is dropped by the next deploy that forgets it:
 
