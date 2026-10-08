@@ -135,8 +135,15 @@ describe("the first screen", () => {
     renderScreen(reviewed);
     // The headline is what the business is; what a Context Engine is follows in one plain line.
     expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf is a lodging business offering Samspitze 4." })).toBeVisible();
-    expect(screen.getByText(/WordLift built a model/)).toHaveTextContent("From 1 page of alpina.travel, WordLift built a model of this business that AI agents can use to understand it and act on it: its first Context Engine.");
+    expect(screen.getByText(/Built from 1 page/)).toHaveTextContent("Built from 1 page of alpina.travel: the model AI agents use to understand this business and act on it, its Context Engine.");
+    // The cards are the model, not a form: the controls to correct them sit one click down.
     const understood = screen.getByRole("list", { name: "What WordLift understood" });
+    expect(within(understood).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "AlpiNest FeriendorfLodging businessDeclared by site",
+      "Samspitze 4ApartmentConfirmed",
+      "MariapfarrPlaceInferred from text",
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: "Correct the model" }));
     expect(within(understood).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
       "AlpiNest FeriendorfLodging businessDeclared by siteRelevantNot ours",
       "Samspitze 4ApartmentConfirmed",
@@ -284,7 +291,7 @@ describe("the readers line", () => {
     renderScreen(withGraph);
     // What the business is leads; a byline, the site's own name and a demoted thing are not in the sentence or the cards.
     expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf Lungau is a lodging business offering apartments such as Samspitze 5." })).toBeVisible();
-    expect(screen.getByText(/WordLift built a model/)).toHaveTextContent("From 2 pages of alpina.travel, WordLift built a model");
+    expect(screen.getByText(/Built from 2 pages/)).toHaveTextContent("Built from 2 pages of alpina.travel: the model AI agents use");
     const cards = screen.getByRole("list", { name: "What WordLift understood" });
     expect(cards).not.toHaveTextContent(/Andrea Volpini|Old brochure|Alpina\.travel/);
     expect(screen.getByRole("link", { name: "Full model & evidence" })).toHaveAttribute("href", "#full-audit");

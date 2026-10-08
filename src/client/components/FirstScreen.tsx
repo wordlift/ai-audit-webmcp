@@ -318,8 +318,8 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         {!engine && !unreadable && gap && <p className="first-sentence">{gap}</p>}
         {engine && (
           <p className="first-context">
-            From {engine.pages} {engine.pages === 1 ? "page" : "pages"} of {host}, WordLift built a model of this business that AI agents can use to
-            understand it and act on it: its first <b>Context Engine</b>.
+            Built from {engine.pages} {engine.pages === 1 ? "page" : "pages"} of {host}: the model AI agents use to understand this business and act on it,
+            its <b>Context Engine</b>.
           </p>
         )}
         {engine && ownWords(report) && <p className="first-own-words">In its own words: “{ownWords(report)}”</p>}

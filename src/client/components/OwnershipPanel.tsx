@@ -77,9 +77,9 @@ export function OwnershipPanel({ report }: { report: ReportRecord }) {
       {!verified && !holds && (
         <p>
           {engine.claimed
-            ? `This Context Engine is claimed, and nobody has proved ${host} is theirs yet. If it is yours, claim it with your address and verify it to take it over.`
-            : "Claim this Context Engine to keep your decisions across reads of the site, then verify you own the site to make them the business's own word."}{" "}
-          <a href="#deep-scan">Claim it</a>
+            ? `This Context Engine is claimed, and nobody has proved ${host} is theirs yet. If it is yours, answer who runs an action above and this browser holds it; then verify it to take it over.`
+            : "Your first correction, above or in the answers, keeps this Context Engine in this browser across reads of the site. Verify you own the site afterwards to make your decisions the business's own word."}{" "}
+          <a href="#own-it">Answer who runs each action</a>
         </p>
       )}
       {!verified && holds && (

@@ -131,19 +131,21 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
     return { where: whereFound(entity) || undefined, relations: relationPhrases(entity, report), actions: links.actions, terms: links.terms, wikidata: links.wikidata };
   };
   return (
-    <section id="understand" className={`understand ${fixable ? "understand-fixable" : ""}`} aria-labelledby="understand-title">
-      <h2 id="understand-title">{fixable ? "Fix what agents cannot understand" : "Agents understand your business"}</h2>
-      <p className="understand-lead">
-        Agents found {plural(total, "important thing")} on these pages.
-        {" "}
-        {fixable ? (
-          <>
-            {published.length === 0 ? "None" : published.length} {published.length === 1 ? "is" : "are"} declared by the site, so agents already read {published.length === 1 ? "it" : "them"}. {textOnly.length} {textOnly.length === 1 ? "exists" : "exist"} only in the text.
-          </>
-        ) : (
-          <>All of {total === 1 ? "it is" : "them are"} declared by the site.</>
-        )}
-      </p>
+    <section id="understand" className={`understand ${fixable ? "understand-fixable" : "understand-done"}`} aria-labelledby="understand-title">
+      {/* Nothing to fix is one line, not a card: the model on the first screen already showed every thing. */}
+      {fixable ? (
+        <h2 id="understand-title">Fix what agents cannot understand</h2>
+      ) : (
+        <p id="understand-title" className="understand-done-line">
+          <b>Agents understand your business.</b> All {plural(total, "important thing")} found on these pages {total === 1 ? "is" : "are"} declared by the site.
+        </p>
+      )}
+      {fixable && (
+        <p className="understand-lead">
+          Agents found {plural(total, "important thing")} on these pages.{" "}
+          {published.length === 0 ? "None" : published.length} {published.length === 1 ? "is" : "are"} declared by the site, so agents already read {published.length === 1 ? "it" : "them"}. {textOnly.length} {textOnly.length === 1 ? "exists" : "exist"} only in the text.
+        </p>
+      )}
 
       {fixable && (
         <p className="fix-cta">
@@ -169,7 +171,7 @@ export function UnderstandPanel({ report }: { report: ReportRecord }) {
           <a href="#full-audit" onClick={openFullAudit}>{textOnly.length - MAX_PER_GROUP} more in the model &amp; evidence</a>
         </p>
       )}
-      {published.length > 0 && (
+      {fixable && published.length > 0 && (
         <p className="understand-declared">
           <b>Declared by the site:</b> {published.slice(0, 8).map((entity) => entity.name).join(", ")}{published.length > 8 ? ` and ${published.length - 8} more` : ""}.
           {" "}<a href="#full-audit" onClick={openFullAudit}>Open the full map</a>, where entities, terms and actions are drawn together.

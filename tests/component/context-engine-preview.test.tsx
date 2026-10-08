@@ -32,6 +32,8 @@ describe("where the knowledge comes from, in one line", () => {
         onSave={onSave}
       />,
     );
+    // The controls sit one click down; a first read is the model, not a form.
+    fireEvent.click(screen.getByRole("button", { name: "Correct the model" }));
     // Nothing is staged until a card is told something.
     expect(screen.queryByRole("button", { name: /Save/ })).toBeNull();
     fireEvent.click(screen.getByRole("group", { name: "Is Samspitze 4 right?" }).querySelector("button")!);
@@ -65,6 +67,7 @@ describe("where the knowledge comes from, in one line", () => {
     const app = card("bc", "Basecamp", "SoftwareApplication", "inferred");
     const onSave = vi.fn(async () => undefined);
     render(<ContextEnginePreview summary={summary({ preview: [business, app], view: { business, offerings: [app], places: [] } as never })} onSave={onSave} />);
+    fireEvent.click(screen.getByRole("button", { name: "Correct the model" }));
     const legend = screen.getByRole("list", { name: "How it fits together" });
     expect(legend).toHaveTextContent("37signals offers Basecamp · implied by the site's pages");
     const group = screen.getByRole("group", { name: "Is it right that 37signals offers Basecamp?" });
@@ -79,7 +82,7 @@ describe("where the knowledge comes from, in one line", () => {
     const business = { ...card("org", "Shake Shack", "Organization", "declared"), role: "business" as const };
     render(<ContextEnginePreview summary={summary({ pages: 4, declared: 1, inferred: 0, preview: [business], view: { business, offerings: [], places: [] } as never })} onSave={vi.fn()} />);
     expect(screen.queryByText("The business")).toBeNull();
-    expect(screen.getByText(/Only the business was found on these 4 pages/)).toHaveTextContent("nothing it offers is declared there or named in their text. Claiming reads more of the site.");
+    expect(screen.getByText(/Only the business was found on these 4 pages/)).toHaveTextContent("nothing it offers is declared there or named in their text.");
     expect(screen.queryByRole("list", { name: "How it fits together" })).toBeNull();
   });
 });
