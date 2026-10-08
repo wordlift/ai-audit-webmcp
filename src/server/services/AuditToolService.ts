@@ -45,8 +45,8 @@ import {
   type ClaimStore,
 } from "../adapters/claims/index.js";
 import type { AuditOrchestrator } from "./AuditOrchestrator.js";
-import type { DeepScanDelivery } from "./DeepScanDelivery.js";
-import { DeepScanGate, newReportId } from "./DeepScanGate.js";
+import type { ReportDelivery } from "./ReportDelivery.js";
+import { DeliveryRequests, newReportId } from "./DeliveryRequests.js";
 import { reportNotFound, reportStillRunning, ToolCallError } from "./toolErrors.js";
 
 /**
@@ -90,8 +90,8 @@ export class AuditToolService {
   constructor(
     private readonly orchestrator: AuditOrchestrator,
     private readonly options: AuditToolServiceOptions = {},
-    private readonly deepScan: DeepScanGate = new DeepScanGate(null),
-    private readonly delivery?: DeepScanDelivery,
+    private readonly deliveries: DeliveryRequests = new DeliveryRequests(null),
+    private readonly delivery?: ReportDelivery,
   ) {}
 
   /**
@@ -100,15 +100,14 @@ export class AuditToolService {
    * result — and the audit keeps running behind the answer, so `get-audit-report` completes it.
    */
   async auditWebsite(input: unknown): Promise<ToolAnswer<AuditToolResult | AuditRunningResult>> {
-    const { url, archetype, depth, email, fresh } = parse(auditWebsiteInputSchema, input);
+    // `depth` is still accepted and means nothing: there is one scan. The address, when given, is
+    // filed before any crawling happens, so an audit that fails still knows whom it owes a report.
+    const { url, archetype, email, fresh } = parse(auditWebsiteInputSchema, input);
     const reportId = newReportId();
-
-    // The exchange is settled before any crawling happens: a deep scan that fails still knows
-    // whose address it owes a report to.
-    const access = await this.deepScan.authorize({
+    const access = await this.deliveries.request({
       reportId,
       reportUrl: this.orchestrator.reportUrl(reportId),
-      depth,
+      siteUrl: url,
       email,
       source: this.options.source ?? "mcp",
     });
@@ -116,16 +115,14 @@ export class AuditToolService {
     const claimToken = await this.issueClaim(reportId);
 
     const running = this.orchestrator
-      .create({ requestId: reportId, url, archetypeOverride: archetype ?? null, depth: access.depth, fresh })
+      .create({ requestId: reportId, url, archetypeOverride: archetype ?? null, fresh })
       .then((report) => ({ report }) as const, (error: unknown) => ({ error }) as const);
 
-    // A deep scan is settled when its audit lands, whether or not the caller is still waiting: the
-    // report was bought, and the buyer may have hung up long before it finished.
-    if (access.depth === "deep") {
-      void running.then((outcome) => {
-        if ("report" in outcome) this.delivery?.settle(reportId);
-      });
-    }
+    // Delivery is settled when the audit lands, whether or not the caller is still waiting: the
+    // person may have hung up long before it finished, and an address may arrive while it runs.
+    void running.then((outcome) => {
+      if ("report" in outcome) this.delivery?.settle(reportId);
+    });
 
     const wait = this.options.wait ?? sleep;
     const outcome = await Promise.race([running, wait(this.options.graceMs ?? DEFAULT_GRACE_MS).then(() => null)]);

@@ -57,6 +57,7 @@ const leadDelivery = config.HUBSPOT_PORTAL_ID && config.HUBSPOT_FORM_GUID
       formGuid: config.HUBSPOT_FORM_GUID,
       region: config.HUBSPOT_REGION,
       sourceField: config.HUBSPOT_SOURCE_FIELD,
+      statusField: config.HUBSPOT_STATUS_FIELD,
       signalFields: parseSignalFields(config.HUBSPOT_SIGNAL_FIELDS),
     })
   : undefined;

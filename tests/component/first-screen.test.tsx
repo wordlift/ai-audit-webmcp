@@ -106,16 +106,10 @@ describe("the first screen", () => {
     expect(screen.getByText(/Agents have no way to find this site's capabilities yet: it publishes no catalog\./)).toBeVisible();
   });
 
-  it("offers to claim the Context Engine on the first screen, opening in place, and not on a deep scan", () => {
+  it("asks for nothing on the first screen: the address was asked while the audit ran", () => {
     renderScreen();
-    const strip = screen.getByRole("button", { name: /Claim your Context Engine, free with your email: keep your corrections, read more of the site, hear when it changes/ });
-    expect(strip).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByLabelText(/email address/i)).toBeNull();
-    fireEvent.click(strip);
-    expect(screen.getByLabelText(/email address/i)).toBeVisible();
-    expect(screen.getByRole("button", { name: /claim & expand/i })).toBeDisabled();
-    renderScreen({ ...report, id: "5b8a04c0-e247-4bec-a440-d9f3506f9213", scanDepth: "deep" });
-    expect(screen.getAllByRole("button", { name: /Claim your Context Engine/ })).toHaveLength(1);
+    expect(screen.queryByLabelText(/email/i)).toBeNull();
+    expect(screen.queryByRole("button", { name: /Claim your Context Engine/ })).toBeNull();
   });
 
   it("shows the Context Engine first, each thing with where the knowledge comes from, and what agents can do with it second", () => {

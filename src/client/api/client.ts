@@ -31,8 +31,9 @@ async function requestJson(input: string, init?: RequestInit): Promise<{ status:
 export interface CreateReportOptions {
   archetype?: Archetype;
   fixtureId?: string;
-  /** "deep" reads more of the site and requires an address the report is sent to. */
+  /** Accepted and ignored: there is one scan. Kept so an older caller's request still parses. */
   depth?: ScanDepth;
+  /** An address the finished report is sent to. Delivery is all it buys. */
   email?: string;
   /** Which surface asked, so the page's form and an agent driving the page stay distinguishable. */
   surface?: "web" | "webmcp";
@@ -130,6 +131,23 @@ export async function waitForTerminalReport(reportId: string, options: CreateRep
     }
     await wait(POLL_INTERVAL_MS);
   }
+}
+
+/**
+ * "Send me the report": the address, given while the audit runs or after it landed. The report
+ * itself never changes; a report that already landed is sent at once.
+ */
+export async function requestDelivery(
+  reportId: string,
+  email: string,
+  surface: "web" | "webmcp" = "web",
+): Promise<{ reportId: string; maskedEmail: string | null; status: string }> {
+  const { body } = await requestJson(`/api/reports/${reportId}/deliver`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email, surface }),
+  });
+  return body as { reportId: string; maskedEmail: string | null; status: string };
 }
 
 export async function getReport(reportId: string): Promise<ReportRecord> {

@@ -15,14 +15,9 @@ test("a claimed Context Engine keeps a correction across a new read of the site"
   // A first visit says nothing about an unclaimed draft.
   await expect(page.getByText(/Draft Context Engine/)).toHaveCount(0);
 
-  // Claim: the address goes with the expansion, and this browser now holds the engine.
-  const offer = page.getByRole("region", { name: /claim your context engine/i });
-  await offer.getByRole("button", { name: /claim your context engine/i }).click();
-  await offer.getByLabel(/email address/i).fill("owner@example.com");
-  await offer.getByRole("button", { name: /claim & expand/i }).click();
-  await expect(page.getByText("Your Context Engine · claimed, ownership not verified")).toBeVisible();
-
-  // Correct the model where it is read: one card is not theirs.
+  // Correct the model where it is read: one card is not theirs. The first correction claims the
+  // engine for this browser; no address is asked for on the report.
+  await expect(page.getByRole("textbox", { name: /email/i })).toHaveCount(0);
   const cards = page.getByRole("list", { name: "What WordLift understood" });
   const group = cards.getByRole("group", { name: /^Is .+ right\?$/ }).first();
   const name = ((await group.getAttribute("aria-label")) ?? "").replace(/^Is /, "").replace(/ right\?$/, "");

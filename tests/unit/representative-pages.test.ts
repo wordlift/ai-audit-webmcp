@@ -85,9 +85,10 @@ describe("representative page selection", () => {
     const links = [...document.querySelectorAll("a[href]")];
     const selected = selectRepresentativePages(links, new URL("https://alpina.travel/"));
 
-    expect(selected).toHaveLength(3);
-    expect(selected.map((item) => item.role)).toEqual(["detail", "offer", "policy"]);
-    expect(selected.map((item) => item.url.pathname)).toEqual(["/properties/alpinest", "/booking", "/faq"]);
+    // Four secondary pages beside the entry page: the three roles first, then what is left.
+    expect(selected).toHaveLength(4);
+    expect(selected.map((item) => item.role)).toEqual(["detail", "offer", "policy", "other"]);
+    expect(selected.map((item) => item.url.pathname)).toEqual(["/properties/alpinest", "/booking", "/faq", "/about"]);
   });
 });
 
@@ -108,20 +109,20 @@ describe("scan depth", () => {
     <a href="/press">Press</a>
   </nav>`;
 
-  it("reads three secondary pages for the free basic scan", () => {
+  it("reads four secondary pages for the scan", () => {
     const { document } = parseHTML(nav);
     const links = [...document.querySelectorAll("a[href]")];
 
-    // Four pages in the report: the entry page the caller gave, plus three sampled.
-    expect(selectRepresentativePages(links, new URL("https://hotel.example/"))).toHaveLength(3);
+    // Five pages in the report: the entry page the caller gave, plus four sampled.
+    expect(selectRepresentativePages(links, new URL("https://hotel.example/"))).toHaveLength(4);
   });
 
-  it("reads further when a deep scan asks it to, and still samples rather than crawls", () => {
+  it("reads further when asked to, and still samples rather than crawls", () => {
     const { document } = parseHTML(nav);
     const links = [...document.querySelectorAll("a[href]")];
 
     const deep = selectRepresentativePages(links, new URL("https://hotel.example/"), 12);
-    expect(deep.length).toBeGreaterThan(3);
+    expect(deep.length).toBeGreaterThan(4);
     expect(deep.length).toBeLessThanOrEqual(11);
     expect(new Set(deep.map((page) => page.url.pathname)).size).toBe(deep.length);
   });

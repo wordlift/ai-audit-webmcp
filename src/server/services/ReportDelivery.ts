@@ -5,16 +5,19 @@ import type { ContextEngine } from "../../shared/schemas/contextEngine.js";
 import { leadSignals } from "../../domain/engine/signals.js";
 
 /**
- * Sending a deep scan's report to the address that bought it.
+ * Sending a report to the address that asked for it, in two writes.
  *
- * The lead store is the ledger of what is owed; this is what settles it. A send that fails leaves
- * the lead pending rather than losing it, and the next completed deep scan retries the ones still
- * waiting — so a HubSpot outage delays delivery instead of dropping it.
+ * The first, `announce`, goes the moment the address is given: the address and the site, so the
+ * lead platform holds a contact even if the audit never lands. The second, `deliverFor`, goes when
+ * the report is complete: the score, the summary, the link. The lead store is the ledger of what
+ * is owed; this is what settles it. A send that fails leaves the lead pending rather than losing
+ * it, and the next completed audit retries the ones still waiting — so a HubSpot outage delays
+ * delivery instead of dropping it.
  *
  * Nothing here blocks an audit. A person waiting for their report should never wait on a marketing
  * platform, and an audit must never fail because one did.
  */
-export interface DeepScanDeliveryOptions {
+export interface ReportDeliveryOptions {
   leads?: LeadStore;
   delivery?: LeadDelivery;
   publicReportUrl(reportId: string): string;
@@ -28,12 +31,31 @@ export interface DeepScanDeliveryOptions {
 
 export type DeliveryOutcome = "sent" | "not-owed" | "unavailable" | "failed";
 
-export class DeepScanDelivery {
-  constructor(private readonly options: DeepScanDeliveryOptions) {}
+export class ReportDelivery {
+  constructor(private readonly options: ReportDeliveryOptions) {}
 
   /** True when this deployment can actually send anything. */
   get enabled(): boolean {
     return Boolean(this.options.leads && this.options.delivery);
+  }
+
+  /** The first write, fire-and-forget: a lead that could not be announced is still delivered later. */
+  announce(reportId: string, siteUrl?: string): void {
+    const { leads, delivery } = this.options;
+    if (!leads || !delivery) return;
+    void (async () => {
+      const lead = await leads.get(reportId);
+      if (!lead || lead.announcedAt || lead.deliveredAt) return;
+      // Before the record exists the request's own URL is the site; after, the record's.
+      const report = await this.options.loadReport(reportId);
+      const canonicalUrl = report?.canonicalUrl ?? report?.requestedUrl ?? siteUrl;
+      if (!canonicalUrl) return;
+      await delivery.announce(lead, { canonicalUrl, reportUrl: this.options.publicReportUrl(reportId) });
+      await leads.markAnnounced(reportId, (this.options.now ?? (() => new Date()))().toISOString());
+    })().catch((error: unknown) => {
+      // Not owed twice: the second write carries everything the first did. Never the address.
+      console.error("lead_announce_failed", delivery.name, reportId, error instanceof Error ? error.message : "unknown");
+    });
   }
 
   async deliverFor(reportId: string): Promise<DeliveryOutcome> {

@@ -83,26 +83,28 @@ test("a human refinement turns the machine draft into refined Terms of Action", 
 });
 
 /**
- * The one thing the audit asks a visitor for, on the surface most visitors use.
+ * The one thing the audit asks a visitor for is asked while the audit runs, and never on the
+ * report. In demo mode the audit lands at once, so the report is what a visitor sees: it shows no
+ * email field, and the address can still be filed against it through the same route the progress
+ * screen uses.
  */
-test("the report offers the deeper read in exchange for an address", async ({ page }) => {
+test("the report asks for nothing, and an address can still be filed against it for delivery", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Website URL").fill("https://alpina.travel");
   await page.getByRole("button", { name: /audit my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
+  await expect(page.locator(".first-screen")).toBeVisible({ timeout: 60_000 });
+  const reportId = page.url().split("/reports/")[1]!;
 
-  // One line on the first screen, opening in place: nobody is sent to the bottom of the page.
-  const offer = page.getByRole("region", { name: /claim your context engine/i });
-  await expect(offer.getByLabel(/email address/i)).toBeHidden();
-  await offer.getByRole("button", { name: /claim your context engine, free with your email: keep your corrections/i }).click();
-  await expect(offer.getByText(/built from 4 representative pages/i)).toBeVisible();
-  await expect(offer.getByText(/review decisions are kept for every later read/i)).toBeVisible();
+  await expect(page.getByRole("textbox", { name: /email/i })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /claim your context engine/i })).toHaveCount(0);
 
-  await offer.getByLabel(/email address/i).fill("reviewer@example.com");
-  await offer.getByRole("button", { name: /claim & expand/i }).click();
+  const delivery = await page.request.post(`/api/reports/${reportId}/deliver`, { data: { email: "reviewer@example.com", surface: "web" } });
+  expect(delivery.status()).toBe(202);
+  expect(await delivery.json()).toMatchObject({ reportId, maskedEmail: "re******@example.com", status: "completed" });
 
-  // The address is shown back masked, and never written into a page anyone with the link can open.
-  await expect(page.getByText("re******@example.com")).toBeVisible();
+  // The address is never written into a page anyone with the link can open.
+  await page.reload();
+  await expect(page.locator(".first-screen")).toBeVisible({ timeout: 60_000 });
   await expect(page.getByText("reviewer@example.com")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: /follow it live/i })).toBeVisible();
 });

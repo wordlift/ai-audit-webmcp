@@ -403,23 +403,22 @@ describe("scan depth", () => {
     });
   }
 
-  it("asks the collector for four pages by default and keeps them", async () => {
+  it("asks the collector for five pages and keeps them", async () => {
     const scrape = countingScraper();
     const report = await liveOrchestrator(scrape).create({ requestId: randomUUID(), url: "alpina.travel" });
 
-    expect(scrape.askedFor).toEqual([4]);
-    expect(report.contextGraph?.pages).toHaveLength(4);
+    expect(scrape.askedFor).toEqual([5]);
+    expect(report.contextGraph?.pages).toHaveLength(5);
     expect(report.scanDepth).toBeUndefined();
   });
 
-  it("asks for twelve on a deep scan, and the report keeps every page it was given", async () => {
+  it("reads the same five pages when a caller still names a depth: there is one scan", async () => {
     const scrape = countingScraper();
     const report = await liveOrchestrator(scrape).create({ requestId: randomUUID(), url: "alpina.travel", depth: "deep" });
 
-    // What the address bought has to survive compilation and storage, or it was bought for nothing.
-    expect(scrape.askedFor).toEqual([12]);
-    expect(report.scanDepth).toBe("deep");
-    expect(report.contextGraph?.pages).toHaveLength(12);
+    expect(scrape.askedFor).toEqual([5]);
+    expect(report.scanDepth).toBeUndefined();
+    expect(report.contextGraph?.pages).toHaveLength(5);
     expect(report.status).toBe("completed");
   });
 });

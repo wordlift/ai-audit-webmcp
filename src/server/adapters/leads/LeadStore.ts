@@ -6,7 +6,8 @@ import { z } from "zod";
  * Not in the report: a report is a public document with a shareable link, and a private
  * identifier does not belong in one. A lead sits beside its report, keyed by report id, with its
  * own expiry, and is only ever read by the delivery system that sends the report to the person
- * who asked for it.
+ * who asked for it. The collection keeps its old name, `deepScanLeads`: the scan it was named for
+ * is gone, the ledger and its expiry policy are not.
  */
 export const deepScanLeadSchema = z
   .object({
@@ -17,6 +18,8 @@ export const deepScanLeadSchema = z
     source: z.enum(["web", "webmcp", "mcp"]),
     requestedAt: z.string().datetime(),
     expiresAt: z.string().datetime(),
+    /** Set once the address has been told to the lead platform, before the report exists. */
+    announcedAt: z.string().datetime().optional(),
     /** Set by the delivery system once the address has opted in. */
     confirmedAt: z.string().datetime().optional(),
     /** Set by the delivery system once the report has actually been sent. */
@@ -47,6 +50,7 @@ export interface LeadStore {
    * owns the sending; this store owns knowing what is still owed.
    */
   pending(limit?: number): Promise<DeepScanLead[]>;
+  markAnnounced(reportId: string, at: string): Promise<DeepScanLead | null>;
   markConfirmed(reportId: string, at: string): Promise<DeepScanLead | null>;
   markDelivered(reportId: string, at: string): Promise<DeepScanLead | null>;
   /**

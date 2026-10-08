@@ -57,12 +57,12 @@ describe("one crawl per site per day", () => {
     expect(later.id).not.toBe(first.id);
   });
 
-  it("does not hand a deep scan a basic crawl, or a different site's crawl", async () => {
+  it("reuses the crawl whatever depth a caller still names, and never a different site's crawl", async () => {
     const orchestrator = orchestratorWith();
-    await audit(orchestrator, { depth: "basic" });
+    const first = await audit(orchestrator, { depth: "basic" });
 
-    const deep = await audit(orchestrator, { depth: "deep" });
-    expect(deep.reusedFrom).toBeUndefined();
+    const named = await audit(orchestrator, { depth: "deep" });
+    expect(named.reusedFrom).toBe(first.id);
 
     const other = await orchestrator.create({ requestId: randomUUID(), url: "https://publisher.example/" });
     expect(other.reusedFrom).toBeUndefined();

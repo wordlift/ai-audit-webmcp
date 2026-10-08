@@ -37,8 +37,8 @@ that does not exist fails in a way that looks like a server outage.
 | `explain-capability` | Explain one action | Evidence, gap and contract for one action | Read |
 | `explain-foundation-audit` | Explain the foundation audit | The technical foundation findings | Read |
 
-Auditing and reading are free and anonymous. A deep scan asks for an email address and sends the
-report there.
+Auditing and reading are free and anonymous. Give `audit-website` an email address and the report
+is sent there as well; the scan is the same five pages either way.
 
 Publishing a human refinement is deliberately not exposed by the anonymous remote MCP endpoint.
 That operation requires user-bound authorization and remains available in the WordLift AI Audit

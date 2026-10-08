@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DEEP_SCAN_PAGES } from "../format/deepScan.js";
+import { MAX_REPORT_PAGES } from "../format/deepScan.js";
 
 export const MAX_EVIDENCE_ITEMS = 100;
 export const MAX_EVIDENCE_SNIPPET_LENGTH = 500;
@@ -180,7 +180,7 @@ export const contextGraphSchema = z
   .object({
     // The ceiling a deep scan can reach, not the four a basic scan reads: a report that read more
     // has to be storable, or the deeper read is bought and thrown away.
-    pages: z.array(auditedPageSchema).min(1).max(DEEP_SCAN_PAGES),
+    pages: z.array(auditedPageSchema).min(1).max(MAX_REPORT_PAGES),
     entities: z.array(domainEntitySchema).max(80),
     lexicalEntries: z.array(lexicalEntrySchema).max(100),
     interfaces: z.array(actionInterfaceSchema).max(120),

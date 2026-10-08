@@ -1,22 +1,29 @@
 import type { ScanDepth } from "../types/index.js";
 
 /**
- * The two scans, and the words used for them everywhere: in a tool description, in a report page,
- * in the sentence an agent reads back to the person who asked.
+ * There is one scan, and the words used for it everywhere: in a tool description, in a report
+ * page, in the sentence an agent reads back to the person who asked.
  *
- * The basic scan is what every visitor gets for nothing. The deep scan reads more of the site and
- * is what an email address buys — the report goes to that address, and the address goes nowhere
- * near the report.
+ * It reads five representative pages for everyone and asks for nothing. An email address buys
+ * nothing more than delivery: the finished report goes to that address, and the address goes
+ * nowhere near the report. The deep scan of twelve pages for an address was retired on
+ * 2026-10-08 (the fourth brief); `depth` is still accepted wherever it was, and means nothing.
  */
-export const BASIC_SCAN_PAGES = 4;
-export const DEEP_SCAN_PAGES = 12;
+export const SCAN_PAGES = 5;
+/** The old name for the only scan, kept for callers that named it. */
+export const BASIC_SCAN_PAGES = SCAN_PAGES;
+/**
+ * The most pages a stored report may carry. The retired deep scan read twelve, and a report
+ * stored then must still parse today; no new report reaches it.
+ */
+export const MAX_REPORT_PAGES = 12;
 
-export function pagesForDepth(depth: ScanDepth | undefined): number {
-  return depth === "deep" ? DEEP_SCAN_PAGES : BASIC_SCAN_PAGES;
+export function pagesForDepth(_depth: ScanDepth | undefined): number {
+  return SCAN_PAGES;
 }
 
-export function describeDepth(depth: ScanDepth | undefined): string {
-  return depth === "deep" ? `deep scan (up to ${DEEP_SCAN_PAGES} pages)` : `basic scan (${BASIC_SCAN_PAGES} pages)`;
+export function describeDepth(_depth: ScanDepth | undefined): string {
+  return `scan of ${SCAN_PAGES} representative pages`;
 }
 
 /**

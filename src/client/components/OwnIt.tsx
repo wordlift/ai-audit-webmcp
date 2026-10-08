@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ActionBoundary, CapabilityResult, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
-import { refineReport } from "../api/client";
-import { engineHostFor, engineKeyFor } from "../engine/engineKeys";
+import { claimEngine, refineReport } from "../api/client";
+import { keyForReview } from "../engine/engineKeys";
+import { announceEngineChange } from "../engine/useEngine";
 import { WORD_LABEL, actionsThatMatter, plainWord } from "./FirstScreen";
 
 /**
@@ -91,7 +92,8 @@ export function OwnIt({ report }: { report: ReportRecord }) {
     setError(null);
     try {
       // The same call the interview ends with; here it carries the decisions made on this page alone.
-      const child = await refineReport(report.id, { actionDecisions: decisions }, engineKeyFor(engineHostFor(report)));
+      const child = await refineReport(report.id, { actionDecisions: decisions }, await keyForReview(report, claimEngine));
+      announceEngineChange();
       navigate(`/reports/${child.id}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Your answers could not be saved.");
@@ -181,7 +183,7 @@ export function OwnIt({ report }: { report: ReportRecord }) {
           <div className={`own-it-actions${anything ? " is-ready" : ""}`} role={anything ? "status" : undefined}>
             <span>
               {anything
-                ? `${decisions.length} ${decisions.length === 1 ? "answer" : "answers"} ready. Saving creates a new version of this report${engineKeyFor(engineHostFor(report)) ? ", kept on your Context Engine for every later read" : ""}.`
+                ? `${decisions.length} ${decisions.length === 1 ? "answer" : "answers"} ready. Saving creates a new version of this report, kept on your Context Engine for every later read.`
                 : "Pick an answer for each action you know. Your answers create a new version of this report; the score stays where the evidence put it."}
             </span>
             <button type="submit" className="review-cta review-cta-primary" disabled={saving || !anything}>{saving ? "Saving…" : "Save my answers"}</button>

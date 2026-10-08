@@ -18,11 +18,11 @@ import type { MarkupProvider } from "./adapters/markup/MarkupProvider.js";
 import type { PlatformEgress } from "./security/platformEgress.js";
 import type { VisitLedger } from "./services/VisitLedger.js";
 import { AuditToolService, type AuditToolServiceOptions } from "./services/AuditToolService.js";
-import { DeepScanDelivery } from "./services/DeepScanDelivery.js";
+import { ReportDelivery } from "./services/ReportDelivery.js";
 import { Observer, type ObserveOptions } from "./services/Observer.js";
 import { createObserveRouter } from "./routes/observe.js";
 import type { PublishedSiteStore } from "./adapters/published/PublishedSiteStore.js";
-import { DeepScanGate } from "./services/DeepScanGate.js";
+import { DeliveryRequests } from "./services/DeliveryRequests.js";
 import type { UrlPolicyOptions } from "./security/urlPolicy.js";
 import { CapabilityTestService } from "./services/CapabilityTest.js";
 import { AlpinaAvailabilitySidecar } from "./sidecars/alpina/adapter.js";
@@ -150,14 +150,14 @@ export function createApp(options: AppOptions = {}): Express {
 
   if (options.orchestrator) {
     const limiters: RequestHandler[] = createAuditRateLimiters(options.rateLimits, options.platformEgress);
-    const deepScan = new DeepScanGate(options.leads ?? null, options.reportTtlDays);
-    const delivery = new DeepScanDelivery({
+    const delivery = new ReportDelivery({
       leads: options.leads,
       delivery: options.leadDelivery,
       publicReportUrl: (reportId) => (options.orchestrator as AuditOrchestrator).reportUrl(reportId),
       loadReport: (reportId) => (options.orchestrator as AuditOrchestrator).get(reportId),
       engineFor: async (report) => (await options.orchestrator?.engines?.forReport(report)) ?? null,
     });
+    const deliveries = new DeliveryRequests(options.leads ?? null, options.reportTtlDays, undefined, delivery);
     app.get("/api/demo/alpina", async (_request, response) => response.json(await options.orchestrator?.pinnedAlpina()));
     const writeLimiters: RequestHandler[] = createAuditRateLimiters(
       options.writeRateLimits ?? { ...options.rateLimits, perIp: 40, global: 800 },
@@ -165,7 +165,7 @@ export function createApp(options: AppOptions = {}): Express {
     if (options.orchestrator.engines) app.use("/api/engines", createEnginesRouter(options.orchestrator, options.orchestrator.engines, writeLimiters));
     app.use(
       "/api/reports",
-      createReportsRouter(options.orchestrator, limiters, deepScan, writeLimiters, delivery, options.visits, new CapabilityTestService(options.orchestrator, options.capabilityTest)),
+      createReportsRouter(options.orchestrator, limiters, deliveries, writeLimiters, delivery, options.visits, new CapabilityTestService(options.orchestrator, options.capabilityTest)),
     );
     const sidecarLimiters: RequestHandler[] = createAuditRateLimiters(
       options.sidecarRateLimits ?? { ...options.rateLimits, perIp: 30, global: 600 },
@@ -189,7 +189,7 @@ export function createApp(options: AppOptions = {}): Express {
             claims: undefined,
             claimTtlDays: options.reportTtlDays,
           },
-          deepScan,
+          deliveries,
           delivery,
         ),
         [

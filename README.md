@@ -79,12 +79,12 @@ inspect, interview, confirm — while keeping readiness grounded in evidence.
 
 ## What it costs
 
-Nothing. Auditing a URL, reading a report, sharing its link: no account, no payment. The basic scan
-reads four representative pages and asks for nothing at all.
+Nothing. Auditing a URL, reading a report, sharing its link: no account, no payment. The scan
+reads five representative pages and asks for nothing at all.
 
-One exchange exists. A **deep scan** reads up to twelve pages and asks for an email address, and the
-finished report is sent there. A report page offers it once the free scan has shown what it found —
-never before — and an agent can ask for the same thing through `audit-website`. The address is filed beside the report, never inside it — a report is
+One exchange exists. An email address, and the finished report is sent there. The page asks for it
+once, while the audit runs, and it can be skipped; an agent can pass the same thing to
+`audit-website`. The address is filed beside the report, never inside it — a report is
 a public document with a shareable link — and it is masked wherever it is read back. The report is
 sent through the same HubSpot form the WordLift AI Audit already uses, so one person is one contact
 whichever audit they arrived through.

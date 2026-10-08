@@ -7,8 +7,9 @@ import { FixtureProvider } from "../../src/server/adapters/fixtures/FixtureProvi
 import { MemoryReportStore } from "../../src/server/adapters/store/MemoryReportStore.js";
 import { AuditOrchestrator } from "../../src/server/services/AuditOrchestrator.js";
 import { AuditToolService } from "../../src/server/services/AuditToolService.js";
-import { DeepScanGate } from "../../src/server/services/DeepScanGate.js";
+import { DeliveryRequests } from "../../src/server/services/DeliveryRequests.js";
 import type { AuditToolResult } from "../../src/shared/format/agentSummary.js";
+import { SCAN_PAGES } from "../../src/shared/format/deepScan.js";
 
 const fixedNow = new Date("2026-08-27T05:00:00.000Z");
 const TRAVEL = "https://alpina.travel/";
@@ -22,8 +23,8 @@ function harness(options: { leads?: MemoryLeadStore | null } = {}) {
     ttlDays: 30,
     now: () => fixedNow,
   });
-  const gate = new DeepScanGate(leads, 30, () => fixedNow);
-  const service = new AuditToolService(orchestrator, { graceMs: 5_000, source: "mcp" }, gate);
+  const deliveries = new DeliveryRequests(leads, 30, () => fixedNow);
+  const service = new AuditToolService(orchestrator, { graceMs: 5_000, source: "mcp" }, deliveries);
   return {
     leads,
     orchestrator,
@@ -42,18 +43,22 @@ describe("the one thing the audit asks for", () => {
     expect(answer.text).not.toContain("email");
   });
 
-  it("asks for an address before reading further, and says why", async () => {
-    const { service, leads } = harness();
+  it("reads the same pages whether or not a depth is named: there is one scan", async () => {
+    const { service, orchestrator } = harness();
+    const plain = await service.auditWebsite({ url: TRAVEL });
+    const named = await service.auditWebsite({ url: TRAVEL, depth: "deep", fresh: true });
 
-    await expect(service.auditWebsite({ url: TRAVEL, depth: "deep" })).rejects.toMatchObject({
-      code: "email_required",
-    });
-    expect(await leads?.pending()).toEqual([]);
+    for (const answer of [plain, named]) {
+      const report = await orchestrator.get(answer.structured.reportId);
+      expect(report?.scanDepth).toBeUndefined();
+      expect(report?.contextGraph?.pages.length).toBeLessThanOrEqual(SCAN_PAGES);
+    }
+    expect(named.text).not.toContain("email");
   });
 
   it("files the address beside the report, never inside it", async () => {
     const { service, leads, orchestrator } = harness();
-    const answer = await service.auditWebsite({ url: TRAVEL, depth: "deep", email: ADDRESS });
+    const answer = await service.auditWebsite({ url: TRAVEL, email: ADDRESS });
     const reportId = answer.structured.reportId;
 
     const [lead] = (await leads?.pending()) ?? [];
@@ -61,68 +66,74 @@ describe("the one thing the audit asks for", () => {
     expect(lead.deliveredAt).toBeUndefined();
 
     const report = await orchestrator.get(reportId);
-    expect(report?.scanDepth).toBe("deep");
     expect(JSON.stringify(report)).not.toContain(ADDRESS);
     expect(JSON.stringify(report)).not.toContain("example.com");
   });
 
   it("shows the person the address they gave without spelling it out", async () => {
     const { service } = harness();
-    const answer = await service.auditWebsite({ url: TRAVEL, depth: "deep", email: ADDRESS });
+    const answer = await service.auditWebsite({ url: TRAVEL, email: ADDRESS });
 
     expect(answer.text).toContain("re******@example.com");
     expect(answer.text).not.toContain(ADDRESS);
     expect((answer.structured as AuditToolResult).notes.join(" ")).toContain("stays public and free");
   });
 
-  it("refuses to take an address it has no use for", async () => {
-    const { service } = harness();
+  it("refuses an address that is not one, and says the audit runs without", async () => {
+    const { service, leads } = harness();
 
-    await expect(service.auditWebsite({ url: TRAVEL, email: ADDRESS })).rejects.toMatchObject({
-      code: "email_not_needed",
+    await expect(service.auditWebsite({ url: TRAVEL, email: "not an address" })).rejects.toMatchObject({
+      code: "invalid_email",
     });
+    expect(await leads?.pending()).toEqual([]);
   });
 
-  it("says so rather than silently running a basic scan when deep scans are unavailable", async () => {
+  it("says so rather than silently dropping the address when delivery is unavailable", async () => {
     const { service } = harness({ leads: null });
 
-    await expect(service.auditWebsite({ url: TRAVEL, depth: "deep", email: ADDRESS })).rejects.toMatchObject({
-      code: "deep_scan_unavailable",
+    await expect(service.auditWebsite({ url: TRAVEL, email: ADDRESS })).rejects.toMatchObject({
+      code: "delivery_unavailable",
     });
   });
 
-  it("holds the web form to the same exchange", async () => {
+  it("ends every audit with the one door: a conversation, not a dashboard", async () => {
+    const { service } = harness();
+    const answer = await service.auditWebsite({ url: TRAVEL });
+
+    expect(answer.text).toContain("https://wordlift.io/book-a-demo/");
+    expect(answer.text).not.toContain("my.wordlift.io");
+  });
+
+  it("takes the address with the web form, or later, while the audit runs or after it landed", async () => {
     const { app, leads } = harness();
-    const requestId = randomUUID();
 
-    const refused = await request(app)
-      .post("/api/reports")
-      .send({ requestId, url: TRAVEL, depth: "deep" })
-      .expect(400);
-    expect(refused.body.error).toBe("email_required");
-
-    const accepted = await request(app)
-      .post("/api/reports")
-      .send({ requestId, url: TRAVEL, depth: "deep", email: ADDRESS })
-      .expect(200);
-    expect(accepted.body.scanDepth).toBe("deep");
+    const withForm = randomUUID();
+    const accepted = await request(app).post("/api/reports").send({ requestId: withForm, url: TRAVEL, email: ADDRESS }).expect(200);
+    expect(accepted.body.scanDepth).toBeUndefined();
     expect(JSON.stringify(accepted.body)).not.toContain(ADDRESS);
-    expect((await leads?.pending())?.[0]).toMatchObject({ reportId: requestId, source: "web" });
+    expect((await leads?.get(withForm))).toMatchObject({ source: "web" });
+
+    const later = randomUUID();
+    await request(app).post("/api/reports").send({ requestId: later, url: TRAVEL, fresh: true }).expect(200);
+    expect(await leads?.get(later)).toBeNull();
+    const delivery = await request(app).post(`/api/reports/${later}/deliver`).send({ email: ADDRESS }).expect(202);
+    expect(delivery.body).toMatchObject({ reportId: later, maskedEmail: "re******@example.com", status: "completed" });
+    expect(await leads?.get(later)).toMatchObject({ reportId: later, email: ADDRESS, source: "web" });
+
+    await request(app).post(`/api/reports/${randomUUID()}/deliver`).send({ email: ADDRESS }).expect(404);
+    await request(app).post(`/api/reports/${later}/deliver`).send({ email: "nope" }).expect(400);
   });
 
   it("keeps the page's own form and an agent driving that page apart", async () => {
     const { app, leads } = harness();
 
     const form = randomUUID();
-    await request(app)
-      .post("/api/reports")
-      .send({ requestId: form, url: TRAVEL, depth: "deep", email: ADDRESS })
-      .expect(200);
+    await request(app).post("/api/reports").send({ requestId: form, url: TRAVEL, email: ADDRESS }).expect(200);
 
     const agent = randomUUID();
     await request(app)
       .post("/api/reports")
-      .send({ requestId: agent, url: TRAVEL, depth: "deep", email: "agent@example.com", surface: "webmcp" })
+      .send({ requestId: agent, url: TRAVEL, email: "agent@example.com", surface: "webmcp" })
       .expect(200);
 
     // Both arrive over the same API; only the caller can say which surface it is.
@@ -133,7 +144,7 @@ describe("the one thing the audit asks for", () => {
   it("keeps what is still owed, and forgets it once it has been sent", async () => {
     const leads = new MemoryLeadStore(() => fixedNow);
     const { service } = harness({ leads });
-    const answer = await service.auditWebsite({ url: TRAVEL, depth: "deep", email: ADDRESS });
+    const answer = await service.auditWebsite({ url: TRAVEL, email: ADDRESS });
     const reportId = answer.structured.reportId;
 
     expect(await leads.pending()).toHaveLength(1);
