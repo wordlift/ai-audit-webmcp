@@ -158,7 +158,7 @@ export function ReportRoute() {
       <section className="step-fix" id="step-fix" aria-labelledby="step-fix-title">
         <header className="step-head">
           <p className="section-kicker"><Wrench size={16} /> Fix</p>
-          <h2 className="step-title" id="step-fix-title">Make your Context Engine authoritative</h2>
+          <h2 className="step-title" id="step-fix-title">Fix what agents read wrong</h2>
           <p className="step-subtitle">What exists only in your content, and who actually performs each action. Nothing here moves readiness; evidence does.</p>
         </header>
         <UnderstandPanel report={report} />

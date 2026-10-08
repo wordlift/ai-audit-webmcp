@@ -10,7 +10,7 @@ export type Step = "audit" | "fix" | "activate";
 
 const STEPS: ReadonlyArray<{ id: Step; label: string; hint: string }> = [
   { id: "audit", label: "Audit", hint: "Understand the business and verify what agents can do" },
-  { id: "fix", label: "Fix", hint: "Correct, confirm and make the Context Engine authoritative" },
+  { id: "fix", label: "Fix", hint: "Correct what agents read wrong, and say who runs each action" },
   { id: "activate", label: "Activate", hint: "Publish it and make its capabilities usable by agents" },
 ];
 

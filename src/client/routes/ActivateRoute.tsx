@@ -1,4 +1,4 @@
-import { ArrowUpRight, BookOpen, Radar, Rocket } from "lucide-react";
+import { ArrowRight, ArrowUpRight, BookOpen, Radar, Rocket } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { Publication, PublishedAction, ScoreReading } from "../../shared/types/activate.js";
@@ -196,6 +196,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
   const hasInterface = publication.actions.some((action) => action.publishedAs === "action");
   const { engine } = useReportEngine();
   const activate = publishUrl(report.id, { intent: "activate", engine: engine?.id });
+  const runsWordLift = Boolean(report.publishedWith);
   const [openDoc, setOpenDoc] = useState<PublishedDoc | null>(null);
   const [businessData, instructions, discovery, llms]: PublishedDoc[] = [
     {
@@ -261,16 +262,30 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
       <header className="activate-head">
         <h1><Rocket size={26} aria-hidden="true" /> Make {host} usable by AI agents</h1>
         <p className="first-sentence">
-          Make your Context Engine operational. WordLift publishes it on your pages, keeps it synchronized, and verifies every week that agents can still use what works.
+          Put your business, as agents read it, where they look. Two ways, depending on how {host} is run.
         </p>
+        {/* Two paths, decided on 2026-10-08: a site without WordLift copies the files to its root, by hand or
+            through an agent with the runbook; a site on WordLift goes to the dashboard. The audit knows which
+            it is looking at, so the right one leads. */}
         <p className="activate-doors">
-          <a className="fix-publish" href={activate} onClick={() => track(report.id, "door_activate")} target="_blank" rel="noreferrer">
-            Activate with WordLift <ArrowUpRight size={15} aria-hidden="true" />
-          </a>
+          {runsWordLift ? (
+            <>
+              <a className="fix-publish" href={activate} onClick={() => track(report.id, "door_activate")} target="_blank" rel="noreferrer">
+                Open your WordLift dashboard <ArrowUpRight size={15} aria-hidden="true" />
+              </a>
+              <span>{host} runs WordLift, so publishing belongs there. The files below are what it publishes.</span>
+            </>
+          ) : (
+            <>
+              <a className="fix-publish" href="#runbook-title">
+                Copy the files to your site <ArrowRight size={15} aria-hidden="true" />
+              </a>
+              <span>Four files at your site's root, by hand or by an agent with the runbook. Already on WordLift? <a href={activate} onClick={() => track(report.id, "door_activate")} target="_blank" rel="noreferrer">Open your dashboard</a>.</span>
+            </>
+          )}
           <a className="activate-talk" href={talkToUsUrl(report.id)} target="_blank" rel="noreferrer">
             Talk to us <ArrowUpRight size={13} aria-hidden="true" />
           </a>
-          <span>for a whole business, several sites, or an interface that has to be built.</span>
         </p>
       </header>
 
@@ -279,7 +294,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
       <section className="activate-section" aria-labelledby="outcomes-title">
         <h2 id="outcomes-title">What WordLift publishes</h2>
         <p className="activate-lead">
-          Your Context Engine, published where agents look, as three outcomes. Each file is readable now; the plugin puts them on your site and keeps them current.
+          Your business, as agents read it, published where they look, as three outcomes. Each file is readable now; the runbook or the WordLift plugin puts them on your site.
         </p>
         <ol className="outcome-list">
           {outcomes.map((outcome) => (
@@ -408,8 +423,8 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
         </div>
         )}
         <p className="activate-lead">
-          <a href={publishUrl(report.id, { intent: "monitor", engine: engine?.id })} onClick={() => track(report.id, "door_monitor")} target="_blank" rel="noreferrer">Monitor AI visibility</a>: use this Context Engine to
-          track how your business is discovered and used by AI systems. WordLift re-verifies on a schedule and writes only when something moves.
+          <a href={publishUrl(report.id, { intent: "monitor", engine: engine?.id })} onClick={() => track(report.id, "door_monitor")} target="_blank" rel="noreferrer">Monitor AI visibility</a>: track how your
+          business is discovered and used by AI systems. WordLift re-verifies on a schedule and writes only when something moves.
         </p>
       </section>
       {/* For the engineers: the exact rows the page carries, and every surface agents are given, one fold below the outcome. */}
@@ -491,7 +506,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
           Activate with WordLift <ArrowUpRight size={15} aria-hidden="true" />
         </a>
         <a className="activate-talk" href={talkToUsUrl(report.id)} target="_blank" rel="noreferrer">Talk to us <ArrowUpRight size={13} aria-hidden="true" /></a>
-        <span>Publishes your Context Engine on your site and keeps it agent-ready.</span>
+        <span>Publishes what agents read on your site and keeps it agent-ready.</span>
       </p>
     </div>
   );

@@ -20,7 +20,7 @@ export const PROVENANCE_WORD: Record<EntityProvenance, string> = {
 const PROVENANCE_HINT: Record<EntityProvenance, string> = {
   declared: "The website explicitly identifies this in its markup.",
   inferred: "WordLift found this in the content; the website does not declare it.",
-  "human-confirmed": "Confirmed in a review of this Context Engine.",
+  "human-confirmed": "Confirmed in a review.",
 };
 
 /** "LodgingBusiness" → "Lodging business": the schema.org type in words a person reads. */

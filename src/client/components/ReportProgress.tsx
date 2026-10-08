@@ -76,7 +76,7 @@ export function ReportProgress({ report }: { report: ReportRecord }) {
   return (
     <div className="report-page report-progress" aria-busy="true">
       <p className="eyebrow"><Bot size={16} /> Audit</p>
-      <h1>Building a Context Engine for <span>{host}</span></h1>
+      <h1>Reading <span>{host}</span> the way AI agents do</h1>
 
       <ol className="progress-phases" aria-label="What the audit has done so far">
         {steps.map((step) => (

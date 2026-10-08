@@ -13,7 +13,7 @@ test("a claimed Context Engine keeps a correction across a new read of the site"
   const firstUrl = page.url();
   await expect(page.getByText(/Built from \d+ pages? of saas\.example/)).toBeVisible();
   // A first visit says nothing about an unclaimed draft.
-  await expect(page.getByText(/Draft Context Engine/)).toHaveCount(0);
+  await expect(page.getByText(/Draft · not claimed/)).toHaveCount(0);
 
   // Correct the model where it is read: one card is not theirs. The first correction claims the
   // engine for this browser; no address is asked for on the report.
@@ -28,7 +28,7 @@ test("a claimed Context Engine keeps a correction across a new read of the site"
 
   // The correction shows where the model is, and the engine keeps it.
   await expect(page.getByText(/decision added · not ours:|decisions added · not ours:/)).toContainText(name);
-  await expect(page.getByText(/Your Context Engine · claimed, ownership not verified · 1 decision kept/)).toBeVisible();
+  await expect(page.getByText(/Kept in this browser · ownership not verified · 1 decision kept/)).toBeVisible();
 
   // Back on the first report, the engine says a review landed since. Then a new read of the site:
   // the correction is carried onto it.

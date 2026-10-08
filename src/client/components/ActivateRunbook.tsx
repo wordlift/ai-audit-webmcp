@@ -35,11 +35,19 @@ export function ActivateRunbook({ publication, onRead }: { publication: Publicat
   }
   return (
     <section className="activate-section activate-runbook" aria-labelledby="runbook-title">
-      <h2 id="runbook-title"><TerminalSquare size={18} aria-hidden="true" /> Put it on your site with an agent</h2>
+      <h2 id="runbook-title"><TerminalSquare size={18} aria-hidden="true" /> Copy the files to your site</h2>
       <p className="activate-lead">
-        Hand the runbook to an agent that can change your site, such as Claude Code or Codex. It serves the catalog, the Terms of Action and llms.txt
-        at <code>{publication.sitePaths.catalog}</code>, <code>{publication.sitePaths.skill}</code> and <code>{publication.sitePaths.llms}</code>, adds the JSON-LD to your home page, and ends by reading the site again so the three agree. It publishes only what is in these files.
+        Four files, each at a fixed path on your site, plus one block in your home page's <code>&lt;head&gt;</code>. Hand the runbook to an agent that can change your site, such as Claude Code or Codex, or do it by hand from the table. Either way it publishes only what is in these files, and ends by reading the site again so what the page declares, what the catalog registers and what an agent could call agree.
       </p>
+      <table className="activate-files">
+        <thead><tr><th>File</th><th>Put it at</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>Discovery catalog</td><td><code>{publication.sitePaths.catalog}</code></td><td><a href={publication.documents.siteCatalog} target="_blank" rel="noreferrer">Download <ArrowUpRight size={12} aria-hidden="true" /></a></td></tr>
+          <tr><td>Terms of Action</td><td><code>{publication.sitePaths.skill}</code></td><td><a href={publication.documents.skill} target="_blank" rel="noreferrer">Download <ArrowUpRight size={12} aria-hidden="true" /></a></td></tr>
+          <tr><td>llms.txt</td><td><code>{publication.sitePaths.llms}</code></td><td><a href={publication.documents.llms} target="_blank" rel="noreferrer">Download <ArrowUpRight size={12} aria-hidden="true" /></a></td></tr>
+          <tr><td>Business data (JSON-LD)</td><td>the <code>&lt;head&gt;</code> of your home page</td><td><a href={publication.documents.pageJsonLd} target="_blank" rel="noreferrer">Download <ArrowUpRight size={12} aria-hidden="true" /></a></td></tr>
+        </tbody>
+      </table>
       <div className="publish-actions">
         <button type="button" className="doc-read" onClick={copy}>
           {state === "copied" ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />} {state === "copied" ? "Copied — paste it to your agent" : "Copy the prompt for your agent"}

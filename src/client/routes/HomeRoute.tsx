@@ -111,7 +111,7 @@ export function HomeRoute() {
     <section className="home-page">
       <div className="hero" aria-labelledby="hero-title">
         <div className="eyebrow"><Sparkles size={16} /> Free · no account · public websites</div>
-        <h1 id="hero-title">Turn your website into a Context Engine <span>for AI agents</span></h1>
+        <h1 id="hero-title">Your business, <span>as AI agents read it</span></h1>
         <p className="hero-copy">
           Paste a URL. WordLift builds a first model of your business from its pages, shows what the site declares and what it
           only says in its content, and checks what AI agents can actually do with it.

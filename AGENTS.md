@@ -28,10 +28,13 @@ support them. Declarations never earn readiness; only invoked evidence does.
 - **The report schema** in `src/shared/schemas/report.ts` is strict; new fields are optional, and a
   report stored yesterday must still parse today.
 - **Vocabulary the UI uses**: Terms of Action, Context Engine, capability map, Full WordLift audit,
-  foundation score, agent readiness — in the model & evidence fold, the docs and the tools. The first
-  screen of a report leads with the Context Engine, decided on 2026-09-16: what the business is and
-  offers, each thing marked **Declared** (the site's markup says so), **Inferred** (read from its
-  content) or **Confirmed** (a review said so); "verified" is reserved for an action an agent
+  foundation score, agent readiness — in the model & evidence fold, the docs and the tools. On the
+  owner's layer (the first screen, Fix, Activate, the progress screen) the Context Engine is called
+  **your business, as AI agents read it**, decided on 2026-10-08 after every cold-reader round read
+  the name as jargon; the name itself stays one click below and in the docs. The first screen leads
+  with that model, decided on 2026-09-16: what the business is and offers, each thing marked
+  **Declared** (the site's markup says so), **Inferred** (read from its content) or **Confirmed** (a
+  review said so); "verified" is reserved for an action an agent
   actually invoked. Readiness follows as proof, in plain words decided on 2026-09-07: **works**,
   **fix this**, **talk to us**, each mapping onto exactly one precise state (agent-ready;
   unverified or human-only; missing), never two.

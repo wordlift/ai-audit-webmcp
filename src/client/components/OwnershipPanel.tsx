@@ -72,13 +72,13 @@ export function OwnershipPanel({ report }: { report: ReportRecord }) {
         </>
       )}
       {verified && engine.standing !== "owner" && (
-        <p>The owner of {host} verified this Context Engine. Their decisions are the business's own word; a review from anyone else stays on its report.</p>
+        <p>The owner of {host} verified this. Their decisions are the business's own word; a review from anyone else stays on its report.</p>
       )}
       {!verified && !holds && (
         <p>
           {engine.claimed
-            ? `This Context Engine is claimed, and nobody has proved ${host} is theirs yet. If it is yours, answer who runs an action above and this browser holds it; then verify it to take it over.`
-            : "Your first correction, above or in the answers, keeps this Context Engine in this browser across reads of the site. Verify you own the site afterwards to make your decisions the business's own word."}{" "}
+            ? `Someone claimed this, and nobody has proved ${host} is theirs yet. If it is yours, answer who runs an action above and this browser holds it; then verify it to take it over.`
+            : "Your first correction, above or in the answers, is kept in this browser across reads of the site. Verify you own the site afterwards to make your decisions the business's own word."}{" "}
           <a href="#own-it">Answer who runs each action</a>
         </p>
       )}
@@ -86,7 +86,7 @@ export function OwnershipPanel({ report }: { report: ReportRecord }) {
         <>
           <p>
             {engine.standing === "pending"
-              ? `Someone else claimed this Context Engine first. Prove ${host} is yours to take it over.`
+              ? `Someone else claimed this first. Prove ${host} is yours to take it over.`
               : `Your decisions are kept as a reviewer's until you prove ${host} is yours. Then they are the business's own word.`}
           </p>
           {!verification ? (
