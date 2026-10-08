@@ -790,6 +790,102 @@ the business does, what WordLift inferred against what the company says, what an
 today, and what claiming does; then, given ChatGPT and no instructions, reviews the understanding,
 corrects something, and sees the model change. The last clause waits for the object above.
 
+## The fourth brief, 2026-10-08: what clients showed on the new beta
+
+Andrea's fourth brief, from testing beta (`392e69f`, the activation branch live since 2026-10-04)
+with clients. Three findings, in his words: the email is asked too late and for too much; Activate
+hands over files when it should hand over an outcome; and the report shows more than a reader needs
+to act. One line holds them together: the free product ends with a lead and a working runbook, the
+paid product ends with a knowledge graph that keeps the site agent-ready. Every change below keeps
+the public remote MCP surface exactly as the OpenAI app directory reviewed it (five tools,
+`audit-website` with `url`, `archetype`, `depth`, `email`), so the plugin needs no resubmission.
+
+### 1. One scan, five pages, the email asked while waiting
+
+- **Decided.** There is one scan. It reads five representative pages for everyone;
+  `BASIC_SCAN_PAGES` becomes 5 and the twelve-page deep scan is retired. The audit still runs
+  without an email. The address is asked on the web while the audit runs, the way audit.wordlift.io
+  asks it, as "send me the report": one field, skippable, on the progress screen, never again on
+  the report. The one-line offer on the first screen goes.
+- **Why.** Twelve pages for an address is a trade nobody saw, and the few who did saw it after
+  the result, when the reason to give an address had passed. In the wait, the person has just
+  committed and has ninety seconds with nothing to do. The report goes by email anyway.
+- **The plugin keeps its contract.** `depth` stays in the schema and is accepted; both values read
+  the same five pages. `email` stays optional and means "deliver the report". The tool description
+  is reworded in the next planned update, not before. A scan with no address stays anonymous, which
+  is the line the privacy review rests on.
+- **In ChatGPT the lead comes at the end.** The agent does not ask for an address before auditing.
+  After the result, the closing door is https://wordlift.io/book-a-demo/, not the dashboard: the
+  person has just seen what agents can and cannot do on their site, and a conversation is what
+  they want next. Both surfaces deliver the same five-page report; they differ only in when they
+  ask, which is each surface's own norm.
+- **HubSpot is written twice.** Today one form submission goes out when a deep scan completes.
+  Now: a first submission the moment the address is given (email, audited URL, source, and a status
+  of requested), a second when the audit completes (score, summary, report link, signals). Both go
+  through the same Forms v3 endpoint; HubSpot matches the second to the contact by email and
+  updates the properties, so no new credential and no Contacts API. The lead store records both
+  writes and what each still owes. A completed audit with no address writes nothing.
+- **Follows from it.** The Observer's weekly re-read attaches to every audit that left an address,
+  so `OBSERVE_PER_TICK` is the cost ceiling to watch. The privacy page's sections 3.1 and 6 say a
+  deep scan requires an address; they change to "the report is sent to an address you choose to
+  give". Five pages against four is about a quarter more per audit and far below the deep scan.
+
+### 2. Activate is an outcome, reached two ways
+
+The three documents (page JSON-LD, the skill file, the ARD catalog) are served today beneath the
+report, on our domain. That is staging, not activation: discovery reads the site's own origin.
+Activate is done when the site serves them, or when a knowledge graph the site already publishes
+from carries them.
+
+- **AC5. A runbook an agent can execute, for everyone, first.** Shipped with the three files: where
+  each goes, the well-known path in Google's spelling, the link and robots hints, the JSON-LD block
+  to add or merge, and one line to verify. Written for Claude Code and Codex to apply on any stack;
+  readable by a person. Prove already has the check (W5): the site is read again and declared,
+  registered and invoked agree. The line that keeps this on our side of the generators: the
+  runbook deploys what the audit verified and the owner confirmed, never tools derived from pages.
+- **AC6. A knowledge graph for the site that has none, second.** Andrea's call: a user without a KG
+  is the easier and bigger case, because an existing client's graph has its own import strategy.
+  From the audit's model, the Starter KG (second brief) becomes a real WordLift dataset the person
+  owns, and the three documents are published from it; the plugin or Cloud JS then carries them to
+  the site. This is the paid path and the one that stays true when the site changes.
+- **Existing WordLift clients, later.** The audit already detects an install (`publishedWith`:
+  the plugin path, the SDK, or the site's own dataset portal). Sending the model into an existing
+  graph is less obvious than it sounds, since each client imported differently; it waits on a
+  per-client import strategy and is not in this brief's scope.
+- **Not a central graph of our own.** A WordLift graph that is not the customer's would be the
+  directory ruled out on 2026-09-06.
+
+### 3. Hide what the reader does not need
+
+Andrea: "I love the details we have but I can get lost and I built it." The first screen passed the
+cold-reader test in September when it said one sentence about the business, three plain words and
+one next step; what was added since sits on top of that.
+
+- **One click down by default:** the boundaries table and the decision log; the model diagram's
+  edge controls (Right / Wrong on inferred lines stay in Own it); the engineers' table and surfaces
+  in Activate; the full Terms of Action vocabulary.
+- **Two readers, two layers.** The owner's layer: what agents understand about the business, what
+  they can do today, what to do next, one door. The fold: the model and evidence, for us, for
+  engineers, and for the ChatGPT interview, which keeps every tool it has.
+- **The name.** "Context Engine" read as jargon in every cold-reader round and is still on the
+  first screen. Naming is Andrea's decision; the brief records that the test keeps failing on it.
+- **The test is the same one.** A stranger, thirty seconds, four questions (what the business does,
+  what was inferred against what it says, what an agent can do today, what to do next). Then one
+  more: where would you click. One answer, in under ten seconds.
+
+### Order
+
+1 before 2 before 3, and inside 1 the HubSpot double write ships with the email field, not after
+it: a lead captured and never updated is worse than none. The remote tool description changes
+last, in a planned update, with the two business-model reads joining the remote surface in the
+same resubmission (see "Borrowed from the WebMCP Challenge field").
+
+### Not to build
+
+A required email anywhere; a deep scan tier; a Contacts API integration for HubSpot; a directory
+or central graph; publication of anything the audit did not verify or the owner did not confirm;
+an account before the first screen.
+
 ## Review pauses
 
 1. After Audit: the one-minute test with two people outside the team; the bill after a week of
@@ -843,6 +939,8 @@ refinement as a gate before publishing, and any index of our own.
 - The reuse window in A3. Proposal: one day.
 - The daily audit budget in A3. Proposal: a number the bill can absorb twice over; ops sets it.
 - What free Fix shows. Proposal: the finding and one entity's markup, never the full set.
+- (Fourth brief) The HubSpot form needs a status property for the two-stage write before the code names it; the same rule as the signal fields.
+- (Fourth brief) How a Starter KG becomes a dataset the person owns without an account before the first screen: the account is created at Activate, not at Audit. Andrea's call on where the sign-up lives.
 - Whether the free entity gets a URL of its own, one page per site carrying the `WebSite` and its
   `potentialAction`s, or stays the report page. Proposal: the report page now, a per-site entity
   URL when Fix ships, because that is the thing Google would come back for.
