@@ -11,6 +11,7 @@ test("a card on the first screen takes a correction, and the reviewed version sh
   await expect(page).toHaveURL(/\/reports\//);
   const firstUrl = page.url();
 
+  await page.getByRole("button", { name: "Correct the model" }).click();
   const cards = page.getByRole("list", { name: "What WordLift understood" });
   const group = cards.getByRole("group", { name: /^Is .+ right\?$/ }).first();
   const name = ((await group.getAttribute("aria-label")) ?? "").replace(/^Is /, "").replace(/ right\?$/, "");

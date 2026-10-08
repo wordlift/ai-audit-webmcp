@@ -122,8 +122,9 @@ describe("what an agent understands", () => {
 
   it("says so when everything is already published, and offers nothing to publish", () => {
     render(<UnderstandPanel report={{ ...base, contextGraph: { ...base.contextGraph!, entities: [declared] } }} />);
-    expect(screen.getByRole("heading", { name: /agents understand your business/i })).toBeVisible();
-    expect(screen.getByText(/Agents found 1 important thing on these pages\./)).toHaveTextContent("All of it is declared by the site.");
+    // One line, no card: the first screen already showed the model.
+    expect(screen.queryByRole("heading", { name: /agents understand your business/i })).toBeNull();
+    expect(screen.getByText(/All 1 important thing found on these pages/)).toHaveTextContent("Agents understand your business. All 1 important thing found on these pages is declared by the site.");
     expect(screen.queryByRole("list", { name: "Only in the text" })).toBeNull();
     expect(screen.queryByRole("link", { name: /publish/i })).toBeNull();
   });

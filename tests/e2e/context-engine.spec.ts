@@ -11,13 +11,14 @@ test("a claimed Context Engine keeps a correction across a new read of the site"
   await page.getByRole("button", { name: /audit my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
   const firstUrl = page.url();
-  await expect(page.getByText(/of saas\.example, WordLift built a model/)).toBeVisible();
+  await expect(page.getByText(/Built from \d+ pages? of saas\.example/)).toBeVisible();
   // A first visit says nothing about an unclaimed draft.
   await expect(page.getByText(/Draft Context Engine/)).toHaveCount(0);
 
   // Correct the model where it is read: one card is not theirs. The first correction claims the
   // engine for this browser; no address is asked for on the report.
   await expect(page.getByRole("textbox", { name: /email/i })).toHaveCount(0);
+  await page.getByRole("button", { name: "Correct the model" }).click();
   const cards = page.getByRole("list", { name: "What WordLift understood" });
   const group = cards.getByRole("group", { name: /^Is .+ right\?$/ }).first();
   const name = ((await group.getAttribute("aria-label")) ?? "").replace(/^Is /, "").replace(/ right\?$/, "");
@@ -35,7 +36,7 @@ test("a claimed Context Engine keeps a correction across a new read of the site"
   await expect(page.getByText(/Reviewed since this report/)).toBeVisible();
   await page.getByRole("button", { name: /run again/i }).click();
   await expect(page).not.toHaveURL(firstUrl);
-  await expect(page.getByText(/of saas\.example, WordLift built a model/)).toBeVisible();
+  await expect(page.getByText(/Built from \d+ pages? of saas\.example/)).toBeVisible();
   await page.getByRole("link", { name: /open it/i }).click();
   await expect(page.getByText(/Your earlier review carried over to this read/)).toBeVisible();
   await expect(page.getByText(/not ours:/)).toContainText(name);

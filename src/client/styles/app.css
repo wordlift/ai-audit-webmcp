@@ -1334,6 +1334,9 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .understand { display: grid; gap: 14px; padding: clamp(22px, 4vw, 36px); background: var(--surface); border: 1px solid var(--line-subtle); border-radius: 18px; }
 .understand h2 { margin: 0; font-size: 1.35rem; }
 .understand-lead { margin: 0; color: var(--muted); max-width: 66ch; }
+.understand-done { padding: 14px 18px; }
+.understand-done-line { margin: 0; color: var(--muted); }
+.understand-done-line b { color: var(--ink); font-weight: 600; }
 .entity-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
 .entity-group { display: grid; gap: 10px; align-content: start; padding: 14px 16px; border: 1px solid var(--line-subtle); border-radius: 12px; }
 .entity-group h3 { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.95rem; }

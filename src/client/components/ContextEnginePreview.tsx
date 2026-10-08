@@ -110,6 +110,9 @@ export function ContextEnginePreview({
   const [decisions, setDecisions] = useState<Record<string, CardDecision>>({});
   const [relationDecisions, setRelationDecisions] = useState<Record<string, RelationDecision>>({});
   const [showAll, setShowAll] = useState(false);
+  // The controls to correct the model sit one click down: a first read is the model, not a form.
+  const [correcting, setCorrecting] = useState(false);
+  const canDecide = Boolean(onSave) && correcting;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // A zero says nothing a reader needs: "4 declared by the site", not "· 0 read from its text".
@@ -162,21 +165,20 @@ export function ContextEnginePreview({
         entities={summary.preview}
         relations={relations}
         decisions={decisions}
-        onDecide={onSave ? decide : undefined}
+        onDecide={canDecide ? decide : undefined}
         relationDecisions={relationDecisions}
-        onDecideRelation={onSave ? decideRelation : undefined}
+        onDecideRelation={canDecide ? decideRelation : undefined}
         filedBy={summary.filedBy}
       />
       {summary.preview.length === 1 && everything.length === 1 && (
         <p className="engine-alone">
           Only the business was found on {summary.pages === 1 ? "this page" : `these ${summary.pages} pages`}: nothing it offers is declared there or named in their text.
-          {onSave ? " Claiming reads more of the site." : ""}
         </p>
       )}
       {showAll && extras.length > 0 && (
         <ul className="engine-entities engine-extras" aria-label="Everything else WordLift found">
           {extras.map((entity) => (
-            <EntityCard key={entity.id} entity={entity} decision={decisions[entity.id]} onDecide={onSave ? decide : undefined} filedBy={summary.filedBy} />
+            <EntityCard key={entity.id} entity={entity} decision={decisions[entity.id]} onDecide={canDecide ? decide : undefined} filedBy={summary.filedBy} />
           ))}
         </ul>
       )}
@@ -198,7 +200,13 @@ export function ContextEnginePreview({
         {summary.declared === 0 && summary.confirmed === 0 && summary.inferred > 0
           ? `${host} declares none of these in its markup: WordLift read ${summary.inferred === 1 ? "it" : `all ${summary.inferred}`} from its text.`
           : `${provenance.join(" · ")}.`}{" "}
-        {onSave && <span className="engine-counts-hint">Mark each one Relevant or Not ours. </span>}
+        {onSave && !correcting && (
+          <>
+            <button type="button" className="engine-show-all engine-correct" onClick={() => setCorrecting(true)}>Correct the model</button>{" "}
+            ·{" "}
+          </>
+        )}
+        {canDecide && <span className="engine-counts-hint">Mark each one Relevant or Not ours. </span>}
         {extras.length > 0 && (
           <>
             <button type="button" className="engine-show-all" aria-expanded={showAll} onClick={() => setShowAll((current) => !current)}>
