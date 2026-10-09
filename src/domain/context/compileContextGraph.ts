@@ -200,6 +200,8 @@ function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, business
   // namesake: what a model read into the text never stands beside what a page declares, nor beside
   // what the model already read under another label, as a second entity of the same name.
   const idsByName = new Map<string, string[]>();
+  // Links a place was given without its own name ("Roma" → Rome), by where it ended up.
+  const hintsById = new Map<string, Set<string>>();
   for (const page of pages) {
     for (const extracted of page.entities) {
       const name = extracted.name.trim().toLowerCase();
@@ -240,8 +242,10 @@ function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, business
         ...(origin === "inferred" ? { origin } : {}),
       };
       byId.set(id, next);
+      for (const hint of extracted.unconfirmedSameAs ?? []) hintsById.set(id, new Set([...(hintsById.get(id) ?? []), hint]));
     }
   }
+  foldPlacesByLink(byId, idMap, hintsById);
   const websiteId = `${new URL(canonicalUrl).origin}/#website`;
   if (![...byId.values()].some((entity) => entity.types.includes("WebSite"))) {
     const sourceUrls = unique((pages.length > 0 ? pages : [emptyPage(canonicalUrl)]).map((page) => page.url)).slice(0, 12);
@@ -261,6 +265,52 @@ function mergeEntities(pages: SitePageSnapshot[], canonicalUrl: string, business
     .sort((left, right) => entityRank(left, businessTypes) - entityRank(right, businessTypes) || left.name.localeCompare(right.name))
     .slice(0, 80);
   return { entities, idMap };
+}
+
+const PLACE_TYPES = new Set(["Place", "City", "Country", "AdministrativeArea", "State", "TouristDestination", "TouristAttraction", "Mountain", "LakeBodyOfWater", "BodyOfWater", "Landform", "SkiResort"]);
+
+/**
+ * One place under two names is one place. Two places that earned the same Wikidata link are one;
+ * and a place the linker tied to a link only another place earned by its own name ("Roma", sure it
+ * is Q220, beside a "Rome" that is Q220) joins that place, its name kept as another name. The first
+ * name read stays the name. Only places fold this way: a hint never joins a product or a business.
+ */
+function foldPlacesByLink(byId: Map<string, DomainEntity>, idMap: Map<string, string>, hintsById: Map<string, Set<string>>) {
+  const isPlace = (entity: DomainEntity) => entity.types.some((type) => PLACE_TYPES.has(type));
+  const owner = new Map<string, string>();
+  const fold = (fromId: string, intoId: string) => {
+    const from = byId.get(fromId);
+    const into = byId.get(intoId);
+    if (!from || !into || fromId === intoId) return;
+    const merged: DomainEntity = {
+      ...into,
+      alternateNames: unique([...into.alternateNames, from.name, ...from.alternateNames].filter((name) => name !== into.name)).slice(0, 20),
+      sourceUrls: unique([...into.sourceUrls, ...from.sourceUrls]).slice(0, 12),
+      sameAs: unique([...into.sameAs, ...from.sameAs]).slice(0, 12),
+    };
+    // Declared wins: a place the markup names stays declared whatever the text adds.
+    if (into.origin === "inferred" && from.origin !== "inferred") {
+      delete merged.origin;
+      merged.confidence = from.confidence;
+    }
+    byId.set(intoId, merged);
+    byId.delete(fromId);
+    for (const [extractedId, mergedId] of idMap) if (mergedId === fromId) idMap.set(extractedId, intoId);
+  };
+  for (const entity of [...byId.values()]) {
+    if (!isPlace(entity)) continue;
+    for (const link of entity.sameAs) {
+      const first = owner.get(link);
+      if (first && byId.has(first)) fold(entity.id, first);
+      else owner.set(link, entity.id);
+    }
+  }
+  for (const [id, hints] of hintsById) {
+    const entity = byId.get(id);
+    if (!entity || !isPlace(entity)) continue;
+    const target = [...hints].map((hint) => owner.get(hint)).find((candidate) => candidate && candidate !== id && byId.get(candidate) && isPlace(byId.get(candidate)!));
+    if (target) fold(id, target);
+  }
 }
 
 function compileLexicalEntries(

@@ -251,12 +251,15 @@ export function nodesFrom(found: AnalysedEntity[], confidence: number, linkConfi
     }
     const type = SCHEMA_TYPES[label] ?? label;
     const canonical = typeof entity.entity_label === "string" ? entity.entity_label.trim() : "";
-    const linked =
+    const sure =
       typeof entity.entity_id === "string" &&
       /^Q\d+$/.test(entity.entity_id) &&
       typeof entity.disambiguation_score === "number" &&
-      entity.disambiguation_score >= linkConfidence &&
-      labelMatches(name, canonical);
+      entity.disambiguation_score >= linkConfidence;
+    const linked = sure && labelMatches(name, canonical);
+    // "Roma" is Rome in Wikidata: no link is shown, but the place keeps the hint, so it can join a
+    // "Rome" the site also names. Only places: a place's other name is a language, a thing's is a guess.
+    const hint = sure && !linked && type === "Place" ? [`https://www.wikidata.org/wiki/${entity.entity_id as string}`] : [];
     const link = {
       alternateNames: linked && canonical && canonical.toLowerCase() !== name.toLowerCase() ? [canonical] : [],
       ...(linked && typeof entity.entity_description === "string" && entity.entity_description.trim() ? { description: entity.entity_description.trim() } : {}),
@@ -271,7 +274,7 @@ export function nodesFrom(found: AnalysedEntity[], confidence: number, linkConfi
       if (linked && seen.sameAs.length === 0) nodes.set(key, { ...seen, ...link });
       continue;
     }
-    nodes.set(key, { types: [type], name, ...link, offers: [] });
+    nodes.set(key, { types: [type], name, ...link, offers: [], ...(hint.length > 0 ? { unconfirmedSameAs: hint } : {}) });
     if (nodes.size >= MAX_ENTITIES) break;
   }
   // "Samspitze 4Enter" is "Samspitze 4" with a button label glued on by the page's text: the shorter name is the thing.

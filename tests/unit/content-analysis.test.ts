@@ -180,4 +180,20 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
     // Every geographic label is a Place, so the same name on two pages merges into one entity.
     expect(nodes.map((node) => `${node.types[0]}:${node.name}`)).toEqual(["Place:Katschberg", "Place:Salzburg region", "Place:Longone", "Organization:ACME"]);
   });
+
+  it("keeps a sure link to a place's other name as a hint, never as a link", () => {
+    const nodes = nodesFrom(
+      [
+        { text: "Roma", label: "City", score: 0.96, entity_id: "Q220", entity_label: "Rome", disambiguation_score: 1 },
+        { text: "Rome", label: "City", score: 0.94, entity_id: "Q220", entity_label: "Rome", disambiguation_score: 1 },
+        { text: "Data Connect", label: "Product", score: 0.9, entity_id: "Q1", entity_label: "data integration", disambiguation_score: 0.9 },
+      ],
+      0.6, 0.7, [], "A farm near Roma. Visiting Rome? Data Connect.",
+    );
+    const roma = nodes.find((node) => node.name === "Roma");
+    expect(roma?.sameAs).toEqual([]);
+    expect(roma?.unconfirmedSameAs).toEqual(["https://www.wikidata.org/wiki/Q220"]);
+    expect(nodes.find((node) => node.name === "Rome")?.sameAs).toEqual(["https://www.wikidata.org/wiki/Q220"]);
+    expect(nodes.find((node) => node.name === "Data Connect")?.unconfirmedSameAs).toBeUndefined();
+  });
 });
