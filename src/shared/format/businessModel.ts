@@ -94,10 +94,13 @@ const MAX_TERMS_PER_ENTITY = 5;
 export const MODEL_BOUNDARIES =
   "Declared entities come from the site's own markup. Inferred entities were read from its text by the audit's extractor: they are candidates, never evidence, and never move readiness. Human-confirmed means the owner said so on the report. An action is agent-ready only when the audit's agent invoked its interface. This model was built from the pages the audit read, not from the whole business.";
 
-export function entityRole(entity: DomainEntity): EntityRole {
+/** By types alone, and by price when the entity carries its offers: a key built from a name and types has none. */
+export function entityRole(entity: Pick<DomainEntity, "types"> & Partial<Pick<DomainEntity, "offers">>): EntityRole {
   if (entity.types.some((type) => BUSINESS_TYPES.has(type))) return "business";
   if (entity.types.includes("Person")) return "person";
   if (entity.types.some((type) => PLACE_TYPES.has(type))) return "place";
+  // A book, a film or a record a shop puts a price on is what it sells, not what it publishes.
+  if (entity.types.includes("Product") || (entity.offers?.length ?? 0) > 0) return "offering";
   if (entity.types.some((type) => CONTENT_TYPES.has(type))) return "content";
   return "offering";
 }

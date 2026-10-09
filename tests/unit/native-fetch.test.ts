@@ -20,6 +20,16 @@ describe("readable text for classification", () => {
     expect(text).not.toContain("color: red");
   });
 
+  it("keeps the phrases of a product card apart when the source has no whitespace between them", () => {
+    const { document } = parseHTML(`<!doctype html><html><body><main>${"<p>Bestsellers of the week, every format and every price.</p>".repeat(6)}<div class="card"><a href="/p/1"><span>Liberi tutti</span></a><div class="author"><a href="/autore/x">Chiara Gamberale</a></div><div><p>Brossura</p></div><span>18,00 €</span></div><p>Dum<b>a</b>s</p></main></body></html>`);
+
+    const text = readableText(document as unknown as Document);
+
+    expect(text).toContain("Liberi tutti Chiara Gamberale Brossura 18,00 €");
+    // Inline markup inside a word leaves the word whole.
+    expect(text).toContain("Dumas");
+  });
+
   it("reads the whole body when the main landmark is an empty shell", () => {
     const { document } = parseHTML(`<!doctype html><html><body>
       <header><h1>Makeup, Skincare, Fragrance</h1></header>

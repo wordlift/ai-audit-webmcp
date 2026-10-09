@@ -1078,10 +1078,21 @@ export function readableText(document: Document): string {
   return text.slice(0, MAX_TEXT);
 }
 
+/** Elements that end a phrase; inline ones (span, a, b) can sit inside a word and are left alone. */
+const BLOCK_ELEMENTS =
+  "address, article, aside, blockquote, br, button, dd, div, dl, dt, figcaption, figure, footer, form, h1, h2, h3, h4, h5, h6, header, hr, label, li, main, nav, ol, option, p, pre, section, table, td, th, tr, ul";
+
 function strippedText(root: Element): string {
   // Cloned so the removal never mutates the document the other extractors still read.
   const clone = root.cloneNode(true) as Element;
   for (const node of [...clone.querySelectorAll("script, style, noscript, template")]) node.remove();
+  // A block starts and ends a phrase even when the source has no whitespace around it: a product
+  // card's <a>Liberi tutti</a><div>Chiara Gamberale</div><p>Brossura</p> is three phrases, not
+  // "Liberi tuttiChiara GamberaleBrossura".
+  for (const node of [...clone.querySelectorAll(BLOCK_ELEMENTS)]) {
+    node.parentNode?.insertBefore(clone.ownerDocument.createTextNode(" "), node);
+    node.appendChild(clone.ownerDocument.createTextNode(" "));
+  }
   return (clone.textContent ?? "").replace(/\s+/g, " ").trim();
 }
 

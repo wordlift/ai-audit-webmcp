@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { businessModel, businessModelText, entityDetail, entityDetailText, findEntity } from "../../src/shared/format/businessModel.js";
+import { businessModel, businessModelText, entityDetail, entityDetailText, entityRole, findEntity } from "../../src/shared/format/businessModel.js";
 import type { CapabilityResult, DomainEntity, ReportRecord } from "../../src/shared/types/index.js";
 
 const entity = (id: string, name: string, type: string, extra: Partial<DomainEntity> = {}): DomainEntity => ({
@@ -99,5 +99,15 @@ describe("the business as the audit modelled it", () => {
     expect(text).toContain("Samspitze 4 (Apartment), inferred, confidence 90%.");
     expect(text).toContain("Also called: Samspitze IV.");
     expect(text).toContain("- availability.check: People can check availability (observed, https://alpina.travel/booking)");
+  });
+});
+
+describe("what a shop sells", () => {
+  it("counts a book with a price, or typed a Product, as an offering and a book on its own as content", () => {
+    const offer = [{ name: "Rilegato", price: "19.95", priceCurrency: "EUR" }];
+    expect(entityRole(entity("b1", "Threshing day", "Book", { types: ["Product", "Book"] }))).toBe("offering");
+    expect(entityRole(entity("b2", "Liberi tutti", "Book", { offers: offer } as Partial<DomainEntity>))).toBe("offering");
+    expect(entityRole(entity("b3", "A review of Liberi tutti", "Book"))).toBe("content");
+    expect(entityRole(entity("s", "Example.com", "WebSite"))).toBe("content");
   });
 });
