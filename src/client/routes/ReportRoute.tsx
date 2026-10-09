@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowRight, Rocket, Share2 , Wrench } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { explainReportError, failureTitle, onlyFoundationMissing, unreadableReason, visibleErrors } from "../../shared/format/explainError.js";
 import type { Archetype, ReportRecord } from "../../shared/types/index.js";
@@ -18,6 +18,7 @@ import { captureReviewToken } from "../engine/engineKeys";
 import { EngineProvider } from "../engine/EngineContext";
 import { ReportErrorState } from "../components/ReportErrorState";
 import { ReportProgress } from "../components/ReportProgress";
+import { deliveryAsked, SendMeTheReport } from "../components/SendMeTheReport";
 import { ServiceMapProvenance } from "../components/ServiceMapProvenance";
 import { StepBar } from "../components/StepBar";
 import { UnderstandPanel } from "../components/UnderstandPanel";
@@ -31,6 +32,20 @@ import { InspectServiceMapTool } from "../webmcp/InspectServiceMapTool";
 import { RefineServiceMapTool } from "../webmcp/RefineServiceMapTool";
 
 const SIDECAR_HOST = "alpina.travel";
+
+/**
+ * Below this, the progress screen was not on screen long enough for anyone to type an address: a
+ * site read earlier that day lands at once, and the field it carried was never seen.
+ */
+const LATE_ASK_UNDER_MS = 6_000;
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
 
 /** The approved sidecar is offered only where its allowlisted endpoint actually applies. */
 function sidecarApplies(report: ReportRecord): boolean {
@@ -52,6 +67,10 @@ export function ReportRoute() {
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   // A review link from the holder carries a day-long token: kept for this tab, taken off the address.
   useState(() => captureReviewToken());
+  // When the progress screen first showed, if it did: the person who started an audit and saw it
+  // for less than a few seconds never had time to give an address, so the report asks once instead.
+  const progressShownAt = useRef<number | null>(null);
+  const [askLate, setAskLate] = useState<boolean | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,7 +143,14 @@ export function ReportRoute() {
 
   if (error) return <>{tools}<ReportErrorState title="Report unavailable" message={error} /></>;
   if (!report) return <>{tools}<div className="report-loading" role="status">Loading the capability map…</div></>;
-  if (report.status === "running") return <>{tools}<ReportProgress report={report} /></>;
+  if (report.status === "running") {
+    progressShownAt.current ??= Date.now();
+    return <>{tools}<ReportProgress report={report} /></>;
+  }
+  if (askLate === null) {
+    const seenLongEnough = progressShownAt.current !== null && Date.now() - progressShownAt.current >= LATE_ASK_UNDER_MS;
+    setAskLate(justStarted && report.status !== "failed" && !seenLongEnough && !deliveryAsked(report.id));
+  }
   if (report.status === "failed") {
     return (
       <>
@@ -150,6 +176,8 @@ export function ReportRoute() {
       {report.status === "partial" && !onlyFoundationMissing(report.errors) && !unreadableReason(report.errors) && (
         <div className="partial-banner" role="status">Partial report: {visibleErrors(report.errors).map(explainReportError).join(" ")}</div>
       )}
+      {/* The one field, once, for whoever never saw the progress screen long enough to answer it. */}
+      {askLate && <SendMeTheReport reportId={report.id} host={hostOf(report.canonicalUrl ?? report.requestedUrl)} variant="late" onDismiss={() => setAskLate(false)} />}
       {/* The Context Engine first, what agents can do with it second. Everything precise is one click below. */}
       <FirstScreen key={`first-${report.id}`} report={report} />
       {/* Fix makes the Context Engine authoritative, in two parts: what agents cannot read, then who runs

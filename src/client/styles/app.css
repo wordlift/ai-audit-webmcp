@@ -1831,6 +1831,13 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .send-report-note { margin: 8px 0 0; color: var(--faint); font-size: 0.86rem; }
 .send-report .form-error { margin: 8px 0 0; font-size: 0.86rem; }
 .send-report-sent { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.95rem; }
+/* The same field once on the report, for whoever never saw the progress screen: a strip, not a card. */
+.send-report-late { max-width: none; margin: 0 0 16px; padding: 12px 16px; border-radius: 12px; display: grid; gap: 6px; }
+.send-report-late label { margin-bottom: 0; }
+.send-report-late .input-row { max-width: 560px; }
+.send-report-dismiss { padding: 0 6px; border: 0; background: none; color: var(--muted); font: inherit; cursor: pointer; white-space: nowrap; }
+.send-report-dismiss:hover { color: var(--ink); text-decoration: underline; }
+.send-report-late.send-report-sent { display: flex; }
 .send-report-sent strong { color: var(--ink); }
 @media (max-width: 600px) {
   .send-report .input-row { flex-direction: column; }

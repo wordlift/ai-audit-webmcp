@@ -83,12 +83,12 @@ test("a human refinement turns the machine draft into refined Terms of Action", 
 });
 
 /**
- * The one thing the audit asks a visitor for is asked while the audit runs, and never on the
- * report. In demo mode the audit lands at once, so the report is what a visitor sees: it shows no
- * email field, and the address can still be filed against it through the same route the progress
- * screen uses.
+ * The one thing the audit asks a visitor for is asked while the audit runs. When the audit lands
+ * before anyone could answer — a site read earlier that day, or demo mode, where it lands at once —
+ * the report asks the same thing once, as a strip that can be dismissed, and never again for that
+ * report in that tab. A link opened cold is not asked at all.
  */
-test("the report asks for nothing, and an address can still be filed against it for delivery", async ({ page }) => {
+test("a report that landed at once asks for the address once, and a shared link never does", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Website URL").fill("https://alpina.travel");
   await page.getByRole("button", { name: /audit my site/i }).click();
@@ -96,8 +96,16 @@ test("the report asks for nothing, and an address can still be filed against it 
   await expect(page.locator(".first-screen")).toBeVisible({ timeout: 60_000 });
   const reportId = page.url().split("/reports/")[1]!;
 
-  await expect(page.getByRole("textbox", { name: /email/i })).toHaveCount(0);
+  const late = page.getByRole("textbox", { name: /landed fast.*by email too/i });
+  await expect(late).toBeVisible();
   await expect(page.getByRole("button", { name: /claim your context engine/i })).toHaveCount(0);
+  await page.getByRole("button", { name: "No thanks" }).click();
+  await expect(page.getByRole("textbox", { name: /email/i })).toHaveCount(0);
+
+  // Dismissed is remembered for this tab; a cold open of the link never asks.
+  await page.reload();
+  await expect(page.locator(".first-screen")).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole("textbox", { name: /email/i })).toHaveCount(0);
 
   const delivery = await page.request.post(`/api/reports/${reportId}/deliver`, { data: { email: "reviewer@example.com", surface: "web" } });
   expect(delivery.status()).toBe(202);
