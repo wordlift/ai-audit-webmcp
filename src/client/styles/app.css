@@ -1819,7 +1819,7 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .progress-footnote { color: var(--faint); font-size: 0.88rem; }
 
 /* The one field asked while the audit runs: a label, the row, one line saying it is optional. */
-.send-report { margin: 22px 0 18px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); max-width: 560px; }
+.send-report { margin: 0 0 26px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); max-width: 560px; }
 .send-report label { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 600; color: var(--ink); }
 .send-report .input-row input { flex: 1; min-width: 0; }
 .send-report-note { margin: 8px 0 0; color: var(--faint); font-size: 0.86rem; }

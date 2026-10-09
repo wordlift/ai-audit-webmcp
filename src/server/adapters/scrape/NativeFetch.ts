@@ -1,6 +1,7 @@
 import { parseHTML } from "linkedom";
 import { BASIC_SCAN_PAGES, MAX_REPORT_PAGES } from "../../../shared/format/deepScan.js";
 import { safeFetch, UrlPolicyError, type UrlPolicyOptions } from "../../security/urlPolicy.js";
+import { entitiesFromJsonLd } from "../markup/jsonLd.js";
 import { probeMcpEndpoint } from "./mcpProbe.js";
 import {
   CATALOG_KINDS,
@@ -32,6 +33,8 @@ import { executeSearchAction, findSearchActionTemplate } from "./searchAction.js
 import { collectDeclarativeTools, dedupePageTools, extractImperativeTools } from "./webmcpTools.js";
 
 const MAX_LINKS = 150;
+/** Pages are chosen from more links than a page reports: on a large shop the company's own pages sit far down. */
+const MAX_SELECTION_LINKS = 400;
 const MAX_FORMS = 20;
 const MAX_TEXT = 20_000;
 /** A site is sampled, never crawled: whatever depth a caller asks for, this is the ceiling. */
@@ -152,7 +155,7 @@ export class NativeFetchCollector implements ScrapeProvider {
     const canonicalHref = document.querySelector('link[rel="canonical"]')?.getAttribute("href");
     const canonicalUrl = resolve(canonicalHref, finalUrl) ?? finalUrl.toString();
 
-    const links = [...document.querySelectorAll("a[href]")].slice(0, MAX_LINKS);
+    const links = [...document.querySelectorAll("a[href]")].slice(0, MAX_SELECTION_LINKS);
     const [{ discovery, softNotFound, declaredEndpoints }, pageTools] = await Promise.all([
       this.collectDiscovery(finalUrl, document),
       this.collectPageTools(document, finalUrl),
@@ -637,7 +640,9 @@ export function selectRepresentativePages(links: Element[], base: URL, maxPages 
       // "Book your stay" must not turn the /booking page into a detail page.
       const byPath = pageRole(pathname);
       const role = byPath === "other" ? pageRole(text(link).toLowerCase()) : byPath;
-      const roleWeight = { detail: 40, offer: 36, policy: 30, contact: 28, other: 8, entry: 0 }[role];
+      // A page about the company names who runs the site, which no product page does.
+      const aboutWeight = role === "other" && ABOUT_PAGE.test(haystack) ? 18 : 0;
+      const roleWeight = { detail: 40, offer: 36, policy: 30, contact: 28, other: 8, entry: 0 }[role] + aboutWeight;
       const depthBonus = Math.min(url.pathname.split("/").filter(Boolean).length, 4);
       // A checkout configurator, cart, sign-in page, imprint, or customer-service hub is never
       // worth a fetch: it renders as an app shell or describes the publisher, not the offer. Its
@@ -655,20 +660,52 @@ export function selectRepresentativePages(links: Element[], base: URL, maxPages 
     .filter((candidate): candidate is PageCandidate => candidate !== null)
     .sort((left, right) => right.score - left.score || left.order - right.order);
 
+  // Each page a different kind of page first: five author listings read as one page five times.
+  // Only when no page of a new kind is left are the remaining slots filled in order.
   const selected: PageCandidate[] = [];
   const seenUrls = new Set<string>();
   const seenRoles = new Set<SitePageSnapshot["role"]>();
-  for (const candidate of candidates) {
-    const key = candidate.url.toString();
-    if (seenUrls.has(key)) continue;
-    if (seenRoles.has(candidate.role) && candidates.some((item) => !seenRoles.has(item.role))) continue;
-    selected.push(candidate);
-    seenUrls.add(key);
-    seenRoles.add(candidate.role);
-    if (selected.length === maxPages - 1) break;
+  const seenShapes = new Set<string>();
+  for (const varied of [true, false]) {
+    for (const candidate of candidates) {
+      if (selected.length >= maxPages - 1) break;
+      const key = candidate.url.toString();
+      const shape = pathShape(candidate.url.pathname);
+      if (seenUrls.has(key)) continue;
+      if (varied && seenRoles.has(candidate.role) && candidates.some((item) => !seenRoles.has(item.role))) continue;
+      if (varied && seenShapes.has(shape)) continue;
+      selected.push(candidate);
+      seenUrls.add(key);
+      seenRoles.add(candidate.role);
+      seenShapes.add(shape);
+    }
   }
   return selected;
 }
+
+/**
+ * The kind of page a path is, with its names and ids left out: `/autore/rebecca-yarros/c/01798202`
+ * and `/autore/rokia/c/04741841` are one shape. The first step, a plain word, is the section; after
+ * it only a marker as short as `c` or `p` is kept, and every name and number is starred out.
+ */
+export function pathShape(pathname: string): string {
+  return pathname
+    .toLowerCase()
+    .split("/")
+    .filter(Boolean)
+    .map((segment, index) => (/^[a-z]{1,12}$/.test(segment) && (index === 0 || segment.length <= 3) ? segment : "*"))
+    .join("/");
+}
+
+/** A page about the company, in the languages the audit meets. */
+const ABOUT_PAGE =
+  /\b(about|about-us|who-we-are|our-story|company|chi-siamo|azienda|societa|ueber-uns|uber-uns|über-uns|unternehmen|qui-sommes-nous|a-propos|quienes-somos|sobre-nosotros|empresa)\b/;
+
+/**
+ * An item page by its address alone: the last step is `/p/<id>` or `/dp/<id>`. A bare number at
+ * the end is not enough; a shop numbers its author and category listings too.
+ */
+const ITEM_PATH = /\/(?:p|dp|item|prodotto|produkt|produit)\/[^/]+\/?$/;
 
 /**
  * Pages that need session state (checkout, cart, sign-in) render as app shells for a first-time
@@ -689,6 +726,7 @@ const CATALOG_PATH = /\/(collections?|categor(?:y|ies)|catalog(?:ue)?|shop|store
 const EDITORIAL_PATH = /\/(blog|news|stories|magazine|journal|press|articles?|learn|resources|insights)(\/|$)/;
 
 function pageRole(value: string): SitePageSnapshot["role"] {
+  if (ITEM_PATH.test(value)) return "detail";
   if (/\b(products?|property|properties|rooms?|stays?|accommodations?|articles?|story|stories|posts?|services?|solutions?|features?|hosting|domains?|destinations?|attractions?|events?|experiences?|regions?|tours?)\b/.test(value)) return "detail";
   if (/\b(price|pricing|plans?|compare|offer|availability|book|booking|reserve|shop|store|collections?|catalog(?:ue)?|inventory|listings?|sales?|deals?|checkout|demo|trial|signup)\b/.test(value)) return "offer";
   if (/\b(faq|policy|terms|shipping|return|privacy|help|guides?|docs|documentation|developers|knowledge-?base)\b/.test(value)) return "policy";
@@ -716,12 +754,45 @@ function extractPage(
     linkLabels: unique(links.map((node) => text(node).toLowerCase()).filter(Boolean)).slice(0, 80),
     forms: collectForms(document, base),
     jsonLdTypes: jsonLd.types,
-    entities: jsonLd.entities,
+    entities: [...jsonLd.entities, ...publisherEntity(document, base, jsonLd.entities)],
     ...(jsonLd.relations.length > 0 ? { relations: jsonLd.relations } : {}),
     pageTools,
     entryPoints: findEntryPoints(document, base, base.toString()),
     truncated,
   };
+}
+
+/** A company's legal form, as it follows the name in a footer. Case matters: "AG" is a form, "ag" is not. */
+const LEGAL_FORM =
+  "S\\.\\s?p\\.\\s?A\\.?|S\\.\\s?r\\.\\s?l\\.?|S\\.\\s?a\\.\\s?s\\.?|GmbH(?: & Co\\. KG)?|AG|SE|Ltd\\.?|Limited|LLC|L\\.L\\.C\\.|Inc\\.?|Corp\\.?|Corporation|S\\.A\\.S\\.?|SAS|SARL|S\\.A\\.|S\\.L\\.|B\\.V\\.|N\\.V\\.|PLC|plc|Pty Ltd";
+const LEGAL_NAME = new RegExp(`((?:[A-ZÀ-Þ][\\p{L}\\p{N}&'’.\\-]*\\s+){1,5})(${LEGAL_FORM})(?=$|[\\s,;|)])`, "gu");
+/** What anchors a legal name to the site's own publisher: a copyright line before it, or a company number after it. */
+const COPYRIGHT_MARK = /(?:©|\(c\)|copyright)[^A-Za-zÀ-ÿ]*$/i;
+const COMPANY_NUMBER = /^.{0,160}?\b(?:p\.?\s?iva|partita iva|vat|ust-?id|c\.f\.|codice fiscale|company (?:no|number|registration)|registered|siren|siret|kvk|cif|nif|abn)\b/i;
+const BUSINESS_DECLARED = new Set(["Organization", "Corporation", "LocalBusiness", "OnlineStore", "Store", "NewsMediaOrganization"]);
+
+/**
+ * The company behind the site, as its footer names it for the law: "Copyright 2001 - 2026
+ * Mondadori Retail S.p.A." or "Mondadori Retail S.p.A. … P. IVA 11022370156". Read only from the
+ * footer and only beside a copyright mark or a company number, so a partner named in passing is
+ * not taken for the publisher. Inferred, never declared, and skipped when the markup names a business.
+ */
+export function publisherEntity(document: Document, base: URL, declared: ExtractedEntity[]): ExtractedEntity[] {
+  if (declared.some((entity) => entity.types.some((type) => BUSINESS_DECLARED.has(type)))) return [];
+  const footers = [...document.querySelectorAll("footer, [role=contentinfo]")];
+  const footer = footers.at(-1);
+  if (!footer) return [];
+  const content = strippedText(footer).slice(0, 4_000);
+  for (const match of content.matchAll(LEGAL_NAME)) {
+    const index = match.index ?? 0;
+    const before = content.slice(Math.max(0, index - 40), index);
+    const after = content.slice(index + match[0].length);
+    if (!COPYRIGHT_MARK.test(before) && !COMPANY_NUMBER.test(after)) continue;
+    const name = `${(match[1] ?? "").trim()} ${match[2]}`.replace(/\s+/g, " ").slice(0, 120);
+    if (name.length < 4) continue;
+    return entitiesFromJsonLd([{ types: ["Organization"], name, alternateNames: [], sameAs: [], offers: [] }], base.toString());
+  }
+  return [];
 }
 
 function collectForms(document: Document, base: URL): SiteForm[] {

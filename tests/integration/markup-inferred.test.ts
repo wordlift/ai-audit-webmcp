@@ -248,6 +248,16 @@ describe("the markup a page should have", () => {
     expect(none.asked).toEqual([]);
   });
 
+  it("still reads a page whose only entity is the publisher its footer names", async () => {
+    const footerOnly = snapshot();
+    const booking = footerOnly.pages[1]!;
+    booking.entities = [{ id: "https://alpina.travel/#inferred-organization-alpina", types: ["Organization"], name: "Alpina GmbH", alternateNames: [], sourceUrl: booking.url, sameAs: [], offers: [], origin: "inferred" }];
+    const { provider, asked } = fakeMarkup();
+    const target = orchestrator(provider, { providers: { scrape: { name: "stub", collect: async () => footerOnly }, markup: provider } });
+    await audit(target);
+    expect(asked.map((page) => page.url)).toEqual(["https://alpina.travel/booking"]);
+  });
+
   it("never moves readiness", async () => {
     const without = await audit(orchestrator());
     const withMarkup = await audit(orchestrator(fakeMarkup().provider));

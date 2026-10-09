@@ -78,6 +78,10 @@ export function ReportProgress({ report }: { report: ReportRecord }) {
       <p className="eyebrow"><Bot size={16} /> Audit</p>
       <h1>Building a Context Engine for <span>{host}</span></h1>
 
+      {/* The one thing asked, asked while there is time to answer it, and above the steps so
+          nothing that lands while the model forms can move it out from under the cursor. */}
+      <SendMeTheReport reportId={report.id} host={host} />
+
       <ol className="progress-phases" aria-label="What the audit has done so far">
         {steps.map((step) => (
           <li key={step.key} className={step.state === "done" ? "done" : step.state === "active" ? "active" : ""}>
@@ -96,9 +100,6 @@ export function ReportProgress({ report }: { report: ReportRecord }) {
           Foundation score <strong>{report.foundationAudit.score}/100</strong>, already in.
         </p>
       )}
-
-      {/* The one thing asked, asked while there is time to answer it. */}
-      <SendMeTheReport reportId={report.id} host={host} />
 
       <p className="progress-footnote" role="status">
         We read the text of every page and call what the site declares rather than counting it. This page
