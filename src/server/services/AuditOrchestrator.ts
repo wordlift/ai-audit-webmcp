@@ -816,7 +816,8 @@ export class AuditOrchestrator {
       onBasic === "all"
         ? snapshot.pages
         : onBasic === "thin"
-          ? snapshot.pages.filter((page) => page.entities.length === 0)
+          // Thin is what the markup leaves unsaid: a publisher read from the footer is not a declaration.
+          ? snapshot.pages.filter((page) => page.entities.every((entity) => entity.origin === "inferred"))
           : [];
     const chosen = pages.slice(0, pagesForDepth(scanDepth));
     if (chosen.length === 0) return { provider: provider.name, model: provider.model, pagesGenerated: 0, pagesFailed: 0 };
