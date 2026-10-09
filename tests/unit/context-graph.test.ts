@@ -1,5 +1,6 @@
 import { compileContextGraph, appliesToForAction } from "../../src/domain/context/compileContextGraph.js";
 import type { CapabilityResult } from "../../src/shared/types/index.js";
+import { contextGraphSchema } from "../../src/shared/schemas/report.js";
 import type { SitePageSnapshot } from "../../src/server/adapters/scrape/ScrapeProvider.js";
 
 const capability: CapabilityResult = {
@@ -236,6 +237,18 @@ describe("context graph", () => {
     );
 
     expect(context.entities.filter((item) => item.name === "Mercury")).toHaveLength(2);
+  });
+});
+
+describe("a page that names more than a report can link", () => {
+  it("keeps the first 40 on every list, so the report still stores", () => {
+    const many = Array.from({ length: 70 }, (_, index) => entity(`https://alpina.travel/#apt-${index}`, "Apartment", `Apartment ${index}`, "https://alpina.travel/"));
+    const context = compileContextGraph([page("https://alpina.travel/", "entry", many)], [], [capability], "https://alpina.travel/", "travel-hospitality");
+
+    expect(context.entities.length).toBeGreaterThan(40);
+    expect(context.pages[0]?.entityIds).toHaveLength(40);
+    expect(appliesToForAction(context, "availability.check").length).toBeLessThanOrEqual(40);
+    expect(() => contextGraphSchema.parse(context)).not.toThrow();
   });
 });
 

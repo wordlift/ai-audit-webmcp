@@ -11,6 +11,13 @@ import type {
 import { MAX_REPORT_PAGES } from "../../shared/format/deepScan.js";
 import { inferRelations } from "./inferRelations.js";
 
+/**
+ * A graph holds up to 80 entities, a page, a topic, an interface or an action names at most 40 of
+ * them. The entities arrive most important first, so a site that names more keeps the 40 that
+ * matter and the report still stores; one rich page must never fail the audit.
+ */
+const MAX_LINKED_ENTITIES = 40;
+
 const ENTITY_ACTIONS: Record<string, string[]> = {
   Organization: ["site.browse", "site.search", "source.verify", "inquiry.submit", "policy.explain"],
   LocalBusiness: ["detail.retrieve", "site.search", "inquiry.submit", "availability.check"],
@@ -72,7 +79,7 @@ export function compileContextGraph(
       role: page.role,
       description: page.description || undefined,
       headings: page.headings.slice(0, 20),
-      entityIds: entities.filter((entity) => entity.sourceUrls.includes(page.url)).map((entity) => entity.id),
+      entityIds: entities.filter((entity) => entity.sourceUrls.includes(page.url)).map((entity) => entity.id).slice(0, MAX_LINKED_ENTITIES),
     })),
     entities,
     lexicalEntries: compileLexicalEntries(auditedPages, categories, entities),
@@ -117,6 +124,7 @@ export function appliesToForAction(context: ContextGraph, actionId: string) {
   const ids = new Set(preferred.map((binding) => binding.entityId));
   return context.entities
     .filter((entity) => ids.has(entity.id))
+    .slice(0, MAX_LINKED_ENTITIES)
     .map((entity) => ({ id: entity.id, name: entity.name, types: entity.types }));
 }
 
@@ -291,7 +299,7 @@ function compileLexicalEntries(
         label: normalized,
         aliases: [],
         kind: "topic",
-        entityIds: entities.filter((entity) => entity.sourceUrls.includes(page.url)).map((entity) => entity.id),
+        entityIds: entities.filter((entity) => entity.sourceUrls.includes(page.url)).map((entity) => entity.id).slice(0, MAX_LINKED_ENTITIES),
         sourceUrls: [page.url],
         confidence: 0.7,
       });
@@ -315,7 +323,7 @@ function interfaceFrom(
   return {
     id: `interface:${evidence.id}`,
     actionId: capability.actionId,
-    entityIds: (scopedEntities.length > 0 ? scopedEntities : candidates).map((entity) => entity.id),
+    entityIds: (scopedEntities.length > 0 ? scopedEntities : candidates).map((entity) => entity.id).slice(0, MAX_LINKED_ENTITIES),
     name: interfaceName(evidence, capability.label),
     protocol: protocolFor(evidence),
     audience: evidence.audience,

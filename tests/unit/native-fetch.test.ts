@@ -21,11 +21,12 @@ describe("readable text for classification", () => {
   });
 
   it("keeps the phrases of a product card apart when the source has no whitespace between them", () => {
-    const { document } = parseHTML(`<!doctype html><html><body><main>${"<p>Bestsellers of the week, every format and every price.</p>".repeat(6)}<div class="card"><a href="/p/1"><span>Liberi tutti</span></a><div class="author"><a href="/autore/x">Chiara Gamberale</a></div><div><p>Brossura</p></div><span>18,00 €</span></div><p>Dum<b>a</b>s</p></main></body></html>`);
+    const { document } = parseHTML(`<!doctype html><html><body><main>${"<p>Bestsellers of the week, every format and every price.</p>".repeat(6)}<div class="card"><a href="/p/1"><span>Liberi tutti</span></a><div class="author"><a href="/autore/x">Chiara Gamberale</a></div><div><p>Brossura</p></div><span>18,00 €</span></div><p>Dum<b>a</b>s</p><nav><a href="/r">Ricette</a><a href="/g">Guide</a><a href="/s">Racconti</a></nav></main></body></html>`);
 
     const text = readableText(document as unknown as Document);
 
     expect(text).toContain("Liberi tutti Chiara Gamberale Brossura 18,00 €");
+    expect(text).toContain("Ricette Guide Racconti");
     // Inline markup inside a word leaves the word whole.
     expect(text).toContain("Dumas");
   });
@@ -162,6 +163,8 @@ describe("telling a site's bouncer from its page", () => {
   it("reads a refusal, a rate limit, and a challenge page as what they are", () => {
     expect(blockedResponse(403, "<html><title>Access Denied</title></html>")).toMatch(/refused automated access \(HTTP 403\)/);
     expect(blockedResponse(429, "")).toMatch(/rate-limited/);
+    // Akamai's failover page ships a friendly title and a 200.
+    expect(blockedResponse(200, `<html><head><title>Hang Tight! Routing to checkout...</title></head><body><img src="./botfailoveroriginal_files/x.png"></body></html>`)).toMatch(/bot challenge/);
     expect(blockedResponse(503, "<html><head><title>Just a moment...</title></head></html>")).toMatch(/bot challenge/);
     // CloudFront's refusal page as a walled shop serves it, even when the status is lost on the way.
     expect(blockedResponse(200, "<html><head><title>ERROR: The request could not be satisfied</title></head></html>")).toMatch(/bot challenge/);

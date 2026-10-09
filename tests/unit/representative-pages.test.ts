@@ -139,6 +139,7 @@ describe("a sample of different pages", () => {
     <a href="/interprete/some-singer/c/00199723">Some Singer</a>
     <a href="/negozi">I nostri negozi</a>
     <a href="/carrello">Carrello</a>
+    <a href="/product-recall.html">Richiami prodotto</a>
   </main>`;
 
   it("reads an item page by its /p/ address, and never five pages of the same kind", () => {
@@ -150,6 +151,7 @@ describe("a sample of different pages", () => {
     const shapes = selected.map((item) => pathShape(item.url.pathname));
     expect(new Set(shapes).size).toBe(shapes.length);
     expect(shapes).toContain("interprete/*/c/*");
+    expect(selected.map((item) => item.url.pathname)).not.toContain("/product-recall.html");
   });
 
   it("fills the remaining slots in order once no new kind of page is left", () => {
@@ -183,6 +185,11 @@ describe("the company behind the site", () => {
     expect(entity).toMatchObject({ name: "Example Retail S.p.A.", types: ["Organization"], origin: "inferred" });
   });
 
+  it("reads a name led by digits, and never takes a year for part of the name", () => {
+    expect(read(`<footer>&copy; 37signals LLC. All rights reserved.</footer>`)[0]?.name).toBe("37signals LLC.");
+    expect(read(`<footer>© 2001 - 2026 Example Retail S.p.A.</footer>`)[0]?.name).toBe("Example Retail S.p.A.");
+  });
+
   it("reads it beside a company number when there is no copyright line", () => {
     const [entity] = read(`<footer>Informazioni societarie Example Retail S.p.A. | Capitale sociale: Euro 2.000.000 i.v. P. IVA 11022370156</footer>`);
     expect(entity?.name).toBe("Example Retail S.p.A.");
@@ -194,5 +201,33 @@ describe("the company behind the site", () => {
     const { document } = parseHTML(`<footer>© 2026 Example Retail S.p.A.</footer>`);
     const declared = [{ id: "x", types: ["Organization"], name: "Example", alternateNames: [], sourceUrl: "https://shop.example/", sameAs: [], offers: [] }];
     expect(publisherEntity(document, new URL("https://shop.example/"), declared)).toEqual([]);
+  });
+});
+
+describe("one language", () => {
+  it("does not read the same page again in another language", () => {
+    const { document } = parseHTML(`<nav>
+      <a href="/rooms-suites/basic-room">Basic room</a>
+      <a href="/ja/rooms-suites/basic-room">ベーシックルーム</a>
+      <a href="/faq">FAQ</a>
+      <a href="/de/faq">FAQ</a>
+      <a href="/booking">Book</a>
+    </nav>`);
+    const selected = selectRepresentativePages([...document.querySelectorAll("a[href]")], new URL("https://hotel.example/"));
+    expect(selected.map((item) => item.url.pathname)).toEqual(["/rooms-suites/basic-room", "/booking", "/faq"]);
+  });
+
+  it("stays in the entry page's language when the entry page has one", () => {
+    const { document } = parseHTML(`<nav>
+      <a href="/en/rooms/basic">Basic</a>
+      <a href="/it/camere/basic">Basic</a>
+    </nav>`);
+    const selected = selectRepresentativePages([...document.querySelectorAll("a[href]")], new URL("https://hotel.example/it/"), 2);
+    expect(selected.map((item) => item.url.pathname)).toEqual(["/it/camere/basic"]);
+  });
+
+  it("reads another language when the site links nothing in the entry page's own", () => {
+    const { document } = parseHTML(`<nav><a href="/en/rooms/basic">Basic</a><a href="/en/faq">FAQ</a></nav>`);
+    expect(selectRepresentativePages([...document.querySelectorAll("a[href]")], new URL("https://hotel.example/"))).toHaveLength(2);
   });
 });

@@ -217,10 +217,25 @@ export function modelView(report: ReportRecord): ModelView {
   // The business: the one that is not just the website's name, unless nothing else is.
   const businesses = all.filter((entity) => entityRole(entity) === "business");
   // One name, one business: an Organization and a Brand called Allbirds are Allbirds.
-  const businessName = (entity: DomainEntity) => normalized(entity.name).replace(/[\s,.]+(inc|llc|ltd|limited|gmbh|srl|s r l|spa|s p a|ag|sa|bv|corp|corporation|co)\.?$/, "").trim();
-  const distinct = businesses
-    .filter((entity) => !namesTheSite(entity, host))
-    .filter((entity, index, list) => list.findIndex((other) => businessName(other) === businessName(entity)) === index);
+  // Dots go first, so "S.p.A." is "spa" and "B.V." is "bv".
+  const businessName = (entity: DomainEntity) => normalized(entity.name).replace(/\./g, "").replace(/\s+/g, " ").replace(/[\s,]+(inc|llc|ltd|limited|gmbh|srl|s r l|spa|s p a|ag|sa|bv|nv|plc|sas|sarl|corp|corporation|co)$/, "").trim();
+  // A name with a legal form ("Feltrinelli S.p.A.", "37signals LLC.") is the company's registered name.
+  const legalName = (entity: DomainEntity) => businessName(entity) !== normalized(entity.name).replace(/\./g, "").replace(/\s+/g, " ").trim();
+  // The names that are one business are counted as one: "37signals" on one page and "37signals LLC."
+  // on five are seen on five, and shown by the name a customer uses, not the registered one.
+  const sameBusiness = new Map<string, DomainEntity[]>();
+  for (const entity of businesses.filter((candidate) => !namesTheSite(candidate, host))) {
+    sameBusiness.set(businessName(entity), [...(sameBusiness.get(businessName(entity)) ?? []), entity]);
+  }
+  const distinct = [...sameBusiness.values()].map((members) => {
+    const lead = [...members].sort((left, right) =>
+      Number(primary(right)) - Number(primary(left)) ||
+      PROVENANCE_RANK[entityProvenance(left)] - PROVENANCE_RANK[entityProvenance(right)] ||
+      Number(legalName(left)) - Number(legalName(right)) ||
+      right.sourceUrls.length - left.sourceUrls.length)[0]!;
+    const sourceUrls = [...new Set(members.flatMap((member) => member.sourceUrls))].slice(0, 12);
+    return sourceUrls.length === lead.sourceUrls.length ? lead : { ...lead, sourceUrls };
+  });
   // Beside a business the site declares, a brand only the text names is a line it sells ("Runner NZ"), not a second business.
   const settledBusiness = distinct.some((entity) => entityProvenance(entity) !== "inferred");
   // A business only the text names that carries the declared business's own name is one of its places:
@@ -230,8 +245,9 @@ export function modelView(report: ReportRecord): ModelView {
   const ownTokens = declaredBusiness ? tokens(declaredBusiness.name) : new Set<string>();
   const carriesOwnName = (entity: DomainEntity) => ownTokens.size > 0 && [...ownTokens].every((token) => tokens(entity.name).has(token));
   const namesake = (entity: DomainEntity) => carriesOwnName(entity) && tokens(entity.name).size === ownTokens.size;
+  // A registered name ("Feltrinelli S.p.A.", "Inter IKEA Systems B.V.") is a company, never a line it sells.
   const productLines = settledBusiness
-    ? distinct.filter((entity) => entityProvenance(entity) === "inferred" && !namesake(entity) && (entity.types.includes("Brand") || carriesOwnName(entity)))
+    ? distinct.filter((entity) => entityProvenance(entity) === "inferred" && !namesake(entity) && !legalName(entity) && (entity.types.includes("Brand") || carriesOwnName(entity)))
     : [];
   // Any other business only the text names, beside the one the site declares, is a mention ("Reese's" in a
   // shake), not a second business of this site's; a review can still confirm it.
@@ -257,7 +273,10 @@ export function modelView(report: ReportRecord): ModelView {
   const offeringPool = [...all.filter((entity) => entityRole(entity) === "offering" && !isPlatform(entity, host)), ...productLines];
   // An inferred event is usually a headline ("Mountain days"), an inferred offer a banner ("Final Sale"):
   // each stays out unless something connects it or someone confirmed it.
+  const ownBusinessName = businessPool[0] ? businessName(businessPool[0]) : "";
   const offeringCandidates = offeringPool.filter((entity) => {
+    // The business is not one of its own offerings: "The Guardian is a publisher offering The Guardian".
+    if (ownBusinessName && businessName(entity) === ownBusinessName) return false;
     if (entityProvenance(entity) !== "inferred" || connected.has(entity.id)) return true;
     // A priced offer is a thing the business sells ("$2 Sodas"); an unpriced one is a banner ("Final Sale").
     if (entity.types.includes("Offer")) return /^([$€£¥]\s?\d|\d+([.,]\d+)?\s?(€|eur|usd|gbp)\b)/i.test(entity.name) && entity.name.length <= 40;

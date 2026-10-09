@@ -91,9 +91,9 @@ export type PageFetcher = (url: URL) => Promise<{ finalUrl: string; body: string
 const REFUSAL_STATUSES = new Set([401, 403, 451]);
 /** Challenge pages name themselves in the title, whatever status they ship with. */
 const CHALLENGE_TITLE =
-  /<title>[^<]*(just a moment|access denied|attention required|pardon our interruption|verify you are human|are you a human|bot verification|request unsuccessful|security check|the request could not be satisfied|403 forbidden)/i;
+  /<title>[^<]*(just a moment|access denied|attention required|pardon our interruption|verify you are human|are you a human|bot verification|request unsuccessful|security check|the request could not be satisfied|403 forbidden|hang tight)/i;
 /** Fingerprints of the usual bot walls, for challenge pages with a bland title. */
-const CHALLENGE_TOKENS = /cf-chl-bypass|cf-browser-verification|\/cdn-cgi\/challenge-platform\/|_Incapsula_Resource|distil_r_captcha|px-captcha|awswaf-captcha/i;
+const CHALLENGE_TOKENS = /botfailover|cf-chl-bypass|cf-browser-verification|\/cdn-cgi\/challenge-platform\/|_Incapsula_Resource|distil_r_captcha|px-captcha|awswaf-captcha/i;
 
 /**
  * Tells a site's bouncer from its page. A 401/403/451 is a refusal, a 429 a rate limit, and a
@@ -172,12 +172,17 @@ export class NativeFetchCollector implements ScrapeProvider {
     const collectedPages = await Promise.allSettled(
       pageCandidates.map((candidate) => this.fetchSecondaryPage(candidate.url, candidate.role)),
     );
+    // A sampled link that redirects to a page already read (an about page that lands on the home
+    // page) is that page again, and is read once.
+    const readUrls = new Set<string>();
     const pages = [
       mainPage,
       ...collectedPages
         .map((result) => (result.status === "fulfilled" ? result.value : null))
         .filter((item): item is SitePageSnapshot => item !== null),
-    ].slice(0, maxPages);
+    ]
+      .filter((item) => !readUrls.has(item.url) && Boolean(readUrls.add(item.url)))
+      .slice(0, maxPages);
 
     // Second hop: a listing page proves a catalog exists, but only an item page carries the
     // Product and Offer data the map is for. When no sampled page yielded one, the audit follows
@@ -276,14 +281,16 @@ export class NativeFetchCollector implements ScrapeProvider {
     );
     if (hasCommercialData) return null;
 
-    const fetched = new Set(pages.map((page) => new URL(page.url).pathname.toLowerCase()));
+    // Read in any language is read: /ja/rooms/basic is /rooms/basic again.
+    const unlocalised = (pathname: string) => pathname.toLowerCase().replace(LOCALE_SEGMENT, "") || "/";
+    const fetched = new Set(pages.map((page) => unlocalised(new URL(page.url).pathname)));
     const listings = pages.filter((page) => page.role === "offer" || page.role === "detail");
     for (const listing of listings) {
       const base = new URL(listing.url);
       const listingSegments = base.pathname.split("/").filter(Boolean);
       const candidate = listing.linkPaths.find((path) => {
         const pathname = path.split("?")[0];
-        if (fetched.has(pathname)) return false;
+        if (fetched.has(unlocalised(pathname))) return false;
         const segments = pathname.split("/").filter(Boolean);
         const childOfListing =
           listingSegments.length > 0 &&
@@ -294,7 +301,7 @@ export class NativeFetchCollector implements ScrapeProvider {
       if (!candidate) continue;
       try {
         const hop = await this.fetchSecondaryPage(new URL(candidate, base), "detail");
-        return fetched.has(new URL(hop.url).pathname.toLowerCase()) ? null : hop;
+        return fetched.has(unlocalised(new URL(hop.url).pathname)) ? null : hop;
       } catch {
         return null;
       }
@@ -666,6 +673,8 @@ export function selectRepresentativePages(links: Element[], base: URL, maxPages 
   const seenUrls = new Set<string>();
   const seenRoles = new Set<SitePageSnapshot["role"]>();
   const seenShapes = new Set<string>();
+  const baseLocale = localeOf(base.pathname);
+  const homeLanguage = candidates.some((candidate) => localeOf(candidate.url.pathname) === baseLocale);
   for (const varied of [true, false]) {
     for (const candidate of candidates) {
       if (selected.length >= maxPages - 1) break;
@@ -674,6 +683,9 @@ export function selectRepresentativePages(links: Element[], base: URL, maxPages 
       if (seenUrls.has(key)) continue;
       if (varied && seenRoles.has(candidate.role) && candidates.some((item) => !seenRoles.has(item.role))) continue;
       if (varied && seenShapes.has(shape)) continue;
+      // The same page in another language is the page read twice: /ja/rooms beside /rooms. Another
+      // language is read only on a site that links nothing in the entry page's own.
+      if (homeLanguage && localeOf(candidate.url.pathname) !== baseLocale) continue;
       selected.push(candidate);
       seenUrls.add(key);
       seenRoles.add(candidate.role);
@@ -690,11 +702,19 @@ export function selectRepresentativePages(links: Element[], base: URL, maxPages 
  */
 export function pathShape(pathname: string): string {
   return pathname
+    .replace(LOCALE_SEGMENT, "")
     .toLowerCase()
     .split("/")
     .filter(Boolean)
     .map((segment, index) => (/^[a-z]{1,12}$/.test(segment) && (index === 0 || segment.length <= 3) ? segment : "*"))
     .join("/");
+}
+
+/** The language a path leads with ("/ja/…", "/de-at/…"), or "" for none. */
+const LOCALE_SEGMENT = /^\/(en|it|de|fr|es|pt|nl|ja|zh|ko|ru|pl|sv|da|nb|no|fi|cs|tr|ar|he|el|hu|ro|sk|sl|hr|bg|uk)(?:[-_][a-z]{2,4})?(?=\/|$)/i;
+
+function localeOf(pathname: string): string {
+  return LOCALE_SEGMENT.exec(pathname)?.[1]?.toLowerCase() ?? "";
 }
 
 /** A page about the company, in the languages the audit meets. */
@@ -710,11 +730,11 @@ const ITEM_PATH = /\/(?:p|dp|item|prodotto|produkt|produit)\/[^/]+\/?$/;
 /**
  * Pages that need session state (checkout, cart, sign-in) render as app shells for a first-time
  * visitor; legal boilerplate (imprint, terms indexes) describes the publisher, not the offer; and
- * a customer-service hub describes the aftermath of a sale, not the sale. All are demoted so the
- * sampled pages are the ones that carry evidence.
+ * a customer-service hub or a product recall notice describes the aftermath of a sale, not the
+ * sale. All are demoted so the sampled pages are the ones that carry evidence.
  */
 const SESSION_SHELL =
-  /\b(checkout|cart|carrello|warenkorb|panier|basket|payment|billing|log-?in|sign-?in|my-?account|imprint|impressum|assistenza|kundenservice|order-status|track(?:ing)?)\b|customer-?(?:service|care|order)/;
+  /\b(checkout|cart|carrello|warenkorb|panier|basket|payment|billing|log-?in|sign-?in|my-?account|imprint|impressum|assistenza|kundenservice|order-status|track(?:ing)?|recalls?|richiam[io])\b|customer-?(?:service|care|order)/;
 
 /** Signals that a site sells things: a cart in any of the shop languages we meet, or a checkout. */
 const COMMERCE_SIGNAL = /\b(cart|carrello|warenkorb|panier|basket|checkout|add-to-cart)\b/;
@@ -764,8 +784,9 @@ function extractPage(
 
 /** A company's legal form, as it follows the name in a footer. Case matters: "AG" is a form, "ag" is not. */
 const LEGAL_FORM =
-  "S\\.\\s?p\\.\\s?A\\.?|S\\.\\s?r\\.\\s?l\\.?|S\\.\\s?a\\.\\s?s\\.?|GmbH(?: & Co\\. KG)?|AG|SE|Ltd\\.?|Limited|LLC|L\\.L\\.C\\.|Inc\\.?|Corp\\.?|Corporation|S\\.A\\.S\\.?|SAS|SARL|S\\.A\\.|S\\.L\\.|B\\.V\\.|N\\.V\\.|PLC|plc|Pty Ltd";
-const LEGAL_NAME = new RegExp(`((?:[A-ZÀ-Þ][\\p{L}\\p{N}&'’.\\-]*\\s+){1,5})(${LEGAL_FORM})(?=$|[\\s,;|)])`, "gu");
+  "S\\.\\s?p\\.\\s?A\\.?|S\\.\\s?r\\.\\s?l\\.?|S\\.\\s?a\\.\\s?s\\.?|GmbH(?: & Co\\. KG)?|AG|SE|Ltd\\.?|Limited|LLC\\.?|L\\.L\\.C\\.|Inc\\.?|Corp\\.?|Corporation|S\\.A\\.S\\.?|SAS|SARL|S\\.A\\.|S\\.L\\.|B\\.V\\.|N\\.V\\.|PLC|plc|Pty Ltd";
+/** Up to five words before the form, each capitalised or led by digits and letters ("37signals"); a bare year is not a name. */
+const LEGAL_NAME = new RegExp(`((?:(?:[A-ZÀ-Þ]|\\d+\\p{L})[\\p{L}\\p{N}&'’.\\-]*\\s+){1,5})(${LEGAL_FORM})(?=$|[\\s,;|)])`, "gu");
 /** What anchors a legal name to the site's own publisher: a copyright line before it, or a company number after it. */
 const COPYRIGHT_MARK = /(?:©|\(c\)|copyright)[^A-Za-zÀ-ÿ]*$/i;
 const COMPANY_NUMBER = /^.{0,160}?\b(?:p\.?\s?iva|partita iva|vat|ust-?id|c\.f\.|codice fiscale|company (?:no|number|registration)|registered|siren|siret|kvk|cif|nif|abn)\b/i;
@@ -1078,9 +1099,12 @@ export function readableText(document: Document): string {
   return text.slice(0, MAX_TEXT);
 }
 
-/** Elements that end a phrase; inline ones (span, a, b) can sit inside a word and are left alone. */
+/**
+ * Elements that end a phrase. A link is one too: a menu's <a>Ricette</a><a>Guide</a> is two words.
+ * Inline formatting (span, b, em) can sit inside a word and is left alone.
+ */
 const BLOCK_ELEMENTS =
-  "address, article, aside, blockquote, br, button, dd, div, dl, dt, figcaption, figure, footer, form, h1, h2, h3, h4, h5, h6, header, hr, label, li, main, nav, ol, option, p, pre, section, table, td, th, tr, ul";
+  "a, address, article, aside, blockquote, br, button, dd, div, dl, dt, figcaption, figure, footer, form, h1, h2, h3, h4, h5, h6, header, hr, label, li, main, nav, ol, option, p, pre, section, table, td, th, tr, ul";
 
 function strippedText(root: Element): string {
   // Cloned so the removal never mutates the document the other extractors still read.

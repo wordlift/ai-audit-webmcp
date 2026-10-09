@@ -198,4 +198,41 @@ describe("the model a stranger meets", () => {
     expect(modelView(report("wordlift.io", mentions)).offerings.map((item) => item.name)).toEqual(["Data Connect"]);
     expect(modelView(report("google.com", mentions)).offerings.map((item) => item.name)).toContain("Google");
   });
+
+  it("never lists the business among its own offerings", () => {
+    const view = modelView(report("theguardian.com", [
+      entity("org", "The Guardian", "NewsMediaOrganization"),
+      entity("paper", "The Guardian", "Product"),
+      entity("live", "Guardian Live", "Event"),
+      entity("app", "Guardian Weekly", "Product"),
+    ]));
+    expect(view.business?.name).toBe("The Guardian");
+    expect(view.offerings.map((item) => item.name)).not.toContain("The Guardian");
+    expect(view.offerings.map((item) => item.name)).toContain("Guardian Weekly");
+  });
+
+  it("reads a company's legal name as the company, never as a line it sells", () => {
+    const view = modelView(report("ikea.com", [
+      entity("org", "IKEA", "Organization"),
+      entity("legal", "Inter IKEA Systems B.V.", "Brand", { origin: "inferred" }),
+      entity("spa", "IKEA Italia S.p.A.", "Organization", { origin: "inferred" }),
+      entity("family", "IKEA Family", "Brand", { origin: "inferred" }),
+      entity("p", "BILLY", "Product"),
+    ]));
+    const offered = view.offerings.map((item) => item.name);
+    expect(offered).not.toContain("Inter IKEA Systems B.V.");
+    expect(offered).not.toContain("IKEA Italia S.p.A.");
+    expect(offered).toContain("IKEA Family");
+  });
+
+  it("counts the names of one business as one, and shows it by the name a customer uses", () => {
+    const pages = (count: number) => Array.from({ length: count }, (_, index) => `https://basecamp.example/${index}`);
+    const view = modelView(report("basecamp.example", [
+      entity("short", "37signals", "Organization", { origin: "inferred" }),
+      entity("legal", "37signals LLC.", "Organization", { origin: "inferred", sourceUrls: pages(5) }),
+      entity("noise", "K-12", "Organization", { origin: "inferred" }),
+      entity("app", "Basecamp", "SoftwareApplication", { origin: "inferred" }),
+    ]));
+    expect(view.business?.name).toBe("37signals");
+  });
 });
