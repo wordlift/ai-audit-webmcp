@@ -15,8 +15,10 @@ test("a claimed Context Engine keeps a correction across a new read of the site"
   // A first visit says nothing about an unclaimed draft.
   await expect(page.getByText(/Draft Context Engine/)).toHaveCount(0);
 
-  // Correct the model where it is read: one card is not theirs. The first correction claims the
-  // engine for this browser; no address is asked for on the report.
+  // The audit landed at once, so the report asks for the address once; declining it is the end of
+  // that. Correct the model where it is read: one card is not theirs. The first correction claims
+  // the engine for this browser, no address needed.
+  await page.getByRole("button", { name: "No thanks" }).click();
   await expect(page.getByRole("textbox", { name: /email/i })).toHaveCount(0);
   await page.getByRole("button", { name: "Correct the model" }).click();
   const cards = page.getByRole("list", { name: "What WordLift understood" });

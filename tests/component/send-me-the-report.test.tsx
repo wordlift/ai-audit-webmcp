@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { SendMeTheReport } from "../../src/client/components/SendMeTheReport";
+import { deliveryAsked, SendMeTheReport } from "../../src/client/components/SendMeTheReport";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -13,8 +13,34 @@ function renderField() {
   );
 }
 
+describe("SendMeTheReport, once on the report when the audit landed too fast", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.sessionStorage.clear();
+  });
+
+  it("asks the same thing in the past tense, and a dismissal is remembered for this report", () => {
+    const onDismiss = vi.fn();
+    render(
+      <MemoryRouter>
+        <SendMeTheReport reportId={REPORT_ID} host="alpina.travel" variant="late" onDismiss={onDismiss} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("textbox", { name: /landed fast\. want the report for alpina\.travel by email too/i })).toBeVisible();
+    expect(deliveryAsked(REPORT_ID)).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "No thanks" }));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(deliveryAsked(REPORT_ID)).toBe(true);
+    expect(deliveryAsked("22222222-2222-4222-8222-222222222222")).toBe(false);
+  });
+});
+
 describe("SendMeTheReport", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.sessionStorage.clear();
+  });
 
   it("asks for one optional address, and says the audit runs without it", () => {
     renderField();
