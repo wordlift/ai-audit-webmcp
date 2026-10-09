@@ -135,7 +135,7 @@ describe("the first screen", () => {
     renderScreen(reviewed);
     // The headline is what the business is; what a Context Engine is follows in one plain line.
     expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf is a lodging business offering Samspitze 4." })).toBeVisible();
-    expect(screen.getByText(/Built from 1 page/)).toHaveTextContent("Built from 1 page of alpina.travel: the model AI agents use to understand this business and act on it, its Context Engine.");
+    expect(screen.getByText(/Built from 1 page/)).toHaveTextContent("Built from 1 page of alpina.travel: your business, as AI agents read it.");
     // The cards are the model, not a form: the controls to correct them sit one click down.
     const understood = screen.getByRole("list", { name: "What WordLift understood" });
     expect(within(understood).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
@@ -153,7 +153,7 @@ describe("the first screen", () => {
     expect(screen.getByText(/decisions added/)).toHaveTextContent("Reviewed · 3 decisions added · not ours: Somebody Else GmbH");
     expect(screen.getByText(/declared by the site/)).toHaveTextContent("1 declared by the site · 1 read from its text · 1 confirmed in a review. Mark each one Relevant or Not ours. Full model & evidence");
     // A draft nobody claimed says nothing about its engine in the first thirty seconds.
-    expect(screen.queryByText(/Draft Context Engine/)).toBeNull();
+    expect(screen.queryByText(/Draft · not claimed/)).toBeNull();
     // Review beside the model, then the proof.
     expect(screen.getByRole("button", { name: /Review with ChatGPT/ })).toBeVisible();
     expect(screen.getByRole("heading", { level: 2, name: "Can agents use it?" })).toBeVisible();
@@ -291,7 +291,7 @@ describe("the readers line", () => {
     renderScreen(withGraph);
     // What the business is leads; a byline, the site's own name and a demoted thing are not in the sentence or the cards.
     expect(screen.getByRole("heading", { level: 1, name: "AlpiNest Feriendorf Lungau is a lodging business offering apartments such as Samspitze 5." })).toBeVisible();
-    expect(screen.getByText(/Built from 2 pages/)).toHaveTextContent("Built from 2 pages of alpina.travel: the model AI agents use");
+    expect(screen.getByText(/Built from 2 pages/)).toHaveTextContent("Built from 2 pages of alpina.travel: your business, as AI agents read it.");
     const cards = screen.getByRole("list", { name: "What WordLift understood" });
     expect(cards).not.toHaveTextContent(/Andrea Volpini|Old brochure|Alpina\.travel/);
     expect(screen.getByRole("link", { name: "Full model & evidence" })).toHaveAttribute("href", "#full-audit");

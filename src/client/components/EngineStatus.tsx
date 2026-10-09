@@ -9,9 +9,9 @@ import type { ReportRecord } from "../../shared/types/index.js";
  * after this report was made (a person came back from ChatGPT), the door to the reviewed version.
  */
 export function engineLine(engine: EngineWithStanding): string {
-  if (engine.owner.state === "verified") return engine.standing === "owner" ? "Your Context Engine · owner verified" : "Owner-verified Context Engine";
-  if (engine.claimed) return engine.standing === "reviewer" ? "Your Context Engine · claimed, ownership not verified" : "Claimed Context Engine · ownership not verified";
-  return "Draft Context Engine · not claimed";
+  if (engine.owner.state === "verified") return engine.standing === "owner" ? "Yours · owner verified" : "Owner verified";
+  if (engine.claimed) return engine.standing === "reviewer" ? "Kept in this browser · ownership not verified" : "Claimed by someone · ownership not verified";
+  return "Draft · not claimed";
 }
 
 /** The reviewed version to open from this report, when one landed after it. */
@@ -43,7 +43,7 @@ export function EngineStatus({ report, engine }: { report: ReportRecord; engine:
       )}
       {newer && (
         <p className="engine-newer" role="status">
-          <b>Reviewed since this report.</b> The Context Engine has a newer reviewed version.{" "}
+          <b>Reviewed since this report.</b> There is a newer reviewed version.{" "}
           <Link to={`/reports/${newer.reportId}`}>Open it <ArrowRight size={13} aria-hidden="true" /></Link>
         </p>
       )}

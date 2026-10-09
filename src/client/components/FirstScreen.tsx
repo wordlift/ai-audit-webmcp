@@ -307,7 +307,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         {/* The moment is the headline: what the business is, in one sentence from what was read. What
             a Context Engine is follows in one plain line, so nobody has to guess who built what. */}
         <h1 id="first-screen-title" className={engine?.sentence ? "first-understood" : undefined}>
-          {engine?.sentence ?? (engine ? `WordLift built a first Context Engine for ${host}.` : unreadable ? `WordLift could not read ${host}.` : headline(capabilities, host))}
+          {engine?.sentence ?? (engine ? `WordLift read ${host} the way AI agents do.` : unreadable ? `WordLift could not read ${host}.` : headline(capabilities, host))}
         </h1>
         {unreadable && (
           <p className="first-sentence">
@@ -318,8 +318,7 @@ export function FirstScreen({ report, now = () => Date.now() }: { report: Report
         {!engine && !unreadable && gap && <p className="first-sentence">{gap}</p>}
         {engine && (
           <p className="first-context">
-            Built from {engine.pages} {engine.pages === 1 ? "page" : "pages"} of {host}: the model AI agents use to understand this business and act on it,
-            its <b>Context Engine</b>.
+            Built from {engine.pages} {engine.pages === 1 ? "page" : "pages"} of {host}: <b>your business, as AI agents read it</b>.
           </p>
         )}
         {engine && ownWords(report) && <p className="first-own-words">In its own words: “{ownWords(report)}”</p>}

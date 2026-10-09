@@ -141,7 +141,8 @@ describe("the Activate screen", () => {
     expect(screen.getByRole("heading", { name: /what wordlift publishes/i })).toBeVisible();
     expect(screen.getByText(/of 100 agent-ready since 1 September/)).toHaveTextContent("62 → 74");
 
-    const table = screen.getByRole("table");
+    // Two tables now: the files to copy, then what the page carries.
+    const table = screen.getAllByRole("table").at(-1)!;
     const search = within(table).getByRole("row", { name: /search the site/i });
     expect(search).toHaveTextContent("Ours");
     expect(search).toHaveTextContent("The action, with its entry point");
@@ -169,7 +170,7 @@ describe("the Activate screen", () => {
     // What agents are given to read lives here, with the artifacts, not three clicks down in the full audit.
     expect(screen.getByRole("heading", { name: "What agents are given to read" })).toBeInTheDocument();
     // The door to WordLift, at the top and at the close, carries the report and the intent; the step bar's "Activate" is the page itself.
-    const doors = screen.getAllByRole("link", { name: /activate with wordlift/i });
+    const doors = screen.getAllByRole("link").filter((link) => (link.getAttribute("href") ?? "").includes("intent=activate"));
     expect(doors.length).toBeGreaterThanOrEqual(2);
     for (const door of doors) {
       expect(door).toHaveAttribute("href", expect.stringContaining(`report=${REPORT_ID}`));
@@ -195,7 +196,7 @@ describe("the Activate screen", () => {
     vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText: async (text: string) => { written.push(text); } } });
     renderScreen(ledger);
 
-    const section = screen.getByRole("region", { name: /put it on your site with an agent/i });
+    const section = screen.getByRole("region", { name: /copy the files to your site/i });
     expect(within(section).getByText(/Claude Code or Codex/)).toBeVisible();
     fireEvent.click(within(section).getByRole("button", { name: /copy the prompt for your agent/i }));
     await screen.findByRole("button", { name: /copied/i });

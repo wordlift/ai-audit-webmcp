@@ -873,6 +873,17 @@ one next step; what was added since sits on top of that.
   what was inferred against what it says, what an agent can do today, what to do next). Then one
   more: where would you click. One answer, in under ten seconds.
 
+### Decided on 2026-10-08, after the three items shipped
+
+- **The name.** On the owner's layer the Context Engine is "your business, as AI agents read it".
+  The name stays one click below, in the docs and in the sales conversation. AGENTS.md > Frozen says so.
+- **Activate's two paths.** A site that does not run WordLift copies the four files to its root, by
+  hand or through an agent with the runbook (AC5, shipped). A site that runs WordLift is sent to
+  my.wordlift.io; from there nothing publishes yet, and that is the next thing to build on the
+  platform side, not here. The audit's own detection of WordLift decides which path leads.
+- **AC6 is parked.** The Starter KG becoming a dataset the person owns waits until the dashboard
+  can publish from one; the account question is answered with it.
+
 ### Order
 
 1 before 2 before 3, and inside 1 the HubSpot double write ships with the email field, not after

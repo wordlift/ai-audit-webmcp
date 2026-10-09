@@ -186,7 +186,7 @@ export function ContextEnginePreview({
         <div className="engine-save" role="status">
           <span>
             {count(staged, "correction")} ready.{" "}
-            {keptOnEngine ? "Saving keeps them on your Context Engine for every later read." : "Saving creates a reviewed version of this report."}
+            {keptOnEngine ? "Saving keeps them for every later read of the site." : "Saving creates a reviewed version of this report."}
           </span>
           <button type="button" className="review-cta review-cta-primary" onClick={() => void save()} disabled={saving}>
             {saving ? "Saving…" : `Save ${count(staged, "correction")}`}

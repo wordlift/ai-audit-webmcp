@@ -33,7 +33,7 @@ export function App() {
       </main>
       <footer>
         <p>Audit what agents can do on your site. Fix what they cannot. Activate what works.</p>
-        <a href="https://wordlift.io" target="_blank" rel="noreferrer">Build your Context Engine with WordLift</a>
+        <a href="https://wordlift.io" target="_blank" rel="noreferrer">Keep your business agent-ready with WordLift</a>
         <a className="footer-legal" href="/privacy">Privacy policy</a>
       </footer>
     </div>

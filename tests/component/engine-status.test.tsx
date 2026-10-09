@@ -25,10 +25,10 @@ function engine(overrides: Partial<EngineWithStanding> = {}): EngineWithStanding
 
 describe("where a report stands in its Context Engine", () => {
   it("says draft, claimed or verified, and whose", () => {
-    expect(engineLine(engine({ claimed: false, standing: "none", status: "draft" }))).toBe("Draft Context Engine · not claimed");
-    expect(engineLine(engine())).toBe("Your Context Engine · claimed, ownership not verified");
-    expect(engineLine(engine({ standing: "none" }))).toBe("Claimed Context Engine · ownership not verified");
-    expect(engineLine(engine({ owner: { state: "verified", method: "meta-tag" }, standing: "owner" }))).toBe("Your Context Engine · owner verified");
+    expect(engineLine(engine({ claimed: false, standing: "none", status: "draft" }))).toBe("Draft · not claimed");
+    expect(engineLine(engine())).toBe("Kept in this browser · ownership not verified");
+    expect(engineLine(engine({ standing: "none" }))).toBe("Claimed by someone · ownership not verified");
+    expect(engineLine(engine({ owner: { state: "verified", method: "meta-tag" }, standing: "owner" }))).toBe("Yours · owner verified");
   });
 
   it("opens the reviewed version when a review landed after this report, and not before", () => {

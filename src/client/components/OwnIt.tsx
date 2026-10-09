@@ -183,7 +183,7 @@ export function OwnIt({ report }: { report: ReportRecord }) {
           <div className={`own-it-actions${anything ? " is-ready" : ""}`} role={anything ? "status" : undefined}>
             <span>
               {anything
-                ? `${decisions.length} ${decisions.length === 1 ? "answer" : "answers"} ready. Saving creates a new version of this report, kept on your Context Engine for every later read.`
+                ? `${decisions.length} ${decisions.length === 1 ? "answer" : "answers"} ready. Saving creates a new version of this report, kept for every later read of the site.`
                 : "Pick an answer for each action you know. Your answers create a new version of this report; the score stays where the evidence put it."}
             </span>
             <button type="submit" className="review-cta review-cta-primary" disabled={saving || !anything}>{saving ? "Saving…" : "Save my answers"}</button>

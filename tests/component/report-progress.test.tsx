@@ -46,7 +46,7 @@ describe("ReportProgress", () => {
   it("shows the Context Engine forming from what has landed while the audit still runs", () => {
     render(<ReportProgress report={running} />);
 
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Building a Context Engine for northstar-lending.example");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Reading northstar-lending.example the way AI agents do");
     const steps = screen.getByRole("list", { name: /what the audit has done so far/i });
     expect(steps).toHaveTextContent("Selected 1 representative page");
     expect(steps).toHaveTextContent("Found Northstar Lending");
