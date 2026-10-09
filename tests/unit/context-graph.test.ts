@@ -240,6 +240,47 @@ describe("context graph", () => {
   });
 });
 
+describe("one place under two names", () => {
+  const rome = "https://www.wikidata.org/wiki/Q220";
+  const place = (id: string, name: string, extra: Partial<SitePageSnapshot["entities"][number]> = {}) => ({ ...entity(id, "Place", name), origin: "inferred" as const, ...extra });
+
+  it("folds a place the linker tied to another place's link into that place, keeping its name as another name", () => {
+    const context = compileContextGraph(
+      [page("https://alpina.travel/", "entry", [place("a", "Roma", { unconfirmedSameAs: [rome] })]), page("https://alpina.travel/about", "other", [place("b", "Rome", { sameAs: [rome], sourceUrl: "https://alpina.travel/about" })])],
+      [], [], "https://alpina.travel/",
+    );
+    const places = context.entities.filter((item) => item.types.includes("Place"));
+    expect(places).toHaveLength(1);
+    expect(places[0]).toMatchObject({ name: "Rome", alternateNames: ["Roma"], sameAs: [rome] });
+    expect(places[0]?.sourceUrls).toEqual(["https://alpina.travel/about", "https://alpina.travel/"]);
+    expect(JSON.stringify(context)).not.toContain("unconfirmedSameAs");
+  });
+
+  it("folds two places that earned the same link, and leaves a hint with nothing to match alone", () => {
+    const context = compileContextGraph(
+      [page("https://alpina.travel/", "entry", [
+        place("a", "Firenze", { sameAs: ["https://www.wikidata.org/wiki/Q2044"] }),
+        place("b", "Florence", { sameAs: ["https://www.wikidata.org/wiki/Q2044"] }),
+        place("c", "Roma", { unconfirmedSameAs: [rome] }),
+      ])],
+      [], [], "https://alpina.travel/",
+    );
+    expect(context.entities.filter((item) => item.types.includes("Place")).map((item) => item.name).sort()).toEqual(["Firenze", "Roma"]);
+    expect(context.entities.find((item) => item.name === "Roma")?.sameAs).toEqual([]);
+  });
+
+  it("never folds a place into something that is not a place", () => {
+    const context = compileContextGraph(
+      [page("https://alpina.travel/", "entry", [
+        { ...entity("p", "Apartment", "Klimmspitze"), sameAs: ["https://www.wikidata.org/wiki/Q9"] },
+        place("s", "Samspitze 4", { unconfirmedSameAs: ["https://www.wikidata.org/wiki/Q9"] }),
+      ])],
+      [], [], "https://alpina.travel/",
+    );
+    expect(context.entities.map((item) => item.name)).toEqual(expect.arrayContaining(["Klimmspitze", "Samspitze 4"]));
+  });
+});
+
 describe("a page that names more than a report can link", () => {
   it("keeps the first 40 on every list, so the report still stores", () => {
     const many = Array.from({ length: 70 }, (_, index) => entity(`https://alpina.travel/#apt-${index}`, "Apartment", `Apartment ${index}`, "https://alpina.travel/"));

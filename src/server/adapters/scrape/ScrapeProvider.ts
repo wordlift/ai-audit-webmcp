@@ -28,6 +28,12 @@ export interface ExtractedEntity {
   offers: ExtractedOffer[];
   /** Declared in the page's markup (the default), or inferred from its text by a markup provider. */
   origin?: "markup" | "inferred";
+  /**
+   * A Wikidata link the linker was sure of for a place whose Wikidata label is not the name on the
+   * page ("Roma" → Rome). Never shown and never stored: it only lets the graph find the same place
+   * under another name, when another sighting earned that link with its own name.
+   */
+  unconfirmedSameAs?: string[];
 }
 
 export type RelationKind = "offers" | "located-in" | "provided-by" | "part-of" | "serves" | "brand";

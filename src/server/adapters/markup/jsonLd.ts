@@ -16,6 +16,8 @@ export interface JsonLdNode {
   alternateNames: string[];
   sameAs: string[];
   offers: ExtractedOffer[];
+  /** See ExtractedEntity.unconfirmedSameAs. */
+  unconfirmedSameAs?: string[];
 }
 
 export const MAX_NODES = 20;
@@ -115,6 +117,7 @@ export function entitiesFromJsonLd(nodes: JsonLdNode[], pageUrl: string): Extrac
     sourceUrl: pageUrl,
     sameAs: node.sameAs,
     offers: node.offers,
+    ...(node.unconfirmedSameAs && node.unconfirmedSameAs.length > 0 ? { unconfirmedSameAs: node.unconfirmedSameAs } : {}),
     origin: "inferred" as const,
   }));
 }
