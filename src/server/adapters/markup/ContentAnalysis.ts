@@ -135,6 +135,9 @@ export function labelMatches(name: string, label: string): boolean {
   return a.length > 0 && a === b;
 }
 
+/** Every label the recogniser is asked for, as a word: what it must never return as a name. */
+const LABEL_WORDS = new Set([...ENTITY_LABELS, ...Object.values(LABELS_BY_SITE_TYPE).flat(), ...Object.keys(SCHEMA_TYPES)].map((label) => label.toLowerCase()));
+
 const LEGAL_FORMS = new Set(["inc", "llc", "ltd", "limited", "gmbh", "ag", "srl", "spa", "sa", "sas", "plc", "co", "corp", "corporation", "company", "bv", "nv", "oy", "ab", "as"]);
 
 /** Role nouns the recogniser reads as people, and the generic phrases it reads as things. Neither is an entity. */
@@ -237,6 +240,11 @@ export function nodesFrom(found: AnalysedEntity[], confidence: number, linkConfi
     }
     // A name begins with a capital or a digit; "cutting-edge AI platforms" and a role noun are not things the business is.
     if (NOT_A_NAME.test(name) || !/^[\p{Lu}\d]/u.test(name)) {
+      notNames += 1;
+      continue;
+    }
+    // A name that is one of the labels asked for ("Product", "Region") is the label read back, not a name.
+    if (LABEL_WORDS.has(name.toLowerCase()) || LABEL_WORDS.has(name.toLowerCase().replace(/s$/, ""))) {
       notNames += 1;
       continue;
     }

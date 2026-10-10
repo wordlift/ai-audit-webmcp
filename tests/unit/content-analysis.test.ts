@@ -196,4 +196,9 @@ describe("Content Analysis v3 as the entities behind Fix", () => {
     expect(nodes.find((node) => node.name === "Rome")?.sameAs).toEqual(["https://www.wikidata.org/wiki/Q220"]);
     expect(nodes.find((node) => node.name === "Data Connect")?.unconfirmedSameAs).toBeUndefined();
   });
+
+  it("never takes a label it was asked for as a name", () => {
+    const nodes = nodesFrom([{ text: "Product", label: "Product", score: 0.9 }, { text: "Region", label: "Region", score: 0.9 }, { text: "Products", label: "Product", score: 0.9 }, { text: "Checkout", label: "Product", score: 0.9 }], 0.6, 0.7, [], "Product Region Products Checkout");
+    expect(nodes.map((node) => node.name)).toEqual(["Checkout"]);
+  });
 });

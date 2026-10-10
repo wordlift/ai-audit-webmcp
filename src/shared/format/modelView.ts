@@ -103,6 +103,12 @@ function categoryNoun(report: ReportRecord): string | null {
  * Accessories") rather than a thing it offers: two things joined, or a short run of words ending in a
  * plural, with no number and no brand-like capital inside a word.
  */
+/** The service around a sale, in the languages the audit meets: "Servizio Clienti", "Customer Service", "Free shipping". */
+const AFTER_SALE = /\b(customer (service|care|support)|servizio clienti|assistenza|kundenservice|service client|atención al cliente|help ?desk|support|faq|contatti|contact us|newsletter|my account|il mio account|spedizion[ei]|shipping|returns?|resi|reso)\b/i;
+
+/** The rooms and corners of a business, in the languages the audit meets: its parts, not places it is about. */
+const FACILITY = /\b(area|bar|lounge|lobby|terrace|rooftop|room|rooms|hall|spa|pool|garden|restaurant|reception|gym|parking|sala|terrazza|giardino|piscina|ristorante|camera|camere|bereich|terrasse|garten|salle|jardin|piscine)$/i;
+
 export function looksLikeCategory(name: string): boolean {
   const words = name.trim().split(/\s+/);
   // A slogan, not a thing: "Wildly Comfortable", "Shop New Arrivals", "Discover More", "Make a night of it".
@@ -123,7 +129,8 @@ export function looksLikeCategory(name: string): boolean {
  */
 export function looksGeneric(name: string): boolean {
   const words = name.trim().split(/\s+/);
-  if (words.length > 1) return words.slice(1).some((word) => /^[a-z]{3,}$/.test(word) && !/^(and|of|for|the|with|by|to|in|on)$/.test(word));
+  // Lowercase in any script: "Giochi di società" and "Idee regalo" are labels as much as "Gift ideas".
+  if (words.length > 1) return words.slice(1).some((word) => /^\p{Ll}{3,}$/u.test(word) && !/^(and|of|for|the|with|by|to|in|on)$/.test(word));
   const word = words[0] ?? "";
   if (/^[A-Z]{2,4}$/.test(word)) return true;
   return /^[A-Z][a-z]+$/.test(word) && !/\d/.test(word);
@@ -278,6 +285,8 @@ export function modelView(report: ReportRecord): ModelView {
     // The business is not one of its own offerings: "The Guardian is a publisher offering The Guardian".
     if (ownBusinessName && businessName(entity) === ownBusinessName) return false;
     if (entityProvenance(entity) !== "inferred" || connected.has(entity.id)) return true;
+    // Customer service, shipping and returns are how a business looks after a sale, not what it sells.
+    if (AFTER_SALE.test(entity.name)) return false;
     // A priced offer is a thing the business sells ("$2 Sodas"); an unpriced one is a banner ("Final Sale").
     if (entity.types.includes("Offer")) return /^([$€£¥]\s?\d|\d+([.,]\d+)?\s?(€|eur|usd|gbp)\b)/i.test(entity.name) && entity.name.length <= 40;
     if (entity.types.includes("Event")) return false;
@@ -306,7 +315,19 @@ export function modelView(report: ReportRecord): ModelView {
     // A product the site lists in many variants is one it sells most visibly.
     .sort((left, right) => rank(left.entity, right.entity, (entity) => (entity === left.entity ? left.variants : right.variants) * 2 + salience(entity) + specificity(entity)));
 
-  const places = all.filter((entity) => entityRole(entity) === "place").sort((left, right) => rank(left, right, depth));
+  // A place is somewhere the site is about. A registered company ("Stripe France SARL") is not one; nor
+  // is a room of the business the text calls a place with no link to say where it is ("Lounge Area",
+  // "Rooftop Bar"); and "Älmhult, Sweden" beside "Älmhult" is Älmhult once.
+  const placeNames = new Set(all.filter((entity) => entityRole(entity) === "place").map((entity) => normalized(entity.name)));
+  const places = all
+    .filter((entity) => entityRole(entity) === "place")
+    .filter((entity) => !legalName(entity))
+    .filter((entity) => !(entityProvenance(entity) === "inferred" && entity.sameAs.length === 0 && FACILITY.test(entity.name.trim())))
+    .filter((entity) => {
+      const head = entity.name.split(",")[0]?.trim() ?? "";
+      return !(entity.name.includes(",") && head && placeNames.has(normalized(head)));
+    })
+    .sort((left, right) => rank(left, right, depth));
   const people = all.filter((entity) => entityRole(entity) === "person");
 
   const business = businessPool[0] ? view(businessPool[0]) : null;
@@ -350,7 +371,7 @@ export function modelView(report: ReportRecord): ModelView {
       inferred: counted.filter((entity) => entityProvenance(entity) === "inferred").length,
       confirmed: counted.filter((entity) => entityProvenance(entity) === "human-confirmed").length,
     },
-    sentence: sentenceFor(report, business, offerings.map(({ entity, variants }) => offeringView(entity, variants)), relations, all, offerings.length + setAside.length),
+    sentence: sentenceFor(report, business, offerings.map(({ entity, variants }) => offeringView(entity, variants)), relations, all, offerings.length + setAside.length, places),
   };
 }
 
@@ -387,7 +408,7 @@ function list(names: string[]): string {
  * it offers, and where, only when a relation says where. "AlpiNest Feriendorf Lungau is a lodging
  * business offering Samspitze 4, in Mariapfarr." Nothing is said that the model does not hold.
  */
-function sentenceFor(report: ReportRecord, business: ViewEntity | null, offerings: ViewEntity[], relations: EntityRelation[], all: DomainEntity[], everything = offerings.length): string | null {
+function sentenceFor(report: ReportRecord, business: ViewEntity | null, offerings: ViewEntity[], relations: EntityRelation[], all: DomainEntity[], everything = offerings.length, shownPlaces: DomainEntity[] = all.filter((entity) => entityRole(entity) === "place")): string | null {
   const names = new Map(all.map((entity) => [entity.id, entity.name]));
   const where = (id: string) => relations.find((relation) => relation.from === id && relation.kind === "located-in");
   const subject = business ?? offerings[0];
@@ -407,9 +428,13 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
   const candidates = business ? (settled.length > 0 ? settled : offerings) : [];
   // What the site is built around speaks for it; otherwise every name that is not a page label does.
   // "Basecamp" leads basecamp.com; "Project page", "CLI" and a bare "Eyewear" stay in the cards.
-  const prominent = candidates.filter((offering) => offering.prominent);
+  // A heading makes a name prominent, not a name: "Money management" in a heading is still a label.
+  // A one-word name the site is built around ("Basecamp") still leads; a phrase of ordinary words does not.
+  const prominent = candidates.filter((offering) => offering.prominent && !(offering.provenance === "inferred" && /\s/.test(offering.name.trim()) && looksGeneric(offering.name)));
   const named = candidates.filter((offering) => !looksGeneric(offering.name));
-  const pool = prominent.length > 0 ? prominent : named.length > 0 ? named : candidates.slice(0, 1);
+  // With nothing named, one thing the site declares may stand for it; a label only the text read
+  // ("Idee regalo", a menu entry) never does: the sentence then says what the business is, and stops.
+  const pool = prominent.length > 0 ? prominent : named.length > 0 ? named : candidates.filter((offering) => offering.provenance !== "inferred").slice(0, 1);
   // Three names read at a glance; past three, "and more" says there is more without a count to parse.
   const shown = pool.slice(0, 3);
   const totalOfferings = pool.length;
@@ -434,7 +459,9 @@ function sentenceFor(report: ReportRecord, business: ViewEntity | null, offering
     const nested = relations.find((relation) => relation.kind === "located-in" && all.some((entity) => entity.id === relation.from && entityRole(entity) === "place"));
     if (nested && names.get(nested.from) && names.get(nested.to)) return `${body} The site is about ${names.get(nested.from)}, in ${names.get(nested.to)}.`;
     // A chain names many places and says none is inside another: which places, then, and how many.
-    const places = all.filter((entity) => entityRole(entity) === "place");
+    // The places the page lists, in the order the model holds them.
+    const listed = new Set(shownPlaces.map((place) => place.id));
+    const places = all.filter((entity) => listed.has(entity.id));
     if (places.length >= 3) {
       const first = places.slice(0, 3).map((place) => place.name);
       return `${body} The site is about ${list(places.length > 3 ? [...first, `${places.length - 3} more places`] : first)}.`;
