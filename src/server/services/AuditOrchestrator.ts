@@ -828,7 +828,8 @@ export class AuditOrchestrator {
       chosen.map(async (page) => {
         try {
           const outcome = await provider.generate({ url: page.url, title: page.title, description: page.description, headings: page.headings, text: page.text, ...(siteType ? { siteType } : {}) });
-          page.entities.push(...outcome.entities);
+          // A menu read as one name ("Ispirazioni Ricette Guide Racconti") is the page's links, not a thing.
+          page.entities.push(...outcome.entities.filter((entity) => !isMenuRun(entity.name, page.linkLabels)));
           return outcome;
         } finally {
           read += 1;
@@ -1108,3 +1109,25 @@ function disprovedDiscovery(snapshot: SiteSnapshot | null): { evidenceIds: Set<s
 
   return { evidenceIds, signals };
 }
+
+/**
+ * Whether a name is two or more of the page's own link labels in a row: a navigation bar the text
+ * reader took for one name. A product whose name happens to be one link is still one name.
+ */
+export function isMenuRun(name: string, linkLabels: readonly string[]): boolean {
+  const labels = new Set(linkLabels.map((label) => label.toLowerCase().replace(/\s+/g, " ").trim()).filter(Boolean));
+  const words = name.toLowerCase().replace(/\s+/g, " ").trim().split(" ");
+  // fewest[i]: the fewest labels that spell the first i words, or Infinity when none do.
+  const fewest: number[] = [0, ...words.map(() => Number.POSITIVE_INFINITY)];
+  for (let end = 1; end <= words.length; end += 1) {
+    for (let start = 0; start < end; start += 1) {
+      if (fewest[start] !== Number.POSITIVE_INFINITY && labels.has(words.slice(start, end).join(" "))) {
+        fewest[end] = Math.min(fewest[end]!, fewest[start]! + 1);
+      }
+    }
+  }
+  // Spelled whole by labels, and by more than one: a single label is a name the site links, not a menu.
+  const spelled = fewest[words.length]!;
+  return spelled !== Number.POSITIVE_INFINITY && spelled >= 2 && !labels.has(words.join(" "));
+}
+

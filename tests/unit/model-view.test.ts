@@ -235,4 +235,33 @@ describe("the model a stranger meets", () => {
     ]));
     expect(view.business?.name).toBe("37signals");
   });
+
+  it("lists the places a site is about, not its rooms, its companies or the same town twice", () => {
+    const rome = "https://www.wikidata.org/wiki/Q220";
+    const view = modelView(report("hotel.example", [
+      entity("h", "Hotel Example", "Hotel"),
+      entity("rome", "Rome", "Place", { origin: "inferred", sameAs: [rome] }),
+      entity("venice", "Venice", "Place", { origin: "inferred" }),
+      entity("milan", "Milan", "Place", { origin: "inferred" }),
+      entity("lounge", "Lounge Area", "Place", { origin: "inferred" }),
+      entity("bar", "Rooftop Bar", "Place", { origin: "inferred" }),
+      entity("sarl", "Example France SARL", "Place", { origin: "inferred" }),
+      entity("town", "Älmhult", "Place", { origin: "inferred" }),
+      entity("town2", "Älmhult, Sweden", "Place", { origin: "inferred" }),
+    ]));
+    expect(view.places.map((item) => item.name).sort()).toEqual(["Milan", "Rome", "Venice", "Älmhult"]);
+    expect(view.sentence).not.toMatch(/Lounge|Rooftop|SARL|Sweden/);
+  });
+
+  it("never lets a label only the text read stand for what the business sells", () => {
+    const view = modelView(report("shop.example", [
+      entity("org", "Shop Example", "Organization"),
+      entity("a", "Idee regalo", "Product", { origin: "inferred" }),
+      entity("b", "Giochi di società", "Product", { origin: "inferred" }),
+      entity("c", "Servizio Clienti", "Service", { origin: "inferred" }),
+      entity("d", "Free Shipping", "Offer", { origin: "inferred" }),
+    ]));
+    expect(view.sentence).not.toMatch(/Idee regalo|Giochi|Servizio|Shipping/);
+    expect(view.preview.map((item) => item.name)).toEqual(["Shop Example"]);
+  });
 });
