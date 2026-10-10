@@ -32,7 +32,7 @@ test("an agent answers what the business offers, which entities matter, which ar
   await page.getByLabel("Website URL").fill("https://alpina.travel");
   await page.getByRole("button", { name: /audit my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
-  await expect(page.locator(".first-screen")).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator(".doorway")).toBeVisible({ timeout: 60_000 });
   const reportId = page.url().split("/reports/")[1]!;
 
   // What does this company offer, and which entities matter?

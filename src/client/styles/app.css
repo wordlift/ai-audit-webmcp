@@ -408,19 +408,6 @@ button:disabled { opacity: 0.6; cursor: wait; }
 .report-toolbar { display: flex; justify-content: space-between; }
 
 /* ---------- Steps: Audit, Fix, Activate, the current one lit, on both pages ---------- */
-.step-bar { position: sticky; top: 0; z-index: 6; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; margin: 0 -4px; padding: 10px 4px; background: color-mix(in srgb, var(--page) 92%, transparent); backdrop-filter: blur(6px); }
-.step-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.step-link { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border: 1px solid var(--line-subtle); border-radius: 999px; background: var(--surface); color: var(--ink); font-weight: 600; font-size: 0.92rem; text-decoration: none; }
-.step-link:hover { border-color: var(--brand); }
-.step-index { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: var(--wl-neutral-100); color: var(--muted); font-family: var(--font-mono); font-size: 0.7rem; }
-.step-link.is-current { background: var(--brand); border-color: var(--brand); color: var(--wl-neutral-0); }
-.step-link.is-current .step-index { background: color-mix(in srgb, var(--wl-neutral-0) 22%, transparent); color: var(--wl-neutral-0); }
-.step-aside { margin-left: 6px; }
-.step-link-quiet { padding: 6px 12px; border-color: transparent; background: none; color: var(--muted); font-weight: 500; }
-.step-link-quiet:hover { color: var(--brand); border-color: transparent; }
-.step-bar-actions { display: flex; align-items: center; gap: 14px; }
-.step-bar-actions a, .step-bar-actions button:not(.fix-publish) { display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; color: var(--muted); font: inherit; text-decoration: none; cursor: pointer; }
-.step-bar-actions a:not(.fix-publish):hover, .step-bar-actions button:not(.fix-publish):hover { color: var(--brand); }
 @media (max-width: 640px) { .step-bar { top: auto; bottom: 0; padding: 8px 4px; border-top: 1px solid var(--line-subtle); } .step-bar-actions { display: none; } }
 
 /* The Fix step: two blocks under one heading, and the agent doors once. */
@@ -1348,8 +1335,6 @@ details.agent-diary .diary-lines { padding: 0 16px 14px; }
 .entity-group h3 { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.95rem; }
 .entity-count { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .entity-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.entity-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 8px 10px; border-radius: 8px; background: var(--wl-neutral-100); }
-.entity-row-text { background: color-mix(in srgb, var(--state-unverified) 10%, white); }
 .entity-name { font-weight: 600; overflow-wrap: anywhere; }
 .entity-type { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; align-self: center; }
 .entity-where { grid-column: 1 / -1; color: var(--muted); font-size: 0.8rem; overflow-wrap: anywhere; }

@@ -1,7 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
-
-/** The model & evidence fold is one click away, and the specs take that click before reading it. */
-const openFullAudit = (page: Page) => page.locator("summary", { hasText: "Model & evidence" }).click();
+import { expect, test } from "@playwright/test";
+import { audit, openEvidence, step } from "./helpers";
 
 test("landing page asks one question and takes a URL", async ({ page }) => {
   await page.goto("/");
@@ -11,37 +9,35 @@ test("landing page asks one question and takes a URL", async ({ page }) => {
 });
 
 test("a site typed the way people type it, without https://, is audited", async ({ page }) => {
-  await page.goto("/");
-  await page.getByLabel("Website URL").fill("alpina.travel");
-  await page.getByRole("button", { name: /audit my site/i }).click();
-  await expect(page).toHaveURL(/\/reports\//);
-  await expect(page.getByText(/as AI agents read it|AI agents can do \d+ of the \d+/i).first()).toBeVisible();
+  await audit(page, "alpina.travel");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("alpina.travel");
 });
 
-test("a report opens with the Context Engine, then three words, and keeps the model & evidence one click away", async ({ page }) => {
-  await page.goto("/");
-  await page.getByLabel("Website URL").fill("https://shop.example");
-  await page.getByRole("button", { name: /audit my site/i }).click();
-  await expect(page).toHaveURL(/\/reports\//);
+test("a report opens on the business, then what agents can do, and keeps the model & evidence one click away", async ({ page }) => {
+  await audit(page, "https://shop.example");
 
-  // The first screen: the Context Engine first, then what agents can do with it, in plain words.
-  await expect(page.getByRole("list", { name: /what wordlift understood/i })).toContainText(/declared|inferred/i);
-  await expect(page.getByRole("button", { name: /review with chatgpt/i })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Can agents use it?" })).toBeVisible();
+  // The doorway: the host, its sector, what was understood with provenance, then the four-stage map.
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("shop.example");
+  await expect(page.getByText(/Commerce \/ Retail/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What we understood about your business" })).toBeVisible();
+  const core = page.getByRole("list", { name: /core entities/i });
+  await expect(core).toContainText(/declared|inferred/i);
+  await expect(core.getByRole("listitem").filter({ hasText: "Trail Jacket" }).first()).toContainText("Product");
+  await expect(page.getByRole("heading", { name: "What can agents do here?" })).toBeVisible();
+  for (const stage of ["Discover", "Understand & decide", "Act", "Manage"]) await expect(page.getByRole("heading", { name: stage, exact: true })).toBeVisible();
+  await expect(page.getByText(/\d+ \/ \d+ verified/)).toBeVisible();
   await expect(page.getByRole("link", { name: /pitching to a client/i })).toHaveCount(0);
-  await expect(page.getByText(/as AI agents read it|AI agents can do \d+ of the \d+/i).first()).toBeVisible();
-  const three = page.getByRole("list", { name: /the actions that matter/i });
-  await expect(three.getByRole("listitem")).toHaveCount(3);
-  await expect(three).toContainText(/works|fix this|talk to us/i);
-  // The model, one card per thing, on the first screen; Fix names what needs fixing, or says in one line that nothing does.
-  await expect(page.getByText(/fix what agents cannot understand|agents understand your business/i).first()).toBeVisible();
-  await expect(page.getByRole("list", { name: "What WordLift understood" }).getByRole("listitem").filter({ hasText: "Trail Jacket" }).first()).toContainText("Product");
-  // The full audit says what it is before it opens, and the precise names stay behind it.
-  await expect(page.getByText(/Evidence, entities, terminology, actions, governance/i)).toBeVisible();
-  await expect(page.getByRole("heading", { name: /commerce \/ retail/i })).toBeHidden();
+  // The precise names stay off the first screen.
+  await expect(page.getByRole("heading", { name: /commerce \/ retail/i })).toHaveCount(0);
 
-  // One click below, the model with its exact names.
-  await openFullAudit(page);
+  // The three steps are views over the same report.
+  await expect(step(page, "Audit")).toHaveAttribute("aria-current", "step");
+  await step(page, "Fix").click();
+  await expect(page.getByRole("heading", { level: 1, name: "Make your business actionable." })).toBeVisible();
+  await expect(step(page, "Fix")).toHaveAttribute("aria-current", "step");
+
+  // One click away, the model with its exact names.
+  await openEvidence(page);
   await expect(page.getByRole("heading", { name: /commerce \/ retail/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: /from what the site means to what an agent can do/i })).toBeVisible();
   await expect(page.getByText("Trail Jacket", { exact: true }).first()).toBeVisible();

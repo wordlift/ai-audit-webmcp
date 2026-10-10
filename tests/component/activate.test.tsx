@@ -135,48 +135,48 @@ describe("the numbers equal the ledger", () => {
 });
 
 describe("the Activate screen", () => {
-  it("shows the movement, the table, the three documents, and who read it", () => {
+  it("previews the publication, keeps the delivery routes, and shows who read it", () => {
     renderScreen(ledger);
-    expect(screen.getByRole("heading", { level: 1, name: "Make alpina.travel usable by AI agents" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: /what wordlift publishes/i })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1, name: "Activate your Context Engine." })).toBeVisible();
     expect(screen.getByText(/of 100 agent-ready since 1 September/)).toHaveTextContent("62 → 74");
 
-    // Two tables now: the files to copy, then what the page carries.
-    const table = screen.getAllByRole("table").at(-1)!;
-    const search = within(table).getByRole("row", { name: /search the site/i });
-    expect(search).toHaveTextContent("Ours");
-    expect(search).toHaveTextContent("The action, with its entry point");
-    // What publishes an entity only, and what publishes nothing, is said once each rather than once per action.
-    const rows = within(table).getAllByRole("row").slice(1).map((row) => row.textContent);
+    // The preview: each capability with its evidence-based status and whether it travels as something callable.
+    const preview = within(screen.getByRole("tabpanel")).getByRole("table");
+    const search = within(preview).getByRole("row", { name: /search the site/i });
+    expect(search).toHaveTextContent("Verified");
+    expect(search).toHaveTextContent("Included");
+    // A person's answer is never invocation evidence: an action nothing answered for is not included as callable.
+    expect(within(preview).getByRole("row", { name: /retrieve details/i })).toHaveTextContent(/Not included as (verified|callable)/);
+    expect(within(preview).getByRole("row", { name: /check availability/i })).toHaveTextContent("Included as a handoff to Lungau Lodging");
+    expect(within(preview).getByRole("row", { name: /compare options/i })).toHaveTextContent("Not included");
+
+    // The exact rows the page carries stay with the technical files, said once per group.
+    const carriesTable = screen.getAllByRole("table").at(-1)!;
+    const rows = within(carriesTable).getAllByRole("row").slice(1).map((row) => row.textContent);
     expect(rows).toHaveLength(4);
     expect(rows[0]).toContain("Search the site");
-    expect(rows[1]).toContain("Check availability");
-    expect(rows[2]).toContain("Retrieve details");
+    expect(rows[0]).toContain("The action, with its entry point");
     expect(rows[2]).toContain("The entity, no action");
-    expect(rows[3]).toContain("Compare options");
     expect(rows[3]).toContain("Not relevant");
-    expect(rows[3]).toContain("Nothing");
 
-    // Outcomes first, each with the files that make it true.
-    expect(screen.getAllByRole("heading", { level: 3 }).slice(0, 3).map((heading) => heading.textContent)).toEqual(["Agents can find it", "Agents know the rules", "Agents can use what works"]);
-    expect(screen.getByText(/the entry point an agent actually used|entry points an agent actually used|Nothing an agent can call has answered yet/)).toBeVisible();
-    // The monitoring door carries the report and says why the person came.
-    expect(screen.getByRole("link", { name: "Monitor AI visibility" })).toHaveAttribute("href", expect.stringContaining("intent=monitor"));
-    for (const title of ["Business data", "Agent instructions", "Discovery", "llms.txt"]) expect(screen.getByRole("article", { name: title })).toBeVisible();
-    // Each document opens in place, formatted, and the raw file stays one click away.
-    expect(screen.getAllByRole("button", { name: /read the whole file/i })).toHaveLength(4);
-    // Four documents, and the runbook that puts them on the site.
-    expect(screen.getAllByRole("link", { name: /^raw/i })).toHaveLength(5);
-    // What agents are given to read lives here, with the artifacts, not three clicks down in the full audit.
+    // The five prepared files, by name, each readable in place and downloadable from the report's own export links.
+    for (const file of ["page.jsonld", "ai-catalog.json", "llms.txt", "skill.md", "runbook.md"]) expect(screen.getAllByText(file, { selector: "code" })).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: /^download/i }).map((link) => link.getAttribute("href"))).toEqual([
+      publication.documents.pageJsonLd,
+      publication.documents.siteCatalog,
+      publication.documents.llms,
+      publication.documents.skill,
+      publication.documents.runbook,
+    ]);
     expect(screen.getByRole("heading", { name: "What agents are given to read" })).toBeInTheDocument();
-    // The door to WordLift, at the top and at the close, carries the report and the intent; the step bar's "Activate" is the page itself.
-    const doors = screen.getAllByRole("link").filter((link) => (link.getAttribute("href") ?? "").includes("intent=activate"));
-    expect(doors.length).toBeGreaterThanOrEqual(2);
-    for (const door of doors) {
-      expect(door).toHaveAttribute("href", expect.stringContaining(`report=${REPORT_ID}`));
-      expect(door).toHaveAttribute("href", expect.stringContaining("intent=activate"));
-    }
-    expect(within(screen.getByRole("navigation", { name: "Steps" })).getByRole("link", { name: "Activate" })).toHaveAttribute("aria-current", "step");
+
+    // Continue with WordLift is the one primary action; it carries the report and the intent.
+    const door = screen.getByRole("link", { name: /continue with wordlift/i });
+    expect(door).toHaveAttribute("href", expect.stringContaining(`report=${REPORT_ID}`));
+    expect(door).toHaveAttribute("href", expect.stringContaining("intent=activate"));
+    expect(screen.getByRole("link", { name: "Monitor AI visibility" })).toHaveAttribute("href", expect.stringContaining("intent=monitor"));
+    expect(screen.getByRole("button", { name: /run the audit again/i })).toBeVisible();
+    expect(screen.getByRole("link", { name: /talk to us/i })).toBeVisible();
 
     const crawlers = screen.getByRole("article", { name: /crawlers/i });
     expect(crawlers).toHaveTextContent("Googlebot3");
@@ -191,32 +191,40 @@ describe("the Activate screen", () => {
     expect(activations).toHaveTextContent("webmcp 4 · web 2");
   });
 
-  it("leads with the runbook for an agent that has the site's code, and the prompt names the site's paths", async () => {
+  it("copies the complete publishing prompt, says so, and never says it published anything", async () => {
     const written: string[] = [];
     vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText: async (text: string) => { written.push(text); } } });
     renderScreen(ledger);
 
-    const section = screen.getByRole("region", { name: /copy the files to your site/i });
-    expect(within(section).getByText(/Claude Code or Codex/)).toBeVisible();
-    fireEvent.click(within(section).getByRole("button", { name: /copy the prompt for your agent/i }));
-    await screen.findByRole("button", { name: /copied/i });
+    expect(screen.getByText(/Codex or Claude Code/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /copy publishing prompt/i }));
+    await screen.findByRole("button", { name: /prompt copied/i });
     expect(written[0]).toContain(`https://audit.example/api/reports/${REPORT_ID}/publish/runbook.md`);
     expect(written[0]).toContain("/.well-known/ai-catalog.json");
     expect(written[0]).toContain("Add nothing that is not in those documents");
+    expect(screen.getByText(/Copying publishes nothing/)).toBeVisible();
+    vi.unstubAllGlobals();
+  });
+
+  it("offers the prompt to select by hand when the clipboard refuses", async () => {
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText: async () => { throw new Error("denied"); } } });
+    renderScreen(ledger);
+    fireEvent.click(screen.getByRole("button", { name: /copy publishing prompt/i }));
+    const fallback = await screen.findByRole("textbox", { name: /could not be copied/i });
+    expect((fallback as HTMLTextAreaElement).value).toContain("runbook.md");
     vi.unstubAllGlobals();
   });
 
   it("says what to expect when nothing has read it yet, never a row of zeros", () => {
     renderScreen({ reportId: REPORT_ID, since: "2026-09-07T05:00:00.000Z", days: [], activations: [], history: ledger.history!.slice(0, 1) });
     expect(screen.getByText(/The next reading shows how it moved/)).toHaveTextContent("74 of 100 agent-ready.");
-    // While there is nothing to prove, one sentence says what will show, instead of four empty cards.
     expect(screen.getByText(/Nothing to prove yet/)).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Crawlers" })).toBeNull();
     expect(screen.getByText(/Nothing to prove yet/)).toHaveTextContent(/whether Google read it/);
-    for (const card of screen.getAllByRole("article")) expect(card).not.toHaveTextContent(/\b0\b/);
+    for (const card of screen.queryAllByRole("article")) expect(card).not.toHaveTextContent(/\b0\b/);
   });
 
-  it("explains that there is nothing to activate when no interface answered", () => {
+  it("says business context can still be prepared when no action is verified, and borrows no verified action", () => {
     render(
       <MemoryRouter>
         <ActivateScreen
@@ -226,9 +234,13 @@ describe("the Activate screen", () => {
         />
       </MemoryRouter>,
     );
+    expect(screen.getByText(/No action in this report is verified as callable/)).toHaveTextContent(/can still be prepared while the technical work remains/);
+    const preview = within(screen.getByRole("tabpanel")).getByRole("table");
+    expect(within(preview).queryByText("Included")).toBeNull();
     expect(screen.getByText(/Nothing to prove yet/)).toHaveTextContent(/No interface has answered yet, so there is nothing an agent could activate/);
-    expect(screen.getByText(/The three questions are unanswered/)).toBeVisible();
-    expect(screen.getByRole("link", { name: "the three questions" })).toHaveAttribute("href", `/reports/${REPORT_ID}#own-it`);
+    // Who handles each action is one tab away, and unanswered says so.
+    fireEvent.click(screen.getByRole("tab", { name: "Rules" }));
+    expect(screen.getByText(/No responsibility has been reviewed yet/)).toBeVisible();
     expect(screen.getByRole("heading", { name: /is alpina\.travel still agent-ready/i })).toBeVisible();
   });
 });
