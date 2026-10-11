@@ -23,7 +23,7 @@ test("the Activate screen previews the publication, keeps the delivery routes an
 
   // The existing routes: WordLift setup with the report and intent, the publishing prompt, the runbook, a new audit.
   const door = page.getByRole("link", { name: /continue with wordlift/i });
-  await expect(door).toHaveAttribute("href", new RegExp(`report=${reportId}.*intent=activate`));
+  await expect(door).toHaveAttribute("href", new RegExp(`report=${reportId}`));
   await expect(page.getByRole("button", { name: /copy publishing prompt/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /run the audit again/i })).toBeVisible();
   await page.getByRole("button", { name: /read the runbook/i }).click();

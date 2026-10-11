@@ -795,3 +795,16 @@ main:has(> .activate-page) {
 .panel-section > .entity-board { margin-top: 20px; }
 
 .report-page > .send-report, .report-page > .late-ask, .report-page > section:first-of-type:not(.doorway):not(.fix):not(.evidence-view) { margin-top: 20px; }
+
+/* ---------- Operating role ---------- */
+.role-options { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 0; padding: 0; border: 0; min-width: 0; }
+.role-option { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 16px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; }
+.role-option.is-on { border-color: var(--brand); background: var(--brand-tint); }
+.role-option input { width: 18px; height: 18px; margin: 0; accent-color: var(--brand); }
+.panel-section b { font-weight: 600; }
+
+/* ---------- The foundation audit, in the same voice ---------- */
+.evidence-view .foundation-details { border-color: var(--line); border-radius: var(--radius); }
+.evidence-view .foundation-details > summary span { font-weight: 400; font-size: 1.15rem; }
+.evidence-view .main-audit-link { justify-self: start; padding: 0; border: 0; border-radius: 0; background: none; color: var(--brand); font-weight: 400; }
+.evidence-view .main-audit-link:hover { background: none; text-decoration: underline; text-underline-offset: 3px; }

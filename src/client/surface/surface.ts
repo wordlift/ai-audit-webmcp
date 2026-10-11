@@ -488,3 +488,27 @@ export function sector(kind: string): { label: string; noun: string } {
   const label = kind.replace(/\b\p{L}/gu, (letter) => letter.toUpperCase());
   return { label, noun: kind };
 }
+
+// ---------- Operating role ----------
+
+/**
+ * Roles a business of each kind commonly plays, offered for a person to validate. They are
+ * suggestions on the screen, never a finding: nothing is sent until one is chosen, and a person can
+ * always write their own. Stored the way the refinement always stored a role, as a short slug.
+ */
+const ROLE_SUGGESTIONS: Record<string, string[]> = {
+  saas: ["Software vendor", "Platform provider", "Agency or service provider"],
+  "commerce-retail": ["Online retailer", "Brand selling direct", "Marketplace"],
+  "travel-hospitality": ["Accommodation provider", "Destination organization", "Travel agency or tour operator"],
+  "publisher-content": ["Publisher", "Media brand", "Community or membership"],
+  "finance-insurance": ["Insurer", "Broker or comparison service", "Bank or lender"],
+  other: ["Service provider", "Non-profit organization", "Public institution"],
+};
+
+export const roleSlug = (label: string) => label.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
+export const roleWords = (slug: string) => slug.replaceAll("-", " ");
+
+export function roleSuggestions(report: ReportRecord): Array<{ slug: string; label: string }> {
+  const archetype = report.classification?.override ?? report.classification?.primaryArchetype ?? "other";
+  return (ROLE_SUGGESTIONS[archetype] ?? ROLE_SUGGESTIONS.other!).map((label) => ({ slug: roleSlug(label), label }));
+}

@@ -170,10 +170,10 @@ describe("the Activate screen", () => {
     ]);
     expect(screen.getByRole("heading", { name: "What agents are given to read" })).toBeInTheDocument();
 
-    // Continue with WordLift is the one primary action; it carries the report and the intent.
+    // Continue with WordLift is the one primary action. A site that does not run WordLift starts with a conversation.
     const door = screen.getByRole("link", { name: /continue with wordlift/i });
+    expect(door).toHaveAttribute("href", expect.stringContaining("https://wordlift.io/book-a-demo/"));
     expect(door).toHaveAttribute("href", expect.stringContaining(`report=${REPORT_ID}`));
-    expect(door).toHaveAttribute("href", expect.stringContaining("intent=activate"));
     expect(screen.getByRole("link", { name: "Monitor AI visibility" })).toHaveAttribute("href", expect.stringContaining("intent=monitor"));
     expect(screen.getByRole("button", { name: /run the audit again/i })).toBeVisible();
     expect(screen.getByRole("link", { name: /talk to us/i })).toBeVisible();
@@ -189,6 +189,19 @@ describe("the Activate screen", () => {
     expect(activations).toHaveTextContent("5 succeeded, 1 failed");
     expect(activations).toHaveTextContent("1 failure: upstream timeout");
     expect(activations).toHaveTextContent("webmcp 4 · web 2");
+  });
+
+  it("sends a site that runs WordLift to its dashboard, with the report and the intent", () => {
+    render(
+      <MemoryRouter>
+        <ActivateScreen report={{ ...report, publishedWith: { name: "WordLift", evidence: "The WordLift WordPress plugin is installed", sourceUrl: "https://alpina.travel/" } }} publication={publication} visits={null} />
+      </MemoryRouter>,
+    );
+    const door = screen.getByRole("link", { name: /continue with wordlift/i });
+    expect(door).toHaveAttribute("href", expect.stringContaining("https://my.wordlift.io/"));
+    expect(door).toHaveAttribute("href", expect.stringContaining(`report=${REPORT_ID}`));
+    expect(door).toHaveAttribute("href", expect.stringContaining("intent=activate"));
+    expect(screen.getByText(/that is not an account connection/)).toBeVisible();
   });
 
   it("copies the complete publishing prompt, says so, and never says it published anything", async () => {

@@ -34,6 +34,8 @@ import {
   ownershipProblem,
   peopleStatus,
   priorityAssertions,
+  roleSlug,
+  roleSuggestions,
   stagePriority,
   wikidataOf,
   type OwnershipDraft,
@@ -146,6 +148,12 @@ describe("what the screens say, read from the report", () => {
     // The preview states responsibility, and nothing about whether it works.
     expect(agentsWillRead("Submit an inquiry", draft({ choice: "team" }), "wordlift.io")).toBe("wordlift.io handles “Submit an inquiry” itself.");
     expect(agentsWillRead("Submit an inquiry", draft({}), "wordlift.io")).toBeNull();
+  });
+
+  it("suggests operating roles for the sector, as slugs the refinement already stores", () => {
+    expect(roleSuggestions(wordlift).map((entry) => entry.label)).toContain("Software vendor");
+    expect(roleSuggestions(alpina).map((entry) => entry.slug)).toContain("destination-organization");
+    expect(roleSlug(" Franchise  network ")).toBe("franchise-network");
   });
 
   it("keeps the anchors the report always had, and the selection across reports", () => {
@@ -508,5 +516,30 @@ describe("action ownership", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(api.refineReport).not.toHaveBeenCalled();
     confirm.mockRestore();
+  });
+});
+
+describe("the operating role", () => {
+  it("offers suggestions to validate or a field to write, and sends the chosen role once", async () => {
+    const child = { ...wordlift, id: "33333333-3333-4333-8333-333333333333", parentReportId: wordlift.id };
+    api.getReport.mockResolvedValue(wordlift);
+    api.refineReport.mockResolvedValue(child);
+    const onSaved = vi.fn();
+    render(
+      <MemoryRouter>
+        <FixView report={wordlift} tab="model" filter="all" showOthers={false} selectedActionId={null} onSelect={noop} onInspectDetection={noop} onSaved={onSaved} />
+      </MemoryRouter>,
+    );
+    // Nothing is chosen for anyone, and nothing is staged.
+    for (const radio of within(screen.getByRole("group", { name: "Operating role" })).getAllByRole("radio")) expect(radio).not.toBeChecked();
+    expect(screen.queryByLabelText("In your words")).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "Something else" }));
+    fireEvent.change(screen.getByLabelText("In your words"), { target: { value: "Franchise network" } });
+    fireEvent.click(screen.getByRole("radio", { name: "Software vendor" }));
+    expect(screen.queryByLabelText("In your words")).toBeNull();
+    expect(screen.getByText("1 change staged")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /save review/i }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(api.refineReport.mock.calls[0]!.slice(0, 2)).toEqual([wordlift.id, { businessRole: "software-vendor" }]);
   });
 });

@@ -221,8 +221,10 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
   const activations = activationSummary(visits);
   const hasInterface = publication.actions.some((action) => action.publishedAs === "action");
   const { engine } = useReportEngine();
-  const activate = publishUrl(report.id, { intent: "activate", engine: engine?.id });
   const found = detection(report);
+  // A site that runs WordLift continues in its dashboard; one that does not starts with a conversation.
+  const runsWordLift = found.state === "detected";
+  const activate = runsWordLift ? publishUrl(report.id, { intent: "activate", engine: engine?.id }) : talkToUsUrl(report.id);
   const who = identity(report);
   const cards = coreEntities(report, 6);
   const counts = entityCounts(report);
@@ -628,12 +630,13 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
           <p className="kicker kicker-quiet">Choose your delivery</p>
           <h2>Keep it alive with WordLift.</h2>
           <p>Build and maintain your brand knowledge graph as an evolving Context Engine.</p>
-          <a className="button button-primary button-block button-large" href={activate} onClick={() => track(report.id, "door_activate")} target="_blank" rel="noreferrer">
+          <a className="button button-primary button-block button-large" href={activate} onClick={() => { if (runsWordLift) track(report.id, "door_activate"); }} target="_blank" rel="noreferrer">
             Continue with WordLift <ArrowUpRight size={17} aria-hidden="true" />
           </a>
           <p className="rail-note">
-            Opens the existing WordLift setup.
-            {found.state === "detected" && ` WordLift was detected on ${host}; that is not an account connection and does not prove who owns the site.`}
+            {runsWordLift
+              ? `Opens the existing WordLift setup. WordLift was detected on ${host}; that is not an account connection and does not prove who owns the site.`
+              : `${host} does not run WordLift yet, so this opens a conversation with our team: book a demo.`}
           </p>
         </section>
 

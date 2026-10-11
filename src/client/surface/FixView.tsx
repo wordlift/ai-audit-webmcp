@@ -25,6 +25,9 @@ import {
   peopleStatus,
   plural,
   priorityAssertions,
+  roleSlug,
+  roleSuggestions,
+  roleWords,
   sector,
   verifiedCount,
   type CapabilityFilter,
@@ -258,7 +261,10 @@ const RELATION_WORDS: Record<EntityRelation["kind"], string> = { offers: "offers
 function BusinessModelPanel({ report, onSaved }: { report: ReportRecord; onSaved: (child: ReportRecord, notice: SavedNotice) => void }) {
   const { engine, key: engineKey } = useReportEngine();
   const savedRole = report.classification?.businessRole ?? "";
+  const suggestions = roleSuggestions(report);
   const [role, setRole] = useState(savedRole);
+  // A saved role that is none of the suggestions was written by hand, and opens that way.
+  const [ownWords, setOwnWords] = useState(Boolean(savedRole) && !suggestions.some((entry) => entry.slug === roleSlug(savedRole)));
   const [priorities, setPriorities] = useState<PriorityDraft>({});
   const [relationDraft, setRelationDraft] = useState<Record<string, "confirm" | "reject">>({});
   const [saving, setSaving] = useState(false);
@@ -267,8 +273,8 @@ function BusinessModelPanel({ report, onSaved }: { report: ReportRecord; onSaved
   const entities = report.contextGraph?.entities ?? [];
   const names = useMemo(() => new Map(entities.map((entity) => [entity.id, entity.name])), [entities]);
   const relations = (report.contextGraph?.relations ?? []).filter((relation) => names.has(relation.from) && names.has(relation.to));
-  const roleValue = role.trim();
-  const roleChanged = roleValue !== savedRole.trim() && roleValue.length >= 2;
+  const roleValue = roleSlug(role);
+  const roleChanged = roleValue !== roleSlug(savedRole) && roleValue.length >= 2;
   const roleInvalid = roleValue.length === 1;
   const staged = Object.keys(priorities).length + Object.keys(relationDraft).length + (roleChanged ? 1 : 0);
 
@@ -288,7 +294,7 @@ function BusinessModelPanel({ report, onSaved }: { report: ReportRecord; onSaved
       const parts = [
         Object.keys(priorities).length > 0 ? prioritySummary(priorities).replace(/\.$/, "") : null,
         relationDecisions.length > 0 ? `${plural(relationDecisions.length, "relationship")} reviewed` : null,
-        roleChanged ? `operating role set to “${roleValue}”` : null,
+        roleChanged ? `operating role set to “${roleWords(roleValue)}”` : null,
       ].filter(Boolean);
       onSaved(child, { kind: "model", summary: `${parts.join(", ")}.` });
     } catch (caught) {
@@ -302,13 +308,30 @@ function BusinessModelPanel({ report, onSaved }: { report: ReportRecord; onSaved
       <section className="panel-section" aria-labelledby="role-title">
         <h2 id="role-title">How the business operates</h2>
         <p className="section-lead">
-          The sector is read from the site and is not edited here. The operating role is yours to say: what the business is to its customers, in a few words.
+          Agents treat a shop, a marketplace and an agency differently. Pick the role that fits {hostOf(report)}, or write your own. These are suggestions, not findings: nothing is saved until you choose.
         </p>
-        <label className="text-field">
-          Operating role
-          <input type="text" value={role} maxLength={120} placeholder="for example: destination organization, marketplace, software vendor" disabled={saving} aria-invalid={roleInvalid} onChange={(event) => setRole(event.target.value)} />
-        </label>
-        {roleInvalid && <p className="form-hint" role="status">Use at least two characters, or leave it as it was.</p>}
+        <fieldset className="role-options" disabled={saving}>
+          <legend className="sr-only">Operating role</legend>
+          {suggestions.map((entry) => (
+            <label key={entry.slug} className={`role-option${!ownWords && roleValue === entry.slug ? " is-on" : ""}`}>
+              <input type="radio" name="operating-role" checked={!ownWords && roleValue === entry.slug} onChange={() => { setOwnWords(false); setRole(entry.slug); }} />
+              {entry.label}
+            </label>
+          ))}
+          <label className={`role-option${ownWords ? " is-on" : ""}`}>
+            <input type="radio" name="operating-role" checked={ownWords} onChange={() => { setOwnWords(true); setRole(suggestions.some((entry) => entry.slug === roleValue) ? "" : role); }} />
+            Something else
+          </label>
+        </fieldset>
+        {ownWords && (
+          <label className="text-field">
+            In your words
+            <input type="text" value={roleWords(role)} maxLength={120} placeholder="for example: franchise network, wholesaler, booking platform" disabled={saving} aria-invalid={roleInvalid} onChange={(event) => setRole(event.target.value)} />
+          </label>
+        )}
+        {roleInvalid && <p className="form-hint" role="status">Use at least two characters, or pick one of the suggestions.</p>}
+        {savedRole && <p className="section-lead">Saved in a review: <b>{roleWords(savedRole)}</b>.</p>}
+        <p className="empty-note empty-note-quiet">The sector ({sector(siteKind(report)).label}) is read from the site and is not edited here.</p>
       </section>
 
       <section className="panel-section" aria-labelledby="core-title">
@@ -364,7 +387,7 @@ function BusinessModelPanel({ report, onSaved }: { report: ReportRecord; onSaved
         )}
       </section>
 
-      <SaveBar staged={staged} saving={saving} error={error} onSave={() => void save()} onDiscard={() => { setPriorities({}); setRelationDraft({}); setRole(savedRole); setError(null); }} disabled={roleInvalid} />
+      <SaveBar staged={staged} saving={saving} error={error} onSave={() => void save()} onDiscard={() => { setPriorities({}); setRelationDraft({}); setRole(savedRole); setOwnWords(false); setError(null); }} disabled={roleInvalid} />
 
       <section className="panel-section panel-section-quiet">
         <AgentDoors reportId={report.id} host={holds(engine) ? engine!.host : null} engineKey={engineKey} />
