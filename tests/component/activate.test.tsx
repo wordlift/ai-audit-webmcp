@@ -139,10 +139,10 @@ describe("the Activate screen", () => {
     renderScreen(ledger);
     expect(screen.getByRole("heading", { level: 1, name: "Activate your Context Engine." })).toBeVisible();
     // The score is this scan's; the movement is measured from the earliest stored reading, and each date says what it is.
-    expect(screen.getByText(/of 100 agent-ready in this scan/)).toHaveTextContent("It was 62 → 74 since the earliest stored reading, 1 September.");
+    expect(screen.getByText(/of 100 agent-ready in this scan/)).toHaveTextContent("It was 62 → 74 since the earliest reading still stored, 1 September.");
     const clocks = screen.getByLabelText("What each date means");
-    expect(clocks).toHaveTextContent("Site last read");
-    expect(clocks).toHaveTextContent("Earliest stored reading of this site1 September, 62 of 100");
+    expect(clocks).toHaveTextContent("This report created");
+    expect(clocks).toHaveTextContent("Earliest reading still stored (reports are kept 30 days)1 September, 62 of 100");
     expect(clocks).toHaveTextContent("This package prepared");
     expect(screen.getByRole("heading", { name: "Is alpina.travel still agent-ready?" })).toBeVisible();
 
@@ -238,7 +238,7 @@ describe("the Activate screen", () => {
     renderScreen({ reportId: REPORT_ID, since: "2026-09-07T05:00:00.000Z", days: [], activations: [], history: ledger.history!.slice(0, 1) });
     expect(screen.getByText(/the next one shows how it moved/)).toHaveTextContent("74 of 100 agent-ready in this scan. This is the only reading on record");
     // No historical claim is made from a single reading.
-    expect(screen.getByLabelText("What each date means")).not.toHaveTextContent("Earliest stored reading");
+    expect(screen.getByLabelText("What each date means")).not.toHaveTextContent("Earliest reading still stored");
     expect(screen.getByText(/Nothing to prove yet/)).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Crawlers" })).toBeNull();
     expect(screen.getByText(/Nothing to prove yet/)).toHaveTextContent(/whether Google read it/);

@@ -26,7 +26,7 @@ test("a claimed Context Engine keeps a correction across a new read of the site"
   // The correction shows where the model is, and the engine keeps it.
   await expect(page.getByText("1 marked peripheral")).toBeVisible();
   await expect(page.locator(".version-strip")).toContainText("Reviewed version");
-  await expect(page.locator(".version-strip")).toContainText("1 review decision included");
+  await expect(page.locator(".version-strip")).toContainText("1 decision in the review that made this version");
   await expect(page.locator(".version-strip")).toContainText("by a reviewer; ownership not verified (kept in this browser)");
 
   // Back on the first report, the engine says a review landed since. Then a new read of the site:
@@ -40,7 +40,7 @@ test("a claimed Context Engine keeps a correction across a new read of the site"
   await expect(page).not.toHaveURL(firstUrl);
   await expect(page.locator(".doorway")).toBeVisible();
   await page.getByRole("link", { name: "Open the reviewed version" }).click();
-  await expect(page.locator(".version-strip")).toContainText("1 review decision included, carried over from an earlier review of this site");
+  await expect(page.locator(".version-strip")).toContainText("1 review decision carried over from an earlier review of this site");
   await expect(page.getByText("1 marked peripheral")).toBeVisible();
 
   // Ownership is the next step, beside the business model, and it says so.

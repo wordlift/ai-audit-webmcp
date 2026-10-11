@@ -14,7 +14,7 @@ test("the Activate screen previews the publication, keeps the delivery routes an
   await expect(step(page, "Activate")).toHaveAttribute("aria-current", "step");
   // Other specs audit the same fixture, so the store may hold one reading or several: either the
   // movement or the promise of one, never a bare number.
-  await expect(page.locator(".activate-score")).toContainText(/of 100 agent-ready in this scan\. (This is the only reading on record|It was \d+ → \d+ since the earliest stored reading|The earliest stored reading)/);
+  await expect(page.locator(".activate-score")).toContainText(/of 100 agent-ready in this scan\. (This is the only reading on record|It was \d+ → \d+ since the earliest reading still stored|The earliest reading still stored)/);
   await expect(page.getByLabel("What each date means")).toContainText("Site last read");
   await expect(page.getByLabel("What each date means")).toContainText("This package prepared");
   // The same report, said the same way as on Audit and Fix.

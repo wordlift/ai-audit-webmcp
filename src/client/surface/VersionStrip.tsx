@@ -28,7 +28,8 @@ export function VersionStrip({ report, now = () => Date.now() }: { report: Repor
   const [rerunning, setRerunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const refinement = report.refinement;
-  const read = readAgo(report.collectedAt ?? report.createdAt, now())?.replace(/^Checked/, "Site read");
+  // A review reads nothing: a reviewed version says when it was reviewed, and the site's read only when the report records one.
+  const read = readAgo(report.collectedAt, now())?.replace(/^Checked/, "Site read") ?? (refinement ? readAgo(refinement.appliedAt, now())?.replace(/^Checked/, "Reviewed") : readAgo(report.createdAt, now())?.replace(/^Checked/, "Site read"));
   const newer = engine ? newerReview(report, engine) : null;
   const stored = engine?.decisions.total ?? 0;
   const reviewer = reviewerLine(report, holds(engine));
@@ -55,7 +56,9 @@ export function VersionStrip({ report, now = () => Date.now() }: { report: Repor
           {read && <span>{read}{report.reusedFrom ? ", reused from an earlier read" : ""}</span>}
           <span>
             {refinement
-              ? `${plural(refinement.decisions, "review decision")} included${refinement.carried ? ", carried over from an earlier review of this site" : ""}`
+              ? refinement.carried
+                ? `${plural(refinement.decisions, "review decision")} carried over from an earlier review of this site`
+                : `${plural(refinement.decisions, "decision")} in the review that made this version`
               : "No review decisions in this version"}
           </span>
           {reviewer && <span>{reviewer}</span>}

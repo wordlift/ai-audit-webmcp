@@ -557,18 +557,22 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
             )}{" "}
             {movement && movement.from !== movement.to ? (
               <>
-                It was <b>{movement.from}</b> <span aria-hidden="true">→</span> <b>{movement.to}</b> since the earliest stored reading, {longDate(movement.since)}.
+                It was <b>{movement.from}</b> <span aria-hidden="true">→</span> <b>{movement.to}</b> since the earliest reading still stored, {longDate(movement.since)}.
               </>
             ) : movement ? (
-              <>The earliest stored reading, {longDate(movement.since)}, was the same.</>
+              <>The earliest reading still stored, {longDate(movement.since)}, was the same.</>
             ) : (
               <>This is the only reading on record; the next one shows how it moved.</>
             )}
           </p>
           {/* Three clocks, each named for what it measures. */}
           <dl className="site-today" aria-label="What each date means">
-            <div><dt>Site last read</dt><dd>{dateTime(scanned)}{report.reusedFrom ? " (reused)" : ""}</dd></div>
-            {movement && <div><dt>Earliest stored reading of this site</dt><dd>{longDate(movement.since)}, {movement.from} of 100</dd></div>}
+            {report.collectedAt ? (
+              <div><dt>Site last read</dt><dd>{dateTime(report.collectedAt)}{report.reusedFrom ? " (reused)" : ""}</dd></div>
+            ) : (
+              <div><dt>{report.refinement ? "This version reviewed" : "This report created"}</dt><dd>{dateTime(scanned)}</dd></div>
+            )}
+            {movement && <div><dt>Earliest reading still stored (reports are kept 30 days)</dt><dd>{longDate(movement.since)}, {movement.from} of 100</dd></div>}
             <div><dt>This package prepared</dt><dd>{dateTime(publication.publishedAt)}</dd></div>
           </dl>
           {!(crawlers.length > 0 || google > 0 || agents.length > 0 || activations.length > 0) ? (

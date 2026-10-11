@@ -594,7 +594,7 @@ describe("the version strip", () => {
     });
     expect(screen.getByText("Reviewed version")).toBeVisible();
     expect(screen.getByText(/reused from an earlier read/)).toBeVisible();
-    expect(screen.getByText("7 review decisions included, carried over from an earlier review of this site")).toBeVisible();
+    expect(screen.getByText("7 review decisions carried over from an earlier review of this site")).toBeVisible();
     expect(screen.getByText("by a reviewer; ownership not verified")).toBeVisible();
     expect(document.body).not.toHaveTextContent(/\byour\b/i);
   });
