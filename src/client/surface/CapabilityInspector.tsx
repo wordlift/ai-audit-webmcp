@@ -66,6 +66,10 @@ export function CapabilityInspector({
   const [showEvidence, setShowEvidence] = useState(false);
   const [showTest, setShowTest] = useState(false);
   const testRef = useRef<HTMLDivElement | null>(null);
+  // The dashboard is for a site that runs WordLift; everyone else starts with a conversation.
+  const runsWordLift = detection(report).state === "detected";
+  const wordliftDoor = (intent: "agent-ready" | "keep") =>
+    runsWordLift ? publishUrl(report.id, { action: capability.actionId, intent, engine: engine?.id }) : talkToUsUrl(report.id, capability.actionId);
 
   // A different row is a different question: nothing from the last one stays open.
   useEffect(() => {
@@ -229,14 +233,14 @@ export function CapabilityInspector({
           </li>
           {capability.state === "human-only" && (
             <li>
-              <a href={publishUrl(report.id, { action: capability.actionId, intent: "agent-ready", engine: engine?.id })} onClick={() => track(report.id, "door_agent-ready")} target="_blank" rel="noreferrer">
+              <a href={wordliftDoor("agent-ready")} onClick={() => { if (runsWordLift) track(report.id, "door_agent-ready"); }} target="_blank" rel="noreferrer">
                 Make this agent-ready with WordLift <ArrowUpRight size={14} aria-hidden="true" />
               </a>
             </li>
           )}
           {capability.state === "agent-ready" && (
             <li>
-              <a href={publishUrl(report.id, { action: capability.actionId, intent: "keep", engine: engine?.id })} onClick={() => track(report.id, "door_keep")} target="_blank" rel="noreferrer">
+              <a href={wordliftDoor("keep")} onClick={() => { if (runsWordLift) track(report.id, "door_keep"); }} target="_blank" rel="noreferrer">
                 Keep it agent-ready with WordLift <ArrowUpRight size={14} aria-hidden="true" />
               </a>
             </li>

@@ -396,6 +396,23 @@ describe("Fix, the capability table and its inspector", () => {
     expect(screen.queryByRole("button", { name: /fix|repair|install|publish/i })).toBeNull();
   });
 
+  it("sends a site without WordLift to a conversation, and one that runs it to its dashboard", () => {
+    const subject = capability(wordlift, "inquiry.submit");
+    const show = (report: ReportRecord) =>
+      render(
+        <MemoryRouter>
+          <CapabilityInspector report={report} capability={subject} onClose={noop} onReviewOwnership={noop} />
+        </MemoryRouter>,
+      );
+    const detected = show(wordlift);
+    expect(screen.getByRole("link", { name: /make this agent-ready with wordlift/i })).toHaveAttribute("href", expect.stringContaining("https://my.wordlift.io/"));
+    detected.unmount();
+    show({ ...wordlift, publishedWith: undefined });
+    const door = screen.getByRole("link", { name: /make this agent-ready with wordlift/i });
+    expect(door).toHaveAttribute("href", expect.stringContaining("https://wordlift.io/book-a-demo/"));
+    expect(door).toHaveAttribute("href", expect.stringContaining("action=inquiry.submit"));
+  });
+
   it("shows the successful call for a verified action, and keeps ownership review available", () => {
     render(
       <MemoryRouter>

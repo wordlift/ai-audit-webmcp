@@ -185,6 +185,11 @@ const names = (actions: PublishedAction[]) => actions.map((action) => action.lab
 const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long" });
 const plural = (count: number, singular: string, pluralForm = `${singular}s`) => `${count} ${count === 1 ? singular : pluralForm}`;
 
+/** Found, not found, or not checked: a site that answers every path with its page proves nothing either way. */
+function onSite(state: "found" | "missing" | "unknown" | undefined): string {
+  return state === "found" ? "Published" : state === "missing" ? "Not published" : "Not checked";
+}
+
 type PreviewTab = "business" | "capabilities" | "rules";
 const PREVIEW_TABS: ReadonlyArray<{ id: PreviewTab; label: string }> = [
   { id: "business", label: "Business" },
@@ -666,7 +671,12 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
           <button type="button" className="text-button text-button-strong" onClick={() => void runAgain()} disabled={rerunning}>
             {rerunning ? "Reading the site again…" : "Run the audit again"} <ArrowUpRight size={15} aria-hidden="true" />
           </button>
-          <p className="rail-note">Publishing business context does not build a missing interface or raise readiness. A new audit says what answers.</p>
+          {/* What this scan found on the site itself: the only publication this screen can vouch for. */}
+          <dl className="site-today" aria-label="On the site in this scan">
+            <div><dt>Discovery catalog</dt><dd>{onSite(report.agentDiscovery?.catalog)}</dd></div>
+            <div><dt>Agent instructions</dt><dd>{onSite(report.agentDiscovery?.memory)}</dd></div>
+          </dl>
+          <p className="rail-note">Read from {host} in this scan. Publishing business context does not build a missing interface or raise readiness; a new audit says what is there and what answers.</p>
           {rerunError && <p className="form-error" role="alert">{rerunError}</p>}
         </section>
 

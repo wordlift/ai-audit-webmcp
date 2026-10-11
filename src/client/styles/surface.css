@@ -808,3 +808,8 @@ main:has(> .activate-page) {
 .evidence-view .foundation-details > summary span { font-weight: 400; font-size: 1.15rem; }
 .evidence-view .main-audit-link { justify-self: start; padding: 0; border: 0; border-radius: 0; background: none; color: var(--brand); font-weight: 400; }
 .evidence-view .main-audit-link:hover { background: none; text-decoration: underline; text-underline-offset: 3px; }
+
+.site-today { display: grid; gap: 0; margin: 16px 0 0; border-top: 1px solid var(--line); }
+.site-today > div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.site-today dt { color: var(--muted); }
+.site-today dd { margin: 0; }
