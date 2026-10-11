@@ -25,41 +25,43 @@ test("the eight enterprise questions are each two clicks from the report", async
   expect(refined.ok()).toBeTruthy();
   const childId = ((await refined.json()) as { id: string }).id;
   await page.goto(`/reports/${childId}`);
-  await page.locator(".first-screen").waitFor();
+  await page.locator(".doorway").waitFor();
 
-  // 7. What is inferred versus explicitly declared? No click: every card on the first screen says which.
-  await expect(page.getByRole("list", { name: "What WordLift understood" }).getByText(/declared by site/i).first()).toBeVisible();
+  // 7. What is inferred versus explicitly declared? No click: every entity on the first screen says which.
+  await expect(page.getByRole("list", { name: /core entities/i }).getByText(/declared|inferred|confirmed/i).first()).toBeVisible();
 
-  // 1, 2, 3, 4 and 8: one click on the action. The dialog says what it applies to, who owns it and
-  // why, with the decision's provenance, which interfaces implement it, and what evidence supports it.
-  await page.locator(".three-actions").getByRole("button", { name: /check availability/i }).click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog.getByText(/this action applies to/i)).toBeVisible();
-  await expect(dialog.getByText(/business owner/i)).toBeVisible();
-  await expect(dialog.getByText(/a partner runs it: lungau lodging/i)).toBeVisible();
-  await expect(dialog.getByText(/partners own the inventory/i)).toBeVisible();
-  await expect(dialog.getByText(/human-provided/i).first()).toBeVisible();
-  await expect(dialog.getByRole("heading", { name: /for agents/i })).toBeVisible();
-  await expect(dialog.getByText(/webmcp|mcp|declared/i).first()).toBeVisible();
+  // 1, 2, 3, 4 and 8: one click on the action. The inspector says what it applies to, who handles it and
+  // why, as a person's word; a second click shows which interfaces implement it and the evidence.
+  await page.locator(".stage-map").getByRole("button", { name: /check availability/i }).click();
+  const inspector = page.getByRole("complementary", { name: "Check availability" });
+  await expect(inspector.getByRole("heading", { name: /about th(is|ese) entit/i })).toBeVisible();
+  const saved = inspector.getByLabel("Saved responsibility");
+  await expect(saved).toContainText("A partner: Lungau Lodging");
+  await expect(saved).toContainText("Partners own the inventory.");
+  await expect(saved).toContainText(/saved in a review/i);
+  await expect(saved).toContainText("It is not evidence that the action works.");
+  await inspector.getByRole("button", { name: /inspect evidence & contract/i }).click();
+  await expect(inspector.getByRole("heading", { name: "For agents" })).toBeVisible();
+  await expect(inspector.getByText(/declared by the site|called, and it/i).first()).toBeVisible();
   await page.keyboard.press("Escape");
 
   // 5. When was it verified? One click on the action that works.
-  await page.locator(".three-actions").getByRole("button", { name: /search the site/i }).click();
-  await expect(page.getByRole("dialog").getByText(/verified (just now|\d+ (minutes?|hours?|days?) ago)/i)).toBeVisible();
+  await page.locator(".stage-map").getByRole("button", { name: /search the site/i }).click();
+  await expect(page.getByRole("complementary").getByText(/verified (just now|\d+ (minutes?|hours?|days?) ago)/i)).toBeVisible();
   await page.keyboard.press("Escape");
 
-  // 6. What is published to agents? One click to Activate, where the three documents are readable
-  // and, beneath them, the agent-facing surfaces list every document and interface, today and from this report.
-  await page.getByRole("link", { name: /^activate$/i }).click();
+  // 6. What is published to agents? One click to Activate, where the publication preview is, and one
+  // more for the files and the agent-facing surfaces, today and from this report.
+  await page.getByRole("navigation", { name: "Steps" }).getByRole("link", { name: "Activate" }).click();
   await expect(page).toHaveURL(/\/activate$/);
-  for (const title of ["Business data", "Agent instructions", "Discovery"]) await expect(page.getByRole("article", { name: title })).toBeVisible();
-  await page.locator("summary", { hasText: "For your engineers" }).click();
+  await expect(page.getByRole("tabpanel").getByRole("row", { name: /check availability/i })).toContainText("Included as a handoff to Lungau Lodging");
+  await page.locator("summary", { hasText: "Technical files & contracts" }).click();
+  for (const file of ["page.jsonld", "ai-catalog.json", "skill.md"]) await expect(page.locator(".file-list code", { hasText: file })).toBeVisible();
   await expect(page.getByRole("heading", { name: /what agents are given to read/i })).toBeVisible();
   await expect(page.getByText(/terms of action, the skill agents load/i)).toBeVisible();
 
-  // Back on the report, one click opens the full audit for the rest.
-  await page.goto(`/reports/${childId}`);
-  await page.locator("summary", { hasText: "Model & evidence" }).click();
+  // Back on the report, one click opens the model & evidence for the rest.
+  await page.goto(`/reports/${childId}#full-audit`);
 
   // 8, again, for the whole business at once: the boundaries table, one click below, one row per action.
   const boundaries = page.getByRole("row", { name: /check availability/i }).filter({ hasText: /partner handoff/i });

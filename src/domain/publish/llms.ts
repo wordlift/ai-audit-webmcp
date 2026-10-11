@@ -9,6 +9,8 @@ export interface LlmsOptions {
   host: string;
   reportUrl: string;
   documents: { pageJsonLd: string; skill: string; catalog: string };
+  /** Where the documents live on the site itself. llms.txt is read there, so it links there. */
+  sitePaths: { skill: string };
 }
 
 const bullet = (name: string, url: string | undefined, note?: string) => `- ${url ? `[${name}](${url})` : name}${note ? `: ${note}` : ""}`;
@@ -69,11 +71,18 @@ export function llmsText(report: ReportRecord, entities: DomainEntity[], actions
   for (const action of handoffs) lines.push(bullet(action.label, action.provider!.url, `handled by ${action.provider!.name}`));
   lines.push("");
 
+  // What an agent cannot call here and a person can do: somewhere to send them, instead of a dead end.
+  const forPeople = actions.filter((action) => action.publishedAs === "entity" && action.humanUrl);
+  if (forPeople.length > 0) {
+    lines.push("## For people, not yet for agents", ...forPeople.map((action) => bullet(action.label, action.humanUrl, "a page for people; there is nothing here for an agent to call")), "");
+  }
+
   lines.push(
     "## How to act here",
-    bullet("Terms of Action", options.documents.skill, "who runs each action, the business's boundaries and vocabulary; load it before acting"),
+    // The site's own copies: this file is read on the site, long after the report it came from is gone.
+    bullet("Terms of Action", `${options.origin}${options.sitePaths.skill}`, "who runs each action, the business's boundaries and vocabulary; load it before acting"),
     bullet("Agent catalog", `${options.origin}${ARD.path}`, "the capabilities this site publishes for agent registries"),
-    bullet("Business data", options.documents.pageJsonLd, "the entities and actions as schema.org JSON-LD"),
+    bullet("Business data", `${options.origin}/`, "the entities and actions as schema.org JSON-LD, in the home page's head"),
     "",
   );
 
@@ -86,6 +95,6 @@ export function llmsText(report: ReportRecord, entities: DomainEntity[], actions
     lines.push("## Where", ...places.slice(0, 12).map((entity) => bullet(entity.name, pageOf(entity, options.origin))), "");
   }
 
-  lines.push("## Optional", bullet("AI Audit report", options.reportUrl, "the evidence behind every line above, and when it was checked"), "");
+  lines.push("## Optional", bullet("AI Audit report", options.reportUrl, "the evidence behind every line above, and when it was checked; kept for a limited time"), "");
   return lines.join("\n");
 }

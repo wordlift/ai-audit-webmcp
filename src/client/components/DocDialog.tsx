@@ -49,9 +49,11 @@ export type MarkdownBlock =
   | { type: "meta"; entries: Array<[string, string]> }
   | { type: "heading"; level: 1 | 2 | 3; text: string }
   | { type: "list"; items: string[] }
+  | { type: "table"; head: string[]; rows: string[][] }
+  | { type: "code"; language: string; text: string }
   | { type: "paragraph"; text: string };
 
-/** The subset the generated documents use: headings, bullet lists and paragraphs. Anything else is a paragraph. */
+/** The subset the generated documents use: headings, bullet lists, pipe tables, fenced code and paragraphs. Anything else is a paragraph. */
 export function markdownBlocks(text: string): MarkdownBlock[] {
   const blocks: MarkdownBlock[] = [];
   let paragraph: string[] = [];
@@ -69,8 +71,29 @@ export function markdownBlocks(text: string): MarkdownBlock[] {
     paragraph = [];
     list = [];
   };
-  for (const raw of text.split("\n")) {
-    const line = raw.trimEnd();
+  const cells = (line: string) => line.trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim());
+  const lines = text.split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]!.trimEnd();
+    const fence = /^```(\w*)\s*$/.exec(line.trim());
+    if (fence) {
+      // A fenced block is kept byte for byte: it is something to copy.
+      flush();
+      const body: string[] = [];
+      for (index += 1; index < lines.length && !/^```\s*$/.test(lines[index]!.trim()); index += 1) body.push(lines[index]!);
+      blocks.push({ type: "code", language: fence[1] ?? "", text: body.join("\n") });
+      continue;
+    }
+    // A header row followed by a separator row is a table; the separator is structure, never content.
+    if (/^\|.*\|$/.test(line.trim()) && /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$/.test((lines[index + 1] ?? "").trim())) {
+      flush();
+      const head = cells(line);
+      const rows: string[][] = [];
+      for (index += 2; index < lines.length && /^\|.*\|$/.test(lines[index]!.trim()); index += 1) rows.push(cells(lines[index]!));
+      index -= 1;
+      blocks.push({ type: "table", head, rows });
+      continue;
+    }
     const heading = /^(#{1,3})\s+(.*)$/.exec(line);
     if (heading) {
       flush();
@@ -105,6 +128,25 @@ export function Inline({ text }: { text: string }) {
   );
 }
 
+function CodeBlock({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1_500);
+    } catch {
+      // Nothing to copy with: the block is selectable as it stands.
+    }
+  }
+  return (
+    <figure className="doc-code">
+      <button type="button" onClick={() => void copy()}><Copy size={12} aria-hidden="true" /> {copied ? "Copied" : "Copy"}</button>
+      <pre><code>{text}</code></pre>
+    </figure>
+  );
+}
+
 export function Markdown({ text }: { text: string }) {
   return (
     <div className="doc-markdown">
@@ -120,6 +162,21 @@ export function Markdown({ text }: { text: string }) {
           const Tag = (["h2", "h3", "h4"] as const)[block.level - 1];
           return <Tag key={index}><Inline text={block.text} /></Tag>;
         }
+        if (block.type === "table") {
+          return (
+            <div key={index} className="doc-table-wrap">
+              <table className="doc-table">
+                <thead><tr>{block.head.map((cell, cellIndex) => <th key={cellIndex} scope="col"><Inline text={cell} /></th>)}</tr></thead>
+                <tbody>
+                  {block.rows.map((row, rowIndex) => (
+                    <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex} data-label={block.head[cellIndex]}><Inline text={cell} /></td>)}</tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+        if (block.type === "code") return <CodeBlock key={index} text={block.text} />;
         if (block.type === "list") return <ul key={index}>{block.items.map((item, itemIndex) => <li key={itemIndex}><Inline text={item} /></li>)}</ul>;
         return <p key={index}><Inline text={block.text} /></p>;
       })}

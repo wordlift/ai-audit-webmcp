@@ -39,7 +39,22 @@ const ACTION_TYPES: Record<string, { actionId: string; read: boolean }> = {
 };
 
 /** Placeholders the audit can fill from the page itself. Anything else is an input it would have to invent. */
-const QUERY_PLACEHOLDERS = /\{(search_term_string|query|q|term|keyword|keywords|s)\}/gi;
+const QUERY_PLACEHOLDERS = /\{(search_term_string|query|q|term|keyword|keywords|s|question|prompt)\}/gi;
+
+/**
+ * An `/ask` endpoint that takes a question in a placeholder the audit can fill (NLWeb's shape) is
+ * also how an agent searches the site, whatever action type the markup files it under: schema.org's
+ * AskAction reads as a message to someone, and this is a read.
+ */
+function isAskEndpoint(template: string, base: URL): boolean {
+  try {
+    const path = new URL(template.replace(/\{[^}]+\}/g, "probe"), base).pathname.replace(/\/$/, "");
+    const fillable = new RegExp(QUERY_PLACEHOLDERS.source, "i").test(template);
+    return fillable && /(^|\/)ask$/i.test(path);
+  } catch {
+    return false;
+  }
+}
 
 /** Reads every declared entry point out of a page's JSON-LD, on the site's origin only, SearchAction aside. */
 export function findEntryPoints(document: Document, base: URL, sourceUrl: string): DeclaredEntryPoint[] {
@@ -98,7 +113,7 @@ function readAction(action: unknown, base: URL, sourceUrl: string): DeclaredEntr
   } catch {
     return null;
   }
-  const rule = ACTION_TYPES[actionType]!;
+  const rule = isAskEndpoint(template, base) ? { actionId: "site.search", read: true } : ACTION_TYPES[actionType]!;
   return {
     actionType,
     actionId: rule.actionId,

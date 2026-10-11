@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { audit, openEvidence } from "./helpers";
 
 const FIXTURES = [
   { url: "https://shop.example", archetype: /commerce \/ retail/i, entity: "Trail Jacket", action: /retrieve details/i, pages: 3 },
@@ -12,13 +13,8 @@ const FIXTURES = [
 
 for (const fixture of FIXTURES) {
   test(`${fixture.url} compiles complete entity-aware Terms of Action`, async ({ page }) => {
-    await page.goto("/");
-    await page.getByLabel("Website URL").fill(fixture.url);
-    await page.getByRole("button", { name: /audit my site/i }).click();
-
-    await expect(page).toHaveURL(/\/reports\//);
-    await expect(page.getByText(/as AI agents read it|AI agents can do \d+ of the \d+/i).first()).toBeVisible();
-    await page.locator("summary", { hasText: "Model & evidence" }).click();
+    await audit(page, fixture.url);
+    await openEvidence(page);
     await expect(page.getByRole("heading", { name: fixture.archetype }).first()).toBeVisible();
     await expect(page.getByText(`${fixture.pages} representative pages analyzed`)).toBeVisible();
     await expect(page.getByText(/classification selects the expected action journey/i)).toBeVisible();

@@ -1,26 +1,15 @@
-import { Link, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { HomeRoute } from "./routes/HomeRoute";
 import { ActivateRoute } from "./routes/ActivateRoute";
 import { ReportRoute } from "./routes/ReportRoute";
 import { PinnedAlpinaRoute } from "./routes/PinnedAlpinaRoute";
 import { PitchRoute } from "./routes/PitchRoute";
-import { AuditWebsiteTool } from "./webmcp/AuditWebsiteTool";
-import { GetAuditReportTool } from "./webmcp/GetAuditReportTool";
+import { SiteHeader } from "./surface/SiteHeader";
 
 export function App() {
   return (
     <div className="app-shell">
-      <header className="site-header">
-        <Link className="wordlift-brand" to="/" aria-label="WordLift AI Audit home">
-          <img className="wordlift-mark" src="/brand/wordmark-sky.svg" alt="WordLift" width={116} height={24} />
-          <span className="product-name">AI Audit</span>
-        </Link>
-        <div className="header-status">
-          <AuditWebsiteTool />
-          <GetAuditReportTool />
-          <span className="open-source-label">Open source</span>
-        </div>
-      </header>
+      <SiteHeader />
       <main>
         <Routes>
           <Route path="/" element={<HomeRoute />} />

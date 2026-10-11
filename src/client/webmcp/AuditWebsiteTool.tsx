@@ -114,5 +114,6 @@ export function AuditWebsiteTool({
     }),
   });
 
-  return <WebMcpBadge state={state} label="WebMCP tools live" />;
+  // The badge is about this application, never about the site a report audits.
+  return <WebMcpBadge state={state} label="Audit tools available to agents" title="This audit application offers its own tools to AI agents through WebMCP. It says nothing about the audited site." />;
 }

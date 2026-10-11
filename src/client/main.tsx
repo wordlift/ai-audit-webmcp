@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { watchModelContext } from "./webmcp/modelContextAlias";
 import "./styles/app.css";
+import "./styles/surface.css";
 
 const rootElement = document.getElementById("root");
 

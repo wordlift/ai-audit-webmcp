@@ -26,6 +26,10 @@ export interface PublishedAction {
   /** Why, in a sentence the Activate screen shows. */
   because: string;
   entryPoint?: PublishedEntryPoint;
+  /** Other interfaces the audit's agent also called for this action, beside the one above. */
+  alsoVerified?: PublishedEntryPoint[];
+  /** The page on the site where a person does this, when the audit observed one. Never an entry point. */
+  humanUrl?: string;
   provider?: { name: string; url?: string };
 }
 

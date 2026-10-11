@@ -28,18 +28,23 @@ support them. Declarations never earn readiness; only invoked evidence does.
 - **The report schema** in `src/shared/schemas/report.ts` is strict; new fields are optional, and a
   report stored yesterday must still parse today.
 - **Vocabulary the UI uses**: Terms of Action, Context Engine, capability map, Full WordLift audit,
-  foundation score, agent readiness — in the model & evidence fold, the docs and the tools. On the
-  owner's layer (the first screen, Fix, Activate, the progress screen) the Context Engine is called
-  **your business, as AI agents read it**, decided on 2026-10-08 after every cold-reader round read
-  the name as jargon; the name itself stays one click below and in the docs. The first screen leads
-  with that model, decided on 2026-09-16: what the business is and offers, each thing marked
-  **Declared** (the site's markup says so), **Inferred** (read from its content) or **Confirmed** (a
-  review said so); "verified" is reserved for an action an agent
-  actually invoked. Readiness follows as proof, in plain words decided on 2026-09-07: **works**,
-  **fix this**, **talk to us**, each mapping onto exactly one precise state (agent-ready;
-  unverified or human-only; missing), never two.
-  The boundary vocabulary — owned, handoff, informational, not applicable — stays precise and one
-  click below. Public copy (README, Devpost, video) follows what the deployed page says.
+  foundation score, agent readiness — in the model & evidence view, the docs and the tools. The
+  surface was rebuilt on 2026-10-11 from the design handoff of 10 October and the UX review that
+  followed, and these words replace the earlier owner's-layer ones (works / fix this / talk to us,
+  retired that day). The three steps are **Audit**, **Fix**, **Activate**, views over one report.
+  Each thing the model holds is **declared** (the site's markup says so), **inferred** (read from
+  its content) or **confirmed** (a review said so); confirmed core entities and inferred
+  candidates are never shown as one set. What an agent can do with an action is one word per
+  state, never two: **Verified** (agent-ready, an invoked call answered), **Unverified**,
+  **No interface found** (human-only), **Not found** (missing, scoped to the scan); what was seen
+  for people is its own column, **Observed** or **Not observed**; absent data is **Not checked**.
+  Who handles an action is **Our team**, **A partner**, **Information only** or **Not relevant**,
+  mapping onto owned, partner-handoff, informational-only and not-applicable, which stay the
+  precise words in the evidence view and the files. A business the scan could not settle is
+  **Business identity needs review**, with the domain as its name; a third party is never the
+  headline. Every screen says which report it shows: **Original scan** or **Reviewed version**.
+  The outcome is said as "Build your brand knowledge graph: your Context Engine for AI". Public
+  copy (README, Devpost, video) follows what the deployed page says.
 - **Registration on both `navigator.modelContext` and `document.modelContext`** — the alias in
   `src/client/webmcp/modelContextAlias.ts` covers whichever the browser exposes; public copy names
   `navigator.modelContext`, which is what Chrome ships.
