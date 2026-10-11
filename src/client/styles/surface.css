@@ -871,3 +871,6 @@ main:has(> .activate-page) {
 
 .inspector-status { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
 .inspector-untested { color: var(--muted); font-size: 0.95rem; }
+
+.exclusion-reasons { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; color: var(--muted); }
+.exclusion-reasons b { font-weight: 600; color: var(--ink); margin-right: 6px; }

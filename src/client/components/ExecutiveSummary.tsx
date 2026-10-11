@@ -1,3 +1,4 @@
+import { currentRecommendation } from "../../shared/format/recommendation.js";
 import { Bot, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
 import { summaryLead } from "../../shared/format/plainText.js";
 import type { ReportRecord } from "../../shared/types/index.js";
@@ -23,6 +24,12 @@ function heroLead(report: ReportRecord): string {
   return report.foundationAudit
     ? summaryLead(report.foundationAudit.summary)
     : "This report maps the functions an agent needs against the evidence available today.";
+}
+
+/** The advice read from the evidence as it stands, so a stored report never contradicts what it shows. */
+function reasonNow(report: ReportRecord, actionId: string): string | null {
+  const capability = report.capabilities?.find((candidate) => candidate.actionId === actionId);
+  return capability ? currentRecommendation(capability) : null;
 }
 
 export function ExecutiveSummary({ report }: { report: ReportRecord }) {
@@ -78,7 +85,7 @@ export function ExecutiveSummary({ report }: { report: ReportRecord }) {
           {(report.priorities ?? []).map((priority) => (
             <li key={priority.actionId}>
               <span>{priority.label}</span>
-              <small>{priority.state.replace("-", " ")} · {priority.reason}</small>
+              <small>{priority.state.replace("-", " ")} · {reasonNow(report, priority.actionId) ?? priority.reason}</small>
             </li>
           ))}
         </ol>

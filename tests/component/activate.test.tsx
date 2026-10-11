@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import {
   ActivateScreen,
+  packageTally,
   activationSummary,
   agentsByPlatform,
   carries,
@@ -134,6 +135,26 @@ describe("the numbers equal the ledger", () => {
   });
 });
 
+describe("what the package includes", () => {
+  it("counts every action once, and its reasons sum to the exclusions", () => {
+    const row = (publishedAs: "action" | "handoff" | "entity" | "nothing", because: string, index: number) => ({ actionId: `a.${index}`, label: `Action ${index}`, state: "missing" as const, boundary: null, publishedAs, because });
+    const actions = [
+      row("action", "answered", 0),
+      row("handoff", "partner", 1),
+      ...[2, 3, 4, 5, 6].map((index) => row("entity", "No entry point has answered yet, so nothing is declared that an agent could not call.", index)),
+      row("entity", "A review said the business only describes it. The entity is included in this package, no action.", 7),
+      row("nothing", "A review said this is not the business's. Nothing is included for it.", 8),
+      row("nothing", "This kind of site is not expected to offer it. Nothing is included for it.", 9),
+    ];
+    const tally = packageTally(actions);
+    expect([tally.callable, tally.handoff, tally.excluded.length]).toEqual([1, 1, 8]);
+    // Five share one reason and three have their own: all eight are said, not the five.
+    expect(tally.reasons.map((entry) => entry.count)).toEqual([5, 1, 1, 1]);
+    expect(tally.reasons.reduce((sum, entry) => sum + entry.count, 0)).toBe(tally.excluded.length);
+    expect(tally.callable + tally.handoff + tally.excluded.length).toBe(actions.length);
+  });
+});
+
 describe("the Activate screen", () => {
   it("previews the publication, keeps the delivery routes, and shows who read it", () => {
     renderScreen(ledger);
@@ -155,6 +176,9 @@ describe("the Activate screen", () => {
     expect(within(preview).getByRole("row", { name: /retrieve details/i })).toHaveTextContent(/Not included as (verified|callable)/);
     expect(within(preview).getByRole("row", { name: /check availability/i })).toHaveTextContent("Included as a handoff to Lungau Lodging");
     expect(within(preview).getByRole("row", { name: /compare options/i })).toHaveTextContent("Not included");
+    // The summary above the table accounts for every row: 1 callable, 1 handoff, 2 not included, each with its reason.
+    expect(screen.getByLabelText("What this package includes")).toHaveTextContent("Of 4 actions: 1 included as callable, 1 included as a handoff, 2 not included as callable.");
+    expect(within(screen.getByRole("list", { name: "Why actions are not included as callable" })).getAllByRole("listitem")).toHaveLength(2);
 
     // The exact rows the page carries stay with the technical files, said once per group.
     const carriesTable = screen.getAllByRole("table").at(-1)!;

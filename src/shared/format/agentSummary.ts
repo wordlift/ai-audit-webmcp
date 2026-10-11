@@ -1,6 +1,12 @@
+import { currentRecommendation } from "./recommendation.js";
 import { talkToUsUrl } from "./doors.js";
 import type { CapabilityResult, ReportRecord } from "../types/index.js";
 import { explainReportError } from "./explainError.js";
+
+function currentReason(report: ReportRecord, actionId: string): string | null {
+  const capability = report.capabilities?.find((candidate) => candidate.actionId === actionId);
+  return capability ? currentRecommendation(capability) : null;
+}
 
 export interface StageCount {
   ready: number;
@@ -285,7 +291,8 @@ export function summarizeReportForAgent(report: ReportRecord, reportUrl: string)
       actionId: gap.actionId,
       label: gap.label,
       state: gap.state,
-      reason: gap.reason,
+      // Read from the evidence each time, so a report stored earlier does not repeat advice the evidence contradicts.
+      reason: currentReason(report, gap.actionId) ?? gap.reason,
     })),
     stages: {
       discover: countStage(capabilities, "discover"),
@@ -380,7 +387,7 @@ export function describeCapabilityForAgent(
       sourceUrl: item.sourceUrl,
       confidence: item.confidence,
     })),
-    recommendation: capability.recommendation ?? null,
+    recommendation: currentRecommendation(capability),
     governance: capability.contract?.governance ?? null,
     recommendedDelivery: capability.contract?.recommendedDelivery ?? null,
     contractUrl: capability.contract ? contractUrl : null,

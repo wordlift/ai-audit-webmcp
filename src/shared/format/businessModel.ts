@@ -78,7 +78,7 @@ export function modelRelations(report: ReportRecord, entities: ModelledEntity[])
  */
 export interface BusinessIdentity {
   status: "settled" | "needs-review" | "none";
-  /** The entity the model would pick, settled or not. Never to be introduced as the business unless settled. */
+  /** The business's entity, present only when the identity is settled. An unsettled candidate is never named here. */
   entityId?: string;
   note: string;
 }
@@ -89,7 +89,7 @@ export function businessIdentity(report: ReportRecord): BusinessIdentity {
   const business = modelView(report).business;
   const unsettled = `The scan could not settle which organization runs this site, so ${host} stands in as its name. Do not present any organization named on its pages as the business until a review confirms one.`;
   if (!business) return { status: "needs-review", note: unsettled };
-  if (business.provenance === "inferred") return { status: "needs-review", entityId: business.id, note: unsettled };
+  if (business.provenance === "inferred") return { status: "needs-review", note: unsettled };
   return { status: "settled", entityId: business.id, note: `${business.name} is ${business.provenance === "declared" ? "declared by the site" : "confirmed in a review"} as the business.` };
 }
 

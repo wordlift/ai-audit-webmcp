@@ -1,5 +1,5 @@
 import { compileActionGraph } from "../../src/domain/action-model/compileGraph.js";
-import { recommendationFor, untestedInScan } from "../../src/shared/format/recommendation.js";
+import { currentRecommendation, recommendationFor, untestedInScan } from "../../src/shared/format/recommendation.js";
 import type { CapabilityResult } from "../../src/shared/types/index.js";
 import { deriveCapability } from "../../src/domain/action-model/deriveState.js";
 import { loadActionModel } from "../../src/domain/action-model/loadModel.js";
@@ -35,10 +35,12 @@ describe("priority ranking", () => {
     });
     const overBudget = listed(": the per-endpoint call budget was already spent");
     expect(untestedInScan(overBudget)).toEqual({ tools: ["check_booking_availability"], budget: true });
-    expect(recommendationFor(overBudget)).toMatch(/^Not tested within this scan's budget: "check_booking_availability" is listed by the site's MCP server and was not called\. Nothing needs building to find out: verify check availability with a targeted test/);
+    expect(recommendationFor(overBudget)).toMatch(/^Run a verification call\. "check_booking_availability" is listed by the site's MCP server and was not called: this scan's call budget was spent first\./);
     expect(recommendationFor(overBudget)).not.toMatch(/Make .* callable/);
+    // A report compiled before this wording still carries the old sentence; what is read out follows the evidence.
+    expect(currentRecommendation({ ...overBudget, recommendation: "Make check availability callable in a controlled environment and record a successful invocation." })).toMatch(/^Run a verification call\./);
     // Not called for another reason is said with that reason, and still asks for a test before anything is changed.
-    expect(recommendationFor(listed(": not annotated read-only"))).toContain("Not tested in this scan: \"check_booking_availability\" is listed by the site's MCP server and was not called (not annotated read-only).");
+    expect(recommendationFor(listed(": not annotated read-only"))).toContain("\"check_booking_availability\" is listed by the site's MCP server and was not called in this scan (not annotated read-only).");
     // A call that was made and failed is a different finding, and keeps its own advice.
     const failed: CapabilityResult = { ...overBudget, evidence: [...overBudget.evidence, { ...overBudget.evidence[0]!, id: "mcp-call-failed-x", verification: "failed" as const, claim: "\"x\" is declared by the site's live MCP server but the call failed: timeout" }] };
     expect(untestedInScan(failed)).toBeNull();

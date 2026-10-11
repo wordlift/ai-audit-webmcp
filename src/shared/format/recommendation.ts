@@ -40,12 +40,24 @@ export function recommendationFor(capability: CapabilityResult): string {
   if (capability.state === "unverified") {
     const untested = untestedInScan(capability);
     if (untested?.budget) {
-      return `Not tested within this scan's budget: ${quoted(untested.tools)} ${untested.tools.length === 1 ? "is" : "are"} listed by the site's MCP server and ${untested.tools.length === 1 ? "was" : "were"} not called. Nothing needs building to find out: verify ${capability.label.toLowerCase()} with a targeted test of this action, or run the audit again.`;
+      return `Run a verification call. ${quoted(untested.tools)} ${untested.tools.length === 1 ? "is" : "are"} listed by the site's MCP server and ${untested.tools.length === 1 ? "was" : "were"} not called: this scan's call budget was spent first. Nothing needs building to find out whether ${capability.label.toLowerCase()} answers; test this one action, or run the audit again.`;
     }
     if (untested) {
-      return `Not tested in this scan: ${quoted(untested.tools)} ${untested.tools.length === 1 ? "is" : "are"} listed by the site's MCP server and ${untested.tools.length === 1 ? "was" : "were"} not called${untested.note ? ` (${untested.note})` : ""}. Verify ${capability.label.toLowerCase()} with a targeted test before changing anything.`;
+      return `Run a verification call. ${quoted(untested.tools)} ${untested.tools.length === 1 ? "is" : "are"} listed by the site's MCP server and ${untested.tools.length === 1 ? "was" : "were"} not called in this scan${untested.note ? ` (${untested.note})` : ""}. Test ${capability.label.toLowerCase()} before changing anything.`;
     }
     return `Make ${capability.label.toLowerCase()} callable in a controlled environment and record a successful invocation.`;
   }
   return `Implement ${capability.label.toLowerCase()} with the contract inputs, outputs, and governance requirements shown here.`;
+}
+
+/**
+ * The advice for a gap as a report states it today. A report stored earlier carries the sentence
+ * that was written when it was compiled; what the audit did is in its evidence, so the advice is
+ * read from the evidence each time rather than from that sentence.
+ */
+export function currentRecommendation(capability: CapabilityResult): string | null {
+  // Only where the stored sentence can contradict the evidence: an action listed and never called.
+  if (untestedInScan(capability)) return recommendationFor(capability);
+  if (capability.recommendation) return capability.recommendation;
+  return capability.state === "agent-ready" || capability.state === "not-expected" ? null : recommendationFor(capability);
 }

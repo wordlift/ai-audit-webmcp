@@ -46,7 +46,7 @@ export const AUDIT_WEBSITE_TOOL = {
   name: "audit-website",
   title: "Audit a website",
   description:
-    "Analyze a public website from an AI agent's perspective and return its site archetype, verified action-readiness score, priority capability gaps, action-stage summary, and shareable evidence report. The basic scan reads five representative pages and is free and anonymous; a deep scan reads more of the site and is sent to an email address the person gives you.",
+    "Analyze a public website from an AI agent's perspective and return its site archetype, verified action-readiness score, priority capability gaps, action-stage summary, and shareable evidence report. There is one scan: it reads five representative pages and is free and anonymous. An email address is optional and only has the finished report sent there.",
   inputSchema: {
     type: "object",
     properties: {
