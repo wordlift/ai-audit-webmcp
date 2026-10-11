@@ -55,6 +55,10 @@ const NAME_ACTION_RULES: Array<{ pattern: RegExp; actionId: string }> = [
   // Broad fallbacks for namespaced capability ids such as `dev.ucp.shopping.checkout`.
   { pattern: /fulfil/, actionId: "transaction.status" },
   { pattern: /checkout/, actionId: "checkout.create" },
+  // An `ask` interface (NLWeb's /ask, a tool named ask or nlweb_ask) takes a question in words and
+  // answers from the site's own content: for an agent, that is also how it searches. It comes last, so
+  // a name that says more ("ask_availability", "ask_support") keeps the action it names.
+  { pattern: /(^|[^a-z])ask([^a-z]|$)|nlweb/, actionId: "site.search" },
 ];
 
 export function actionForDeclaredName(name: string): string | null {

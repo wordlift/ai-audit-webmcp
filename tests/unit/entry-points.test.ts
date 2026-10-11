@@ -2,6 +2,8 @@ import { parseHTML } from "linkedom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { executeEntryPoint, findEntryPoints } from "../../src/server/adapters/scrape/entryPoints.js";
 import { detectSiteEvidence } from "../../src/domain/evidence/detectSiteEvidence.js";
+import { actionForDeclaredName } from "../../src/domain/evidence/schemaActions.js";
+import { LISTING_TOOL, nameWords } from "../../src/server/adapters/scrape/mcpToolCalls.js";
 import type { EntryPointProbe, SiteSnapshot } from "../../src/server/adapters/scrape/ScrapeProvider.js";
 
 const POLICY = { resolve: async () => ["93.184.216.34"] };
@@ -175,5 +177,41 @@ describe("what an executed entry point proves", () => {
     expect(evidence?.snippet).toBe("https://alpina.travel/api/availability?from={checkin}&to={checkout}");
     const failed = detectSiteEvidence(snapshotWith([probe({ ok: false, status: 500, note: "it answered HTTP 500" })]), "2026-09-07T10:00:00.000Z");
     expect(failed.evidence.find((item) => item.id.startsWith("entry-point-"))?.snippet).toBe("https://alpina.travel/api/availability?q={query}");
+  });
+});
+
+describe("an ask interface is also how an agent searches", () => {
+  it("reads a tool named ask as search, unless its name says more", () => {
+    for (const name of ["ask", "nlweb_ask", "Ask", "site.ask", "ask-question"]) expect(actionForDeclaredName(name)).toBe("site.search");
+    // A more specific word keeps its own action, and a word that merely contains the letters is nothing.
+    expect(actionForDeclaredName("ask_availability")).toBe("availability.check");
+    expect(actionForDeclaredName("ask_support")).toBe("support.request");
+    expect(actionForDeclaredName("task")).toBeNull();
+    expect(actionForDeclaredName("mask_fields")).toBeNull();
+    // Its answer lists things, so what it returns can seed a detail lookup, like any search.
+    expect(LISTING_TOOL.test(nameWords("nlweb_ask"))).toBe(true);
+    expect(LISTING_TOOL.test(nameWords("multitask"))).toBe(false);
+  });
+
+  it("reads a declared /ask endpoint with a question to fill as a search to execute, whatever type files it", () => {
+    const found = findEntryPoints(
+      page({
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        potentialAction: [
+          { "@type": "AskAction", name: "Ask the site", target: { urlTemplate: "https://alpina.travel/ask?query={query}" } },
+          { "@type": "AskAction", name: "Write to us", target: { urlTemplate: "https://alpina.travel/contact", httpMethod: "POST" } },
+          { "@type": "AskAction", name: "Ask a host", target: { urlTemplate: "https://alpina.travel/ask?host={host_id}" } },
+        ],
+      }),
+      base,
+      "https://alpina.travel/",
+    );
+    expect(found.map((entry) => [entry.name, entry.actionId, entry.read])).toEqual([
+      ["Ask the site", "site.search", true],
+      // A message to someone is still a write, and an /ask the audit cannot fill is not turned into a search.
+      ["Write to us", "inquiry.submit", false],
+      ["Ask a host", "inquiry.submit", false],
+    ]);
   });
 });

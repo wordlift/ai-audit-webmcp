@@ -28,7 +28,7 @@ export interface JsonSchema {
 }
 
 /** Only a listing returns things that can be looked up; a config result names the server itself. */
-export const LISTING_TOOL = /\b(search|list|find|query|browse|catalog|catalogue|feed)\b/;
+export const LISTING_TOOL = /\b(search|list|find|query|browse|catalog|catalogue|feed|ask)\b/;
 
 export interface ProbeSeed {
   /** A neutral search term taken from the audited page, never invented vocabulary. */
