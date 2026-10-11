@@ -1,3 +1,4 @@
+import { currentRecommendation, untestedInScan } from "../../shared/format/recommendation.js";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useReportEngine } from "../engine/EngineContext";
 import { track } from "../engine/track";
@@ -44,6 +45,18 @@ export function remedyFor(capability: CapabilityResult, reportId: string, engine
         cta: { label: "Keep it agent-ready", href: publishUrl(reportId, { action: capability.actionId, intent: "keep", engine }) },
       };
     case "unverified": {
+      const untested = untestedInScan(capability);
+      if (untested) {
+        // Listed and never called is not a failure: the next step is a call, not a build.
+        return {
+          case: "inspect",
+          why: untested.budget
+            ? "Your site lists an interface for this, and the audit did not call it: this scan's call budget was spent first."
+            : "Your site lists an interface for this, and the audit did not call it in this scan.",
+          required: currentRecommendation(capability) ?? "Run a verification call.",
+          cta: canTest ? { label: "Run a verification call", test: true } : { label: "Inspect the declaration", inspect: true },
+        };
+      }
       const reason = failureReason(capability);
       return {
         case: "inspect",
@@ -194,7 +207,7 @@ export function ActionDetailDialog({ reportId, report, capability, onOpenChange 
               <EvidenceColumn title="For humans" icon={<UserRound />} available={capability.humanSupport} evidence={capability.evidence.filter((item) => item.audience === "human")} />
               <EvidenceColumn title="For agents" icon={<Bot />} available={capability.agentSupport} evidence={capability.evidence.filter((item) => item.audience === "agent")} />
             </section>
-            {capability.recommendation && <section className="recommendation"><h3>How to close the gap</h3><p>{capability.recommendation}</p></section>}
+            {currentRecommendation(capability) && <section className="recommendation"><h3>How to close the gap</h3><p>{currentRecommendation(capability)}</p></section>}
             {capability.contract && <ContractViewer reportId={reportId} actionId={capability.actionId} contract={capability.contract} />}
           </>}
         </Dialog.Content>

@@ -2,7 +2,7 @@ import { ArrowRight, ArrowUpRight, ChevronDown, ExternalLink } from "lucide-reac
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { CapabilityEvidence, CapabilityResult, ReportRecord } from "../../shared/types/index.js";
-import { recommendationFor, untestedInScan } from "../../shared/format/recommendation.js";
+import { currentRecommendation, untestedInScan } from "../../shared/format/recommendation.js";
 import { verifiedAgo } from "../components/ActionDetailDialog";
 import { CapabilityTest, testable } from "../components/CapabilityTest";
 import { ContractViewer } from "../components/ContractViewer";
@@ -234,7 +234,7 @@ export function CapabilityInspector({
           Technical next steps <ChevronDown size={18} aria-hidden="true" />
         </summary>
         <p className="inspector-note">Available in the existing activation runbook. Nothing here installs an endpoint, publishes a catalog or changes the score.</p>
-        {capability.state !== "agent-ready" && capability.state !== "not-expected" && <p>{recommendationFor(capability)}</p>}
+        {currentRecommendation(capability) && <p>{currentRecommendation(capability)}</p>}
         <ul className="link-list">
           <li>
             <Link to={`/reports/${report.id}/activate#runbook-title`}>Open the activation runbook <ArrowRight size={14} aria-hidden="true" /></Link>

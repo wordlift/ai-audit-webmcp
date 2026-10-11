@@ -192,6 +192,23 @@ function onSite(state: "found" | "missing" | "unknown" | undefined): string {
   return state === "found" ? "Published" : state === "missing" ? "Not published" : "Not checked";
 }
 
+/**
+ * Every action in the package, counted once: included as callable, included as a handoff, or not
+ * included as callable, with each distinct reason and how many actions it covers. The reasons sum
+ * to the exclusions, always.
+ */
+export function packageTally(actions: PublishedAction[]): { callable: number; handoff: number; excluded: PublishedAction[]; reasons: Array<{ because: string; count: number }> } {
+  const excluded = actions.filter((action) => action.publishedAs !== "action" && action.publishedAs !== "handoff");
+  const counts = new Map<string, number>();
+  for (const action of excluded) counts.set(action.because, (counts.get(action.because) ?? 0) + 1);
+  return {
+    callable: actions.filter((action) => action.publishedAs === "action").length,
+    handoff: actions.filter((action) => action.publishedAs === "handoff").length,
+    excluded,
+    reasons: [...counts].map(([because, count]) => ({ because, count })).sort((left, right) => right.count - left.count),
+  };
+}
+
 type PreviewTab = "business" | "capabilities" | "rules";
 const PREVIEW_TABS: ReadonlyArray<{ id: PreviewTab; label: string }> = [
   { id: "business", label: "Business" },
@@ -296,9 +313,8 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
   const runbook = files[4]!;
   const promptText = runbookPrompt(publication);
   const decidedActions = publication.actions.filter((action) => action.boundary);
-  // The sentence the compiler gives every action nothing answered for, and the rows that carry it.
-  const sharedReason = "No entry point has answered yet, so nothing is declared that an agent could not call.";
-  const notCallable = publication.actions.filter((action) => action.because === sharedReason);
+  // One count of everything in the package, so the summary and the rows can never disagree.
+  const tally = packageTally(publication.actions);
   const scanned = report.collectedAt ?? report.createdAt;
   const terms = report.contextGraph?.lexicalEntries ?? [];
   const reviewedTerms = terms.filter((term) => term.provenance === "human-provided");
@@ -358,9 +374,16 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
                   No action in this report is verified as callable, so none is included as callable in this prepared package. Your business context and action boundaries can still be prepared while the technical work remains. Publication is a separate step.
                 </p>
               )}
-              {/* The reason most rows share is said once, above them; a row speaks only when its reason is its own. */}
-              {sharedReason && notCallable.length > 1 && (
-                <p className="section-lead">{plural(notCallable.length, "action")} {notCallable.length === 1 ? "is" : "are"} not included as callable: no entry point answered the audit's call, and nothing is declared that an agent could not call.</p>
+              {/* Every action is accounted for once, above the table: what is included, and each reason something is not. */}
+              <p className="section-lead" aria-label="What this package includes">
+                Of {plural(publication.actions.length, "action")}: {tally.callable} included as callable{tally.handoff > 0 ? `, ${tally.handoff} included as a handoff` : ""}, {tally.excluded.length} not included as callable.
+              </p>
+              {tally.reasons.length > 0 && (
+                <ul className="exclusion-reasons" aria-label="Why actions are not included as callable">
+                  {tally.reasons.map((entry) => (
+                    <li key={entry.because}><b>{entry.count}</b> {entry.because}</li>
+                  ))}
+                </ul>
               )}
               <div className="table-wrap">
                 <table className="capability-table preview-table">
@@ -378,7 +401,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
                         <td><AgentMark status={agentStatus({ state: action.state })} /></td>
                         <td>
                           {publicationWord(action)}
-                          {!(notCallable.length > 1 && action.because === sharedReason) && <span className="row-owner">{action.because}</span>}
+                          {!(action.publishedAs !== "action" && action.publishedAs !== "handoff" && tally.reasons.length === 1) && <span className="row-owner">{action.because}</span>}
                         </td>
                       </tr>
                     ))}

@@ -99,6 +99,8 @@ describe("the business as the audit modelled it", () => {
     const model = businessModel(unsettled, "https://audit.example/reports/r1");
     expect(model.business).toBeNull();
     expect(model.identity.status).toBe("needs-review");
+    // No entity is pointed at while the identity is unsettled: a candidate named here would be read as the business.
+    expect(model.identity.entityId).toBeUndefined();
     expect(model.otherOrganizations).toEqual(expect.arrayContaining(["org", "other"]));
     const text = businessModelText(model);
     expect(text).toContain("Business identity needs review. The scan could not settle which organization runs this site, so alpina.travel stands in as its name.");
@@ -108,6 +110,7 @@ describe("the business as the audit modelled it", () => {
     // Settled, the business is the business, and what else the pages name is still a mention.
     const settled = businessModel({ ...unsettled, contextGraph: { ...unsettled.contextGraph!, entities: [...report.contextGraph!.entities, unsettled.contextGraph!.entities.at(-1)!] } }, "https://audit.example/reports/r1");
     expect(settled.identity.status).toBe("settled");
+    expect(settled.identity.entityId).toBe("org");
     expect(settled.business?.name).toBe("AlpiNest Feriendorf Lungau");
     expect(settled.otherOrganizations).toEqual(["other"]);
   });
