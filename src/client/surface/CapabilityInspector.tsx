@@ -2,6 +2,7 @@ import { ArrowRight, ArrowUpRight, ChevronDown, ExternalLink } from "lucide-reac
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { CapabilityEvidence, CapabilityResult, ReportRecord } from "../../shared/types/index.js";
+import { recommendationFor, untestedInScan } from "../../shared/format/recommendation.js";
 import { verifiedAgo } from "../components/ActionDetailDialog";
 import { CapabilityTest, testable } from "../components/CapabilityTest";
 import { ContractViewer } from "../components/ContractViewer";
@@ -79,6 +80,8 @@ export function CapabilityInspector({
   }, [capability.actionId, report.id]);
 
   const status = agentStatus(capability);
+  // Unverified because nothing was called is a different finding from unverified because a call failed.
+  const untested = untestedInScan(capability);
   const decided = savedChoice(capability);
   const canTest = testable(report, capability);
   const action = capability.label.charAt(0).toLowerCase() + capability.label.slice(1);
@@ -100,7 +103,10 @@ export function CapabilityInspector({
 
   return (
     <Inspector kicker="Selected capability" title={capability.label} onClose={onClose} labelId="inspector-title">
-      <p className="inspector-status"><AgentMark status={status} /></p>
+      <p className="inspector-status">
+        <AgentMark status={status} />
+        {untested && <span className="inspector-untested">{untested.budget ? "Not tested within this scan's budget" : "Not tested in this scan"}</span>}
+      </p>
 
       <dl className="inspector-pair">
         <div>
@@ -185,11 +191,13 @@ export function CapabilityInspector({
         <p className="kicker">{testFirst ? "Next step" : "Next decision"}</p>
         {testFirst ? (
           <>
-            <h3 id="inspector-next">{capability.state === "agent-ready" ? "Call it again with your own inputs" : "Try the declared interface yourself"}</h3>
+            <h3 id="inspector-next">{capability.state === "agent-ready" ? "Call it again with your own inputs" : untested ? "Verify it with a targeted test" : "Try the declared interface yourself"}</h3>
             <p>
               {capability.state === "agent-ready"
                 ? "The interface answered when the audit called it. You can call it again and see what it answers today."
-                : "A first call can fail for reasons that are not the interface's: inputs the audit had to guess, a busy moment, a rate limit. Run the same call with your own inputs."}
+                : untested
+                  ? "The audit listed this interface and did not call it. One targeted call, with your own inputs, says whether it answers."
+                  : "A first call can fail for reasons that are not the interface's: inputs the audit had to guess, a busy moment, a rate limit. Run the same call with your own inputs."}
             </p>
             <button type="button" className="button button-primary button-block" onClick={openTest}>
               Test it yourself <ArrowRight size={16} aria-hidden="true" />
@@ -199,7 +207,7 @@ export function CapabilityInspector({
           </>
         ) : (
           <>
-            <h3 id="inspector-next">{decided ? `You said who handles this` : `Who handles “${action}”?`}</h3>
+            <h3 id="inspector-next">{decided ? "A review said who handles this" : `Who handles “${action}”?`}</h3>
             <p>
               {decided
                 ? "The responsibility is saved on this version. The technical work, if any, is the next step and is listed below."
@@ -226,7 +234,7 @@ export function CapabilityInspector({
           Technical next steps <ChevronDown size={18} aria-hidden="true" />
         </summary>
         <p className="inspector-note">Available in the existing activation runbook. Nothing here installs an endpoint, publishes a catalog or changes the score.</p>
-        {capability.recommendation && <p>{capability.recommendation}</p>}
+        {capability.state !== "agent-ready" && capability.state !== "not-expected" && <p>{recommendationFor(capability)}</p>}
         <ul className="link-list">
           <li>
             <Link to={`/reports/${report.id}/activate#runbook-title`}>Open the activation runbook <ArrowRight size={14} aria-hidden="true" /></Link>

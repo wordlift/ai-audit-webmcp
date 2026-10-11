@@ -491,6 +491,45 @@ export class AuditOrchestrator {
     return this.store.createRevision(parent.id, child);
   }
 
+  /**
+   * Asks the foundation audit again for a report that landed without it, and nothing else: the
+   * pages are not read again, no interface is called, and the capability map and its readiness stay
+   * exactly as they were. What comes back is a new version carrying the foundation score, with the
+   * notice that it was missing taken off; if the audit service still does not answer, that is the
+   * answer, and no version is created.
+   */
+  async retryFoundation(parentId: string): Promise<ReportRecord> {
+    const parent = await this.required(parentId);
+    if (parent.status === "running" || parent.status === "failed") throw new ReportRequestError("That report has no result to add a foundation audit to.", 409);
+    if (parent.foundationAudit) throw new ReportRequestError("That report already carries its foundation audit.", 409);
+    const provider = this.options.providers?.audit;
+    if (!provider) throw new ReportRequestError("The foundation audit is not available on this deployment.", 409);
+    let foundation: ReportRecord["foundationAudit"];
+    try {
+      foundation = (await provider.audit(new URL(parent.canonicalUrl ?? parent.requestedUrl))).foundation;
+    } catch (error) {
+      console.error("foundation_retry_failed", error instanceof Error ? error.name : "unknown");
+      throw new ReportRequestError("The foundation audit did not answer this time either. Nothing was changed; try again in a few minutes.", 502, "foundation_unavailable");
+    }
+    if (!foundation) throw new ReportRequestError("The foundation audit answered without a result. Nothing was changed.", 502, "foundation_unavailable");
+    // The notice the report carried for the missing component, by the name every report files it under.
+    const errors = parent.errors.filter((error) => error.provider !== "wordlift-ai-audit");
+    const base = this.baseRecord(randomUUID(), parent.requestedUrl, this.now(), parent.id, parent.scanDepth);
+    const child: ReportRecord = {
+      ...parent,
+      id: base.id,
+      parentReportId: parent.id,
+      createdAt: base.createdAt,
+      expiresAt: base.expiresAt,
+      completedAt: this.now().toISOString(),
+      // Partial only for what is still missing: with the foundation back and nothing else wrong, the report is complete.
+      status: parent.status === "partial" && errors.filter((error) => error.code !== "classifier_unavailable").length === 0 ? "completed" : parent.status,
+      foundationAudit: foundation,
+      errors,
+    };
+    return this.noted(await this.store.createRevision(parent.id, child));
+  }
+
   async reverify(parentId: string): Promise<ReportRecord> {
     const parent = await this.required(parentId);
     const childBase = this.baseRecord(randomUUID(), parent.requestedUrl, this.now(), parent.id);

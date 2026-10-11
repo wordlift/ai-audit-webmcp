@@ -412,7 +412,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
                 <p className="empty-note">This report holds no products, services or places to publish.</p>
               )}
               <p className="section-lead">
-                {plural(counts.total, "entity", "entities")} in the model: {counts.declared} declared, {counts.inferred} inferred. Only what the site declares or a review confirmed is published as fact.
+                {plural(counts.total, "entity", "entities")} in the model: {counts.declared} declared, {counts.inferred} inferred. Only what the site declares or a review confirmed is included as fact.
               </p>
             </>
           )}
@@ -422,7 +422,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
               <h2>What agents are told</h2>
               <p className="section-lead">
                 {publication.decided > 0
-                  ? `${plural(publication.decided, "decision")} of yours shaped this.`
+                  ? `${plural(publication.decided, "review decision")} shaped this, ${publication.decidedBy === "owner" ? "made by the site's verified owner" : "reviewer-confirmed: ownership of the site is not verified"}.`
                   : "No responsibility has been reviewed yet, so this publishes what the audit verified, no less."}{" "}
                 Nothing is declared that the audit could not call.
               </p>
@@ -492,7 +492,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
               <thead>
                 <tr>
                   <th scope="col">Action</th>
-                  <th scope="col">You said</th>
+                  <th scope="col">A review said</th>
                   <th scope="col">The page carries</th>
                 </tr>
               </thead>
@@ -511,7 +511,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
                   <tr>
                     <th scope="row">No action yet</th>
                     <td>–</td>
-                    <td>Nothing an agent can call has answered, so no action is published.</td>
+                    <td>Nothing an agent can call has answered, so no action is included in this package.</td>
                   </tr>
                 )}
                 {entityOnly.length > 0 && (
@@ -533,7 +533,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
                     <td>Not relevant</td>
                     <td>
                       Nothing
-                      <span className="row-owner">{nothing.length > 1 ? `${names(nothing)}. ` : ""}You said these are not relevant, so nothing is published for them.</span>
+                      <span className="row-owner">{nothing.length > 1 ? `${names(nothing)}. ` : ""}A review said these are not relevant, so nothing is included for them.</span>
                     </td>
                   </tr>
                 )}

@@ -25,7 +25,7 @@ function pageOf(entity: DomainEntity, origin: string): string | undefined {
  * llms.txt, from the same model as the other documents: what the business is, what it offers and where,
  * each linked to its own page, what an agent can actually do here, and where the Terms of Action, the
  * catalog and the business data are. Like the JSON-LD and the skill, it publishes only what the site
- * declares or its owner confirmed: a thing read from the text alone is a candidate, never a published
+ * declares or a review confirmed: a thing read from the text alone is a candidate, never a published
  * fact. An action is listed only where an agent's call answered.
  */
 export function llmsText(report: ReportRecord, entities: DomainEntity[], actions: PublishedAction[], options: LlmsOptions): string {
@@ -52,7 +52,7 @@ export function llmsText(report: ReportRecord, entities: DomainEntity[], actions
   const lines: string[] = [`# ${title}`, "", `> ${summary.replace(/\s+/g, " ").trim()}`, ""];
   if (entry?.description && entry.description.trim() !== summary.trim()) lines.push(entry.description.replace(/\s+/g, " ").trim(), "");
   lines.push(
-    `This file is published from the site's Context Engine by WordLift AI Audit. It lists what ${options.host} declares or its owner confirmed. An action appears under "What an agent can do" only after an agent's call to it answered.`,
+    `This file is published from the site's Context Engine by WordLift AI Audit. It lists what ${options.host} declares or a review confirmed${report.refinement ? (report.refinement.filedBy === "owner" ? " (the site's verified owner)" : " (a reviewer; ownership not verified)") : ""}. An action appears under "What an agent can do" only after an agent's call to it answered.`,
     "",
   );
 

@@ -74,13 +74,42 @@ describe("the business as the audit modelled it", () => {
   it("says it in prose an agent reads once, boundaries included", () => {
     const text = businessModelText(businessModel(report, "https://audit.example/reports/r1"));
     expect(text).toContain("Business model of alpina.travel, read from 2 pages (travel-hospitality). The site runs on WordLift.");
-    expect(text).toContain("5 entities: 2 declared in the site's markup, 2 inferred from its text, 1 confirmed by the owner. 3 expected actions, 1 agent-ready.");
-    expect(text).toContain("- Samspitze 4 (Apartment, inferred); answers for Check availability [fix this], Book a stay [talk to us]; the site's words: \"Alpine stays\"");
+    expect(text).toContain("5 entities: 2 declared in the site's markup, 2 inferred from its text, 1 confirmed in a review. 3 expected actions, 1 agent-ready.");
+    expect(text).toContain("- Samspitze 4 (Apartment, inferred); answers for Check availability [no interface found], Book a stay [not found]; the site's words: \"Alpine stays\"");
     expect(text).toContain("- Lungau (Place, inferred, same as https://www.wikidata.org/wiki/Q268090)");
     expect(text).toContain("How it fits together, as the site's markup declares it or a review confirmed:\n- AlpiNest Feriendorf Lungau offers Samspitze 4\n- Samspitze 4 is in Lungau");
     expect(text).toContain("Actions an agent can perform today: Search the site.");
     expect(text).toContain("Actions people can do here that agents cannot yet: Check availability.");
     expect(text).toContain("never move readiness");
+  });
+
+  it("never hands an agent an organization the text merely names as the business", () => {
+    // The same report with its one organization only read from the text, and a second one named beside it.
+    const unsettled: typeof report = {
+      ...report,
+      contextGraph: {
+        ...report.contextGraph!,
+        relations: [],
+        entities: [
+          ...report.contextGraph!.entities.map((entity) => (entity.id === "org" ? { ...entity, origin: "inferred" as const, humanPriority: undefined } : entity)),
+          { id: "other", types: ["Organization"], name: "Databricks", alternateNames: [], sourceUrls: ["https://alpina.travel/"], sameAs: [], offers: [], confidence: 0.6, origin: "inferred" as const },
+        ],
+      },
+    };
+    const model = businessModel(unsettled, "https://audit.example/reports/r1");
+    expect(model.business).toBeNull();
+    expect(model.identity.status).toBe("needs-review");
+    expect(model.otherOrganizations).toEqual(expect.arrayContaining(["org", "other"]));
+    const text = businessModelText(model);
+    expect(text).toContain("Business identity needs review. The scan could not settle which organization runs this site, so alpina.travel stands in as its name.");
+    expect(text).not.toContain("The business:");
+    expect(text).toContain("Other organizations the pages name (mentions, not this business):");
+    expect(entityDetail(findEntity(unsettled, { entityId: "other" })!, unsettled, "https://audit.example/reports/r1").standing).toBe("mention");
+    // Settled, the business is the business, and what else the pages name is still a mention.
+    const settled = businessModel({ ...unsettled, contextGraph: { ...unsettled.contextGraph!, entities: [...report.contextGraph!.entities, unsettled.contextGraph!.entities.at(-1)!] } }, "https://audit.example/reports/r1");
+    expect(settled.identity.status).toBe("settled");
+    expect(settled.business?.name).toBe("AlpiNest Feriendorf Lungau");
+    expect(settled.otherOrganizations).toEqual(["other"]);
   });
 
   it("finds one entity by id, by name, by another name or by part of the name, and explains it with its evidence", () => {

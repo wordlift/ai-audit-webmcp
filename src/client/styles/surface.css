@@ -868,3 +868,6 @@ main:has(> .activate-page) {
 .doorway-counts { flex-direction: column; align-items: flex-start; gap: 6px; }
 .doorway-counts > p.quiet { font-size: 0.92rem; }
 .doorway .send-report { margin: 22px 0 0; }
+
+.inspector-status { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.inspector-untested { color: var(--muted); font-size: 0.95rem; }

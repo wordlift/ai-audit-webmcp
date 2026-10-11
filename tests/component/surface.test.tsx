@@ -11,6 +11,7 @@ const api = vi.hoisted(() => ({
   getReport: vi.fn(),
   refineReport: vi.fn(),
   claimEngine: vi.fn(),
+  retryFoundation: vi.fn(),
 }));
 vi.mock("../../src/client/api/client", async (original) => ({ ...(await original<typeof import("../../src/client/api/client")>()), ...api }));
 
@@ -57,6 +58,7 @@ beforeEach(() => {
   api.getReport.mockReset();
   api.refineReport.mockReset();
   api.claimEngine.mockReset().mockRejectedValue(new Error("no engines here"));
+  api.retryFoundation.mockReset();
   window.localStorage.clear();
 });
 
@@ -258,6 +260,38 @@ describe("Audit, the doorway", () => {
     expect(screen.getByText("Capabilities were not checked in this scan.")).toBeVisible();
     expect(screen.queryByText(/0 \/ /)).toBeNull();
     expect(screen.queryByText("Not found")).toBeNull();
+  });
+
+  it("offers to ask the foundation audit again when that is the one thing missing, and says so when it still does not answer", async () => {
+    const missing: ReportRecord = { ...alpina, status: "partial", foundationAudit: undefined, errors: [{ code: "audit_timeout", phase: "understanding", provider: "wordlift-ai-audit", message: "The audit service took too long to respond.", retryable: true }] };
+    api.retryFoundation.mockRejectedValue(new Error("The foundation audit did not answer this time either. Nothing was changed; try again in a few minutes."));
+    doorway(missing);
+    expect(screen.getByText(/The rest of this report is complete/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Retry the foundation audit" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("did not answer this time either");
+    expect(api.retryFoundation).toHaveBeenCalledWith(missing.id);
+    // A report that has its foundation audit is not offered a retry.
+    expect(within(document.body).queryAllByRole("button", { name: "Retry the foundation audit" })).toHaveLength(1);
+  });
+
+  it("says not tested within the scan's budget for a listed tool that was never called", () => {
+    const base = capability(alpina, "availability.check");
+    const untested: CapabilityResult = {
+      ...base,
+      state: "unverified",
+      evidence: [
+        ...base.evidence.filter((item) => item.audience === "human"),
+        { id: "mcp-tool-check_booking_availability", actionId: "availability.check", audience: "agent", kind: "discovery", sourceUrl: "https://alpina.travel/mcp", claim: "\"check_booking_availability\" is listed by the site's live MCP server, but it was not called: the per-endpoint call budget was already spent", confidence: 0.9, verification: "declared", collectedAt: "2026-10-11T08:00:00.000Z" },
+      ],
+    };
+    render(
+      <MemoryRouter>
+        <CapabilityInspector report={alpina} capability={untested} onClose={noop} onReviewOwnership={noop} />
+      </MemoryRouter>,
+    );
+    expect(screen.getAllByText("Not tested within this scan's budget").length).toBeGreaterThan(0);
+    expect(screen.getByText(/the site's MCP server lists “check_booking_availability”, and the audit did not call it/)).toBeVisible();
+    expect(document.body).not.toHaveTextContent(/Make check availability callable/);
   });
 
   it("explains an empty model by its scope", () => {

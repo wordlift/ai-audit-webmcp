@@ -41,6 +41,8 @@ export interface Publication {
   publishedAt: string;
   /** How many human decisions the report carries; zero publishes what the audit verified, no less. */
   decided: number;
+  /** Whose decisions they are: the site's verified owner, or a reviewer who has not proved the site is theirs. Absent: nobody identified. */
+  decidedBy?: "owner" | "reviewer";
   actions: PublishedAction[];
   documents: { pageJsonLd: string; skill: string; catalog: string; llms: string; runbook: string; siteCatalog: string };
   /** Where a site serves the catalog: the one spelling this service writes. */
