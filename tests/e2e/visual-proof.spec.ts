@@ -1,18 +1,20 @@
 import { expect, test, type Page } from "@playwright/test";
+import { audit, openEvidence, step } from "./helpers";
 
 async function openTravelReport(page: Page) {
-  await page.goto("/");
-  await page.getByLabel("Website URL").fill("https://alpina.travel");
-  await page.getByRole("button", { name: /audit my site/i }).click();
-  await expect(page).toHaveURL(/\/reports\//);
-  await expect(page.getByText(/as AI agents read it|AI agents can do \d+ of the \d+/i).first()).toBeVisible();
-  await page.locator("summary", { hasText: "Model & evidence" }).click();
-  await expect(page.getByRole("heading", { name: "What an agent should be able to do" })).toBeVisible();
+  await audit(page, "https://alpina.travel");
 }
 
 test("visual proof captures the desktop capability map", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await openTravelReport(page);
+  await page.screenshot({ path: testInfo.outputPath("travel-audit-desktop.png"), fullPage: true });
+  await step(page, "Fix").click();
+  await page.getByRole("button", { name: "Check availability" }).click();
+  await expect(page.getByRole("complementary", { name: "Check availability" })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("travel-fix-desktop.png"), fullPage: true });
+  await openEvidence(page);
+  await expect(page.getByRole("heading", { name: "What an agent should be able to do" })).toBeVisible();
   await expect(page.getByText(/This site runs/)).toBeVisible();
   await expect(page.getByRole("link", { name: /WordLift dashboard/ })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("travel-report-desktop.png"), fullPage: true });
@@ -28,6 +30,6 @@ test("visual proof captures the desktop capability map", async ({ page }, testIn
 test("visual proof captures the mobile capability map", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openTravelReport(page);
-  await expect(page.getByText(/as AI agents read it|AI agents can do \d+ of the \d+/i).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What can agents do here?" })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("travel-report-mobile.png"), fullPage: true });
 });

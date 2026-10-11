@@ -126,20 +126,10 @@ function hostOf(url: URL): string {
   return url.hostname.replace(/^www\./, "");
 }
 
-/** The address the audit called, from the evidence an agent-ready action carries. */
-function entryPointFor(capability: CapabilityResult, graph: ContextGraph | undefined, options: PublicationOptions): PublishedEntryPoint | null {
-  const invoked = capability.evidence.filter((item) => item.verification === "invoked" && item.audience === "agent");
-  if (invoked.length === 0) return null;
-  if (capability.via === "sidecar" || invoked.some((item) => item.id.startsWith("sidecar:"))) {
-    const url = options.sidecarEndpoints?.[capability.actionId];
-    return url ? { url, protocol: "sidecar", httpMethod: "POST", via: "sidecar" } : null;
-  }
-  // A template, when the audit kept one, is what an agent needs; a filled URL is only an example.
-  const withTemplate = invoked.find((item) => templateIn(item));
-  const evidence = withTemplate ?? invoked[0]!;
+function entryPointFrom(evidence: CapabilityEvidence, graph: ContextGraph | undefined): PublishedEntryPoint {
   const declared = graph?.interfaces.find((entry) => entry.evidenceId === evidence.id);
   const protocol: EntryProtocol =
-    declared?.protocol === "mcp" || evidence.kind === "tool-result" ? "mcp" : declared?.protocol === "webmcp" || evidence.kind === "webmcp" ? "webmcp" : "http";
+    declared?.protocol === "mcp" || evidence.kind === "tool-result" || evidence.id.startsWith("mcp-") ? "mcp" : declared?.protocol === "webmcp" || evidence.kind === "webmcp" ? "webmcp" : "http";
   const template = templateIn(evidence);
   const tool = /^mcp-call-(.+)$/.exec(evidence.id)?.[1];
   return {
@@ -152,20 +142,54 @@ function entryPointFor(capability: CapabilityResult, graph: ContextGraph | undef
   };
 }
 
+/**
+ * The addresses the audit called, from the evidence an agent-ready action carries: the one an
+ * agent should use first, and any other the audit's agent also called. A template, when the audit
+ * kept one, is what an agent needs; a filled URL is only an example. A second way in is listed only
+ * when it names something to call: a tool or a template, never a bare handshake.
+ */
+function entryPointsFor(capability: CapabilityResult, graph: ContextGraph | undefined, options: PublicationOptions): { entryPoint: PublishedEntryPoint; alsoVerified: PublishedEntryPoint[] } | null {
+  const invoked = capability.evidence.filter((item) => item.verification === "invoked" && item.audience === "agent");
+  if (invoked.length === 0) return null;
+  if (capability.via === "sidecar" || invoked.some((item) => item.id.startsWith("sidecar:"))) {
+    const url = options.sidecarEndpoints?.[capability.actionId];
+    return url ? { entryPoint: { url, protocol: "sidecar", httpMethod: "POST", via: "sidecar" }, alsoVerified: [] } : null;
+  }
+  const first = invoked.find((item) => templateIn(item)) ?? invoked.find((item) => /^mcp-call-/.test(item.id)) ?? invoked[0]!;
+  const entryPoint = entryPointFrom(first, graph);
+  const key = (entry: PublishedEntryPoint) => `${entry.urlTemplate ?? entry.url}|${entry.tool ?? ""}`;
+  const seen = new Set([key(entryPoint)]);
+  const alsoVerified: PublishedEntryPoint[] = [];
+  for (const item of invoked) {
+    if (item === first) continue;
+    const entry = entryPointFrom(item, graph);
+    if ((!entry.tool && !entry.urlTemplate) || seen.has(key(entry))) continue;
+    seen.add(key(entry));
+    alsoVerified.push(entry);
+  }
+  return { entryPoint, alsoVerified: alsoVerified.slice(0, 4) };
+}
+
+/** The page on the site itself where the audit saw a person do this. A place to send someone, never something to call. */
+function humanPageFor(capability: CapabilityResult, origin: string): string | undefined {
+  return capability.evidence.find((item) => item.audience === "human" && item.verification === "observed" && item.sourceUrl.startsWith(`${origin}/`))?.sourceUrl;
+}
+
 function templateIn(evidence: CapabilityEvidence): string | undefined {
   const snippet = evidence.snippet?.trim();
   return snippet && /^https?:\/\/\S+\{[^}]+\}\S*$/.test(snippet) ? snippet : undefined;
 }
 
-function publishedAction(capability: CapabilityResult, graph: ContextGraph | undefined, options: PublicationOptions): PublishedAction {
+function publishedAction(capability: CapabilityResult, graph: ContextGraph | undefined, options: PublicationOptions, origin: string): PublishedAction {
   const verdict = publishedAs(capability);
-  const base = { actionId: capability.actionId, label: capability.label, state: capability.state, boundary: capability.boundary ?? null };
+  const humanUrl = humanPageFor(capability, origin);
+  const base = { actionId: capability.actionId, label: capability.label, state: capability.state, boundary: capability.boundary ?? null, ...(humanUrl ? { humanUrl } : {}) };
   if (verdict.publishedAs === "action") {
-    const entryPoint = entryPointFor(capability, graph, options);
-    if (!entryPoint) {
+    const entries = entryPointsFor(capability, graph, options);
+    if (!entries) {
       return { ...base, publishedAs: "entity", because: "It answered, but the audit kept no address an agent could call. The entity is published, no action." };
     }
-    return { ...base, ...verdict, entryPoint };
+    return { ...base, ...verdict, entryPoint: entries.entryPoint, ...(entries.alsoVerified.length > 0 ? { alsoVerified: entries.alsoVerified } : {}) };
   }
   if (verdict.publishedAs === "handoff" && capability.boundaryPartner) {
     return { ...base, ...verdict, provider: capability.boundaryPartner };
@@ -286,22 +310,47 @@ const OWN_WORDS: Record<ActionBoundary, string> = {
   "not-applicable": "not ours",
 };
 
-function howToCall(entry: PublishedEntryPoint): string[] {
+function howToCall(entry: PublishedEntryPoint, lead = "How to call it"): string[] {
   switch (entry.protocol) {
     case "http": {
       const placeholder = entry.urlTemplate ? /\{([^}]+)\}/.exec(entry.urlTemplate)?.[1] : undefined;
       return [
-        `- How to call it: \`GET ${entry.urlTemplate ?? entry.url}\`${placeholder ? `, filling \`{${placeholder}}\` with the query.` : "."}`,
+        `- ${lead}: \`GET ${entry.urlTemplate ?? entry.url}\`${placeholder ? `, filling \`{${placeholder}}\` with the query.` : "."}`,
       ];
     }
     case "mcp":
       return [
-        `- How to call it: an MCP server at ${entry.url} (Streamable HTTP; JSON-RPC over POST)${entry.tool ? `, tool \`${entry.tool}\`` : ""}.`,
+        entry.tool
+          ? `- ${lead}: an MCP server at ${entry.url} (Streamable HTTP; JSON-RPC over POST), tool \`${entry.tool}\`.`
+          : `- ${lead}: an MCP server at ${entry.url} (Streamable HTTP; JSON-RPC over POST). The audit opened a session and called no single tool for this action: list the server's tools with \`tools/list\` and choose by description.`,
       ];
     case "webmcp":
-      return [`- How to call it: an in-page tool on ${entry.url}, registered through WebMCP; open the page in a WebMCP-enabled browser.`];
+      return [`- ${lead}: an in-page tool on ${entry.url}, registered through WebMCP; open the page in a WebMCP-enabled browser.`];
     case "sidecar":
-      return [`- How to call it: POST JSON to ${entry.url}. WordLift runs this interface for the site.`];
+      return [`- ${lead}: POST JSON to ${entry.url}. WordLift runs this interface for the site.`];
+  }
+}
+
+/**
+ * What an assistant does about an action it cannot call here: where a person does it, when the
+ * audit saw a page for that, and why there is nothing to call, in terms of what the audit found.
+ * It names no interface: one the audit could not call is not something this file offers.
+ */
+export function gapLine(action: PublishedAction, host: string): string {
+  const there = action.humanUrl ? ` Send the person to ${action.humanUrl}.` : "";
+  if (action.boundary === "informational-only") {
+    return `${host} describes this and does not carry it out for agents.${action.humanUrl ? ` The description is at ${action.humanUrl}.` : ""}`;
+  }
+  const whose = action.boundary === "owned" ? `${host} handles this itself. ` : "";
+  switch (action.state) {
+    case "human-only":
+      return `${whose}People do this on the site; no interface for agents was found.${there}`;
+    case "unverified":
+      return `${whose}The site declares an interface for this that has not answered a call from the audit, so it is not offered here.${action.humanUrl ? ` People do this at ${action.humanUrl}; send the person there.` : " Tell the person it cannot be done through an agent yet."}`;
+    case "agent-ready":
+      return `${whose}It answered the audit, but no address an agent could call was kept.${there}`;
+    default:
+      return `${whose}Not found on the pages the audit read, for people or for agents. Say so; do not guess where it happens.`;
   }
 }
 
@@ -327,9 +376,9 @@ function skillMarkdown(report: ReportRecord, entities: DomainEntity[], actions: 
     "",
     `# ${host}: Terms of Action`,
     "",
-    `Whether any interface named here answers today is stated in the report and nowhere else: ${options.reportUrl}. This file says what the business is, who is responsible for each action, and where an interface is; it never says whether an action answers today.`,
+    `Compiled ${publishedAt.slice(0, 10)} by WordLift AI Audit from a read of ${host}${decidedBy(report)}. This file says what the business is, who is responsible for each action, and where an interface is. It never says an action answers today: each interface named here answered the audit's call on that date, and only a call says whether it still does. Treat a call that fails as the answer, and tell the person.`,
     "",
-    `Published ${publishedAt.slice(0, 10)} by WordLift AI Audit${decidedBy(report)}.`,
+    `The audit report behind this file, kept for a limited time: ${options.reportUrl}`,
     "",
     "## What this business is",
     "",
@@ -362,15 +411,24 @@ function skillMarkdown(report: ReportRecord, entities: DomainEntity[], actions: 
     lines.push(`- Who runs it: ${action.boundary ? OWN_WORDS[action.boundary] : "undecided; the owner has not said"}${action.provider ? ` — ${action.provider.name}${action.provider.url ? ` (${action.provider.url})` : ""}` : ""}.`);
     if (capability.boundaryRationale) lines.push(`- Why: ${capability.boundaryRationale}`);
     if (action.entryPoint) lines.push(...howToCall(action.entryPoint));
+    for (const other of action.alsoVerified ?? []) lines.push(...howToCall(other, "Also answered the audit"));
+    if (action.humanUrl) lines.push(`- For a person: ${action.humanUrl}`);
     if (action.publishedAs === "handoff") lines.push(action.provider?.url ? `- Where: the partner's site, ${action.provider.url}. Nothing on ${host} performs this.` : `- Where: with the partner. Nothing on ${host} performs this.`);
     lines.push("");
   }
   if (described.length > 0) {
-    lines.push("## Described, not offered to agents", "", ...described.map((action) => `- ${action.label} (\`${action.actionId}\`): ${action.because}`), "");
+    lines.push(
+      "## Not available to agents here yet",
+      "",
+      "Nothing in this section can be called. When a person asks for one of these, say an agent cannot do it on this site yet, and point them to the page named, when one is.",
+      "",
+      ...described.map((action) => `- ${action.label} (\`${action.actionId}\`): ${gapLine(action, host)}`),
+      "",
+    );
   }
 
   lines.push("## Never", "");
-  lines.push("- Never take this file as proof that an action answers today. Read the report.");
+  lines.push("- Never take this file as proof that an action answers today. Call the interface, and report a failure as a failure.");
   if (writes.length > 0) {
     lines.push(`- Never perform ${writes.map((action) => action.label.toLowerCase()).join(", ")} without a person's confirmation: each changes something for them.`);
   }
@@ -438,7 +496,7 @@ export function compilePublication(report: ReportRecord, options: PublicationOpt
   // Every expected action, and any action a person decided about, has a row; the rest is noise.
   const actions = (report.capabilities ?? [])
     .filter((capability) => capability.expected || capability.boundary || capability.expectationSource.includes("human:decision"))
-    .map((capability) => publishedAction(capability, graph, options));
+    .map((capability) => publishedAction(capability, graph, options, origin));
   const siteName = entities.find((entity) => entity.types.includes("WebSite"))?.name ?? graph?.pages[0]?.title ?? host;
   const documents = {
     pageJsonLd: `${options.apiUrl}/publish/page.jsonld`,
@@ -462,7 +520,7 @@ export function compilePublication(report: ReportRecord, options: PublicationOpt
     jsonLd: pageJsonLd(report, entities, actions, origin, host),
     skill: skillMarkdown(report, entities, actions, host, options, publishedAt),
     catalog: catalogFor(report, actions, host, origin, siteName, options, publishedAt),
-    llms: llmsText(report, entities, actions, { origin, host, reportUrl: options.reportUrl, documents }),
+    llms: llmsText(report, entities, actions, { origin, host, reportUrl: options.reportUrl, documents, sitePaths: SITE_PATHS }),
     sitePaths: SITE_PATHS,
   };
   return { ...publication, runbook: runbookMarkdown({ ...publication, runbook: "" }, { serviceUrl: options.serviceUrl }) };

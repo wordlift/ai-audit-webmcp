@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+import { openEvidence, step } from "./helpers";
 
 /**
  * The complete human-guided compilation: audit → inspect the machine draft → submit a reviewer's
@@ -16,14 +17,18 @@ test("a human refinement turns the machine draft into refined Terms of Action", 
 
   // 2. The draft says whose interpretation it is, and offers the review path. Playwright has no
   // WebMCP, so the self-test badge must say exactly which browser the reader needs.
-  await page.locator("summary", { hasText: "Model & evidence" }).click();
+  await expect(page.locator(".doorway")).toBeVisible();
+  await openEvidence(page);
   await expect(page.getByText("Machine-generated Terms of Action")).toBeVisible();
-  // The review is offered beside the Context Engine on the first screen, and again in the fold: the same prompt from either door.
-  await expect(page.getByRole("button", { name: /review with chatgpt/i })).toHaveCount(2);
+  // The review is offered here, with the Terms of Action, and beside the business model in Fix: the same prompt from either door.
+  await expect(page.getByRole("button", { name: /review with chatgpt/i })).toHaveCount(1);
   await expect(page.getByText(/site tools require a webmcp-enabled browser/i)).toBeVisible();
 
   // 3. Refinement: the decisions ChatGPT would submit through refine-terms-of-action.
-  const parentId = page.url().split("/reports/")[1];
+  const parentId = /\/reports\/([0-9a-f-]{36})/.exec(page.url())![1];
+  await step(page, "Fix").click();
+  await page.getByRole("tab", { name: "Business model" }).click();
+  await expect(page.getByRole("button", { name: /review with chatgpt/i })).toHaveCount(1);
   const response = await page.request.post(`/api/reports/${parentId}/refine`, {
     data: {
       businessRole: "destination-organization",
@@ -45,8 +50,7 @@ test("a human refinement turns the machine draft into refined Terms of Action", 
   // 4. The child is a new immutable report that EMBODIES the judgment: the human role leads the
   // header, the change summary is compact with the full log folded away, and human vocabulary
   // sits in the lexical graph itself.
-  await page.goto(`/reports/${child.id}`);
-  await page.locator("summary", { hasText: "Model & evidence" }).click();
+  await page.goto(`/reports/${child.id}#full-audit`);
   await expect(page.getByText("Human-refined Terms of Action")).toBeVisible();
   await expect(page.getByRole("heading", { name: /destination organization/i })).toBeVisible();
   await expect(page.getByText(/machine archetype: travel \/ hospitality/i)).toBeVisible();
@@ -65,8 +69,7 @@ test("a human refinement turns the machine draft into refined Terms of Action", 
   await page.keyboard.press("Escape");
 
   // 6. The machine draft is unchanged at its own URL.
-  await page.goto(`/reports/${parentId}`);
-  await page.locator("summary", { hasText: "Model & evidence" }).click();
+  await page.goto(`/reports/${parentId}#full-audit`);
   await expect(page.getByText("Machine-generated Terms of Action")).toBeVisible();
 
   // A refinement that references nothing in the report is refused, not silently accepted.
@@ -93,7 +96,7 @@ test("a report that landed at once asks for the address once, and a shared link 
   await page.getByLabel("Website URL").fill("https://alpina.travel");
   await page.getByRole("button", { name: /audit my site/i }).click();
   await expect(page).toHaveURL(/\/reports\//);
-  await expect(page.locator(".first-screen")).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator(".doorway")).toBeVisible({ timeout: 60_000 });
   const reportId = page.url().split("/reports/")[1]!;
 
   const late = page.getByRole("textbox", { name: /landed fast.*by email too/i });
@@ -104,7 +107,7 @@ test("a report that landed at once asks for the address once, and a shared link 
 
   // Dismissed is remembered for this tab; a cold open of the link never asks.
   await page.reload();
-  await expect(page.locator(".first-screen")).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator(".doorway")).toBeVisible({ timeout: 60_000 });
   await expect(page.getByRole("textbox", { name: /email/i })).toHaveCount(0);
 
   const delivery = await page.request.post(`/api/reports/${reportId}/deliver`, { data: { email: "reviewer@example.com", surface: "web" } });
@@ -113,6 +116,6 @@ test("a report that landed at once asks for the address once, and a shared link 
 
   // The address is never written into a page anyone with the link can open.
   await page.reload();
-  await expect(page.locator(".first-screen")).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator(".doorway")).toBeVisible({ timeout: 60_000 });
   await expect(page.getByText("reviewer@example.com")).toHaveCount(0);
 });
