@@ -3,7 +3,7 @@ import { parseHTML } from "linkedom";
 import request from "supertest";
 import { loadActionModel } from "../../src/domain/action-model/loadModel.js";
 import { ardManifestSchema } from "../../src/domain/publish/ardSchema.js";
-import { compilePublication, organizationType, publishableEntities, publishedAs } from "../../src/domain/publish/publication.js";
+import { compilePublication, gapLine, organizationType, publishableEntities, publishedAs } from "../../src/domain/publish/publication.js";
 import { createApp } from "../../src/server/app.js";
 import { FixtureProvider } from "../../src/server/adapters/fixtures/FixtureProvider.js";
 import { interfacesNamedIn, isSkillEntry, parseCatalogEntries, sameOriginEntries } from "../../src/server/adapters/scrape/agentCatalog.js";
@@ -154,12 +154,21 @@ describe("llms.txt, for language models", () => {
 
     expect(llms).toMatch(/^# .+\n\n> .+\n/);
     expect(llms).toContain("## What an agent can do");
-    expect(llms).toContain(`- [Terms of Action](${documents.skill})`);
+    // The file is read on the site, long after the report is gone: it links to the site's own copies, never to the report's.
+    expect(llms).toContain("- [Terms of Action](https://alpina.travel/.well-known/terms-of-action.md)");
+    expect(llms).toContain("- [Business data](https://alpina.travel/)");
+    expect(llms).not.toContain(documents.skill);
+    expect(llms).not.toContain(documents.pageJsonLd);
     expect(llms).toContain("- [Agent catalog](https://alpina.travel/.well-known/ai-catalog.json)");
     expect(llms).toContain(`- [AI Audit report](${report ? `https://audit.example/reports/${child.id}` : ""})`);
     // An action is listed only where an agent's call answered.
     // An action is listed as callable only where an agent's call answered; a partner's is said as the partner's.
-    for (const action of actions.filter((candidate) => candidate.publishedAs === "entity" || candidate.publishedAs === "nothing")) expect(llms).not.toContain(`- [${action.label}](`);
+    const callable = llms.slice(llms.indexOf("## What an agent can do"), llms.indexOf("## How to act here"));
+    for (const action of actions.filter((candidate) => candidate.publishedAs === "entity" || candidate.publishedAs === "nothing")) expect(callable).not.toContain(`- [${action.label}](`);
+    // What a person can do and an agent cannot is a page to send them to, said as that.
+    for (const action of actions.filter((candidate) => candidate.publishedAs === "entity" && candidate.humanUrl)) {
+      expect(llms).toContain(`- [${action.label}](${action.humanUrl}): a page for people; there is nothing here for an agent to call`);
+    }
     for (const action of actions.filter((candidate) => candidate.publishedAs === "handoff" && candidate.provider)) expect(llms).toContain(`handled by ${action.provider!.name}`);
     // Nothing the text alone suggested is published.
     for (const entity of (report.contextGraph?.entities ?? []).filter((candidate) => candidate.origin === "inferred" && candidate.humanPriority !== "primary")) {
@@ -189,13 +198,48 @@ describe("the skill, for acting", () => {
     expect(skill).toContain("- Who runs it: a partner runs it — Lungau Lodging (https://lungau-lodging.example/book).");
     expect(skill).toContain("- Why: Partners own the inventory.");
     expect(skill).toContain("an MCP server at https://alpina.travel/mcp/alpina/http/mcp");
-    expect(skill).toContain("- Retrieve details (`detail.retrieve`): You said you only describe it.");
+    expect(skill).toContain("- Retrieve details (`detail.retrieve`): alpina.travel describes this and does not carry it out for agents.");
     expect(skill).toMatch(/Never attempt compare options, explain policies here/);
     // Neither published action changes anything for a person, so there is no confirmation rule to state.
     expect(skill).not.toContain("Never perform");
     expect(skill).toContain("https://audit.example/reports/" + child.id);
-    // Readiness lives in the report. The file states boundaries and addresses, never outcomes.
+    // The file states boundaries and addresses, and the date the audit's call answered; never that anything answers today.
     expect(skill).not.toMatch(/agent-ready|verified|\bworks\b|succeed/i);
+    expect(skill).toContain("It never says an action answers today");
+    expect(skill).toContain("kept for a limited time");
+  });
+
+  it("tells an assistant what to do about what it cannot call, and names every way in the audit used", async () => {
+    const { orchestrator } = harness();
+    const report = await orchestrator.create({ requestId: randomUUID(), url: "https://alpina.travel" });
+    const { skill, actions, runbook } = await orchestrator.publish(report.id);
+    const gaps = skill.slice(skill.indexOf("## Not available to agents here yet"));
+    expect(gaps).toContain("Nothing in this section can be called.");
+    for (const action of actions.filter((candidate) => candidate.publishedAs === "entity")) {
+      const line = gaps.split("\n").find((candidate) => candidate.includes(`(\`${action.actionId}\`)`))!;
+      // Each gap says its own reason, and where a person does it when the audit saw a page for that.
+      expect(line).toBe(`- ${action.label} (\`${action.actionId}\`): ${gapLine(action, "alpina.travel")}`);
+      if (action.humanUrl) expect(line).toContain(action.humanUrl);
+      expect(line).not.toMatch(/nothing is declared that an agent could not call/);
+    }
+    // A person's page is on the site itself, and is never offered as something to call.
+    for (const action of actions.filter((candidate) => candidate.humanUrl)) expect(action.humanUrl).toMatch(/^https:\/\/alpina\.travel\//);
+    // An MCP server with no tool named says how to find one, rather than leaving the agent to guess.
+    for (const action of actions.filter((candidate) => candidate.entryPoint?.protocol === "mcp" && !candidate.entryPoint.tool)) {
+      expect(skill).toContain("list the server's tools with `tools/list` and choose by description");
+      expect(action.entryPoint!.url).toBeTruthy();
+    }
+    // The runbook promises only what the product checks.
+    expect(runbook).not.toContain("is listed there by name");
+    expect(runbook).toContain("nothing on the site may depend on it");
+  });
+
+  it("uses each gap's own finding", () => {
+    const action = (state: "missing" | "human-only" | "unverified", extra: Record<string, unknown> = {}) => ({ actionId: "availability.check", label: "Check availability", state, boundary: null, publishedAs: "entity" as const, because: "", ...extra });
+    expect(gapLine(action("human-only", { humanUrl: "https://shop.example/dates" }), "shop.example")).toBe("People do this on the site; no interface for agents was found. Send the person to https://shop.example/dates.");
+    expect(gapLine(action("missing"), "shop.example")).toMatch(/^Not found on the pages the audit read/);
+    expect(gapLine(action("unverified"), "shop.example")).toContain("Tell the person it cannot be done through an agent yet.");
+    expect(gapLine(action("missing", { boundary: "owned" }), "shop.example")).toMatch(/^shop\.example handles this itself\. /);
   });
 });
 
