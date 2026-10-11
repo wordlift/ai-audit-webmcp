@@ -19,6 +19,7 @@ import { CapabilityInspector } from "../../src/client/surface/CapabilityInspecto
 import { EntityReviewModal } from "../../src/client/surface/EntityReview";
 import { FixView } from "../../src/client/surface/FixView";
 import { OwnershipModal } from "../../src/client/surface/OwnershipModal";
+import { VersionStrip } from "../../src/client/surface/VersionStrip";
 import { modeFromHash, reportHref } from "../../src/client/surface/nav";
 import {
   agentStatus,
@@ -182,8 +183,14 @@ describe("Audit, the doorway", () => {
     expect(screen.getByRole("heading", { name: "What we understood about your business" })).toBeVisible();
     expect(screen.queryByText(/Your business, understood/)).toBeNull();
     expect(screen.getByText("Business identity needs review")).toBeVisible();
-    expect(screen.getByText(/The scan selected NVIDIA from your page content/)).toBeVisible();
-    for (const heading of screen.getAllByRole("heading")) expect(heading).not.toHaveTextContent("NVIDIA");
+    // The limitation is said beside the heading, with the domain as the safe identity; the third party the scan picked is named nowhere on the doorway.
+    expect(screen.getByText(/could not settle which organization runs this site, so wordlift\.io stands in as its name/)).toBeVisible();
+    expect(screen.getByRole("button", { name: /review identity/i })).toBeVisible();
+    expect(document.body).not.toHaveTextContent("NVIDIA");
+    // Candidates are only what the site is visibly built around; other names it mentions are counted, not shown as cards.
+    const candidates = within(screen.getByRole("list", { name: "Candidate core entities" })).getAllByRole("listitem").map((item) => item.textContent ?? "");
+    expect(candidates.some((text) => /Yoast|Google|Microsoft|Databricks/.test(text))).toBe(false);
+    expect(screen.getByText(/other mentions on these pages, including other organizations and products the site names/)).toBeVisible();
   });
 
   it("labels uncertain entries as candidates, with type, provenance, source, details and any returned Wikidata link", () => {
@@ -216,7 +223,8 @@ describe("Audit, the doorway", () => {
     expect(screen.getByText("Nothing in this scan is verified as callable by an agent.")).toBeVisible();
     // All four stages, every expected action, each with a worded status.
     for (const stage of ["Discover", "Understand & decide", "Act", "Manage"]) expect(screen.getByRole("heading", { name: stage })).toBeVisible();
-    expect(screen.getByRole("button", { name: /Submit an inquiry.*No interface found/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /Submit an inquiry.*No interface found/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /Submit an inquiry.*No interface found/ })).not.toHaveAttribute("aria-pressed");
     expect(screen.getByRole("button", { name: /Retrieve details.*Unverified/ })).toBeVisible();
     expect(screen.getByRole("button", { name: /Start a trial.*Not found/ })).toBeVisible();
     expect(screen.getByRole("link", { name: /4 other detected actions/ })).toHaveAttribute("href", expect.stringContaining("others=1"));
@@ -225,7 +233,10 @@ describe("Audit, the doorway", () => {
 
   it("shows returned relations with their provenance, and a settled business as core", () => {
     doorway(alpina);
-    expect(screen.getByRole("list", { name: /core entities/i })).toHaveTextContent("AlpiNest Feriendorf Lungau");
+    // What the site declares is core; what was read from the text sits apart, as additional candidates.
+    expect(screen.getByRole("list", { name: "Core entities" })).toHaveTextContent("AlpiNest Feriendorf Lungau");
+    expect(screen.getByRole("list", { name: "Core entities" })).not.toHaveTextContent("Samspitze 4");
+    expect(screen.getByRole("list", { name: "Additional candidates" })).toHaveTextContent("Samspitze 4");
     expect(screen.queryByText("Business identity needs review")).toBeNull();
     expect(screen.getByText(`${alpina.contextGraph!.relations!.length} relationships returned`)).toBeVisible();
     expect(screen.getByText(/3 \/ 10 verified/)).toBeVisible();
@@ -288,7 +299,9 @@ describe("the entity review", () => {
 
   it("shows a selected entity's linked identity and sources without reviewing anything", () => {
     open();
-    fireEvent.click(screen.getByRole("button", { name: "NVIDIA" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show evidence for NVIDIA" }));
+    // Looking at evidence is not a decision: the trigger says what it does and carries no checked state.
+    expect(screen.getByRole("button", { name: "Show evidence for NVIDIA" })).not.toHaveAttribute("aria-pressed");
     const evidence = screen.getByLabelText("Evidence for NVIDIA");
     expect(within(evidence).getByRole("heading", { name: "Why NVIDIA?" })).toBeVisible();
     expect(within(evidence).getByRole("link", { name: /NVIDIA on Wikidata/ })).toHaveAttribute("href", "https://www.wikidata.org/wiki/Q182477");
@@ -558,5 +571,31 @@ describe("the operating role", () => {
     fireEvent.click(screen.getByRole("button", { name: /save review/i }));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(api.refineReport.mock.calls[0]!.slice(0, 2)).toEqual([wordlift.id, { businessRole: "software-vendor" }]);
+  });
+});
+
+describe("the version strip", () => {
+  const strip = (report: ReportRecord) => render(<MemoryRouter><VersionStrip report={report} now={() => new Date(report.collectedAt ?? report.createdAt).getTime() + 80 * 60_000} /></MemoryRouter>);
+
+  it("says an original scan is one, when it was read, and that it holds no review decisions", () => {
+    strip(wordlift);
+    expect(screen.getByText("Original scan")).toBeVisible();
+    expect(screen.getByText(/Site read 80 minutes ago/)).toBeVisible();
+    expect(screen.getByText("No review decisions in this version")).toBeVisible();
+    expect(document.body).not.toHaveTextContent(/\byour\b/i);
+  });
+
+  it("labels a reused read, counts the decisions in a reviewed version, and attributes them without saying you", () => {
+    strip({
+      ...wordlift,
+      reusedFrom: "44444444-4444-4444-8444-444444444444",
+      parentReportId: "55555555-5555-4555-8555-555555555555",
+      refinement: { assertions: {}, decisions: 7, conflicts: [], provenance: "human-provided", appliedAt: "2026-10-11T08:00:00.000Z", carried: true, filedBy: "reviewer" },
+    });
+    expect(screen.getByText("Reviewed version")).toBeVisible();
+    expect(screen.getByText(/reused from an earlier read/)).toBeVisible();
+    expect(screen.getByText("7 review decisions included, carried over from an earlier review of this site")).toBeVisible();
+    expect(screen.getByText("by a reviewer; ownership not verified")).toBeVisible();
+    expect(document.body).not.toHaveTextContent(/\byour\b/i);
   });
 });

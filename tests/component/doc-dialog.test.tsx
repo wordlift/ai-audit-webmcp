@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { DocDialog, jsonTokens, markdownBlocks, type PublishedDoc } from "../../src/client/components/DocDialog";
+import { DocDialog, Markdown, jsonTokens, markdownBlocks, type MarkdownBlock, type PublishedDoc } from "../../src/client/components/DocDialog";
 
 const jsonDoc: PublishedDoc = {
   kind: "Business data",
@@ -71,5 +71,21 @@ describe("one published document, read in full", () => {
   it("renders nothing when no document is open", () => {
     render(<DocDialog doc={null} onOpenChange={() => undefined} />);
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("renders a pipe table as a table and a fenced block as something to copy, and leaves the file's bytes alone", () => {
+    const text = ["## What goes where", "", "| Document | Fetch it from | Put it at |", "|---|---|---|", "| llms.txt | https://audit.example/llms.txt | `/llms.txt` |", "", "```bash", "curl -sI https://site.example/llms.txt | head -1", "```", ""].join("\n");
+    const blocks = markdownBlocks(text);
+    expect(blocks.map((block) => block.type)).toEqual(["heading", "table", "code"]);
+    const table = blocks[1] as Extract<MarkdownBlock, { type: "table" }>;
+    expect(table.head).toEqual(["Document", "Fetch it from", "Put it at"]);
+    // The separator row is structure, never a row of dashes.
+    expect(table.rows).toEqual([["llms.txt", "https://audit.example/llms.txt", "`/llms.txt`"]]);
+    render(<Markdown text={text} />);
+    expect(screen.getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual(["Document", "Fetch it from", "Put it at"]);
+    expect(screen.getByRole("cell", { name: "/llms.txt" })).toBeVisible();
+    expect(screen.queryByText(/\|---/)).toBeNull();
+    expect(screen.getByText("curl -sI https://site.example/llms.txt | head -1")).toBeVisible();
+    expect(screen.getByRole("button", { name: /copy/i })).toBeVisible();
   });
 });

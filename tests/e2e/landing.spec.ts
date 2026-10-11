@@ -3,7 +3,7 @@ import { audit, openEvidence, step } from "./helpers";
 
 test("landing page asks one question and takes a URL", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /your business, as ai agents read it/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /see how ai understands your business, and what agents can do/i })).toBeVisible();
   await expect(page.getByLabel("Website URL")).toBeVisible();
   await expect(page.getByText(/checks what AI agents can actually do with it/i)).toBeVisible();
 });

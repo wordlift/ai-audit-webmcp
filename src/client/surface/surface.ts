@@ -1,5 +1,5 @@
 import { entityProvenance, type EntityProvenance } from "../../shared/format/businessModel.js";
-import { modelView, type ViewEntity } from "../../shared/format/modelView.js";
+import { looksGeneric, modelView, type ViewEntity } from "../../shared/format/modelView.js";
 import type { ActionBoundary, CapabilityResult, DomainEntity, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
 
 /**
@@ -369,9 +369,11 @@ export function identity(report: ReportRecord): IdentityState {
   const entities = report.contextGraph?.entities ?? [];
   if (entities.length === 0) return { state: "empty" };
   const business = modelView(report).business;
-  if (!business) return { state: "needs-review", entity: null, why: "The scan found no organization it could name as the business behind these pages." };
+  // The candidate stays out of the sentence: a third party named on the page is not introduced as the business.
+  const why = `The scan could not settle which organization runs this site, so ${hostOf(report)} stands in as its name.`;
+  if (!business) return { state: "needs-review", entity: null, why };
   if (business.provenance !== "inferred") return { state: "resolved", entity: business };
-  return { state: "needs-review", entity: business, why: `The scan selected ${business.name} from your page content.` };
+  return { state: "needs-review", entity: business, why };
 }
 
 export interface CoreEntity {
@@ -387,26 +389,58 @@ function toCore(view: ViewEntity, report: ReportRecord): CoreEntity | null {
   return { view: { ...view, provenance: entityProvenance(entity) }, entity, wikidata: wikidataOf(entity), seen: seenOn(entity, report) };
 }
 
+export interface DoorwayEntities {
+  /** Declared by the site or marked core in a review: what the report can stand behind. */
+  confirmed: CoreEntity[];
+  /** Read from the text and prominent on the site: candidates, shown apart and said to be so. */
+  candidates: CoreEntity[];
+  /** Everything else the report holds, counted and one click away, never promoted. */
+  others: number;
+}
+
 /**
- * The compact set the doorway shows, from the model's own order: the business when the report
- * settled it, then what it offers and where. A business that still needs review is left to the
- * review line beside the set; nothing is ranked again here.
+ * What the doorway shows, in two groups that are never mixed. Confirmed is what the site declares
+ * or a review marked core. Candidates are inferred things the site is visibly built around: a name
+ * in its titles or on more than one page. A name the text merely mentions is not a candidate; it
+ * stays in the full list. Nothing is ranked again here, and no fixed number of cards is filled.
  */
-export function coreEntities(report: ReportRecord, max = 4): CoreEntity[] {
+export function doorwayEntities(report: ReportRecord, max = 4): DoorwayEntities {
   const view = modelView(report);
   const who = identity(report);
   const unsettled = who.state === "needs-review" ? who.entity?.id : undefined;
+  const entities = report.contextGraph?.entities ?? [];
   const ordered = [...view.preview, ...view.offerings, ...view.places];
   const seen = new Set<string>();
-  const out: CoreEntity[] = [];
+  const confirmed: CoreEntity[] = [];
+  const candidates: CoreEntity[] = [];
+  // What a review marked core leads, whatever the model's own order says about it.
+  for (const entity of entities.filter((candidate) => candidate.humanPriority === "primary")) {
+    const core = toCore({ id: entity.id, name: entity.name, type: entity.types[0] ?? "Thing", role: "offering", provenance: "human-confirmed", variants: 0 }, report);
+    if (core && !seen.has(entity.id)) {
+      seen.add(entity.id);
+      confirmed.push({ ...core, view: { ...core.view, role: ordered.find((item) => item.id === entity.id)?.role ?? core.view.role } });
+    }
+  }
   for (const candidate of ordered) {
     if (candidate.id === unsettled || seen.has(candidate.id)) continue;
-    seen.add(candidate.id);
     const core = toCore(candidate, report);
-    if (core) out.push(core);
-    if (out.length >= max) break;
+    if (!core || core.entity.humanPriority === "demoted") continue;
+    if (core.view.provenance !== "inferred") {
+      seen.add(candidate.id);
+      confirmed.push(core);
+    } else if (candidates.length < max && (candidate.prominent || core.entity.sourceUrls.length > 1) && !(core.view.role === "offering" && looksGeneric(core.entity.name))) {
+      // A bare label ("Product", "Pricing") is a word on the page, not a thing the site is built around.
+      seen.add(candidate.id);
+      candidates.push(core);
+    }
   }
-  return out;
+  return { confirmed: confirmed.slice(0, 6), candidates, others: Math.max(0, entities.length - Math.min(confirmed.length, 6) - candidates.length) };
+}
+
+/** The doorway's two groups as one list, confirmed first: what the review opens on, and what Activate previews. */
+export function coreEntities(report: ReportRecord, max = 4): CoreEntity[] {
+  const shown = doorwayEntities(report, max);
+  return [...shown.confirmed, ...shown.candidates];
 }
 
 /** The entities the review opens on: the doorway's set, the business candidate, and every entity a review already placed. */

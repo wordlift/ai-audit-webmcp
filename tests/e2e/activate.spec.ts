@@ -14,7 +14,11 @@ test("the Activate screen previews the publication, keeps the delivery routes an
   await expect(step(page, "Activate")).toHaveAttribute("aria-current", "step");
   // Other specs audit the same fixture, so the store may hold one reading or several: either the
   // movement or the promise of one, never a bare number.
-  await expect(page.locator(".activate-score")).toContainText(/of 100 agent-ready(\. The next reading shows how it moved\.| since |, unchanged since )/);
+  await expect(page.locator(".activate-score")).toContainText(/of 100 agent-ready in this scan\. (This is the only reading on record|It was \d+ → \d+ since the earliest stored reading|The earliest stored reading)/);
+  await expect(page.getByLabel("What each date means")).toContainText("Site last read");
+  await expect(page.getByLabel("What each date means")).toContainText("This package prepared");
+  // The same report, said the same way as on Audit and Fix.
+  await expect(page.locator(".version-strip")).toContainText("Original scan");
 
   // Only what the audit's agent called is included as callable; nothing unverified is shown as verified.
   const preview = page.getByRole("tabpanel").getByRole("table");
@@ -28,6 +32,9 @@ test("the Activate screen previews the publication, keeps the delivery routes an
   await expect(page.getByRole("button", { name: /run the audit again/i })).toBeVisible();
   await page.getByRole("button", { name: /read the runbook/i }).click();
   await expect(page.getByRole("dialog").getByRole("heading", { name: "Runbook" })).toBeVisible();
+  // The runbook's table reads as a table: three headed columns, no pipes or separator row.
+  await expect(page.getByRole("dialog").getByRole("columnheader")).toHaveText(["Document", "Fetch it from", "Put it at"]);
+  await expect(page.getByRole("dialog").getByText("|---")).toHaveCount(0);
   await page.keyboard.press("Escape");
 
   // The technical files stay reachable, by name, through the report's own export links.

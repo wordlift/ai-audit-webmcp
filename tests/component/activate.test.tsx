@@ -138,7 +138,13 @@ describe("the Activate screen", () => {
   it("previews the publication, keeps the delivery routes, and shows who read it", () => {
     renderScreen(ledger);
     expect(screen.getByRole("heading", { level: 1, name: "Activate your Context Engine." })).toBeVisible();
-    expect(screen.getByText(/of 100 agent-ready since 1 September/)).toHaveTextContent("62 → 74");
+    // The score is this scan's; the movement is measured from the earliest stored reading, and each date says what it is.
+    expect(screen.getByText(/of 100 agent-ready in this scan/)).toHaveTextContent("It was 62 → 74 since the earliest stored reading, 1 September.");
+    const clocks = screen.getByLabelText("What each date means");
+    expect(clocks).toHaveTextContent("Site last read");
+    expect(clocks).toHaveTextContent("Earliest stored reading of this site1 September, 62 of 100");
+    expect(clocks).toHaveTextContent("This package prepared");
+    expect(screen.getByRole("heading", { name: "Is alpina.travel still agent-ready?" })).toBeVisible();
 
     // The preview: each capability with its evidence-based status and whether it travels as something callable.
     const preview = within(screen.getByRole("tabpanel")).getByRole("table");
@@ -230,7 +236,9 @@ describe("the Activate screen", () => {
 
   it("says what to expect when nothing has read it yet, never a row of zeros", () => {
     renderScreen({ reportId: REPORT_ID, since: "2026-09-07T05:00:00.000Z", days: [], activations: [], history: ledger.history!.slice(0, 1) });
-    expect(screen.getByText(/The next reading shows how it moved/)).toHaveTextContent("74 of 100 agent-ready.");
+    expect(screen.getByText(/the next one shows how it moved/)).toHaveTextContent("74 of 100 agent-ready in this scan. This is the only reading on record");
+    // No historical claim is made from a single reading.
+    expect(screen.getByLabelText("What each date means")).not.toHaveTextContent("Earliest stored reading");
     expect(screen.getByText(/Nothing to prove yet/)).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Crawlers" })).toBeNull();
     expect(screen.getByText(/Nothing to prove yet/)).toHaveTextContent(/whether Google read it/);
@@ -247,13 +255,15 @@ describe("the Activate screen", () => {
         />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/No action in this report is verified as callable/)).toHaveTextContent(/can still be prepared while the technical work remains/);
+    expect(screen.getByText(/No action in this report is verified as callable/)).toHaveTextContent(/none is included as callable in this prepared package.*can still be prepared while the technical work remains/);
     const preview = within(screen.getByRole("tabpanel")).getByRole("table");
     expect(within(preview).queryByText("Included")).toBeNull();
     expect(screen.getByText(/Nothing to prove yet/)).toHaveTextContent(/No interface has answered yet, so there is nothing an agent could activate/);
     // Who handles each action is one tab away, and unanswered says so.
     fireEvent.click(screen.getByRole("tab", { name: "Rules" }));
     expect(screen.getByText(/No responsibility has been reviewed yet/)).toBeVisible();
-    expect(screen.getByRole("heading", { name: /is alpina\.travel still agent-ready/i })).toBeVisible();
+    // Nothing was ever ready here, so the page does not ask whether it still is.
+    expect(screen.queryByRole("heading", { name: /still agent-ready/i })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Agent readiness over time" })).toBeVisible();
   });
 });

@@ -101,6 +101,8 @@ test("a report that landed at once asks for the address once, and a shared link 
 
   const late = page.getByRole("textbox", { name: /landed fast.*by email too/i });
   await expect(late).toBeVisible();
+  // Optional, so it comes after the business has been recognised, never before it.
+  expect(await page.evaluate(() => Boolean(document.querySelector("#understood-title")!.compareDocumentPosition(document.querySelector(".send-report")!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
   await expect(page.getByRole("button", { name: /claim your context engine/i })).toHaveCount(0);
   await page.getByRole("button", { name: "No thanks" }).click();
   await expect(page.getByRole("textbox", { name: /email/i })).toHaveCount(0);

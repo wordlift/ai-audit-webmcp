@@ -93,6 +93,7 @@ export function Inspector({ kicker, title, onClose, children, labelId }: { kicke
   }, [title]);
   return (
     <aside
+      id="inspector"
       className="inspector"
       aria-labelledby={labelId}
       onKeyDown={(event) => {

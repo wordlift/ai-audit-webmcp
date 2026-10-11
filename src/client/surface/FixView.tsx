@@ -85,7 +85,7 @@ export function FixView({
           </button>
         </p>
         <h1 id="fix-title">Make your business actionable.</h1>
-        <p className="fix-lead">Review the model. Define who handles each action.</p>
+        <p className="fix-lead">Review your business and action responsibilities.</p>
       </header>
 
       <div className="tabs" role="tablist" aria-label="Fix views">
@@ -137,9 +137,9 @@ export function FixView({
 function CapabilityRow({ capability, selected, onOpen }: { capability: CapabilityResult; selected: boolean; onOpen: () => void }) {
   const decided = capability.boundarySource === "human-provided" && capability.boundary ? RESPONSIBILITY_LABEL[capability.boundary] : null;
   return (
-    <tr className={selected ? "is-selected" : undefined} data-action-id={capability.actionId} aria-selected={selected}>
+    <tr className={selected ? "is-selected" : undefined} data-action-id={capability.actionId}>
       <th scope="row">
-        <button type="button" className="row-open" aria-pressed={selected} onClick={onOpen}>
+        <button type="button" className="row-open" aria-expanded={selected} aria-controls="inspector" onClick={onOpen}>
           {capability.label}
         </button>
         {decided && <span className="row-owner">Handled by: {decided}{capability.boundaryPartner ? ` (${capability.boundaryPartner.name})` : ""}</span>}

@@ -813,3 +813,58 @@ main:has(> .activate-page) {
 .site-today > div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .site-today dt { color: var(--muted); }
 .site-today dd { margin: 0; }
+
+/* ---------- Documents read in place: tables and blocks to copy ---------- */
+.doc-table-wrap { overflow-x: auto; margin: 12px 0; border: 1px solid var(--line); border-radius: 8px; }
+.doc-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.doc-table th, .doc-table td { padding: 10px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line-subtle); overflow-wrap: anywhere; }
+.doc-table th { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 400; }
+.doc-table tr:last-child td { border-bottom: 0; }
+.doc-table a { color: var(--brand); }
+.doc-code { position: relative; margin: 12px 0; }
+.doc-code pre { margin: 0; padding: 14px 16px; padding-right: 84px; border-radius: 8px; background: var(--tint); font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.doc-code button { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; font-size: 0.8rem; cursor: pointer; }
+@media (max-width: 720px) {
+  .doc-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  .doc-table tr { display: block; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .doc-table td { display: block; border: 0; padding: 4px 14px; }
+  .doc-table td::before { content: attr(data-label); display: block; font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+}
+
+/* ---------- One version strip, the same on every screen ---------- */
+.version-strip { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 28px; padding: 12px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 0.92rem; }
+.version-strip details { min-width: 0; }
+.version-strip summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; cursor: pointer; list-style: none; }
+.version-strip summary::-webkit-details-marker { display: none; }
+.version-strip summary > span + span:not(.sr-only)::before { content: "·"; margin: 0 0.7em; }
+.version-strip summary svg { margin-left: 8px; }
+.version-strip details[open] summary svg { transform: rotate(180deg); }
+.version-kind { color: var(--ink); }
+.version-kind.is-reviewed { color: var(--verified); }
+.version-detail { padding: 8px 0 4px; display: grid; gap: 4px; }
+.version-detail p { margin: 0; }
+.version-detail a { color: var(--brand); }
+.version-detail code { font-family: var(--font-mono); font-size: 0.8rem; }
+.version-actions { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 22px; }
+.activate-page > .version-strip { grid-column: 1 / -1; }
+
+/* ---------- Recognition first ---------- */
+.doorway-hero { padding: 32px 0 26px; }
+.doorway-hero h1 { font-size: clamp(2.8rem, 6.2vw, 5rem); }
+.doorway-quote q { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.doorway-quote.is-open q { display: inline; }
+.doorway-quote span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.doorway-section { padding: 26px 0 22px; }
+.section-head .identity-review { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 12px 0 0; }
+.section-head .identity-review > span { flex: 0 1 auto; }
+.section-head .identity-review > .text-button { margin-left: 0; }
+.core-group { margin-top: 20px; }
+.core-group-note { margin: 4px 0 0; color: var(--muted); font-size: 0.95rem; }
+.core-group .core-entities { margin-top: 12px; }
+.detection { padding: 22px 24px; }
+.detection h2 { font-size: 1.5rem; }
+.detection p { margin-top: 8px; font-size: 1rem; }
+.detection .text-button { margin-top: 8px; }
+.doorway-counts { flex-direction: column; align-items: flex-start; gap: 6px; }
+.doorway-counts > p.quiet { font-size: 0.92rem; }
+.doorway .send-report { margin: 22px 0 0; }

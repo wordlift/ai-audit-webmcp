@@ -14,6 +14,7 @@ import { EngineProvider, useReportEngine } from "../engine/EngineContext";
 import { track } from "../engine/track";
 import { PROVENANCE_LABEL, RESPONSIBILITY_LABEL, agentStatus, coreEntities, detection, entityCounts, identity, typeWords } from "../surface/surface";
 import { AgentMark } from "../surface/ui";
+import { VersionStrip } from "../surface/VersionStrip";
 
 /**
  * Activate: how this knowledge and these capabilities are made usable. On the left, a preview of
@@ -182,6 +183,7 @@ export function tableRows(actions: PublishedAction[]): { published: PublishedAct
 }
 
 const names = (actions: PublishedAction[]) => actions.map((action) => action.label).join(", ");
+const dateTime = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
 const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long" });
 const plural = (count: number, singular: string, pluralForm = `${singular}s`) => `${count} ${count === 1 ? singular : pluralForm}`;
 
@@ -294,6 +296,10 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
   const runbook = files[4]!;
   const promptText = runbookPrompt(publication);
   const decidedActions = publication.actions.filter((action) => action.boundary);
+  // The sentence the compiler gives every action nothing answered for, and the rows that carry it.
+  const sharedReason = "No entry point has answered yet, so nothing is declared that an agent could not call.";
+  const notCallable = publication.actions.filter((action) => action.because === sharedReason);
+  const scanned = report.collectedAt ?? report.createdAt;
   const terms = report.contextGraph?.lexicalEntries ?? [];
   const reviewedTerms = terms.filter((term) => term.provenance === "human-provided");
 
@@ -325,6 +331,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
   return (
     <div className="activate-page">
       <DocDialog doc={openDoc} onOpenChange={(open) => { if (!open) setOpenDoc(null); }} />
+      <VersionStrip report={report} />
 
       <div className="activate-main">
         <header className="fix-head">
@@ -348,8 +355,12 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
               <p className="section-lead">Prepared from this report.</p>
               {!hasInterface && (
                 <p className="empty-note" role="status">
-                  No action in this report is verified as callable, so none is published as one. Your business context and action boundaries can still be prepared while the technical work remains.
+                  No action in this report is verified as callable, so none is included as callable in this prepared package. Your business context and action boundaries can still be prepared while the technical work remains. Publication is a separate step.
                 </p>
+              )}
+              {/* The reason most rows share is said once, above them; a row speaks only when its reason is its own. */}
+              {sharedReason && notCallable.length > 1 && (
+                <p className="section-lead">{plural(notCallable.length, "action")} {notCallable.length === 1 ? "is" : "are"} not included as callable: no entry point answered the audit's call, and nothing is declared that an agent could not call.</p>
               )}
               <div className="table-wrap">
                 <table className="capability-table preview-table">
@@ -367,7 +378,7 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
                         <td><AgentMark status={agentStatus({ state: action.state })} /></td>
                         <td>
                           {publicationWord(action)}
-                          <span className="row-owner">{action.because}</span>
+                          {!(notCallable.length > 1 && action.because === sharedReason) && <span className="row-owner">{action.because}</span>}
                         </td>
                       </tr>
                     ))}
@@ -536,22 +547,30 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
 
         <section className="observe" aria-labelledby="observe-title">
           <p className="kicker kicker-quiet">Prove</p>
-          <h2 id="observe-title">Is {host} still agent-ready?</h2>
+          {/* "Still ready" is a question only where something was ready; otherwise this is a record, and says so. */}
+          <h2 id="observe-title">{hasInterface ? `Is ${host} still agent-ready?` : "Agent readiness over time"}</h2>
           <p className="activate-score">
+            {!hasInterface && (report.score?.value ?? 0) === 0 ? (
+              <>No verified callable actions in this scan.</>
+            ) : (
+              <><b>{report.score?.value ?? "–"}</b> of 100 agent-ready in this scan.</>
+            )}{" "}
             {movement && movement.from !== movement.to ? (
               <>
-                <b>{movement.from}</b> <span aria-hidden="true">→</span> <b>{movement.to}</b> of 100 agent-ready since {longDate(movement.since)}
+                It was <b>{movement.from}</b> <span aria-hidden="true">→</span> <b>{movement.to}</b> since the earliest stored reading, {longDate(movement.since)}.
               </>
             ) : movement ? (
-              <>
-                <b>{movement.to}</b> of 100 agent-ready, unchanged since {longDate(movement.since)}.
-              </>
+              <>The earliest stored reading, {longDate(movement.since)}, was the same.</>
             ) : (
-              <>
-                <b>{report.score?.value ?? "–"}</b> of 100 agent-ready. The next reading shows how it moved.
-              </>
+              <>This is the only reading on record; the next one shows how it moved.</>
             )}
           </p>
+          {/* Three clocks, each named for what it measures. */}
+          <dl className="site-today" aria-label="What each date means">
+            <div><dt>Site last read</dt><dd>{dateTime(scanned)}{report.reusedFrom ? " (reused)" : ""}</dd></div>
+            {movement && <div><dt>Earliest stored reading of this site</dt><dd>{longDate(movement.since)}, {movement.from} of 100</dd></div>}
+            <div><dt>This package prepared</dt><dd>{dateTime(publication.publishedAt)}</dd></div>
+          </dl>
           {!(crawlers.length > 0 || google > 0 || agents.length > 0 || activations.length > 0) ? (
             <p className="observe-nothing">
               Nothing to prove yet. Once published, this shows who crawled it, whether Google read it, which agents read it, and which capability an agent activated, with the score's movement.
@@ -633,8 +652,8 @@ export function ActivateScreen({ report, publication, visits }: { report: Report
       <aside className="activate-rail" aria-label="Choose your delivery">
         <section>
           <p className="kicker kicker-quiet">Choose your delivery</p>
-          <h2>Keep it alive with WordLift.</h2>
-          <p>Build and maintain your brand knowledge graph as an evolving Context Engine.</p>
+          <h2>Build your brand knowledge graph: your Context Engine for AI.</h2>
+          <p>WordLift builds it from this model and keeps it current as the business changes.</p>
           <a className="button button-primary button-block button-large" href={activate} onClick={() => { if (runsWordLift) track(report.id, "door_activate"); }} target="_blank" rel="noreferrer">
             Continue with WordLift <ArrowUpRight size={17} aria-hidden="true" />
           </a>

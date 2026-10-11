@@ -1,13 +1,10 @@
 import { AlertCircle, AppWindow, ArrowRight, ArrowUpRight, Box, Building2, CalendarDays, Check, FileText, MapPin, Minus, Play, Search, Settings, Tag, UserRound, CircleHelp } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { explainReportError, onlyFoundationMissing, unreadableReason } from "../../shared/format/explainError.js";
 import { siteKind } from "../../shared/format/modelView.js";
 import type { CapabilityResult, ReportRecord } from "../../shared/types/index.js";
-import { startReport } from "../api/client";
-import { EngineStatus } from "../components/EngineStatus";
-import { ownWords, readAgo } from "../components/FirstScreen";
-import { useReportEngine } from "../engine/EngineContext";
+import { ownWords } from "../components/FirstScreen";
 import { track } from "../engine/track";
 import { reportHref } from "./nav";
 import {
@@ -16,8 +13,8 @@ import {
   RESPONSIBILITY_LABEL,
   STAGES,
   agentStatus,
-  coreEntities,
   detection,
+  doorwayEntities,
   entityCounts,
   hostOf,
   identity,
@@ -67,26 +64,24 @@ export function AuditDoorway({
   onInspectAction,
   onInspectDetection,
   onReviewEntities,
-  now = () => Date.now(),
+  afterRecognition,
 }: {
   report: ReportRecord;
   selectedActionId: string | null;
   onInspectAction: (actionId: string) => void;
   onInspectDetection: () => void;
   onReviewEntities: (options?: { entityId?: string; all?: boolean }) => void;
-  now?: () => number;
+  /** What is optional and can wait until the business has been recognised: shown after that block. */
+  afterRecognition?: ReactNode;
 }) {
-  const navigate = useNavigate();
-  const { engine } = useReportEngine();
-  const [rerunning, setRerunning] = useState(false);
-  const [rerunError, setRerunError] = useState<string | null>(null);
+  const [wholeQuote, setWholeQuote] = useState(false);
 
   const host = hostOf(report);
   const pages = report.contextGraph?.pages.length ?? 0;
   const kind = sector(siteKind(report));
   const found = detection(report);
   const who = identity(report);
-  const cards = coreEntities(report);
+  const shown = doorwayEntities(report);
   const counts = entityCounts(report);
   const relations = report.contextGraph?.relations ?? [];
   const names = new Map((report.contextGraph?.entities ?? []).map((entity) => [entity.id, entity.name]));
@@ -94,24 +89,8 @@ export function AuditDoorway({
   const others = otherDetected(report);
   const verified = verifiedCount(listed);
   const quote = ownWords(report);
-  const ago = readAgo(report.collectedAt, now());
   const unreadable = pages === 0 || counts.total === 0 ? unreadableReason(report.errors) : null;
-  const uncertain = cards.some((core) => core.view.provenance === "inferred");
   const checked = report.capabilities !== undefined;
-
-  async function runAgain() {
-    setRerunning(true);
-    setRerunError(null);
-    try {
-      // The explicit re-verify, through the same audit the first scan used and at the depth it ran.
-      const started = startReport(report.requestedUrl, { fresh: true, surface: "web", depth: report.scanDepth });
-      await started.accepted;
-      navigate(`/reports/${started.reportId}`, { state: { started: true } });
-    } catch (caught) {
-      setRerunning(false);
-      setRerunError(caught instanceof Error ? caught.message : "The site could not be read again.");
-    }
-  }
 
   return (
     <section className="doorway" id="step-audit" aria-labelledby="doorway-title">
@@ -125,29 +104,21 @@ export function AuditDoorway({
           </p>
           <h1 id="doorway-title">{host}</h1>
           {quote && (
-            <p className="doorway-quote">
+            <p className={`doorway-quote${wholeQuote ? " is-open" : ""}`}>
               <q>{quote}</q>
-              <span>Language found on your site.</span>
+              <span>
+                Language found on your site.
+                {quote.length > 110 && (
+                  <button type="button" className="text-button" aria-expanded={wholeQuote} onClick={() => setWholeQuote((current) => !current)}>
+                    {wholeQuote ? "Show less" : "Show all of it"}
+                  </button>
+                )}
+              </span>
             </p>
           )}
           {unreadable && (
             <p className="doorway-unreadable" role="status">
               WordLift could not read {host}. {explainReportError(unreadable)} Nothing below is about the business yet.
-            </p>
-          )}
-          <p className="doorway-meta">
-            {ago && <span>{ago}</span>}
-            <button type="button" className="text-button" onClick={() => void runAgain()} disabled={rerunning}>
-              {rerunning ? "Reading again…" : unreadable ? "Try again" : "Run again"}
-            </button>
-            <Link className="text-button" to="/">New audit</Link>
-          </p>
-          {rerunError && <p className="form-error" role="alert">{rerunError}</p>}
-          <EngineStatus report={report} engine={engine} />
-          {report.refinement && (
-            <p className="doorway-reviewed" role="status">
-              <b>{report.refinement.filedBy === "owner" ? "Reviewed by the owner" : "Reviewed version"}</b> · {plural(report.refinement.decisions, "decision")} applied
-              {report.parentReportId && <> · <Link to={`/reports/${report.parentReportId}`}>Compare with the version before</Link></>}
             </p>
           )}
         </div>
@@ -173,6 +144,19 @@ export function AuditDoorway({
           <div>
             <h2 id="understood-title">What we understood about your business</h2>
             <p className="section-lead">A first reading of the products and services on your site.</p>
+            {/* Uncertainty about who the business is sits beside the heading it qualifies, with the way to settle it. */}
+            {who.state === "needs-review" && (
+              <p className="identity-review" role="status">
+                <AlertCircle size={20} strokeWidth={1.6} aria-hidden="true" />
+                <span>
+                  <b>Business identity needs review</b>
+                  <span>{who.why}</span>
+                </span>
+                <button type="button" className="text-button text-button-strong" onClick={() => onReviewEntities(who.entity ? { entityId: who.entity.id } : { all: true })}>
+                  Review identity <ArrowRight size={15} aria-hidden="true" />
+                </button>
+              </p>
+            )}
           </div>
           {counts.total > 0 && (
             <button type="button" className="button button-outline" onClick={() => onReviewEntities()}>
@@ -181,41 +165,26 @@ export function AuditDoorway({
           )}
         </div>
 
-        {cards.length > 0 ? (
-          <>
-            <p className="kicker" id="core-entities-label">{uncertain ? "Candidate core entities" : "Core entities"}</p>
-            <ul className="core-entities" aria-labelledby="core-entities-label">
-              {cards.map((core) => (
-                <li key={core.entity.id} className="core-entity">
-                  <span className="core-entity-icon"><EntityIcon core={core} /></span>
-                  <div className="core-entity-text">
-                    <span className="core-entity-name">
-                      <b>{core.entity.name}</b>
-                      {core.wikidata && (
-                        <a className="wikidata-link" href={core.wikidata.url} target="_blank" rel="noreferrer" aria-label={`${core.entity.name} on Wikidata (${core.wikidata.qid}), opens wikidata.org`}>
-                          Wikidata <ArrowUpRight size={12} aria-hidden="true" />
-                        </a>
-                      )}
-                    </span>
-                    <span className="core-entity-type">
-                      {typeWords(core.view.type)} · <span className={`provenance provenance-${core.view.provenance}`}><i aria-hidden="true" />{PROVENANCE_LABEL[core.view.provenance].toLowerCase()}</span>
-                    </span>
-                    <span className="core-entity-seen">{core.seen}</span>
-                  </div>
-                  <button type="button" className="icon-button core-entity-open" aria-label={`Details for ${core.entity.name}`} onClick={() => onReviewEntities({ entityId: core.entity.id })}>
-                    <ArrowRight size={18} aria-hidden="true" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
+        {/* Two groups, never mixed: what the report can stand behind, and candidates read from the text. */}
+        {shown.confirmed.length > 0 && (
+          <EntityGroup id="core-entities-label" label="Core entities" note="Declared by the site or marked core in a review." entities={shown.confirmed} onOpen={(id) => onReviewEntities({ entityId: id })} />
+        )}
+        {shown.candidates.length > 0 && (
+          <EntityGroup
+            id="candidate-entities-label"
+            label={shown.confirmed.length > 0 ? "Additional candidates" : "Candidate core entities"}
+            note="Read from your content and not confirmed. Review them to say which define the business."
+            entities={shown.candidates}
+            onOpen={(id) => onReviewEntities({ entityId: id })}
+          />
+        )}
+        {shown.confirmed.length === 0 && shown.candidates.length === 0 && (
           <p className="empty-note">
             {counts.total === 0
               ? pages > 0
                 ? `No entities were found on the ${plural(pages, "page")} read. That says what these pages state, not what the business offers.`
                 : "No pages were read, so there are no entities to show."
-              : "No products, services or places stood out among what was found. The full list is one click away."}
+              : "Nothing the site declares, and nothing it is visibly built around, stood out among what was found. The full list is one click away."}
           </p>
         )}
 
@@ -232,18 +201,7 @@ export function AuditDoorway({
               </button>
             </p>
           )}
-          {who.state === "needs-review" && (
-            <p className="identity-review" role="status">
-              <AlertCircle size={22} strokeWidth={1.6} aria-hidden="true" />
-              <span>
-                <b>Business identity needs review</b>
-                <span>{who.why}</span>
-              </span>
-              <button type="button" className="text-button text-button-strong" onClick={() => onReviewEntities(who.entity ? { entityId: who.entity.id } : { all: true })}>
-                Review identity <ArrowRight size={15} aria-hidden="true" />
-              </button>
-            </p>
-          )}
+          {shown.others > 0 && <p className="quiet">{plural(shown.others, "other mention")} on these pages, including other organizations and products the site names, {shown.others === 1 ? "is" : "are"} in the full list and not shown here.</p>}
         </div>
 
         {/* Relations only as returned, each with where it comes from. None returned: no connecting claim is drawn. */}
@@ -266,6 +224,8 @@ export function AuditDoorway({
           )
         )}
       </div>
+
+      {afterRecognition}
 
       {/* 3. What agents can do: the four stages, every applicable action, readiness beside it and second to it. */}
       <div className="doorway-section" aria-labelledby="capabilities-title">
@@ -346,10 +306,43 @@ export function AuditDoorway({
   );
 }
 
+function EntityGroup({ id, label, note, entities, onOpen }: { id: string; label: string; note: string; entities: CoreEntity[]; onOpen: (entityId: string) => void }) {
+  return (
+    <div className="core-group">
+      <p className="kicker" id={id}>{label}</p>
+      <p className="core-group-note">{note}</p>
+      <ul className="core-entities" aria-labelledby={id}>
+        {entities.map((core) => (
+          <li key={core.entity.id} className="core-entity">
+            <span className="core-entity-icon"><EntityIcon core={core} /></span>
+            <div className="core-entity-text">
+              <span className="core-entity-name">
+                <b>{core.entity.name}</b>
+                {core.wikidata && (
+                  <a className="wikidata-link" href={core.wikidata.url} target="_blank" rel="noreferrer" aria-label={`${core.entity.name} on Wikidata (${core.wikidata.qid}), opens wikidata.org`}>
+                    Wikidata <ArrowUpRight size={12} aria-hidden="true" />
+                  </a>
+                )}
+              </span>
+              <span className="core-entity-type">
+                {typeWords(core.view.type)} · <span className={`provenance provenance-${core.view.provenance}`}><i aria-hidden="true" />{PROVENANCE_LABEL[core.view.provenance].toLowerCase()}</span>
+              </span>
+              <span className="core-entity-seen">{core.seen}</span>
+            </div>
+            <button type="button" className="icon-button core-entity-open" aria-label={`Details for ${core.entity.name}`} onClick={() => onOpen(core.entity.id)}>
+              <ArrowRight size={18} aria-hidden="true" />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function StageAction({ capability, icon, selected, onOpen }: { capability: CapabilityResult; icon: ReactNode; selected: boolean; onOpen: () => void }) {
   const decided = capability.boundarySource === "human-provided" && capability.boundary ? RESPONSIBILITY_LABEL[capability.boundary] : null;
   return (
-    <button type="button" className={`stage-action${selected ? " is-selected" : ""}`} data-action-id={capability.actionId} aria-pressed={selected} onClick={onOpen}>
+    <button type="button" className={`stage-action${selected ? " is-selected" : ""}`} data-action-id={capability.actionId} aria-expanded={selected} aria-controls="inspector" onClick={onOpen}>
       <span className="stage-action-icon">{icon}</span>
       <span className="stage-action-text">
         <span className="stage-action-name">{capability.label}</span>

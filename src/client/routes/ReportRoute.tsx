@@ -25,6 +25,7 @@ import { EntityReviewModal } from "../surface/EntityReview";
 import { FixView, parseFilter } from "../surface/FixView";
 import { fixTab, reportHref, useReportNav } from "../surface/nav";
 import { OwnershipModal } from "../surface/OwnershipModal";
+import { VersionStrip } from "../surface/VersionStrip";
 import type { SavedNotice } from "../surface/surface";
 import { AlpinaAvailabilityTool } from "../webmcp/AlpinaAvailabilityTool";
 import { ExplainCapabilityTool } from "../webmcp/ExplainCapabilityTool";
@@ -239,8 +240,8 @@ export function ReportRoute() {
           <button type="button" className="icon-button" aria-label="Dismiss" onClick={() => setNoticeDismissed(report.id)}><X size={18} aria-hidden="true" /></button>
         </div>
       )}
-      {/* The one field, once, for whoever never saw the progress screen long enough to answer it. */}
-      {askLate && mode === "audit" && <SendMeTheReport reportId={report.id} host={hostOf(report.canonicalUrl ?? report.requestedUrl)} variant="late" onDismiss={() => setAskLate(false)} />}
+      {/* Which report this is, the same words on every screen. */}
+      <VersionStrip report={report} />
 
       {mode === "audit" && (
         <div className="surface-layout">
@@ -251,6 +252,8 @@ export function ReportRoute() {
             onInspectAction={(actionId) => select({ action: actionId, inspect: null })}
             onInspectDetection={inspectDetection}
             onReviewEntities={(options) => { rememberOpener(); setReview(options ?? {}); }}
+            // The one optional field, once, for whoever never saw the progress screen long enough to answer it: after the business, never before it.
+            afterRecognition={askLate ? <SendMeTheReport reportId={report.id} host={hostOf(report.canonicalUrl ?? report.requestedUrl)} variant="late" onDismiss={() => setAskLate(false)} /> : null}
           />
           {inspector}
         </div>

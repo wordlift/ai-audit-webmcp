@@ -25,17 +25,22 @@ test("a claimed Context Engine keeps a correction across a new read of the site"
 
   // The correction shows where the model is, and the engine keeps it.
   await expect(page.getByText("1 marked peripheral")).toBeVisible();
-  await expect(page.getByText(/Kept in this browser · ownership not verified · 1 decision kept/)).toBeVisible();
+  await expect(page.locator(".version-strip")).toContainText("Reviewed version");
+  await expect(page.locator(".version-strip")).toContainText("1 review decision included");
+  await expect(page.locator(".version-strip")).toContainText("by a reviewer; ownership not verified (kept in this browser)");
 
   // Back on the first report, the engine says a review landed since. Then a new read of the site:
   // the correction is carried onto it.
   await page.goto(firstUrl);
-  await expect(page.getByText(/Reviewed since this report/)).toBeVisible();
+  // The original stays the original: the decision is stored for the site, not applied here, and the reviewed version is offered.
+  await expect(page.locator(".version-strip")).toContainText("Original scan");
+  await expect(page.locator(".version-strip")).toContainText("1 review decision stored for this site elsewhere; none applied here.");
+  await expect(page.getByRole("link", { name: "Open the reviewed version" })).toBeVisible();
   await page.getByRole("button", { name: /run again/i }).click();
   await expect(page).not.toHaveURL(firstUrl);
   await expect(page.locator(".doorway")).toBeVisible();
-  await page.getByRole("link", { name: /open it/i }).click();
-  await expect(page.getByText(/Your earlier review carried over to this read/)).toBeVisible();
+  await page.getByRole("link", { name: "Open the reviewed version" }).click();
+  await expect(page.locator(".version-strip")).toContainText("1 review decision included, carried over from an earlier review of this site");
   await expect(page.getByText("1 marked peripheral")).toBeVisible();
 
   // Ownership is the next step, beside the business model, and it says so.

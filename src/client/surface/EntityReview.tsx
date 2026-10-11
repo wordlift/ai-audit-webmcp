@@ -72,7 +72,7 @@ export function EntityEvidence({ report, entity, priority }: { report: ReportRec
   const sources = sourceLinks(entity, report);
   const saved = savedPriority(entity);
   return (
-    <div className="entity-evidence" aria-label={`Evidence for ${entity.name}`}>
+    <div className="entity-evidence" id="entity-evidence" role="region" aria-label={`Evidence for ${entity.name}`}>
       <p className={`kicker kicker-${provenance}`}>{PROVENANCE_LONG[provenance]}</p>
       <h3>Why {entity.name}?</h3>
       <p className="entity-evidence-why">
@@ -203,7 +203,7 @@ export function EntityReviewBoard({
                   <span className="entity-row-icon"><EntityGlyph entity={entity} /></span>
                   <span className="entity-row-text">
                     <span className="entity-row-name">
-                      <button type="button" className="entity-row-select" aria-pressed={selected?.id === entity.id} onClick={() => setSelectedId(entity.id)}>
+                      <button type="button" className="entity-row-select" aria-current={selected?.id === entity.id ? "true" : undefined} aria-controls="entity-evidence" aria-label={`Show evidence for ${entity.name}`} onClick={() => setSelectedId(entity.id)}>
                         {entity.name}
                       </button>
                       {wikidata && (

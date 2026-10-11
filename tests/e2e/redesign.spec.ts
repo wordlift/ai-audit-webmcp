@@ -52,7 +52,9 @@ test("a reviewer recognises the business, inspects an entity and a gap, and find
   await expect(inspector).toContainText("This defines responsibility. It does not verify execution.");
   await page.getByRole("navigation", { name: "Steps" }).getByRole("link", { name: "Fix" }).click();
   await expect(page).toHaveURL(/action=inquiry\.submit.*#step-fix$/);
-  await expect(page.getByRole("row", { name: /submit an inquiry/i })).toHaveAttribute("aria-selected", "true");
+  // The row's trigger says it opens detail; it is not a checkbox and inspecting decides nothing.
+  await expect(page.getByRole("button", { name: "Submit an inquiry", exact: true })).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
   await expect(inspector).toBeVisible();
 
   // Filtering keeps the selection; closing the inspector keeps the filter.
