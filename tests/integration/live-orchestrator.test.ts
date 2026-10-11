@@ -315,6 +315,38 @@ describe("live orchestrator", () => {
     expect(report.capabilities?.length).toBeGreaterThan(0);
   });
 
+  it("asks the foundation audit again for the one missing component, as a new version that changes nothing else", async () => {
+    let answers = false;
+    const audit: AuditProvider = {
+      name: "stub-audit",
+      audit: async () => {
+        if (!answers) throw new AuditProviderError("audit_timeout", "The audit service took too long to respond.", true);
+        return auditBundle;
+      },
+    };
+    const { orchestrator } = liveOrchestrator({ scrape: stubScraper(snapshot), audit, classify: stubClassifier(travelCategories) });
+    const parent = await orchestrator.create({ requestId: randomUUID(), url: "alpina.travel" });
+    expect(parent.status).toBe("partial");
+
+    // Still not answering: said as that, and no version is created.
+    await expect(orchestrator.retryFoundation(parent.id)).rejects.toMatchObject({ status: 502 });
+
+    answers = true;
+    const child = await orchestrator.retryFoundation(parent.id);
+    expect(child.id).not.toBe(parent.id);
+    expect(child.parentReportId).toBe(parent.id);
+    expect(child.foundationAudit?.score).toBe(94);
+    expect(child.status).toBe("completed");
+    expect(child.errors.some((error) => error.provider === "wordlift-ai-audit")).toBe(false);
+    // The map and its readiness are exactly what they were: nothing was read or called again.
+    expect(child.capabilities).toEqual(parent.capabilities);
+    expect(child.score).toEqual(parent.score);
+    expect(child.contextGraph).toEqual(parent.contextGraph);
+    // The original is untouched, and a report that has its foundation is not asked again.
+    expect((await orchestrator.get(parent.id))?.foundationAudit).toBeUndefined();
+    await expect(orchestrator.retryFoundation(child.id)).rejects.toMatchObject({ status: 409 });
+  });
+
   it("marks a report built from fewer than three pages partial instead of complete", async () => {
     const { orchestrator } = liveOrchestrator({
       scrape: stubScraper({ ...snapshot, pages: snapshot.pages.slice(0, 1) }),

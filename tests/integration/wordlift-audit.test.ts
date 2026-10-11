@@ -50,6 +50,7 @@ function provider(fetchImpl: typeof fetch) {
     baseUrl: "https://api.wordlift.io",
     apiKey: "test-key",
     fetchImpl,
+    retryDelayMs: 0,
     now: () => new Date("2026-08-27T09:00:00.000Z"),
   });
 }
@@ -219,6 +220,26 @@ describe("WordLift audit provider", () => {
 
     await expect(call).rejects.toBeInstanceOf(AuditProviderError);
     await expect(call).rejects.toMatchObject({ code, retryable });
+  });
+
+  it("tries once more when the failure is about the moment, and never for a timeout or a rejected key", async () => {
+    const quick = (fetchImpl: typeof fetch, timeoutMs?: number) => new WordLiftAuditProvider({ baseUrl: "https://api.wordlift.io", apiKey: "test-key", fetchImpl, retryDelayMs: 0, ...(timeoutMs ? { timeoutMs } : {}) });
+    // A 5xx, then an answer: the report gets its foundation audit.
+    const flaky = vi.fn().mockResolvedValueOnce(jsonResponse({ error: "busy" }, 503)).mockResolvedValueOnce(jsonResponse(liveShapedResponse));
+    expect((await quick(flaky as unknown as typeof fetch).audit(new URL("https://alpina.travel/"))).foundation).toBeDefined();
+    expect(flaky).toHaveBeenCalledTimes(2);
+    // Two failures are a failure; there is no third call.
+    const down = vi.fn(async () => jsonResponse({ error: "busy" }, 503));
+    await expect(quick(down as unknown as typeof fetch).audit(new URL("https://alpina.travel/"))).rejects.toMatchObject({ code: "audit_upstream_error" });
+    expect(down).toHaveBeenCalledTimes(2);
+    // A rejected credential will be rejected again.
+    const refused = vi.fn(async () => jsonResponse({ error: "no" }, 401));
+    await expect(quick(refused as unknown as typeof fetch).audit(new URL("https://alpina.travel/"))).rejects.toMatchObject({ code: "audit_unauthorized" });
+    expect(refused).toHaveBeenCalledTimes(1);
+    // A timeout already waited as long as a report can.
+    const slow = vi.fn((_url: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => init.signal!.addEventListener("abort", () => reject(new Error("aborted")))));
+    await expect(quick(slow as unknown as typeof fetch, 5).audit(new URL("https://alpina.travel/"))).rejects.toMatchObject({ code: "audit_timeout" });
+    expect(slow).toHaveBeenCalledTimes(1);
   });
 
   it("reports an unreachable service instead of throwing a raw network error", async () => {

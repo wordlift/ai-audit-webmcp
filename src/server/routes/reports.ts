@@ -207,6 +207,15 @@ export function createReportsRouter(
     }
   });
 
+  // The one missing component, asked for again: the foundation audit alone, as a new version.
+  router.post("/:reportId/foundation", ...auditLimiters, async (request, response) => {
+    try {
+      response.json(await orchestrator.retryFoundation(param(request.params.reportId)));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
   router.post("/:reportId/reverify", ...auditLimiters, async (request, response) => {
     try {
       response.json(await orchestrator.reverify(param(request.params.reportId)));

@@ -84,6 +84,8 @@ export interface WordLiftAuditOptions {
   baseUrl: string;
   apiKey: string;
   timeoutMs?: number;
+  /** How long to wait before the one retry of a momentary failure. Overridable so tests do not wait. */
+  retryDelayMs?: number;
   now?: () => Date;
   fetchImpl?: typeof fetch;
 }
@@ -106,7 +108,7 @@ export class WordLiftAuditProvider implements AuditProvider {
   constructor(private readonly options: WordLiftAuditOptions) {}
 
   async audit(url: URL): Promise<AuditEvidenceBundle> {
-    const response = await this.call(url);
+    const response = await this.callWithOneRetry(url);
     const data = response.data;
     if (!data) {
       throw new AuditProviderError("audit_empty_response", "The audit service returned no data for this site.", true);
@@ -124,6 +126,21 @@ export class WordLiftAuditProvider implements AuditProvider {
       evidence: sanitizeEvidence(evidenceFrom(normalized, site, collectedAt)).evidence,
       errors: [],
     };
+  }
+
+  /**
+   * One more try for a failure that is about the moment, not the request: the service unreachable,
+   * answering 5xx, or rate limiting. A timeout is not retried, because the audit already waited as
+   * long as a report can; nor is a rejected credential or an unreadable answer.
+   */
+  private async callWithOneRetry(url: URL): Promise<WordLiftAuditResponse> {
+    try {
+      return await this.call(url);
+    } catch (error) {
+      if (!(error instanceof AuditProviderError) || !error.retryable || error.code === "audit_timeout") throw error;
+      await new Promise((resolve) => setTimeout(resolve, this.options.retryDelayMs ?? 2_000));
+      return this.call(url);
+    }
   }
 
   private async call(url: URL): Promise<WordLiftAuditResponse> {

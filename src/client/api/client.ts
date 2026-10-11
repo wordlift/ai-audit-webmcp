@@ -160,6 +160,12 @@ export async function getPinnedAlpinaReport(): Promise<ReportRecord> {
   return reportRecordSchema.parse(body);
 }
 
+/** Asks the foundation audit again for a report that landed without it; answers with the new version that carries it. */
+export async function retryFoundation(reportId: string): Promise<ReportRecord> {
+  const { body } = await requestJson(`/api/reports/${reportId}/foundation`, { method: "POST" });
+  return reportRecordSchema.parse(body);
+}
+
 export async function recompileReport(reportId: string, archetype: Archetype): Promise<ReportRecord> {
   const { body } = await requestJson(`/api/reports/${reportId}/recompile`, {
     method: "POST",

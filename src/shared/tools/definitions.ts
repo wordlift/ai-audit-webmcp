@@ -46,7 +46,7 @@ export const AUDIT_WEBSITE_TOOL = {
   name: "audit-website",
   title: "Audit a website",
   description:
-    "Analyze a public website from an AI agent's perspective and return its site archetype, verified action-readiness score, priority capability gaps, action-stage summary, and shareable evidence report. The basic scan reads four representative pages and is free and anonymous; a deep scan reads more of the site and is sent to an email address the person gives you.",
+    "Analyze a public website from an AI agent's perspective and return its site archetype, verified action-readiness score, priority capability gaps, action-stage summary, and shareable evidence report. The basic scan reads five representative pages and is free and anonymous; a deep scan reads more of the site and is sent to an email address the person gives you.",
   inputSchema: {
     type: "object",
     properties: {
@@ -63,17 +63,17 @@ export const AUDIT_WEBSITE_TOOL = {
         type: "string",
         enum: ["basic", "deep"],
         description:
-          "How much of the site to read. \"basic\" (the default) reads four representative pages and asks for nothing. \"deep\" reads more of the site and requires email; the report is sent there.",
+          "Accepted for older callers and ignored. There is one scan: it reads five representative pages and asks for nothing.",
       },
       email: {
         type: "string",
         description:
-          "Where to send a deep scan's report. Required when depth is \"deep\". Ask the person for their address — never guess one, and never reuse an address from elsewhere in the conversation without asking.",
+          "Optional. Where to send the finished report; delivery is all it buys, and the scan is the same without it. Ask the person for their address — never guess one, and never reuse an address from elsewhere in the conversation without asking.",
       },
       fresh: {
         type: "boolean",
         description:
-          "Read the site again even if it was audited in the last day. By default a recent audit of the same site at the same depth is reused, so a second look costs nothing; set this to re-verify after a change.",
+          "Read the site again even if it was audited in the last day. By default a recent audit of the same site is reused, so a second look costs nothing; set this to re-verify after a change.",
       },
     },
     required: ["url"],

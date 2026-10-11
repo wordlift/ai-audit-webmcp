@@ -31,12 +31,21 @@ export function catalogForSite(publication: Publication): Publication["catalog"]
   };
 }
 
+/** Whose decisions the package carries, in words that never promote a reviewer to the owner. */
+export function confirmedBy(publication: Pick<Publication, "decided" | "decidedBy">): string {
+  const count = `${publication.decided} ${publication.decided === 1 ? "decision" : "decisions"}`;
+  if (publication.decided === 0) return "nothing a person confirmed yet (0 decisions)";
+  return publication.decidedBy === "owner"
+    ? `what its verified owner confirmed (${count})`
+    : `what a reviewer confirmed (${count}); the reviewer has not proved the site is theirs, so these are reviewer-confirmed, not the owner's word`;
+}
+
 const fence = (language: string, body: string) => ["```" + language, body, "```"].join("\n");
 
 /**
  * The runbook: what an agent does to put the publication on the site, written for Claude Code or
  * Codex to apply on any stack and for a person to read. It deploys exactly what the publication
- * holds — what the audit verified and the owner confirmed — and nothing derived from the pages.
+ * holds — what the audit verified and a review confirmed — and nothing derived from the pages.
  * The last step is the only proof that counts: the site read again, and the three readings agreeing.
  */
 export function runbookMarkdown(publication: Publication, options: RunbookOptions): string {
@@ -48,7 +57,7 @@ export function runbookMarkdown(publication: Publication, options: RunbookOption
   lines.push(
     `# Activate ${host}: put the published documents on the site`,
     "",
-    `Written for an agent with access to the site's code or hosting (Claude Code, Codex, or a person at a terminal). It publishes four documents WordLift AI Audit compiled from ${host} on ${publication.publishedAt.slice(0, 10)}: what the site declares, and what its owner confirmed (${publication.decided} ${publication.decided === 1 ? "decision" : "decisions"}). Nothing here was derived from the pages alone, and no action is published as working unless an agent's call to it answered during the audit.`,
+    `Written for an agent with access to the site's code or hosting (Claude Code, Codex, or a person at a terminal). It puts on the site four documents WordLift AI Audit prepared from ${host} on ${publication.publishedAt.slice(0, 10)}: what the site declares, and ${confirmedBy(publication)}. Nothing here was derived from the pages alone, and no action is published as working unless an agent's call to it answered during the audit.`,
     "",
     `Report: ${publication.reportUrl}`,
     "",
@@ -97,14 +106,14 @@ export function runbookMarkdown(publication: Publication, options: RunbookOption
     "",
   );
   if (usable.length > 0) {
-    lines.push("Actions published as callable, because an agent's call answered during the audit:", "");
+    lines.push("Actions included as callable, because an agent's call answered during the audit:", "");
     for (const action of usable) lines.push(`- ${action.label} (\`${action.actionId}\`)${action.entryPoint ? ` — ${action.entryPoint.protocol} at ${action.entryPoint.url}` : ""}`);
     lines.push("");
   } else {
-    lines.push("No action is published as callable: none of the site's interfaces answered an agent's call during the audit. The catalog and the skill still say what the business is and who runs each action, which is what an agent needs before it can ask.", "");
+    lines.push("No action is included as callable: none of the site's interfaces answered an agent's call during the audit. The catalog and the skill still say what the business is and who runs each action, which is what an agent needs before it can ask.", "");
   }
   if (handoffs.length > 0) {
-    lines.push("Actions published as a handoff to a partner, as the owner decided:", "");
+    lines.push("Actions included as a handoff to a partner, as the review decided:", "");
     for (const action of handoffs) lines.push(`- ${action.label} (\`${action.actionId}\`)${action.provider?.name ? ` → ${action.provider.name}${action.provider.url ? ` (${action.provider.url})` : ""}` : ""}`);
     lines.push("");
   }

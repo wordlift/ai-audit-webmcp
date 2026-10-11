@@ -82,7 +82,7 @@ never a WordLift client site other than alpina.travel. Invent a host under `.exa
     "score": 71, "summary": "…", "findings": ["…"], "provider": "fixture"
   },
   "evidence": [ /* CapabilityEvidence items */ ],
-  "pages": [                          // up to four; these feed the context graph
+  "pages": [                          // up to five; these feed the context graph
     {
       "url": "https://your-site.example/", "title": "…", "description": "…",
       "role": "entry",                // entry | detail | offer | policy | contact | other

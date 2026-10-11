@@ -209,7 +209,7 @@ export function ReportRoute() {
 
   const capability = selectedActionId ? report.capabilities?.find((candidate) => candidate.actionId === selectedActionId) ?? null : null;
   const ownershipCapability = ownershipFor ? report.capabilities?.find((candidate) => candidate.actionId === ownershipFor) ?? null : null;
-  const saved = routeState?.saved && report.refinement && noticeDismissed !== report.id ? routeState.saved : null;
+  const saved = routeState?.saved && report.parentReportId && noticeDismissed !== report.id ? routeState.saved : null;
   const inspector = capability ? (
     <CapabilityInspector report={report} capability={capability} onClose={closeInspector} onReviewOwnership={() => { rememberOpener(); setOwnershipFor(capability.actionId); }} ownershipTriggerRef={ownershipTrigger} />
   ) : inspecting === "wordlift" ? (
@@ -229,8 +229,12 @@ export function ReportRoute() {
       {saved && (
         <div className="saved-banner" role="status">
           <div>
-            <p><b>Reviewed version saved.</b> {saved.summary} Agent readiness is unchanged: a review says who is responsible, evidence says what works.</p>
-            {report.refinement!.conflicts.length > 0 && (
+            {report.refinement ? (
+              <p><b>Reviewed version saved.</b> {saved.summary} Agent readiness is unchanged: a review says who is responsible, evidence says what works.</p>
+            ) : (
+              <p><b>New version.</b> {saved.summary} Agent readiness is unchanged.</p>
+            )}
+            {(report.refinement?.conflicts.length ?? 0) > 0 && (
               <div className="saved-banner-unapplied">
                 <p>Not applied:</p>
                 <ul>{report.refinement!.conflicts.map((conflict) => <li key={conflict}>{conflict}</li>)}</ul>

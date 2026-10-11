@@ -90,29 +90,29 @@ export function organizationType(role: string | undefined): string {
 /** The table in the plan: what the owner decided and what the audit called become what the page carries. */
 export function publishedAs(capability: CapabilityResult): { publishedAs: PublishedAs; because: string } {
   const boundary = capability.boundary ?? null;
-  if (boundary === "not-applicable") return { publishedAs: "nothing", because: "You said this is not yours. Nothing is published for it." };
+  if (boundary === "not-applicable") return { publishedAs: "nothing", because: "A review said this is not the business's. Nothing is included for it." };
   if (!capability.expected) {
     return capability.expectationSource.includes("human:decision")
-      ? { publishedAs: "nothing", because: "You said this is not yours. Nothing is published for it." }
-      : { publishedAs: "nothing", because: "This kind of site is not expected to offer it. Nothing is published for it." };
+      ? { publishedAs: "nothing", because: "A review said this is not the business's. Nothing is included for it." }
+      : { publishedAs: "nothing", because: "This kind of site is not expected to offer it. Nothing is included for it." };
   }
   if (boundary === "partner-handoff") {
-    return { publishedAs: "handoff", because: "You said a partner runs it. The action is published with the partner as its provider." };
+    return { publishedAs: "handoff", because: "A review said a partner runs it. The action is included in this package with the partner as its provider." };
   }
   if (boundary === "informational-only") {
-    return { publishedAs: "entity", because: "You said you only describe it. The entity is published, no action." };
+    return { publishedAs: "entity", because: "A review said the business only describes it. The entity is included in this package, no action." };
   }
   if (capability.state === "agent-ready") {
     return {
       publishedAs: "action",
       because:
         boundary === "owned"
-          ? "You own it and an entry point answered. The action is published with its entry point."
-          : "An entry point answered when the audit called it. The action is published with its entry point.",
+          ? "A review said the business handles it, and an entry point answered. The action is included in this package with its entry point."
+          : "An entry point answered when the audit called it. The action is included in this package with its entry point.",
     };
   }
   if (boundary === "owned") {
-    return { publishedAs: "entity", because: "You own it, but no entry point has answered yet. The entity is published, no action, until one does." };
+    return { publishedAs: "entity", because: "A review said the business handles it, but no entry point has answered yet. The entity is included in this package, no action, until one does." };
   }
   return { publishedAs: "entity", because: "No entry point has answered yet, so nothing is declared that an agent could not call." };
 }
@@ -187,7 +187,7 @@ function publishedAction(capability: CapabilityResult, graph: ContextGraph | und
   if (verdict.publishedAs === "action") {
     const entries = entryPointsFor(capability, graph, options);
     if (!entries) {
-      return { ...base, publishedAs: "entity", because: "It answered, but the audit kept no address an agent could call. The entity is published, no action." };
+      return { ...base, publishedAs: "entity", because: "It answered, but the audit kept no address an agent could call. The entity is included in this package, no action." };
     }
     return { ...base, ...verdict, entryPoint: entries.entryPoint, ...(entries.alsoVerified.length > 0 ? { alsoVerified: entries.alsoVerified } : {}) };
   }
@@ -362,7 +362,7 @@ function skillMarkdown(report: ReportRecord, entities: DomainEntity[], actions: 
   const terms = (report.contextGraph?.lexicalEntries ?? []).filter((entry) => entry.provenance === "human-provided");
   const published = actions.filter((action) => action.publishedAs === "action" || action.publishedAs === "handoff");
   const described = actions.filter((action) => action.publishedAs === "entity");
-  const excluded = actions.filter((action) => action.publishedAs === "nothing" && action.because.startsWith("You said"));
+  const excluded = actions.filter((action) => action.publishedAs === "nothing" && action.because.startsWith("A review said"));
   const writes = published.filter((action) => {
     const governance = capabilities.get(action.actionId)?.contract?.governance;
     return capabilities.get(action.actionId)?.intent === "transactional" || governance?.requiresConfirmation || (governance && governance.sideEffects !== "none");
@@ -385,8 +385,8 @@ function skillMarkdown(report: ReportRecord, entities: DomainEntity[], actions: 
     role
       ? `In the ${report.refinement?.filedBy === "owner" ? "owner's" : "reviewer's"} words: ${role.replaceAll("-", " ")}.${archetype && archetype !== "other" ? ` The audit read it as a ${archetype.replace("-", " / ")} site.` : ""}`
       : archetype && archetype !== "other"
-        ? `A ${archetype.replace("-", " / ")} site, as the audit read it. The owner has not yet said otherwise.`
-        : "As the audit read it; the owner has not yet said what it is.",
+        ? `A ${archetype.replace("-", " / ")} site, as the audit read it. Nobody has reviewed that yet.`
+        : "As the audit read it; nobody has reviewed what it is yet.",
     "",
     "## Entities",
     "",
@@ -400,15 +400,15 @@ function skillMarkdown(report: ReportRecord, entities: DomainEntity[], actions: 
   ];
 
   if (terms.length > 0) {
-    lines.push("## Vocabulary", "", ...terms.map((term) => `- **${term.label}**: ${term.meaning ?? "confirmed by the owner"}${term.aliases.length > 0 ? ` (also: ${term.aliases.join(", ")})` : ""}`), "");
+    lines.push("## Vocabulary", "", ...terms.map((term) => `- **${term.label}**: ${term.meaning ?? "confirmed in a review"}${term.aliases.length > 0 ? ` (also: ${term.aliases.join(", ")})` : ""}`), "");
   }
 
   lines.push("## Actions", "");
-  if (published.length === 0) lines.push("No action is published yet: none has an entry point the audit could call, and the owner has handed none off.", "");
+  if (published.length === 0) lines.push("No action is included yet: none has an entry point the audit could call, and no review has handed one off.", "");
   for (const action of published) {
     const capability = capabilities.get(action.actionId)!;
     lines.push(`### ${action.label} (\`${action.actionId}\`)`, "", `${capability.description}`, "");
-    lines.push(`- Who runs it: ${action.boundary ? OWN_WORDS[action.boundary] : "undecided; the owner has not said"}${action.provider ? ` — ${action.provider.name}${action.provider.url ? ` (${action.provider.url})` : ""}` : ""}.`);
+    lines.push(`- Who runs it: ${action.boundary ? OWN_WORDS[action.boundary] : "undecided; nobody has said"}${action.provider ? ` — ${action.provider.name}${action.provider.url ? ` (${action.provider.url})` : ""}` : ""}.`);
     if (capability.boundaryRationale) lines.push(`- Why: ${capability.boundaryRationale}`);
     if (action.entryPoint) lines.push(...howToCall(action.entryPoint));
     for (const other of action.alsoVerified ?? []) lines.push(...howToCall(other, "Also answered the audit"));
@@ -432,7 +432,7 @@ function skillMarkdown(report: ReportRecord, entities: DomainEntity[], actions: 
   if (writes.length > 0) {
     lines.push(`- Never perform ${writes.map((action) => action.label.toLowerCase()).join(", ")} without a person's confirmation: each changes something for them.`);
   }
-  if (excluded.length > 0) lines.push(`- Never attempt ${excluded.map((action) => action.label.toLowerCase()).join(", ")} here: the owner said it is not theirs.`);
+  if (excluded.length > 0) lines.push(`- Never attempt ${excluded.map((action) => action.label.toLowerCase()).join(", ")} here: ${report.refinement?.filedBy === "owner" ? "the site's verified owner" : "a reviewer"} said it is not the business's.`);
   lines.push("- Never invent an entry point that this file does not name.", "");
   return lines.join("\n");
 }
@@ -514,6 +514,7 @@ export function compilePublication(report: ReportRecord, options: PublicationOpt
     reportUrl: options.reportUrl,
     publishedAt,
     decided: report.refinement?.decisions ?? 0,
+    ...(report.refinement?.filedBy ? { decidedBy: report.refinement.filedBy } : {}),
     actions,
     documents,
     catalogPath: ARD.path,

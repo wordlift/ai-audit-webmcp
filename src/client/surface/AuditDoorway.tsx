@@ -1,9 +1,10 @@
 import { AlertCircle, AppWindow, ArrowRight, ArrowUpRight, Box, Building2, CalendarDays, Check, FileText, MapPin, Minus, Play, Search, Settings, Tag, UserRound, CircleHelp } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { explainReportError, onlyFoundationMissing, unreadableReason } from "../../shared/format/explainError.js";
 import { siteKind } from "../../shared/format/modelView.js";
 import type { CapabilityResult, ReportRecord } from "../../shared/types/index.js";
+import { retryFoundation } from "../api/client";
 import { ownWords } from "../components/FirstScreen";
 import { track } from "../engine/track";
 import { reportHref } from "./nav";
@@ -274,9 +275,7 @@ export function AuditDoorway({
           </div>
         )}
         {checked && listed.length === 0 && <p className="empty-note">No agent capabilities are expected for this kind of site.</p>}
-        {report.status === "partial" && onlyFoundationMissing(report.errors) && (
-          <p className="empty-note empty-note-quiet">No foundation score this time: WordLift's foundation audit did not answer. Run again to include it.</p>
-        )}
+        {report.status === "partial" && onlyFoundationMissing(report.errors) && !report.foundationAudit && <FoundationRetry report={report} />}
         {others.length > 0 && (
           <p className="others-line">
             <Link className="text-button" to={reportHref(report.id, "fix", "view=capabilities&others=1")}>
@@ -336,6 +335,37 @@ function EntityGroup({ id, label, note, entities, onOpen }: { id: string; label:
         ))}
       </ul>
     </div>
+  );
+}
+
+/**
+ * The foundation audit is a separate service, and sometimes it does not answer in time. The report
+ * says so, and offers to ask for that one component again: nothing else is read or called, and the
+ * capability map and its readiness stay as they are.
+ */
+function FoundationRetry({ report }: { report: ReportRecord }) {
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function retry() {
+    setBusy(true);
+    setError(null);
+    try {
+      const child = await retryFoundation(report.id);
+      navigate(reportHref(child.id, "audit"), { state: { saved: { kind: "model", summary: `The foundation audit answered: ${child.foundationAudit?.score ?? "–"} of 100. Nothing else was read again.` } } });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The foundation audit did not answer.");
+      setBusy(false);
+    }
+  }
+  return (
+    <p className="empty-note empty-note-quiet foundation-retry" role="status">
+      No foundation score this time: WordLift's foundation audit did not answer. The rest of this report is complete.{" "}
+      <button type="button" className="text-button text-button-strong" onClick={() => void retry()} disabled={busy}>
+        {busy ? "Asking the foundation audit again…" : "Retry the foundation audit"}
+      </button>
+      {error && <span className="form-error" role="alert"> {error}</span>}
+    </p>
   );
 }
 

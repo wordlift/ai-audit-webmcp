@@ -1,4 +1,5 @@
 import type { CapabilityResult, DomainEntity, EntityRelation, ReportRecord } from "../types/index.js";
+import { modelView } from "./modelView.js";
 
 /**
  * The business as the audit modelled it from a few pages, for an agent that asks: what does this
@@ -70,13 +71,40 @@ export function modelRelations(report: ReportRecord, entities: ModelledEntity[])
     }));
 }
 
+/**
+ * Whether the report settled who the business is. A business the site declares, or one a review
+ * marked core, is settled. One the text alone suggested is a candidate, and a model with no
+ * organization has none: both need review, and the site's address stands in as the name.
+ */
+export interface BusinessIdentity {
+  status: "settled" | "needs-review" | "none";
+  /** The entity the model would pick, settled or not. Never to be introduced as the business unless settled. */
+  entityId?: string;
+  note: string;
+}
+
+export function businessIdentity(report: ReportRecord): BusinessIdentity {
+  const host = hostOf(report.canonicalUrl ?? report.requestedUrl);
+  if ((report.contextGraph?.entities ?? []).length === 0) return { status: "none", note: "The report holds no entities." };
+  const business = modelView(report).business;
+  const unsettled = `The scan could not settle which organization runs this site, so ${host} stands in as its name. Do not present any organization named on its pages as the business until a review confirms one.`;
+  if (!business) return { status: "needs-review", note: unsettled };
+  if (business.provenance === "inferred") return { status: "needs-review", entityId: business.id, note: unsettled };
+  return { status: "settled", entityId: business.id, note: `${business.name} is ${business.provenance === "declared" ? "declared by the site" : "confirmed in a review"} as the business.` };
+}
+
 export interface BusinessModelResult {
   reportId: string;
   reportUrl: string;
   site: { host: string; archetype: string; runsOn?: string };
   pagesRead: number;
   counts: { entities: number; declared: number; inferred: number; humanConfirmed: number; capabilities: number; agentReady: number };
+  /** The business, only when the report settled it; null while its identity needs review. */
   business: ModelledEntity | null;
+  /** Whether the business is settled, and what to say when it is not. */
+  identity: BusinessIdentity;
+  /** Organizations the pages name that are not the settled business: mentions, never the business. */
+  otherOrganizations: string[];
   entities: ModelledEntity[];
   relationships: ModelledRelation[];
   capabilities: Array<ModelledAction & { expected: boolean; appliesTo: string[] }>;
@@ -92,7 +120,7 @@ const MAX_ENTITIES = 40;
 const MAX_TERMS_PER_ENTITY = 5;
 
 export const MODEL_BOUNDARIES =
-  "Declared entities come from the site's own markup. Inferred entities were read from its text by the audit's extractor: they are candidates, never evidence, and never move readiness. Human-confirmed means the owner said so on the report. An action is agent-ready only when the audit's agent invoked its interface. This model was built from the pages the audit read, not from the whole business.";
+  "Declared entities come from the site's own markup. Inferred entities were read from its text by the audit's extractor: they are candidates, never evidence, and never move readiness. Human-confirmed means a review said so on the report; only a verified owner's review is the business's own word. An organization the pages name is a mention unless the model's identity says it is the business. An action is agent-ready only when the audit's agent invoked its interface. This model was built from the pages the audit read, not from the whole business.";
 
 /** By types alone, and by price when the entity carries its offers: a key built from a name and types has none. */
 export function entityRole(entity: Pick<DomainEntity, "types"> & Partial<Pick<DomainEntity, "offers">>): EntityRole {
@@ -155,7 +183,10 @@ export function businessModel(report: ReportRecord, reportUrl: string): Business
       right.confidence - left.confidence ||
       left.name.localeCompare(right.name),
   );
-  const business = ordered.find((entity) => entity.role === "business") ?? null;
+  // The same judgment the page shows: an organization only the text names is never handed over as the business.
+  const identity = businessIdentity(report);
+  const business = identity.status === "settled" ? ordered.find((entity) => entity.id === identity.entityId) ?? null : null;
+  const otherOrganizations = ordered.filter((entity) => entity.role === "business" && entity.id !== business?.id && entity.priority !== "primary").map((entity) => entity.id);
   const capabilities = (report.capabilities ?? []).map((capability) => ({ ...modelledAction(capability), expected: capability.expected, appliesTo: capability.appliesTo.map((subject) => subject.id) }));
   return {
     reportId: report.id,
@@ -175,6 +206,8 @@ export function businessModel(report: ReportRecord, reportUrl: string): Business
       agentReady: capabilities.filter((capability) => capability.expected && capability.agentReady).length,
     },
     business,
+    identity,
+    otherOrganizations,
     entities: ordered.slice(0, MAX_ENTITIES),
     relationships: modelRelations(report, ordered.slice(0, MAX_ENTITIES)),
     capabilities,
@@ -188,7 +221,7 @@ export function businessModel(report: ReportRecord, reportUrl: string): Business
   };
 }
 
-const STATE_WORDS: Record<string, string> = { "agent-ready": "works", unverified: "fix this", "human-only": "fix this", missing: "talk to us", "not-expected": "not expected" };
+const STATE_WORDS: Record<string, string> = { "agent-ready": "verified", unverified: "unverified", "human-only": "no interface found", missing: "not found", "not-expected": "not expected" };
 
 function entityLine(entity: ModelledEntity): string {
   const link = entity.sameAs.find((url) => /wikidata\.org/i.test(url));
@@ -203,8 +236,14 @@ const ROLE_HEADINGS: Record<EntityRole, string> = { business: "The business", of
 export function businessModelText(model: BusinessModelResult): string {
   const lines: string[] = [];
   lines.push(`Business model of ${model.site.host}, read from ${model.pagesRead} ${model.pagesRead === 1 ? "page" : "pages"} (${model.site.archetype})${model.site.runsOn ? `. The site runs on ${model.site.runsOn}` : ""}.`);
-  lines.push(`${model.counts.entities} entities: ${model.counts.declared} declared in the site's markup, ${model.counts.inferred} inferred from its text, ${model.counts.humanConfirmed} confirmed by the owner. ${model.counts.capabilities} expected actions, ${model.counts.agentReady} agent-ready.`);
-  for (const role of ["business", "offering", "place", "person", "content"] as EntityRole[]) {
+  lines.push(`${model.counts.entities} entities: ${model.counts.declared} declared in the site's markup, ${model.counts.inferred} inferred from its text, ${model.counts.humanConfirmed} confirmed in a review. ${model.counts.capabilities} expected actions, ${model.counts.agentReady} agent-ready.`);
+  const mentions = new Set(model.otherOrganizations);
+  const business = model.entities.filter((entity) => entity.role === "business" && !mentions.has(entity.id));
+  if (model.identity.status === "settled" && business.length > 0) lines.push("", "The business:", ...business.map(entityLine));
+  else lines.push("", `Business identity needs review. ${model.identity.note}`);
+  const named = model.entities.filter((entity) => mentions.has(entity.id));
+  if (named.length > 0) lines.push("", "Other organizations the pages name (mentions, not this business):", ...named.map(entityLine));
+  for (const role of ["offering", "place", "person", "content"] as EntityRole[]) {
     const group = model.entities.filter((entity) => entity.role === role);
     if (group.length === 0) continue;
     lines.push("", `${ROLE_HEADINGS[role]}:`, ...group.map(entityLine));
@@ -244,6 +283,8 @@ export interface EntityDetailResult extends ModelledEntity {
   pages: Array<{ url: string; title: string }>;
   /** What was seen for each action the entity answers for, as the report holds it: claims, never conclusions. */
   evidence: Array<{ actionId: string; claim: string; verification: string; sourceUrl: string }>;
+  /** For an organization: whether the report settled it as the business, or it is a name the pages mention. */
+  standing?: "business" | "mention";
   boundaries: string;
 }
 
@@ -268,6 +309,7 @@ export function entityDetail(entity: DomainEntity, report: ReportRecord, reportU
     .flatMap((capability) => capability.evidence.slice(0, 4).map((item) => ({ actionId: capability.actionId, claim: item.claim, verification: item.verification, sourceUrl: item.sourceUrl })))
     .slice(0, 24);
   const all = (report.contextGraph?.entities ?? []).map((candidate) => modelEntity(candidate, report));
+  const identity = businessIdentity(report);
   return {
     ...modelled,
     reportId: report.id,
@@ -277,13 +319,15 @@ export function entityDetail(entity: DomainEntity, report: ReportRecord, reportU
     offers: entity.offers,
     pages: (report.contextGraph?.pages ?? []).filter((page) => page.entityIds.includes(entity.id)).map((page) => ({ url: page.url, title: page.title })),
     evidence,
+    ...(modelled.role === "business" ? { standing: (identity.status === "settled" && identity.entityId === entity.id) || entity.humanPriority === "primary" ? ("business" as const) : ("mention" as const) } : {}),
     boundaries: MODEL_BOUNDARIES,
   };
 }
 
 export function entityDetailText(detail: EntityDetailResult): string {
   const lines: string[] = [];
-  lines.push(`${detail.name} (${detail.type}), ${detail.provenance}${detail.priority === "primary" ? ", primary for the owner" : ""}, confidence ${Math.round(detail.confidence * 100)}%.`);
+  lines.push(`${detail.name} (${detail.type}), ${detail.provenance}${detail.priority === "primary" ? ", marked core in a review" : ""}, confidence ${Math.round(detail.confidence * 100)}%.`);
+  if (detail.standing === "mention") lines.push("An organization the pages name. The report has not settled it as this business: treat it as a mention.");
   if (detail.description) lines.push(detail.description);
   if (detail.alternateNames.length > 0) lines.push(`Also called: ${detail.alternateNames.join(", ")}.`);
   if (detail.sameAs.length > 0) lines.push(`Same as: ${detail.sameAs.join(", ")}.`);

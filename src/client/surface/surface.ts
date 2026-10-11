@@ -1,4 +1,5 @@
-import { entityProvenance, type EntityProvenance } from "../../shared/format/businessModel.js";
+import { businessIdentity, entityProvenance, type EntityProvenance } from "../../shared/format/businessModel.js";
+import { untestedInScan } from "../../shared/format/recommendation.js";
 import { looksGeneric, modelView, type ViewEntity } from "../../shared/format/modelView.js";
 import type { ActionBoundary, CapabilityResult, DomainEntity, HumanAssertion, ReportRecord } from "../../shared/types/index.js";
 
@@ -124,6 +125,11 @@ export function whatWeKnow(capability: CapabilityResult): string {
     case "agent-ready":
       return `${people} An agent called the interface and it answered${capability.via === "sidecar" ? ", through the interface WordLift runs" : ""}.`;
     case "unverified": {
+      const untested = untestedInScan(capability);
+      if (untested) {
+        const tools = untested.tools.map((tool) => `“${tool}”`).join(", ");
+        return `${people} ${untested.budget ? "Not tested within this scan's budget" : "Not tested in this scan"}: the site's MCP server lists ${tools}, and the audit did not call ${untested.tools.length === 1 ? "it" : "them"}${untested.note ? ` (${untested.note})` : ""}. That says nothing about whether it works; a targeted test will.`;
+      }
       const failed = capability.evidence.find((item) => item.audience === "agent" && item.verification === "failed");
       const declared = capability.evidence.find((item) => item.audience === "agent" && item.verification === "declared");
       if (failed) return `${people} The site declares an interface for agents, and the audit's call to it did not succeed: ${failed.claim.replace(/\.?$/, ".")}`;
@@ -366,14 +372,13 @@ export type IdentityState =
  * business at all has none: both need a review, and neither is shown as a confident headline.
  */
 export function identity(report: ReportRecord): IdentityState {
-  const entities = report.contextGraph?.entities ?? [];
-  if (entities.length === 0) return { state: "empty" };
+  // One judgment, shared with what an agent is told through the tools.
+  const verdict = businessIdentity(report);
+  if (verdict.status === "none") return { state: "empty" };
   const business = modelView(report).business;
+  if (verdict.status === "settled" && business) return { state: "resolved", entity: business };
   // The candidate stays out of the sentence: a third party named on the page is not introduced as the business.
-  const why = `The scan could not settle which organization runs this site, so ${hostOf(report)} stands in as its name.`;
-  if (!business) return { state: "needs-review", entity: null, why };
-  if (business.provenance !== "inferred") return { state: "resolved", entity: business };
-  return { state: "needs-review", entity: business, why };
+  return { state: "needs-review", entity: business, why: `The scan could not settle which organization runs this site, so ${hostOf(report)} stands in as its name.` };
 }
 
 export interface CoreEntity {

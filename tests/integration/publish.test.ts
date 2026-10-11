@@ -69,8 +69,8 @@ describe("what the owner decided becomes what the page carries", () => {
     expect(row("availability.check")).toMatchObject({ publishedAs: "handoff", provider: { name: "Lungau Lodging", url: "https://lungau-lodging.example/book" } });
     // Describe only: the entity alone. Not ours, and rejected: nothing.
     expect(row("detail.retrieve")?.publishedAs).toBe("entity");
-    expect(row("items.compare")).toMatchObject({ publishedAs: "nothing", because: expect.stringContaining("not yours") });
-    expect(row("policy.explain")).toMatchObject({ publishedAs: "nothing", because: expect.stringContaining("not yours") });
+    expect(row("items.compare")).toMatchObject({ publishedAs: "nothing", because: expect.stringContaining("not the business's") });
+    expect(row("policy.explain")).toMatchObject({ publishedAs: "nothing", because: expect.stringContaining("not the business's") });
     // Undecided and unverified: the entity, because nothing is declared that the audit could not call.
     expect(row("inquiry.submit")).toMatchObject({ publishedAs: "entity", because: expect.stringContaining("could not call") });
 
@@ -232,6 +232,28 @@ describe("the skill, for acting", () => {
     // The runbook promises only what the product checks.
     expect(runbook).not.toContain("is listed there by name");
     expect(runbook).toContain("nothing on the site may depend on it");
+  });
+
+  it("never calls a reviewer the owner, and never says published for what is only prepared", async () => {
+    const { orchestrator } = harness();
+    const { child } = await refinedAlpina(orchestrator);
+    const reviewed = await orchestrator.publish(child.id);
+    // An unclaimed review is a reviewer's: every document says reviewer-confirmed, none says the owner confirmed.
+    expect(reviewed.decidedBy).not.toBe("owner");
+    expect(reviewed.runbook).toMatch(/what a reviewer confirmed \(\d+ decisions?\); the reviewer has not proved the site is theirs, so these are reviewer-confirmed, not the owner's word/);
+    for (const text of [reviewed.runbook, reviewed.llms, reviewed.skill]) expect(text).not.toMatch(/its owner confirmed|the owner said|as the owner decided|confirmed by the owner/);
+    // Only a verified owner's review is said to be the owner's.
+    const owned = await orchestrator.refine(child.id, { businessRole: "destination-organization" }, { filedBy: "owner" });
+    const ownersPackage = await orchestrator.publish(owned.id);
+    expect(ownersPackage.decidedBy).toBe("owner");
+    expect(ownersPackage.runbook).toContain("what its verified owner confirmed (");
+    expect(ownersPackage.llms).toContain("or a review confirmed (the site's verified owner)");
+    // With no review at all, nothing is attributed to anyone.
+    const plain = await orchestrator.publish((await orchestrator.create({ requestId: randomUUID(), url: "https://alpina.travel" })).id);
+    expect(plain.runbook).toContain("nothing a person confirmed yet (0 decisions)");
+    // A prepared package includes things; it has not published them.
+    for (const action of [...reviewed.actions, ...plain.actions]) expect(action.because).not.toMatch(/\bis published\b|\bpublished for\b/);
+    expect(reviewed.actions.some((action) => /included in this package/.test(action.because))).toBe(true);
   });
 
   it("uses each gap's own finding", () => {
