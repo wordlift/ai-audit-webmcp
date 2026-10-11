@@ -346,7 +346,7 @@ export function gapLine(action: PublishedAction, host: string): string {
     case "human-only":
       return `${whose}People do this on the site; no interface for agents was found.${there}`;
     case "unverified":
-      return `${whose}The site declares an interface for this, and it did not answer the audit's call, so it is not offered here.${action.humanUrl ? ` People do this at ${action.humanUrl}; send the person there.` : " Tell the person it cannot be done through an agent yet."}`;
+      return `${whose}The site declares an interface for this that has not answered a call from the audit, so it is not offered here.${action.humanUrl ? ` People do this at ${action.humanUrl}; send the person there.` : " Tell the person it cannot be done through an agent yet."}`;
     case "agent-ready":
       return `${whose}It answered the audit, but no address an agent could call was kept.${there}`;
     default:
