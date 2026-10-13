@@ -4,6 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import request from "supertest";
 import { loadActionModel } from "../../src/domain/action-model/loadModel.js";
+import { shareCard } from "../../src/server/routes/agentSurface.js";
+import type { ReportRecord } from "../../src/shared/types/index.js";
 import { createApp } from "../../src/server/app.js";
 import { FixtureProvider } from "../../src/server/adapters/fixtures/FixtureProvider.js";
 import { MemoryReportStore } from "../../src/server/adapters/store/MemoryReportStore.js";
@@ -121,14 +123,58 @@ describe("report prerender", () => {
     const reportId = await completedReport(app);
     const response = await request(app).get(`/reports/${reportId}`).expect(200);
 
-    expect(response.text).toContain("<title>https://shop.example/ — agent readiness");
-    expect(response.text).toMatch(/<meta name="description" content="https:\/\/shop\.example\/ looks like a commerce\/retail site/);
+    // The site is named by its host: a raw address in a title or a description becomes a second link in a chat.
+    expect(response.text).toContain("<title>shop.example: how AI understands this business, and what agents can do · WordLift AI Audit</title>");
+    const description = /<meta name="description" content="([^"]*)"/.exec(response.text)![1]!;
+    expect(description).not.toMatch(/https?:\/\//);
+    expect(description).toMatch(/expected actions? (is|are) verified for AI agents|None of its \d+ expected actions is verified for AI agents yet/);
+    expect(description).toMatch(/Read from \d+ pages?\.$/);
     expect(response.text).toContain('<link rel="canonical" href="https://audit.example/reports/');
     expect(response.text).toContain("<noscript>");
     expect(response.text).toContain("Machine-generated Terms of Action");
     // The app still mounts into an empty root; the summary never competes with React.
     expect(response.text).toContain('<div id="root"></div>');
     expect(response.text).not.toMatch(/<meta\s+name="description"[^>]*maps what humans can do/);
+  });
+
+  it("gives a shared link a preview: site name, title, description and an image a chat can draw", async () => {
+    const app = testApp();
+    const reportId = await completedReport(app);
+    for (const path of [`/reports/${reportId}`, `/reports/${reportId}/activate`]) {
+      const html = (await request(app).get(path).expect(200)).text;
+      const tag = (property: string) => new RegExp(`<meta (?:property|name)="${property}" content="([^"]*)"`).exec(html)?.[1];
+      expect(tag("og:site_name")).toBe("WordLift AI Audit");
+      // The card's title leaves the product's name to the site name, and never opens with an address.
+      expect(tag("og:title")).toBe("shop.example: how AI understands this business, and what agents can do");
+      expect(tag("og:description")).toBe(tag("description"));
+      expect(tag("og:url")).toBe(`https://audit.example/reports/${reportId}`);
+      // Absolute, and a PNG: a relative address or an SVG is the grey placeholder.
+      expect(tag("og:image")).toBe("https://audit.example/brand/share-card.png");
+      expect(tag("og:image:width")).toBe("1200");
+      expect(tag("og:image:height")).toBe("630");
+      expect(tag("twitter:card")).toBe("summary_large_image");
+      expect(tag("twitter:image")).toBe(tag("og:image"));
+      // One of each: a second og:image or title would be the one a scraper picks.
+      for (const property of ["og:title", "og:image", "og:description"]) expect(html.split(`property="${property}"`).length - 1).toBe(1);
+    }
+  });
+
+  it("says who the business is only when the report settled it, and quotes the site otherwise", () => {
+    const base = { id: "11111111-1111-4111-8111-111111111111", status: "completed", phase: "complete", mode: "demo", requestedUrl: "https://www.shop.example/it", createdAt: "2026-10-13T08:00:00.000Z", expiresAt: "2026-11-12T08:00:00.000Z", actionModelVersion: "0.1.0", errors: [], evidenceTruncated: false } satisfies ReportRecord;
+    const page = { url: "https://www.shop.example/it", title: "Shop", role: "entry" as const, description: "Outdoor clothing made to last, repaired for free.", headings: [], entityIds: [] };
+    const entity = (id: string, name: string, origin?: "inferred") => ({ id, types: ["Organization"], name, alternateNames: [], sourceUrls: [page.url], sameAs: [], offers: [], confidence: 0.6, ...(origin ? { origin } : {}) });
+    const action = (actionId: string, state: "agent-ready" | "missing") => ({ actionId, label: actionId, description: "d", stage: "discover" as const, intent: "informational" as const, importance: 3 as const, expected: true, expectationSource: ["archetype:commerce-retail"], state, humanSupport: false, agentSupport: state === "agent-ready", appliesTo: [], evidence: [] });
+    const graph = (entities: ReturnType<typeof entity>[]) => ({ pages: [page], entities, lexicalEntries: [], interfaces: [], bindings: [] });
+
+    // Only the text names an organization: it is not introduced as the business, and the site speaks for itself.
+    const unsettled = shareCard({ ...base, contextGraph: graph([entity("x", "Some Partner Inc", "inferred")]), capabilities: [action("site.search", "missing"), action("detail.retrieve", "missing")] } as ReportRecord);
+    expect(unsettled.title).toBe("shop.example: how AI understands this business, and what agents can do");
+    expect(unsettled.description).toBe("In its own words: “Outdoor clothing made to last, repaired for free.” None of its 2 expected actions is verified for AI agents yet. Read from 1 page.");
+    expect(unsettled.description).not.toContain("Some Partner Inc");
+    // Declared by the site: the business is said, and the count is the page's count.
+    const settled = shareCard({ ...base, contextGraph: graph([entity("org", "Trail Shop")]), capabilities: [action("site.search", "agent-ready"), action("detail.retrieve", "missing")] } as ReportRecord);
+    expect(settled.description).toMatch(/^Trail Shop is /);
+    expect(settled.description).toContain("1 of 2 expected actions is verified for AI agents.");
   });
 
   it("escapes report text so site-authored content cannot inject markup", async () => {
@@ -157,6 +203,16 @@ describe("report prerender", () => {
     const response = await request(testApp()).get("/reports/missing-report").expect(200);
     expect(response.text).not.toContain("<noscript>");
     expect(response.text).toContain(SHELL_TITLE);
+  });
+});
+
+describe("the home page shared as a link", () => {
+  it("carries its own preview, with an absolute image", async () => {
+    const html = (await request(testApp()).get("/").expect(200)).text;
+    expect(html).toContain("<title>WordLift AI Audit: see how AI understands your business, and what agents can do</title>");
+    expect(html).toContain('<meta property="og:image" content="https://audit.example/brand/share-card.png" />');
+    expect(html).toContain('<meta name="twitter:card" content="summary_large_image" />');
+    expect(html).toContain('<div id="root"></div>');
   });
 });
 

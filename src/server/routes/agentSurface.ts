@@ -19,6 +19,8 @@ import {
   inspectSummaryText,
   summarizeReportForAgent,
 } from "../../shared/format/agentSummary.js";
+import { businessIdentity } from "../../shared/format/businessModel.js";
+import { modelView } from "../../shared/format/modelView.js";
 import type { ReportRecord } from "../../shared/types/index.js";
 import type { AuditOrchestrator } from "../services/AuditOrchestrator.js";
 
@@ -198,6 +200,81 @@ function reportJsonLd(report: ReportRecord, reportUrl: string, description: stri
   };
 }
 
+/** The picture a shared link shows: the same for every page, and a PNG, because chat previews do not draw SVG. */
+const SHARE_IMAGE = { path: "/brand/share-card.png", width: 1200, height: 630, alt: "WordLift AI Audit: see how AI understands your business, and what agents can do." };
+const SITE_NAME = "WordLift AI Audit";
+
+/** What a link preview reads: Open Graph for Slack, LinkedIn and the rest, and the two tags X needs of its own. */
+function socialTags(card: { title: string; description: string; url: string; origin: string; type: "website" | "article" }): string[] {
+  const image = `${card.origin}${SHARE_IMAGE.path}`;
+  return [
+    `<meta property="og:site_name" content="${SITE_NAME}" />`,
+    `<meta property="og:type" content="${card.type}" />`,
+    `<meta property="og:title" content="${escapeHtml(card.title)}" />`,
+    `<meta property="og:description" content="${escapeHtml(card.description)}" />`,
+    `<meta property="og:url" content="${escapeHtml(card.url)}" />`,
+    `<meta property="og:image" content="${escapeHtml(image)}" />`,
+    `<meta property="og:image:width" content="${SHARE_IMAGE.width}" />`,
+    `<meta property="og:image:height" content="${SHARE_IMAGE.height}" />`,
+    `<meta property="og:image:alt" content="${escapeHtml(SHARE_IMAGE.alt)}" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:title" content="${escapeHtml(card.title)}" />`,
+    `<meta name="twitter:description" content="${escapeHtml(card.description)}" />`,
+    `<meta name="twitter:image" content="${escapeHtml(image)}" />`,
+  ];
+}
+
+function hostOfSite(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * A report as a shared link reads it, in the order the page reads: who the business is, then what
+ * agents can do there. The site is named by its host, never by a raw address a chat would turn
+ * into a second link. The business is said in a sentence only when the report settled who it is;
+ * otherwise the site's own description is quoted as the site's. The count is the page's count:
+ * expected actions verified by a call.
+ */
+export function shareCard(report: ReportRecord): { title: string; description: string } {
+  const host = hostOfSite(report.canonicalUrl ?? report.requestedUrl);
+  const expected = (report.capabilities ?? []).filter((capability) => capability.expected);
+  const verified = expected.filter((capability) => capability.state === "agent-ready").length;
+  const pages = report.contextGraph?.pages ?? [];
+  const settled = businessIdentity(report).status === "settled";
+  const sentence = settled ? modelView(report).sentence : null;
+  const entry = pages.find((page) => page.role === "entry") ?? pages[0];
+  const ownWords = entry?.description?.replace(/\s+/g, " ").trim();
+  const about = sentence ?? (ownWords && ownWords.length >= 24 ? `In its own words: “${truncate(ownWords, 120)}”` : null);
+  const actions =
+    expected.length === 0
+      ? "No agent actions are expected of this kind of site."
+      : verified === 0
+        ? `None of its ${expected.length} expected actions is verified for AI agents yet.`
+        : `${verified} of ${expected.length} expected actions ${verified === 1 ? "is" : "are"} verified for AI agents.`;
+  const read = pages.length > 0 ? ` Read from ${pages.length} ${pages.length === 1 ? "page" : "pages"}.` : "";
+  return {
+    title: `${host}: how AI understands this business, and what agents can do`,
+    description: truncate(`${about ? `${/[.!?”]$/.test(about) ? about : `${about}.`} ` : ""}${actions}${read}`, 300),
+  };
+}
+
+/** The home page's own preview, with an absolute image, which the static shell cannot know. */
+export function prerenderHome(shell: string, origin: string): string {
+  const title = "WordLift AI Audit: see how AI understands your business, and what agents can do";
+  const description = "Paste a URL. WordLift builds a first model of the business from its pages, shows what the site declares and what it only says in its content, and checks what AI agents can actually do with it. Free, no account.";
+  const head = [
+    `<title>${escapeHtml(title)}</title>`,
+    `<meta name="description" content="${escapeHtml(description)}" />`,
+    `<link rel="canonical" href="${escapeHtml(`${origin}/`)}" />`,
+    ...socialTags({ title, description, url: `${origin}/`, origin, type: "website" }),
+  ].join("\n    ");
+  return shell.replace(/<meta\s+name="description"[\s\S]*?\/>/i, "").replace(/<title>[\s\S]*?<\/title>/i, head);
+}
+
 /**
  * Injects a report's own title, description and agent-readable summary into the shell. The page is
  * still rendered by React: the summary sits in `<noscript>`, so it reaches a reader that does not
@@ -206,16 +283,15 @@ function reportJsonLd(report: ReportRecord, reportUrl: string, description: stri
 export function prerenderReport(shell: string, report: ReportRecord, reportUrl: string): string {
   const summary = summarizeReportForAgent(report, reportUrl);
   const terms = inspectServiceMap(report, reportUrl);
-  const site = summary.canonicalUrl;
-
-  const title = `${site} — agent readiness ${summary.agentReadinessScore}/100 · WordLift AI Audit`;
-  const description = truncate(
-    `${site} looks like a ${summary.archetype.replace("-", "/")} site. Verified agent readiness ` +
-      `${summary.agentReadinessScore}/100 across ${summary.pagesAnalyzed} page` +
-      `${summary.pagesAnalyzed === 1 ? "" : "s"}` +
-      `${summary.priorityGaps.length > 0 ? `, with ${summary.priorityGaps.length} priority capability gap${summary.priorityGaps.length === 1 ? "" : "s"}` : ", with no expected action missing agent support"}.`,
-    300,
-  );
+  const card = shareCard(report);
+  const title = `${card.title} · ${SITE_NAME}`;
+  const description = card.description;
+  let origin = "";
+  try {
+    origin = new URL(reportUrl).origin;
+  } catch {
+    origin = "";
+  }
 
   const body = truncate(
     [auditSummaryText(summary), "", inspectSummaryText(terms)].join("\n"),
@@ -226,11 +302,8 @@ export function prerenderReport(shell: string, report: ReportRecord, reportUrl: 
     `<title>${escapeHtml(title)}</title>`,
     `<meta name="description" content="${escapeHtml(description)}" />`,
     `<link rel="canonical" href="${escapeHtml(reportUrl)}" />`,
-    `<meta property="og:type" content="article" />`,
-    `<meta property="og:title" content="${escapeHtml(title)}" />`,
-    `<meta property="og:description" content="${escapeHtml(description)}" />`,
-    `<meta property="og:url" content="${escapeHtml(reportUrl)}" />`,
-    `<meta name="twitter:card" content="summary" />`,
+    // The preview's title leaves the product's name to og:site_name, which a card shows on its own line.
+    ...socialTags({ title: card.title, description, url: reportUrl, origin, type: "article" }),
     `<script type="application/ld+json">${embedJson(reportJsonLd(report, reportUrl, description))}</script>`,
   ].join("\n    ");
 
@@ -314,7 +387,24 @@ export function createAgentSurfaceRouter(options: AgentSurfaceOptions = {}): Rou
 
   // A report that is missing, still running, or unreadable falls through to the untouched shell:
   // the app renders its own empty and error states, and a prerender failure must not lose the page.
-  router.get("/reports/:reportId", async (request, response, next) => {
+  // The home page shared as a link: the same shell, with a preview of its own.
+  router.get("/", (request, response, next) => {
+    const template = loadShell();
+    if (!template) {
+      next();
+      return;
+    }
+    let origin = baseUrl(request);
+    try {
+      if (orchestrator) origin = new URL(orchestrator.reportUrl("home")).origin;
+    } catch {
+      // The request's own origin stands.
+    }
+    response.type("text/html; charset=utf-8").set("cache-control", "public, max-age=0, must-revalidate").send(prerenderHome(template, origin));
+  });
+
+  // A report's link and its Activate page are the same report to whoever receives them.
+  router.get(["/reports/:reportId", "/reports/:reportId/activate"], async (request, response, next) => {
     const template = loadShell();
     if (!template || !orchestrator) {
       next();
